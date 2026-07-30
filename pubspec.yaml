@@ -1,0 +1,45 @@
+name: cyberkingdoms
+description: "CyberKingdoms — MMORPG de economia, politica e sobrevivencia num futuro cyberpunk distopico."
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.9.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Rendering do mundo isometrico.
+  flame: ^1.32.0
+
+  # Estado.
+  flutter_riverpod: ^2.6.1
+
+  # Persistencia local (offline-first). O terreno nao e salvo: ele e uma funcao
+  # pura da seed, entao so o estado do jogador/servidor vai para disco.
+  path_provider: ^2.1.5
+
+  # Backend (projeto cyberkingdoms-f1142). O app roda offline enquanto o
+  # firebase_options.dart nao for gerado por `flutterfire configure`.
+  firebase_core: ^3.15.2
+  cloud_firestore: ^5.6.12
+  firebase_auth: ^5.7.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/sprites/
+    - assets/ui/
+    - assets/data/
+
+  fonts:
+    - family: KenneyInput
+      fonts:
+        - asset: assets/fonts/kenney_input_generic.ttf

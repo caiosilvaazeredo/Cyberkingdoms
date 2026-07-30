@@ -1,0 +1,101 @@
+<meta charset="utf-8">
+<style>html,body{margin:0;background:transparent}canvas{display:block}</style>
+<script type="importmap">
+{"imports":{"three":"./node_modules/three/build/three.module.js","three/addons/":"./node_modules/three/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+const SIZE = 256;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setSize(SIZE, SIZE);
+renderer.setPixelRatio(1);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = null;
+
+// Kenney-style flat-ish lighting: strong key + fill so colormap stays readable.
+const hemi = new THREE.HemisphereLight(0xffffff, 0x404060, 2.0);
+scene.add(hemi);
+const key = new THREE.DirectionalLight(0xffffff, 2.2);
+key.position.set(5, 10, 7);
+scene.add(key);
+const rim = new THREE.DirectionalLight(0x66ccff, 0.8);
+rim.position.set(-6, 4, -5);
+scene.add(rim);
+
+// True 2:1 isometric: azimuth 45deg, elevation atan(1/2) = 26.565deg.
+const ELEV = Math.atan(1 / 2);
+const AZI = Math.PI / 4;
+const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -1000, 1000);
+
+const loader = new GLTFLoader();
+
+window.__renderGlb = async (url) => {
+  const gltf = await loader.loadAsync(url);
+  const root = gltf.scene;
+
+  // Drop anything previously rendered.
+  for (const c of [...scene.children]) if (c.userData.isModel) scene.remove(c);
+  root.userData.isModel = true;
+
+  root.traverse((o) => {
+    if (o.isMesh) {
+      o.frustumCulled = false;
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      for (const m of mats) {
+        if (!m) continue;
+        if (m.map) m.map.colorSpace = THREE.SRGBColorSpace;
+        m.side = THREE.DoubleSide;
+      }
+    }
+  });
+  scene.add(root);
+
+  // Fit an orthographic frustum around the model's bounding box, viewed from the iso angle.
+  const box = new THREE.Box3().setFromObject(root);
+  if (box.isEmpty()) return null;
+  const center = box.getCenter(new THREE.Vector3());
+  const sphere = box.getBoundingSphere(new THREE.Sphere());
+  const r = sphere.radius || 1;
+
+  const dir = new THREE.Vector3(
+    Math.cos(ELEV) * Math.sin(AZI),
+    Math.sin(ELEV),
+    Math.cos(ELEV) * Math.cos(AZI),
+  );
+  camera.position.copy(center).addScaledVector(dir, r * 4);
+  camera.up.set(0, 1, 0);
+  camera.lookAt(center);
+
+  const pad = 1.06;
+  camera.left = -r * pad;
+  camera.right = r * pad;
+  camera.top = r * pad;
+  camera.bottom = -r * pad;
+  camera.updateProjectionMatrix();
+
+  renderer.render(scene, camera);
+
+  // Report footprint so Dart can anchor sprites on the tile grid: the ratio of
+  // the model's XZ footprint to its total height drives the vertical offset.
+  const size = box.getSize(new THREE.Vector3());
+  const png = renderer.domElement.toDataURL('image/png');
+  return {
+    png,
+    sizeX: size.x, sizeY: size.y, sizeZ: size.z,
+    radius: r,
+    // Where the model's ground plane (min Y) lands in normalized image space.
+    baseY: (() => {
+      const groundCenter = new THREE.Vector3(center.x, box.min.y, center.z).project(camera);
+      return (1 - groundCenter.y) / 2;
+    })(),
+  };
+};
+
+window.__ready = true;
+</script>

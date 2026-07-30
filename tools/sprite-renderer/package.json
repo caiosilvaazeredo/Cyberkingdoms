@@ -1,0 +1,14 @@
+{
+  "name": "cyberkingdoms-sprite-renderer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Renderiza os modelos 3D da Kenney em sprites isometricos 2:1 para o cliente Flutter.",
+  "scripts": {
+    "render": "node render.mjs ../../assets/sprites"
+  },
+  "dependencies": {
+    "playwright-core": "^1.49.0",
+    "three": "^0.171.0"
+  }
+}
