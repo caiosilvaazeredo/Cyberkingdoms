@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme.dart';
+import '../../domain/building/building_module.dart';
 import '../../domain/building/building_type.dart';
 import '../../domain/building/plot.dart';
 import '../../domain/economy/item.dart';
 import '../../state/providers.dart';
 import '../widgets/sprite_ui.dart';
 import '../widgets/vital_bar.dart';
+import 'building_sheet.dart';
+import 'village_identity_sheet.dart';
 
 /// O terreno do jogador: grade de construção, catálogo e gestão de obras.
 ///
@@ -41,12 +44,64 @@ class _PlotScreenState extends ConsumerState<PlotScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                plot.name,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                ),
+              Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      color: CyberColors.background.withValues(alpha: 0.45),
+                      borderRadius: BorderRadius.circular(9),
+                      border: Border.all(
+                        color: Color(plot.identity.secondaryColor)
+                            .withValues(alpha: 0.7),
+                      ),
+                    ),
+                    child: Image.asset(
+                      plot.identity.emblem.assetPath,
+                      filterQuality: FilterQuality.medium,
+                      errorBuilder: (_, __, ___) => const Icon(Icons.flag),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          plot.identity.name,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            color: Color(plot.identity.primaryColor),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (plot.identity.motto.trim().isNotEmpty)
+                          Text(
+                            '"${plot.identity.motto.trim()}"',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontStyle: FontStyle.italic,
+                              color: Color(plot.identity.secondaryColor),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.brush_outlined, size: 20),
+                    color: CyberColors.cyan,
+                    tooltip: 'Editar identidade',
+                    onPressed: () async {
+                      await showVillageIdentitySheet(context, ref);
+                      if (mounted) setState(() {});
+                    },
+                  ),
+                ],
               ),
               const SizedBox(height: 2),
               Text(
@@ -86,6 +141,11 @@ class _PlotScreenState extends ConsumerState<PlotScreen> {
                     label: '¢/dia',
                     value: '-${plot.dailyUpkeep}',
                     color: CyberColors.violet,
+                  ),
+                  StatChip(
+                    label: 'status',
+                    value: '+${plot.statusBonus}',
+                    color: CyberColors.pink,
                   ),
                 ],
               ),
@@ -131,7 +191,10 @@ class _PlotScreenState extends ConsumerState<PlotScreen> {
           plot: plot,
           pending: _pending,
           onTapCell: onSite ? _placeAt : null,
-          onTapBuilding: _showBuildingSheet,
+          onTapBuilding: (building) async {
+            await showBuildingSheet(context, ref, building.instanceId);
+            if (mounted) setState(() {});
+          },
         ),
 
         if (plot.underConstruction.isNotEmpty) ...[
@@ -146,7 +209,10 @@ class _PlotScreenState extends ConsumerState<PlotScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      building.def.name,
+                      building.upgrading
+                          ? '${building.displayName} » nível '
+                              '${BuildingUpgrade.romanFor(building.level)}'
+                          : building.displayName,
                       style: const TextStyle(fontSize: 12),
                     ),
                   ),
@@ -205,109 +271,6 @@ class _PlotScreenState extends ConsumerState<PlotScreen> {
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> _showBuildingSheet(PlacedBuilding building) async {
-    final controller = ref.read(campaignControllerProvider.notifier);
-    var workers = building.workers;
-
-    await showModalBottomSheet<void>(
-      context: context,
-      builder: (sheetContext) => StatefulBuilder(
-        builder: (_, setSheetState) {
-          final def = building.def;
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  def.name.toUpperCase(),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  def.description,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: CyberColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                if (!building.isReady)
-                  Text(
-                    'Em obras — faltam ${building.daysRemaining} dia(s).',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: CyberColors.amber,
-                    ),
-                  )
-                else if (building.idle)
-                  const Text(
-                    'PARADA: faltou caixa ou insumo no último reset.',
-                    style: TextStyle(fontSize: 12, color: CyberColors.danger),
-                  )
-                else
-                  const Text(
-                    'Operando normalmente.',
-                    style: TextStyle(fontSize: 12, color: CyberColors.green),
-                  ),
-
-                if (def.jobSlots > 0) ...[
-                  const SizedBox(height: 16),
-                  Text(
-                    'Funcionários: $workers de ${def.jobSlots}',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  Slider(
-                    value: workers.toDouble(),
-                    max: def.jobSlots.toDouble(),
-                    divisions: def.jobSlots,
-                    label: '$workers',
-                    onChanged: (v) => setSheetState(() => workers = v.round()),
-                    onChangeEnd: (v) => controller.assignWorkers(
-                      building.instanceId,
-                      v.round(),
-                    ),
-                  ),
-                  const Text(
-                    'Mais gente, mais produção. Vaga vazia rende só 35%.',
-                    style: TextStyle(fontSize: 10, color: CyberColors.outline),
-                  ),
-                ],
-
-                const SizedBox(height: 20),
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: CyberColors.danger,
-                  ),
-                  onPressed: () {
-                    final refund = controller.demolish(building.instanceId);
-                    Navigator.pop(sheetContext);
-                    final summary = refund.isEmpty
-                        ? 'sem recuperação de material'
-                        : refund.entries
-                            .map((e) =>
-                                '${e.value}x ${ItemCatalog.of(e.key).name}')
-                            .join(', ');
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Demolido — $summary.')),
-                    );
-                    setState(() {});
-                  },
-                  icon: const Icon(Icons.delete_forever, size: 16),
-                  label: const Text('DEMOLIR (metade do material volta)'),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-    if (mounted) setState(() {});
-  }
 }
 
 /// Grade do terreno vista de cima. É deliberadamente ortogonal, não
@@ -419,7 +382,10 @@ class _BuildingTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final def = building.def;
-    final color = _categoryColors[def.category] ?? CyberColors.cyan;
+    // A cor escolhida pelo jogador vence a cor da categoria.
+    final color = building.accentColor != null
+        ? Color(building.accentColor!)
+        : (_categoryColors[def.category] ?? CyberColors.cyan);
     final ready = building.isReady;
 
     return GestureDetector(
@@ -477,6 +443,42 @@ class _BuildingTile extends StatelessWidget {
                 top: 2,
                 child: Icon(Icons.warning_amber,
                     size: 12, color: CyberColors.danger),
+              ),
+            // Nível e módulos: leitura rápida de quais prédios já foram
+            // investidos, sem precisar abrir a ficha de cada um.
+            if (building.level > 1)
+              Positioned(
+                left: 2,
+                bottom: 2,
+                child: Text(
+                  BuildingUpgrade.romanFor(building.level),
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
+                    color: color,
+                  ),
+                ),
+              ),
+            if (building.modules.isNotEmpty)
+              Positioned(
+                right: 2,
+                bottom: 2,
+                child: Row(
+                  children: [
+                    for (var i = 0; i < building.modules.length; i++)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 1),
+                        child: Container(
+                          width: 4,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: color,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
           ],
         ),

@@ -288,13 +288,19 @@ class _CampaignCard extends ConsumerWidget {
 }
 
 Future<void> _showNewCampaignSheet(BuildContext context, WidgetRef ref) async {
+  // Os dois campos vêm preenchidos com uma sugestão. A seed já era assim; o
+  // nome não, e isso deixava o botão de criar mundo travado por um campo em
+  // branco que a maioria dos jogadores só quer pular na primeira partida.
   final seedController = TextEditingController(text: _randomSeedLabel());
-  final nameController = TextEditingController();
+  final nameController = TextEditingController(text: _randomCharacterName());
 
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    builder: (sheetContext) => Padding(
+    // A folha **precisa** rolar: com o teclado aberto num celular pequeno, a
+    // altura disponível encolhe e o botão de criar mundo sai da tela. Sem o
+    // scroll, o jogador simplesmente não consegue começar a jogar.
+    builder: (sheetContext) => SingleChildScrollView(
       padding: EdgeInsets.only(
         left: 20,
         right: 20,
@@ -324,9 +330,15 @@ Future<void> _showNewCampaignSheet(BuildContext context, WidgetRef ref) async {
           TextField(
             controller: nameController,
             textCapitalization: TextCapitalization.words,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Nome do personagem',
-              prefixIcon: Icon(Icons.person_outline),
+              prefixIcon: const Icon(Icons.person_outline),
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.refresh),
+                tooltip: 'Sortear outro nome',
+                onPressed: () =>
+                    nameController.text = _randomCharacterName(),
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -381,4 +393,20 @@ const _seedWords = [
 String _randomSeedLabel() {
   final rng = DeterministicRandom(DateTime.now().microsecondsSinceEpoch);
   return '${rng.pick(_seedWords)}-${rng.pick(_seedWords)}-${rng.range(100, 999)}';
+}
+
+const _firstNames = [
+  'Kaia', 'Rion', 'Yara', 'Dex', 'Nara', 'Vito', 'Zula', 'Enzo',
+  'Mira', 'Caio', 'Iara', 'Tavo', 'Lena', 'Bruno', 'Sol', 'Kito',
+];
+const _lastNames = [
+  'Vex', 'Moreno', 'Okada', 'Ferro', 'Cruz', 'Nakada', 'Rosa', 'Kovak',
+  'Braga', 'Sena', 'Adler', 'Pires', 'Vidal', 'Costa', 'Reis',
+];
+
+String _randomCharacterName() {
+  final rng = DeterministicRandom(
+    DateTime.now().microsecondsSinceEpoch ^ 0x5EED,
+  );
+  return '${rng.pick(_firstNames)} ${rng.pick(_lastNames)}';
 }

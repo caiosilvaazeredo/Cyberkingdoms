@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/seed/deterministic_random.dart';
 import '../data/campaign_repository.dart';
+import '../domain/building/building_module.dart';
 import '../domain/building/building_type.dart';
 import '../domain/building/plot.dart';
+import '../domain/building/village_identity.dart';
 import '../data/firebase_bootstrap.dart';
 import '../domain/campaign/campaign.dart';
 import '../domain/campaign/daily_tick.dart';
@@ -294,6 +296,100 @@ class CampaignController extends StateNotifier<Campaign?> {
       unawaited(save());
     }
     return result;
+  }
+
+  /// Sobe uma construção de nível. Requer estar na cidade do terreno.
+  BuildResult upgradeBuilding(String instanceId) {
+    final campaign = state;
+    if (campaign == null) {
+      return const BuildRejected('Nenhuma campanha aberta.');
+    }
+    if (campaign.currentSettlementId != campaign.plot.settlementId) {
+      return const BuildRejected('Você precisa estar na cidade do terreno.');
+    }
+
+    final building = campaign.plot.byInstanceId(instanceId);
+    final costBefore = building == null
+        ? 0
+        : BuildingUpgrade.creditCost(building.def, building.level);
+
+    final result = campaign.plot.upgrade(
+      instanceId: instanceId,
+      inventory: campaign.character.inventory,
+      credits: campaign.character.credits,
+    );
+
+    if (result is BuildAccepted) {
+      campaign.character.credits -= costBefore;
+      campaign.log(
+        '${result.building.displayName} evoluindo para nível '
+        '${BuildingUpgrade.romanFor(result.building.level)}.',
+      );
+      _bump();
+      unawaited(save());
+    }
+    return result;
+  }
+
+  /// Instala um módulo numa construção.
+  BuildResult installModule(String instanceId, BuildingModule module) {
+    final campaign = state;
+    if (campaign == null) {
+      return const BuildRejected('Nenhuma campanha aberta.');
+    }
+    if (campaign.currentSettlementId != campaign.plot.settlementId) {
+      return const BuildRejected('Você precisa estar na cidade do terreno.');
+    }
+
+    final result = campaign.plot.installModule(
+      instanceId: instanceId,
+      module: module,
+      inventory: campaign.character.inventory,
+      credits: campaign.character.credits,
+    );
+
+    if (result is BuildAccepted) {
+      campaign.character.credits -= module.creditCost;
+      campaign.log(
+        '${module.label} instalado em ${result.building.displayName}.',
+      );
+      _bump();
+      unawaited(save());
+    }
+    return result;
+  }
+
+  void uninstallModule(String instanceId, BuildingModule module) {
+    final campaign = state;
+    if (campaign == null) return;
+    if (campaign.plot.uninstallModule(instanceId, module)) {
+      _bump();
+      unawaited(save());
+    }
+  }
+
+  /// Renomeia e/ou pinta uma construção.
+  void customizeBuilding(
+    String instanceId, {
+    String? name,
+    int? accentColor,
+  }) {
+    final campaign = state;
+    if (campaign == null) return;
+    if (campaign.plot.customize(instanceId, name: name, accentColor: accentColor)) {
+      _bump();
+      unawaited(save());
+    }
+  }
+
+  /// Atualiza a identidade do vilarejo (nome, lema, brasão, cores).
+  void updateVillageIdentity(VillageIdentity identity) {
+    final campaign = state;
+    if (campaign == null) return;
+    campaign.plot.identity = identity;
+    campaign.log('Vilarejo renomeado para "${identity.name}".');
+    _bump();
+    unawaited(save());
   }
 
   /// Demole e devolve metade dos materiais.

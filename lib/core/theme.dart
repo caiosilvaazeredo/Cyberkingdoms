@@ -30,6 +30,13 @@ abstract final class CyberColors {
 }
 
 abstract final class CyberTheme {
+  /// Fonte do corpo da interface. A variante estreita cabe mais texto por linha
+  /// numa tela de celular sem diminuir o tamanho.
+  static const String bodyFont = 'KenneyFutureNarrow';
+
+  /// Fonte de títulos e números grandes.
+  static const String displayFont = 'KenneyFuture';
+
   static const overlayStyle = SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
@@ -49,11 +56,21 @@ abstract final class CyberTheme {
       outline: CyberColors.outline,
     );
 
+    // A fonte é empacotada, nunca herdada do sistema.
+    //
+    // Duas razões: (1) na web, um fallback de sistema ausente renderiza texto
+    // invisível — não há garantia de que a máquina do jogador tenha qualquer
+    // fonte instalada; (2) a identidade visual do jogo depende dela.
+    //
+    // Kenney Future cobre o alfabeto latino com acentos, então o português
+    // renderiza sem tofu. **Não** confundir com KenneyInput, que é uma fonte de
+    // ícones sem nenhuma letra: usá-la como fonte de texto transforma a
+    // interface inteira em quadradinhos.
     final base = ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
       scaffoldBackgroundColor: CyberColors.background,
-      fontFamily: 'KenneyInput',
+      fontFamily: bodyFont,
     );
 
     return base.copyWith(

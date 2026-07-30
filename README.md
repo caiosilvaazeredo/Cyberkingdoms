@@ -17,11 +17,15 @@ biomas, 5 Capitais, 15 Satélites e a malha de estradas PvP que liga tudo.
 | Sobrevivência + reset diário | Completo, com as tabelas do GDD |
 | Economia de 3 camadas + mercados | Completo |
 | Terrenos e 40 tipos de construção | Completo |
+| Customização: nome, cor, níveis I–III, módulos | Completo |
+| Identidade do vilarejo (brasão, cores, lema) | Completo |
+| Campanha principal com 17 quests | Completo |
 | Combate determinístico | Completo |
 | Política, eleições e rebeliões | Completo |
 | Multiplayer real (Firestore) | **Pendente** — ver "Backend" |
 
-124 testes automatizados cobrindo determinismo, balanceamento e persistência.
+154 testes automatizados cobrindo determinismo, balanceamento, regras de
+construção, quests, persistência e navegação entre telas.
 
 ---
 
@@ -32,12 +36,12 @@ lib/
   core/seed/      RNG determinístico e ruído de gradiente
   domain/
     world/        Geração procedural, biomas, cidades, estradas
-    building/     Terrenos e catálogo de construções
+    building/     Terrenos, construções, módulos e identidade do vilarejo
     survival/     Fome/Sede — tabelas literais do GDD
     economy/      Itens, receitas, inventário, mercados
     politics/     Governo, eleições, rebeliões
     combat/       Resolução determinística de PvP
-    campaign/     Estado da campanha e o motor do reset diário
+    campaign/     Estado da campanha, quests e o motor do reset diário
   game/           Camada Flame: projeção isométrica e catálogo de sprites
   data/           Repositórios (local e Firestore)
   state/          Providers Riverpod
@@ -87,12 +91,15 @@ pré-renderizados em projeção isométrica 2:1 pelo pipeline em
 
 ```sh
 flutter pub get
-flutter run            # Android / iOS
-flutter test           # 124 testes
-flutter build web      # também compila para web
+flutter run -d chrome   # navegador (mais rápido para ver funcionando)
+flutter run             # Android / iOS
+flutter test            # 154 testes
 ```
 
 Requer Flutter 3.35+ / Dart 3.9+.
+
+**[→ Guia completo em RUNNING.md](RUNNING.md)** — instalação, emuladores,
+builds de release, Firebase, re-render de sprites e solução de problemas.
 
 ---
 

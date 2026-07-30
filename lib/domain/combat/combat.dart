@@ -99,7 +99,7 @@ class CombatLogEntry {
 
   @override
   String toString() =>
-      'R$round · $attackerName → $defenderName: $damage'
+      'R$round · $attackerName » $defenderName: $damage'
       '${critical ? ' (CRÍTICO)' : ''} · HP $defenderHpAfter';
 }
 

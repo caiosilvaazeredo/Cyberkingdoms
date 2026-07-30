@@ -1,8 +1,7 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../domain/campaign/campaign.dart';
 
@@ -18,41 +17,47 @@ abstract interface class CampaignRepository {
   Future<void> deleteCampaign(String id);
 }
 
-/// Implementação em arquivo local. Uma campanha = um JSON.
+/// Implementação local sobre `shared_preferences`.
 ///
-/// Cabe em poucos KB porque o terreno não é salvo: só a seed, o layout das
-/// cidades, o personagem, os mercados e os governos.
+/// Escolhida em vez de arquivos porque `path_provider` **não tem implementação
+/// para web** e lança `MissingPluginException` no navegador — o que quebrava a
+/// listagem de campanhas por completo. `shared_preferences` usa `localStorage`
+/// na web, `NSUserDefaults` no iOS e `SharedPreferences` no Android, com a
+/// mesma API.
+///
+/// Uma campanha ocupa poucos KB porque o terreno não é salvo: só a seed, o
+/// layout das cidades, o personagem, o vilarejo, os mercados e os governos.
 class LocalCampaignRepository implements CampaignRepository {
-  LocalCampaignRepository({Directory? root}) : _rootOverride = root;
+  LocalCampaignRepository({SharedPreferences? preferences})
+      : _injected = preferences;
 
-  final Directory? _rootOverride;
-  Directory? _resolved;
+  final SharedPreferences? _injected;
+  SharedPreferences? _resolved;
 
-  Future<Directory> _root() async {
-    if (_resolved != null) return _resolved!;
-    final base = _rootOverride ?? await getApplicationDocumentsDirectory();
-    final dir = Directory('${base.path}/campaigns');
-    if (!await dir.exists()) {
-      await dir.create(recursive: true);
-    }
-    return _resolved = dir;
-  }
+  /// Prefixo das chaves. Uma campanha por chave permite salvar uma sem
+  /// reescrever as outras.
+  static const String _keyPrefix = 'campaign:';
 
-  File _fileFor(Directory root, String id) => File('${root.path}/$id.json');
+  Future<SharedPreferences> _prefs() async =>
+      _resolved ??= _injected ?? await SharedPreferences.getInstance();
+
+  String _keyFor(String id) => '$_keyPrefix$id';
 
   @override
   Future<List<CampaignSummary>> listCampaigns() async {
-    final root = await _root();
+    final prefs = await _prefs();
     final summaries = <CampaignSummary>[];
 
-    await for (final entity in root.list()) {
-      if (entity is! File || !entity.path.endsWith('.json')) continue;
+    for (final key in prefs.getKeys()) {
+      if (!key.startsWith(_keyPrefix)) continue;
+      final raw = prefs.getString(key);
+      if (raw == null) continue;
       try {
-        final json = jsonDecode(await entity.readAsString()) as Map<String, dynamic>;
+        final json = jsonDecode(raw) as Map<String, dynamic>;
         summaries.add(Campaign.fromJson(json).summary);
       } catch (error, stack) {
         // Um save corrompido não pode impedir o jogador de abrir os outros.
-        debugPrint('Campanha ilegível em ${entity.path}: $error\n$stack');
+        debugPrint('Campanha ilegível em $key: $error\n$stack');
       }
     }
 
@@ -63,27 +68,55 @@ class LocalCampaignRepository implements CampaignRepository {
 
   @override
   Future<Campaign?> loadCampaign(String id) async {
-    final root = await _root();
-    final file = _fileFor(root, id);
-    if (!await file.exists()) return null;
-    final json = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
-    return Campaign.fromJson(json);
+    final prefs = await _prefs();
+    final raw = prefs.getString(_keyFor(id));
+    if (raw == null) return null;
+    return Campaign.fromJson(jsonDecode(raw) as Map<String, dynamic>);
   }
 
   @override
   Future<void> saveCampaign(Campaign campaign) async {
-    final root = await _root();
-    // Escreve num temporário e renomeia: se o app morrer no meio do save, o
-    // arquivo antigo continua íntegro em vez de virar JSON truncado.
-    final temp = File('${root.path}/${campaign.id}.json.tmp');
-    await temp.writeAsString(jsonEncode(campaign.toJson()), flush: true);
-    await temp.rename(_fileFor(root, campaign.id).path);
+    final prefs = await _prefs();
+    await prefs.setString(_keyFor(campaign.id), jsonEncode(campaign.toJson()));
   }
 
   @override
   Future<void> deleteCampaign(String id) async {
-    final root = await _root();
-    final file = _fileFor(root, id);
-    if (await file.exists()) await file.delete();
+    final prefs = await _prefs();
+    await prefs.remove(_keyFor(id));
+  }
+}
+
+/// Repositório em memória, para testes e para o caso de o armazenamento do
+/// dispositivo falhar. Nunca persiste — mas mantém o jogo jogável na sessão.
+class InMemoryCampaignRepository implements CampaignRepository {
+  final Map<String, String> _store = {};
+
+  @override
+  Future<List<CampaignSummary>> listCampaigns() async {
+    final summaries = _store.values
+        .map((raw) =>
+            Campaign.fromJson(jsonDecode(raw) as Map<String, dynamic>).summary)
+        .toList();
+    summaries.sort((a, b) =>
+        (b.createdAt ?? DateTime(0)).compareTo(a.createdAt ?? DateTime(0)));
+    return summaries;
+  }
+
+  @override
+  Future<Campaign?> loadCampaign(String id) async {
+    final raw = _store[id];
+    if (raw == null) return null;
+    return Campaign.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+  }
+
+  @override
+  Future<void> saveCampaign(Campaign campaign) async {
+    _store[campaign.id] = jsonEncode(campaign.toJson());
+  }
+
+  @override
+  Future<void> deleteCampaign(String id) async {
+    _store.remove(id);
   }
 }

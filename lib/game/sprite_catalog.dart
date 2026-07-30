@@ -4,6 +4,8 @@ import 'package:flame/cache.dart';
 import 'package:flame/flame.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
+import '../domain/building/building_type.dart';
+import '../domain/building/village_identity.dart';
 import '../domain/world/biome.dart';
 import '../domain/world/tile.dart';
 
@@ -79,6 +81,12 @@ class SpriteCatalog {
         .toList();
 
     final byId = {for (final m in models) m.id: m};
+
+    // O `Images` do Flame prefixa tudo com `assets/images/` por padrão. Os
+    // sprites deste projeto vivem em `assets/sprites/`, então o prefixo precisa
+    // ser reduzido a `assets/` — sem isso todo carregamento falha com
+    // "Unable to load asset: assets/images/sprites/...".
+    Flame.images.prefix = 'assets/';
     return SpriteCatalog._(byId, Flame.images);
   }
 
@@ -86,8 +94,9 @@ class SpriteCatalog {
 
   Iterable<SpriteMeta> get all => _byId.values;
 
-  /// Pré-carrega apenas os sprites que o mundo realmente usa. Carregar os 165
-  /// de uma vez desperdiça memória de textura no celular.
+  /// Pré-carrega apenas os sprites que o jogo realmente usa: chão, features do
+  /// mundo, construções e brasões. Carregar os 165 de uma vez desperdiçaria
+  /// dezenas de MB de memória de textura no celular.
   Future<void> preloadUsedSprites() async {
     final needed = <String>{};
     for (final candidates in _featureSprites.values) {
@@ -96,13 +105,29 @@ class SpriteCatalog {
     for (final candidates in _groundSprites.values) {
       needed.addAll(candidates);
     }
+    // Construções e brasões: sem isso o render do terreno no mundo procura no
+    // cache um sprite que nunca foi carregado.
+    for (final def in BuildingCatalog.all) {
+      needed.add(def.spriteId);
+    }
+    for (final emblem in VillageEmblem.values) {
+      needed.add(emblem.spriteId);
+    }
 
     final paths = needed
         .map((id) => _byId[id]?.assetPath)
         .whereType<String>()
         .toList();
     await images.loadAll(paths);
+    _loaded.addAll(paths);
   }
+
+  final Set<String> _loaded = {};
+
+  /// `true` se o sprite já está no cache de imagens. O renderizador consulta
+  /// isto antes de desenhar: `Images.fromCache` lança se o asset não foi
+  /// carregado, e um sprite faltando não pode derrubar o frame.
+  bool isLoaded(SpriteMeta meta) => _loaded.contains(meta.assetPath);
 
   /// Escolhe o sprite do chão de um tile.
   SpriteMeta? groundFor(Biome biome, int x, int y) =>

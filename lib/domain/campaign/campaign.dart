@@ -1,5 +1,6 @@
 import '../../core/seed/deterministic_random.dart';
 import '../building/plot.dart';
+import '../building/village_identity.dart';
 import '../character/attributes.dart';
 import '../character/character.dart';
 import '../economy/market.dart';
@@ -27,9 +28,13 @@ class Campaign {
     this.day = 1,
     this.createdAt,
     List<String>? journal,
+    Set<String>? completedQuests,
+    Set<String>? visitedSettlements,
   })  : _governments = governments,
         _markets = markets,
-        _journal = [...?journal];
+        _journal = [...?journal],
+        completedQuests = {...?completedQuests},
+        visitedSettlements = {...?visitedSettlements};
 
   /// Cria uma campanha nova a partir de um rótulo de seed digitado pelo
   /// jogador (ou sorteado).
@@ -93,6 +98,7 @@ class Campaign {
       governments: governments,
       markets: markets,
       createdAt: DateTime.now(),
+      visitedSettlements: {startCapital.id},
     );
   }
 
@@ -113,7 +119,7 @@ class Campaign {
       ),
       width: width,
       height: height,
-      name: 'Terreno em ${settlement.name}',
+      identity: VillageIdentity(name: 'Terreno em ${settlement.name}'),
     );
   }
 
@@ -140,7 +146,22 @@ class Campaign {
 
   final List<String> _journal;
 
+  /// Ids das quests já pagas. Guardar o id (em vez de recalcular a recompensa)
+  /// é o que garante que uma quest pague exatamente uma vez.
+  final Set<String> completedQuests;
+
+  /// Cidades onde o jogador já esteve. Alimenta o objetivo de explorar as
+  /// estradas — sem isso o jogo inteiro caberia numa capital só.
+  final Set<String> visitedSettlements;
+
   List<String> get journal => List.unmodifiable(_journal);
+
+  /// Registra a cidade atual como visitada. Chamado no reset e ao chegar de
+  /// uma viagem.
+  void markCurrentSettlementVisited() {
+    final id = currentSettlementId;
+    if (id != null) visitedSettlements.add(id);
+  }
 
   Map<String, Government> get governments => Map.unmodifiable(_governments);
 
@@ -188,6 +209,8 @@ class Campaign {
           for (final e in _markets.entries) e.key: e.value.toJson(),
         },
         'journal': _journal,
+        'completedQuests': completedQuests.toList(),
+        'visitedSettlements': visitedSettlements.toList(),
       };
 
   factory Campaign.fromJson(Map<String, dynamic> json) {
@@ -229,6 +252,12 @@ class Campaign {
       journal: ((json['journal'] as List?) ?? const [])
           .map((e) => e as String)
           .toList(),
+      completedQuests: ((json['completedQuests'] as List?) ?? const [])
+          .map((e) => e as String)
+          .toSet(),
+      visitedSettlements: ((json['visitedSettlements'] as List?) ?? const [])
+          .map((e) => e as String)
+          .toSet(),
     );
   }
 

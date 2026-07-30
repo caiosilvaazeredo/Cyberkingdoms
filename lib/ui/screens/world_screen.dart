@@ -63,6 +63,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
           gameWorld: campaign.world,
           catalog: catalog,
           playerPosition: campaign.character.position,
+          plot: campaign.plot,
           onTileTapped: (tile, data) {
             setState(() {
               _selected = tile;
@@ -71,6 +72,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
           },
         );
         game.playerPosition = campaign.character.position;
+        game.plot = campaign.plot;
 
         return Stack(
           children: [
@@ -96,6 +98,13 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                     icon: Icons.my_location,
                     onTap: () => setState(
                       () => game.focusOn(campaign.character.position),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _RoundButton(
+                    icon: Icons.home_work_outlined,
+                    onTap: () => setState(
+                      () => game.focusOn(campaign.plot.origin),
                     ),
                   ),
                   const SizedBox(height: 8),

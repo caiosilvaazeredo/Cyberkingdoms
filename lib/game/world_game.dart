@@ -5,6 +5,7 @@ import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
+import '../domain/building/plot.dart';
 import '../domain/world/coords.dart';
 import '../domain/world/tile.dart';
 import '../domain/world/world.dart' as domain;
@@ -21,6 +22,7 @@ class CyberWorldGame extends FlameGame with ScaleDetector, TapCallbacks {
     required this.gameWorld,
     required this.catalog,
     required this.playerPosition,
+    this.plot,
     this.onTileTapped,
   });
 
@@ -31,6 +33,11 @@ class CyberWorldGame extends FlameGame with ScaleDetector, TapCallbacks {
 
   /// Onde o personagem está. O renderizador desenha um marcador aqui.
   TileCoord playerPosition;
+
+  /// O terreno do jogador. Quando presente, as construções são desenhadas por
+  /// cima do terreno gerado — é assim que o jogador vê a base dele crescendo
+  /// no mundo, em vez de só na planta baixa.
+  Plot? plot;
 
   final void Function(TileCoord tile, WorldTile data)? onTileTapped;
 
@@ -120,6 +127,7 @@ class CyberWorldGame extends FlameGame with ScaleDetector, TapCallbacks {
     canvas.translate(-_cameraTarget.x, -_cameraTarget.y);
 
     _renderVisibleChunks(canvas);
+    _renderPlot(canvas);
     _renderPlayerMarker(canvas);
     _renderHighlight(canvas);
 
@@ -226,8 +234,11 @@ class CyberWorldGame extends FlameGame with ScaleDetector, TapCallbacks {
     SpriteMeta meta,
     double wx,
     double wy,
-    Color? tint,
-  ) {
+    Color? tint, {
+    double opacity = 1,
+  }) {
+    // Um sprite fora do cache lançaria e derrubaria o frame inteiro.
+    if (!catalog.isLoaded(meta)) return;
     final image = catalog.images.fromCache(meta.assetPath);
 
     // O sprite foi renderizado com o modelo centralizado; `baseY` diz onde o
@@ -241,6 +252,9 @@ class CyberWorldGame extends FlameGame with ScaleDetector, TapCallbacks {
     final dy = wy - targetHeight * meta.baseY;
 
     final paint = Paint()..filterQuality = FilterQuality.medium;
+    if (opacity < 1) {
+      paint.color = Color.fromRGBO(0, 0, 0, opacity.clamp(0.0, 1.0));
+    }
     if (tint != null) {
       // Tint sutil deixa o mesmo asset servir a vários biomas sem re-render.
       paint.colorFilter = ui.ColorFilter.mode(
@@ -266,6 +280,93 @@ class CyberWorldGame extends FlameGame with ScaleDetector, TapCallbacks {
       ..lineTo(wx - WorldMetrics.tileWidth / 2, wy)
       ..close();
     canvas.drawPath(path, Paint()..color = color);
+  }
+
+  /// Desenha o contorno do terreno e as construções sobre o mundo.
+  ///
+  /// As construções são desenhadas depois das chunks, em ordem de profundidade
+  /// própria. Isso pode fazer um prédio do terreno aparecer na frente de algo
+  /// que deveria ocultá-lo, mas o terreno é uma área pequena e contígua, e o
+  /// custo de intercalar isso na varredura de chunks não compensa.
+  void _renderPlot(Canvas canvas) {
+    final plot = this.plot;
+    if (plot == null) return;
+
+    final primary = Color(plot.identity.primaryColor);
+
+    // Contorno do lote, para o jogador achar o próprio terreno no mapa.
+    final corners = [
+      IsoProjection.tileToWorld(
+          plot.origin.x.toDouble() - 0.5, plot.origin.y.toDouble() - 0.5),
+      IsoProjection.tileToWorld(
+          plot.origin.x + plot.width - 0.5, plot.origin.y.toDouble() - 0.5),
+      IsoProjection.tileToWorld(
+          plot.origin.x + plot.width - 0.5, plot.origin.y + plot.height - 0.5),
+      IsoProjection.tileToWorld(
+          plot.origin.x.toDouble() - 0.5, plot.origin.y + plot.height - 0.5),
+    ];
+
+    final outline = Path()..moveTo(corners.first.$1, corners.first.$2);
+    for (final corner in corners.skip(1)) {
+      outline.lineTo(corner.$1, corner.$2);
+    }
+    outline.close();
+
+    canvas.drawPath(
+      outline,
+      Paint()..color = primary.withValues(alpha: 0.07),
+    );
+    canvas.drawPath(
+      outline,
+      Paint()
+        ..color = primary.withValues(alpha: 0.75)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3,
+    );
+
+    // Construções, do fundo para a frente.
+    final buildings = plot.buildings.toList()
+      ..sort((a, b) => (a.x + a.y).compareTo(b.x + b.y));
+
+    for (final building in buildings) {
+      final tile = plot.worldTileFor(building.x, building.y);
+      final terrain = gameWorld.tileAt(tile.x, tile.y);
+
+      // Ancora no centro da footprint para prédios maiores que 1x1.
+      final centerX = tile.x + (building.def.width - 1) / 2;
+      final centerY = tile.y + (building.def.height - 1) / 2;
+      final (wx, wy) = IsoProjection.tileToWorld(
+        centerX,
+        centerY,
+        elevation: terrain.elevation.toDouble(),
+      );
+
+      final meta = catalog.byId(building.def.spriteId);
+      if (meta == null) continue;
+
+      if (!building.isReady) {
+        // Obra em andamento: silhueta translúcida em âmbar.
+        _drawSprite(canvas, meta, wx, wy, const Color(0xFFFFB300), opacity: 0.45);
+        continue;
+      }
+
+      _drawSprite(
+        canvas,
+        meta,
+        wx,
+        wy,
+        building.accentColor == null ? null : Color(building.accentColor!),
+      );
+
+      // Prédio parado ganha um alerta visível de longe.
+      if (building.idle) {
+        canvas.drawCircle(
+          Offset(wx, wy - WorldMetrics.tileHeight * 0.9),
+          6,
+          Paint()..color = const Color(0xFFFF5252),
+        );
+      }
+    }
   }
 
   void _renderPlayerMarker(Canvas canvas) {

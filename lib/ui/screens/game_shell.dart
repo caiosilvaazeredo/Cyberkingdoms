@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
 import '../../state/providers.dart';
 import '../widgets/vital_bar.dart';
+import 'campaign_screen.dart';
 import 'character_screen.dart';
 import 'city_screen.dart';
 import 'market_screen.dart';
@@ -28,6 +29,7 @@ class _GameShellState extends ConsumerState<GameShell> {
 
   static const _tabs = [
     _TabSpec('Mundo', Icons.public),
+    _TabSpec('Missões', Icons.flag),
     _TabSpec('Terreno', Icons.home_work),
     _TabSpec('Cidade', Icons.apartment),
     _TabSpec('Mercado', Icons.storefront),
@@ -60,6 +62,7 @@ class _GameShellState extends ConsumerState<GameShell> {
                 index: _tab,
                 children: const [
                   WorldScreen(),
+                  CampaignScreen(),
                   PlotScreen(),
                   CityScreen(),
                   MarketScreen(),
@@ -320,6 +323,45 @@ class _Hud extends ConsumerWidget {
                 ),
               ],
             ),
+
+            if (report.completedQuests.isNotEmpty) ...[
+              const SectionHeader('Quests concluídas'),
+              for (final quest in report.completedQuests)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.check_circle,
+                          size: 15, color: CyberColors.green),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              quest.title,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: CyberColors.green,
+                              ),
+                            ),
+                            if (!quest.reward.isEmpty)
+                              Text(
+                                quest.reward.summary,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: CyberColors.amber,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
 
             if (report.events.isNotEmpty) ...[
               const SectionHeader('Acontecimentos'),

@@ -16,9 +16,10 @@ dependencies:
   # Estado.
   flutter_riverpod: ^2.6.1
 
-  # Persistencia local (offline-first). O terreno nao e salvo: ele e uma funcao
-  # pura da seed, entao so o estado do jogador/servidor vai para disco.
-  path_provider: ^2.1.5
+  # Persistencia local (offline-first). Funciona em todas as plataformas,
+  # inclusive web — `path_provider` nao tem implementacao para navegador e
+  # lanca MissingPluginException la.
+  shared_preferences: ^2.3.5
 
   # Backend (projeto cyberkingdoms-f1142). O app roda offline enquanto o
   # firebase_options.dart nao for gerado por `flutterfire configure`.
@@ -34,12 +35,29 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
+  # ATENCAO: a declaracao de assets do Flutter NAO e recursiva. Cada
+  # subdiretorio precisa da propria linha — declarar so `assets/ui/` deixa
+  # `assets/ui/bars/` de fora e as imagens falham em runtime.
   assets:
     - assets/sprites/
-    - assets/ui/
     - assets/data/
+    - assets/ui/
+    - assets/ui/bars/
+    - assets/ui/panels/
+    - assets/ui/hud/
 
   fonts:
+    # Fonte de texto da interface. Kenney Future cobre todo o alfabeto latino
+    # com acentos, então serve para o português sem cair em fallback do sistema
+    # — importante porque na web um fallback ausente renderiza texto invisível.
+    - family: KenneyFuture
+      fonts:
+        - asset: assets/fonts/KenneyFuture.ttf
+    - family: KenneyFutureNarrow
+      fonts:
+        - asset: assets/fonts/KenneyFutureNarrow.ttf
+    # Fonte de ICONES, nao de texto: so tem glifos de botoes de controle na
+    # area de uso privado (U+E000+). Nunca use como fontFamily global.
     - family: KenneyInput
       fonts:
         - asset: assets/fonts/kenney_input_generic.ttf

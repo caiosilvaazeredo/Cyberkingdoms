@@ -8,6 +8,7 @@ import '../politics/government.dart';
 import '../survival/daily_activity.dart';
 import '../survival/survival_tables.dart';
 import 'campaign.dart';
+import 'quest.dart';
 
 /// O reset diário da meia-noite — o coração do jogo.
 ///
@@ -128,6 +129,17 @@ class DailyTick {
       }
     }
 
+    // --- 5b. Quests -------------------------------------------------------
+    // Depois de tudo: a promoção e a produção do dia contam para os objetivos.
+    campaign.markCurrentSettlementVisited();
+    final claimedQuests = QuestLog(campaign).claimNewlyCompleted();
+    for (final quest in claimedQuests) {
+      events.add(
+        'QUEST CONCLUÍDA: ${quest.title}'
+        '${quest.reward.isEmpty ? '' : ' — recompensa: ${quest.reward.summary}'}.',
+      );
+    }
+
     // --- 6. Avança o calendário --------------------------------------------
     campaign.day++;
     // Energia volta ao base todo reset; energéticos somam por cima no dia.
@@ -144,6 +156,7 @@ class DailyTick {
       outcome: outcome,
       combat: roadCombat,
       produced: produced,
+      completedQuests: claimedQuests,
     );
   }
 
@@ -383,6 +396,7 @@ class TickReport {
     required this.outcome,
     this.combat,
     this.produced = const {},
+    this.completedQuests = const [],
   });
 
   /// O dia que acabou de ser fechado.
@@ -393,4 +407,7 @@ class TickReport {
   final DayEndOutcome? outcome;
   final CombatReport? combat;
   final Map<ItemId, int> produced;
+
+  /// Quests que fecharam neste reset, com a recompensa já paga.
+  final List<Quest> completedQuests;
 }
