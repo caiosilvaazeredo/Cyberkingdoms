@@ -152,12 +152,12 @@ void main() {
 
       for (final label in [
         'Mundo',
-        'Missões',
+        'Quests',
         'Terreno',
         'Cidade',
         'Mercado',
         'Ficha',
-        'Política',
+        'Poder',
       ]) {
         expect(find.text(label), findsWidgets, reason: 'aba $label');
       }
@@ -190,7 +190,7 @@ void main() {
       );
       await pumpFrames(tester);
 
-      await tester.tap(find.text('Missões'));
+      await tester.tap(find.text('Quests'));
       await pumpFrames(tester);
 
       expect(find.text('CAMPANHA PRINCIPAL'), findsOneWidget);

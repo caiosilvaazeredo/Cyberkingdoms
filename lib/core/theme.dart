@@ -103,7 +103,14 @@ abstract final class CyberTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+          // `fontFamily` explícito: um TextStyle dentro de ButtonStyle
+          // substitui o do tema em vez de herdar dele, e sem isto todo botão
+          // do jogo renderiza na fonte padrão da plataforma.
+          textStyle: const TextStyle(
+            fontFamily: bodyFont,
+            fontWeight: FontWeight.w700,
+            fontSize: 15,
+          ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -113,6 +120,33 @@ abstract final class CyberTheme {
           side: const BorderSide(color: CyberColors.outline),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
+          ),
+          textStyle: const TextStyle(
+            fontFamily: bodyFont,
+            fontWeight: FontWeight.w700,
+            fontSize: 14,
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: CyberColors.cyan,
+          textStyle: const TextStyle(
+            fontFamily: bodyFont,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+      // Sete abas não cabem em 412px com rótulo em tamanho normal: os textos
+      // quebravam em duas linhas ("MISSÕ / ES"). Fonte menor e uma linha só.
+      navigationBarTheme: NavigationBarThemeData(
+        labelTextStyle: WidgetStateProperty.all(
+          const TextStyle(
+            fontFamily: bodyFont,
+            fontSize: 9,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.2,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ),

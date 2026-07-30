@@ -20,7 +20,7 @@ class _AudioToggleButtonState extends State<AudioToggleButton> {
   @override
   Widget build(BuildContext context) {
     final audio = AudioService.instance;
-    final anyOn = audio.sfxEnabled || audio.musicEnabled || audio.voiceEnabled;
+    final anyOn = audio.sfxEnabled || audio.musicEnabled || audio.combatEnabled;
 
     return Tooltip(
       message: anyOn ? 'Silenciar (segure para ajustar)' : 'Ativar som',
@@ -32,7 +32,7 @@ class _AudioToggleButtonState extends State<AudioToggleButton> {
           } else {
             await audio.setSfxEnabled(true);
             await audio.setMusicEnabled(true);
-            await audio.setVoiceEnabled(true);
+            await audio.setCombatEnabled(true);
             audio.play(Sfx.tap);
           }
           if (mounted) setState(() {});
@@ -54,7 +54,7 @@ class _AudioToggleButtonState extends State<AudioToggleButton> {
   }
 }
 
-/// Folha com os três canais de áudio e o volume geral.
+/// Folha com os três canais de áudio, o volume geral e o da trilha.
 Future<void> showAudioSettings(BuildContext context) async {
   await showModalBottomSheet<void>(
     context: context,
@@ -97,7 +97,7 @@ class _AudioSettingsSheetState extends State<_AudioSettingsSheet> {
           const SizedBox(height: 4),
           const Text(
             'Os três canais são independentes: dá para manter o retorno dos '
-            'cliques e desligar só a locução de combate.',
+            'cliques e desligar só a trilha, ou só o combate.',
             style: TextStyle(fontSize: 11, color: CyberColors.textSecondary),
           ),
 
@@ -141,8 +141,8 @@ class _AudioSettingsSheetState extends State<_AudioSettingsSheet> {
           ),
           _Channel(
             icon: Icons.music_note,
-            label: 'Jingles',
-            description: 'Quest concluída, promoção, fim de dia.',
+            label: 'Trilha e jingles',
+            description: 'Música de fundo em loop e marcos de conquista.',
             value: audio.musicEnabled,
             onChanged: (v) async {
               await audio.setMusicEnabled(v);
@@ -150,14 +150,44 @@ class _AudioSettingsSheetState extends State<_AudioSettingsSheet> {
               if (mounted) setState(() {});
             },
           ),
+          if (audio.musicEnabled)
+            Padding(
+              padding: const EdgeInsets.only(left: 8, bottom: 8),
+              child: Row(
+                children: [
+                  const SizedBox(
+                    width: 90,
+                    child: Text('Volume da trilha',
+                        style: TextStyle(fontSize: 10)),
+                  ),
+                  Expanded(
+                    child: Slider(
+                      value: audio.musicVolume,
+                      divisions: 20,
+                      label: '${(audio.musicVolume * 100).round()}%',
+                      onChanged: (v) =>
+                          setState(() => audio.setMusicVolume(v)),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 40,
+                    child: Text(
+                      '${(audio.musicVolume * 100).round()}%',
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           _Channel(
-            icon: Icons.record_voice_over,
-            label: 'Locução',
-            description: 'Narração dos combates de estrada.',
-            value: audio.voiceEnabled,
+            icon: Icons.bolt,
+            label: 'Combate',
+            description: 'Alertas, impactos e o som da morte permanente.',
+            value: audio.combatEnabled,
             onChanged: (v) async {
-              await audio.setVoiceEnabled(v);
-              if (v) audio.playVoice(Voice.fight);
+              await audio.setCombatEnabled(v);
+              if (v) audio.playCombat(CombatSfx.impact);
               if (mounted) setState(() {});
             },
           ),

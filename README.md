@@ -22,11 +22,12 @@ biomas, 5 Capitais, 15 Satélites e a malha de estradas PvP que liga tudo.
 | Campanha principal com 17 quests | Completo |
 | Combate determinístico | Completo |
 | Política, eleições e rebeliões | Completo |
-| Áudio (efeitos, jingles, locução) | Completo |
+| Áudio: trilha em loop, efeitos e combate | Completo |
 | Multiplayer real (Firestore) | **Pendente** — ver "Backend" |
 
-163 testes automatizados cobrindo determinismo, balanceamento, regras de
-construção, quests, persistência e navegação entre telas.
+242 testes automatizados cobrindo determinismo, balanceamento, regras de
+construção, quests, persistência, navegação, layout em cinco tamanhos de tela e
+capturas de tela versionadas.
 
 ---
 
@@ -49,6 +50,7 @@ lib/
   ui/             Telas e widgets
 tools/
   sprite-renderer/  Pipeline GLB → sprite isométrico
+  audio-synth/      Síntese da trilha e dos efeitos de combate
 ```
 
 ### Duas decisões que sustentam o resto
@@ -86,16 +88,33 @@ pré-renderizados em projeção isométrica 2:1 pelo pipeline em
 | UI Pack Adventure | Ícones de minimapa e bússola |
 | Input Prompts | Ícones de toque |
 | UI Audio | Cliques, toggles e navegação |
-| RPG Audio | Moedas, construção, viagem, passos, combate |
+| RPG Audio | Moedas, construção, viagem, passos |
 | Music Jingles | Quest concluída, promoção, obra pronta, fim de dia |
-| Voice-over: Fighter | Narração dos combates de estrada |
+
+A **trilha de fundo** e os **efeitos de combate** não vêm de pack: são
+sintetizados por `tools/audio-synth/synth.py`. O Voice-over Pack: Fighter foi
+descartado — a locução de fliperama ("FIGHT!", "YOU WIN!") destoava do tom do
+GDD, que é economia fria e sobrevivência, não torneio.
 
 ### Áudio
 
-Três canais independentes — **efeitos**, **jingles** e **locução** — cada um
-desligável em separado, com volume geral. O controle fica no HUD, não enterrado
-num menu: som em jogo de celular precisa ser silenciável no instante em que
-incomoda.
+Três canais independentes — **efeitos**, **trilha/jingles** e **combate** —
+cada um desligável em separado, com volume geral e volume próprio da trilha. O
+controle fica no HUD, não enterrado num menu: som em jogo de celular precisa ser
+silenciável no instante em que incomoda.
+
+Três trilhas em loop, trocadas por contexto e não por tela — alternar a música a
+cada aba chamaria atenção para a navegação em vez do mundo:
+
+| Contexto | Trilha |
+|---|---|
+| Menu, cidade, mercado, política | `city` — 84 BPM, sem percussão, escura |
+| Mundo aberto e terreno | `world` — 96 BPM, pulso constante |
+| Estrada e combate | `tension` — 118 BPM, baixo insistente |
+
+Os loops fecham dobrando a cauda de volta no início (`wrap_tail`): um loop
+musicalmente exato ainda estala se o release do pad e a realimentação do delay
+forem cortados na emenda.
 
 O `AudioService` **nunca lança**. Se um arquivo faltar, se o navegador bloquear
 a reprodução antes do primeiro gesto do usuário, ou se o dispositivo não tiver
@@ -114,10 +133,10 @@ empacotado ficou sem uso.
 | Demolir | rangido |
 | Viajar | porta abrindo |
 | Andar no mundo | passos alternados |
-| Emboscada na estrada | golpe + locução de vitória/derrota |
+| Emboscada na estrada | alerta seco + impacto + confirmação |
 | Quest concluída | jingle chiptune |
 | Promoção de nível | jingle chiptune |
-| Morte permanente | jingle grave + "game over" |
+| Morte permanente | drone sub que colapsa em 2,6s |
 
 ---
 
@@ -127,7 +146,7 @@ empacotado ficou sem uso.
 flutter pub get
 flutter run -d chrome   # navegador (mais rápido para ver funcionando)
 flutter run             # Android / iOS
-flutter test            # 154 testes
+flutter test            # 242 testes
 ```
 
 Requer Flutter 3.35+ / Dart 3.9+.

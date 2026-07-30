@@ -96,27 +96,62 @@ enum Jingle {
   final String asset;
 }
 
-/// Locuções, usadas só no combate. Vêm do Voice-over Pack: Fighter, que tem
-/// entonação de jogo de luta — combina com o PvP de estrada, que é o momento
-/// mais tenso do ciclo diário.
-enum Voice {
-  ambush('voice/prepare_yourself.ogg'),
-  fight('voice/fight.ogg'),
-  round('voice/round_1.ogg'),
-  win('voice/you_win.ogg'),
-  lose('voice/you_lose.ogg'),
-  flawless('voice/flawless_victory.ogg'),
-  gameOver('voice/game_over.ogg');
+/// Efeitos de combate — sintetizados, não gravados.
+///
+/// A primeira versão usava o Voice-over Pack: Fighter, com locução de jogo de
+/// luta de fliperama ("FIGHT!", "YOU WIN!"). Destoava do tom do jogo: o GDD
+/// descreve economia fria, sobrevivência e política, não um torneio. Estes
+/// sons são gerados por `tools/audio-synth/synth.py` — serra desafinada,
+/// sub-bass e ruído filtrado.
+enum CombatSfx {
+  /// Emboscada detectada na estrada.
+  alert('combat/alert.ogg'),
 
-  const Voice(this.asset);
+  /// Golpe comum.
+  impact('combat/impact.ogg'),
+
+  /// Golpe crítico.
+  critical('combat/critical.ogg'),
+
+  /// Você venceu o encontro.
+  victory('combat/victory.ogg'),
+
+  /// Você perdeu o encontro.
+  defeat('combat/defeat.ogg'),
+
+  /// Morte permanente por abandono.
+  death('combat/death.ogg'),
+
+  /// Bipe neutro de terminal, para confirmações.
+  scan('combat/scan.ogg');
+
+  const CombatSfx(this.asset);
+  final String asset;
+}
+
+/// Trilhas de fundo em loop.
+///
+/// A troca é por contexto, não por tela: alternar a música a cada aba deixaria
+/// o jogo agitado e chamaria atenção para a navegação em vez do mundo.
+enum MusicTrack {
+  /// Menu, cidade, mercado e política. Lenta e sombria.
+  city('music/city.ogg'),
+
+  /// Exploração do mundo aberto e do terreno. Pulso constante.
+  world('music/world.ogg'),
+
+  /// Estrada e combate. Mais rápida, baixo insistente.
+  tension('music/tension.ogg');
+
+  const MusicTrack(this.asset);
   final String asset;
 }
 
 /// Toca o áudio do jogo.
 ///
-/// Três canais independentes — efeitos, jingles e voz — porque são incômodos
-/// muito diferentes: quem se irrita com a locução de combate não
-/// necessariamente quer perder o feedback tátil dos cliques.
+/// Três canais independentes — efeitos de interface, trilha/jingles e combate
+/// — porque incomodam de formas diferentes: quem se cansa da música de fundo
+/// não necessariamente quer perder o retorno tátil dos cliques.
 ///
 /// **Nunca lança.** Áudio é acessório: se um arquivo faltar, se a plataforma
 /// bloquear a reprodução antes do primeiro gesto do usuário (regra dos
@@ -128,20 +163,37 @@ class AudioService {
 
   static const _keySfx = 'audio.sfx';
   static const _keyMusic = 'audio.music';
-  static const _keyVoice = 'audio.voice';
+  static const _keyCombat = 'audio.combat';
+  static const _keyMusicVolume = 'audio.musicVolume';
   static const _keyVolume = 'audio.volume';
 
   bool _sfxEnabled = true;
   bool _musicEnabled = true;
-  bool _voiceEnabled = true;
+  bool _combatEnabled = true;
   double _masterVolume = 0.7;
+
+  /// A trilha fica bem abaixo dos efeitos: é fundo, não evento.
+  double _musicVolume = 0.35;
 
   bool _ready = false;
 
+  /// Interruptor geral. Quando `false`, todo método vira no-op.
+  ///
+  /// Existe para os testes: o `audioplayers` abre canais de evento nativos com
+  /// nome dinâmico (um UUID por player), que não podem ser mocados por nome e
+  /// lançam `MissingPluginException` assíncrona — o `flutter_test` conta isso
+  /// como falha do teste que estava rodando, mesmo o app tratando o erro.
+  /// Silenciar na raiz é mais honesto do que espalhar `try/catch` nos testes.
+  bool _enabled = true;
+
+  /// Desliga o áudio por completo. Chamado no `flutter_test_config.dart`.
+  void disableForTests() => _enabled = false;
+
   bool get sfxEnabled => _sfxEnabled;
   bool get musicEnabled => _musicEnabled;
-  bool get voiceEnabled => _voiceEnabled;
+  bool get combatEnabled => _combatEnabled;
   double get masterVolume => _masterVolume;
+  double get musicVolume => _musicVolume;
 
   /// `true` quando os arquivos já foram carregados em cache.
   bool get isReady => _ready;
@@ -151,12 +203,14 @@ class AudioService {
   /// Deve ser chamado no boot, mas o jogo funciona sem: sem pré-carga, o
   /// primeiro toque de cada som tem uma latência pequena.
   Future<void> initialize() async {
+    if (!_enabled) return;
     try {
       final prefs = await SharedPreferences.getInstance();
       _sfxEnabled = prefs.getBool(_keySfx) ?? true;
       _musicEnabled = prefs.getBool(_keyMusic) ?? true;
-      _voiceEnabled = prefs.getBool(_keyVoice) ?? true;
+      _combatEnabled = prefs.getBool(_keyCombat) ?? true;
       _masterVolume = prefs.getDouble(_keyVolume) ?? 0.7;
+      _musicVolume = prefs.getDouble(_keyMusicVolume) ?? 0.35;
     } catch (error) {
       debugPrint('Preferências de áudio indisponíveis: $error');
     }
@@ -165,7 +219,7 @@ class AudioService {
       await FlameAudio.audioCache.loadAll([
         for (final sfx in Sfx.values) sfx.asset,
         for (final jingle in Jingle.values) jingle.asset,
-        for (final voice in Voice.values) voice.asset,
+        for (final sfx in CombatSfx.values) sfx.asset,
       ]);
       _ready = true;
     } catch (error) {
@@ -183,40 +237,130 @@ class AudioService {
   Future<void> setMusicEnabled(bool value) async {
     _musicEnabled = value;
     await _persist(_keyMusic, value);
+    if (!_enabled) return;
+    if (value) {
+      final track = _currentTrack;
+      if (track != null) await playMusic(track);
+    } else {
+      try {
+        await FlameAudio.bgm.stop();
+      } catch (_) {
+        // Nada tocando.
+      }
+    }
   }
 
-  Future<void> setVoiceEnabled(bool value) async {
-    _voiceEnabled = value;
-    await _persist(_keyVoice, value);
+  Future<void> setCombatEnabled(bool value) async {
+    _combatEnabled = value;
+    await _persist(_keyCombat, value);
+  }
+
+  Future<void> setMusicVolume(double value) async {
+    _musicVolume = value.clamp(0.0, 1.0);
+    await _persist(_keyMusicVolume, _musicVolume);
+    await _applyMusicVolume();
+  }
+
+  Future<void> _applyMusicVolume() async {
+    if (!_enabled) return;
+    try {
+      await FlameAudio.bgm.audioPlayer
+          .setVolume((_musicVolume * _masterVolume).clamp(0.0, 1.0));
+    } catch (_) {
+      // Sem trilha tocando não há volume a ajustar.
+    }
   }
 
   Future<void> setMasterVolume(double value) async {
     _masterVolume = value.clamp(0.0, 1.0);
     await _persist(_keyVolume, _masterVolume);
+    await _applyMusicVolume();
   }
 
   /// Silencia tudo de uma vez.
   Future<void> muteAll() async {
     await setSfxEnabled(false);
     await setMusicEnabled(false);
-    await setVoiceEnabled(false);
+    await setCombatEnabled(false);
   }
 
   void play(Sfx sfx, {double volume = 1.0}) {
-    if (!_sfxEnabled) return;
+    if (!_enabled || !_sfxEnabled) return;
     _fire(sfx.asset, volume);
   }
 
   void playJingle(Jingle jingle, {double volume = 1.0}) {
-    if (!_musicEnabled) return;
+    if (!_enabled || !_musicEnabled) return;
     // Jingles são mais altos que os efeitos na masterização original da
     // Kenney; abaixamos para não estourar sobre o resto.
     _fire(jingle.asset, volume * 0.55);
   }
 
-  void playVoice(Voice voice, {double volume = 1.0}) {
-    if (!_voiceEnabled) return;
-    _fire(voice.asset, volume * 0.85);
+  void playCombat(CombatSfx sfx, {double volume = 1.0}) {
+    if (!_enabled || !_combatEnabled) return;
+    _fire(sfx.asset, volume * 0.9);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Trilha de fundo
+  // ---------------------------------------------------------------------------
+
+  MusicTrack? _currentTrack;
+
+  /// A faixa tocando agora, ou `null` em silêncio.
+  MusicTrack? get currentTrack => _currentTrack;
+
+  /// Troca a trilha de fundo. Repetir a faixa já tocando é ignorado — sem
+  /// isso, cada rebuild da tela reiniciaria a música do zero.
+  Future<void> playMusic(MusicTrack track) async {
+    if (!_enabled) return;
+    if (!_musicEnabled) {
+      _currentTrack = track;
+      return;
+    }
+    if (_currentTrack == track && FlameAudio.bgm.isPlaying) return;
+
+    _currentTrack = track;
+    try {
+      await FlameAudio.bgm.stop();
+      await FlameAudio.bgm.play(
+        track.asset,
+        volume: (_musicVolume * _masterVolume).clamp(0.0, 1.0),
+      );
+    } catch (error) {
+      debugPrint('Trilha indisponível: $error');
+    }
+  }
+
+  Future<void> stopMusic() async {
+    _currentTrack = null;
+    if (!_enabled) return;
+    try {
+      await FlameAudio.bgm.stop();
+    } catch (error) {
+      debugPrint('Não foi possível parar a trilha: $error');
+    }
+  }
+
+  /// Pausa a trilha sem esquecer qual estava tocando — usado quando o app vai
+  /// para segundo plano.
+  Future<void> pauseMusic() async {
+    try {
+      await FlameAudio.bgm.pause();
+    } catch (_) {
+      // Pausar algo que não está tocando não é erro.
+    }
+  }
+
+  Future<void> resumeMusic() async {
+    if (!_musicEnabled) return;
+    final track = _currentTrack;
+    if (track == null) return;
+    try {
+      await FlameAudio.bgm.resume();
+    } catch (_) {
+      await playMusic(track);
+    }
   }
 
   /// Alterna entre dois passos, para caminhar não soar mecânico.
@@ -231,7 +375,7 @@ class AudioService {
     if (effective <= 0) return;
     // Sem `await`: som nunca deve segurar a UI. Erros são engolidos porque
     // áudio ausente não pode virar exceção de gameplay.
-    unawaited(FlameAudio.play(asset, volume: effective));
+    _fireAndForget(FlameAudio.play(asset, volume: effective));
   }
 
   Future<void> _persist(String key, Object value) async {
@@ -246,8 +390,16 @@ class AudioService {
 }
 
 /// Dispara um future sem esperar e sem deixar o erro escapar.
-void unawaited(Future<void> future) {
-  future.catchError((Object error) {
-    debugPrint('Áudio falhou: $error');
-  });
+///
+/// Usa `then(..., onError:)` em vez de `catchError`. A diferença importa:
+/// `catchError` exige que o handler devolva um valor do tipo do future, e
+/// `FlameAudio.play` devolve `Future<AudioPlayer>`. Tipar o parâmetro como
+/// `Future<void>` esconde isso do analisador mas estoura em runtime com
+/// "The error handler of Future.catchError must return a value" — que foi
+/// exatamente o que quebrou a primeira versão.
+void _fireAndForget(Future<Object?> future) {
+  future.then<void>(
+    (_) {},
+    onError: (Object error) => debugPrint('Áudio falhou: $error'),
+  );
 }

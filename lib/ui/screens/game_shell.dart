@@ -31,12 +31,12 @@ class _GameShellState extends ConsumerState<GameShell> {
 
   static const _tabs = [
     _TabSpec('Mundo', Icons.public),
-    _TabSpec('Missões', Icons.flag),
+    _TabSpec('Quests', Icons.flag),
     _TabSpec('Terreno', Icons.home_work),
     _TabSpec('Cidade', Icons.apartment),
     _TabSpec('Mercado', Icons.storefront),
     _TabSpec('Ficha', Icons.badge),
-    _TabSpec('Política', Icons.account_balance),
+    _TabSpec('Poder', Icons.account_balance),
   ];
 
   @override
@@ -118,112 +118,126 @@ class _Hud extends ConsumerWidget {
       campaign.currentSettlementId ?? character.homeSettlementId,
     );
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-      decoration: const BoxDecoration(
-        color: CyberColors.surface,
-        border: Border(bottom: BorderSide(color: CyberColors.outline)),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      character.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
+    // O HUD é a única parte do app que limita a escala de texto do sistema.
+    //
+    // Ele é um painel denso e de altura fixa: nome, cidade, créditos, dia,
+    // três barras vitais e o botão de reset dividem uma faixa estreita. Com a
+    // fonte do sistema em 1.6x a linha estoura e o botão de fechar o dia sai
+    // da tela. O resto do jogo — quests, mercado, catálogo — continua
+    // respeitando a preferência de acessibilidade integralmente, que é onde
+    // ela realmente importa para leitura.
+    return MediaQuery.withClampedTextScaling(
+      maxScaleFactor: 1.15,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+        decoration: const BoxDecoration(
+          color: CyberColors.surface,
+          border: Border(bottom: BorderSide(color: CyberColors.outline)),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        character.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      character.isTravelling
-                          ? 'Em trânsito · ${character.travelDaysRemaining}d restante(s)'
-                          : settlement?.name ?? 'Zona selvagem',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: character.isTravelling
-                            ? CyberColors.amber
-                            : CyberColors.textSecondary,
+                      Text(
+                        character.isTravelling
+                            ? 'Em trânsito · ${character.travelDaysRemaining}d restante(s)'
+                            : settlement?.name ?? 'Zona selvagem',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: character.isTravelling
+                              ? CyberColors.amber
+                              : CyberColors.textSecondary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              StatChip(
-                label: '¢',
-                value: '${character.credits}',
-                color: CyberColors.amber,
-              ),
-              const SizedBox(width: 6),
-              StatChip(
-                label: 'dia',
-                value: '${campaign.day}',
-                color: CyberColors.violet,
-              ),
-              const SizedBox(width: 4),
-              const AudioToggleButton(),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: VitalBar(
-                  label: 'FOME',
-                  value: character.hunger,
-                  max: 100,
-                  compact: true,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: VitalBar(
-                  label: 'SEDE',
-                  value: character.thirst,
-                  max: 100,
-                  compact: true,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: VitalBar(
-                  label: 'HP',
-                  value: character.hp,
-                  max: character.maxHp,
-                  color: CyberColors.pink,
-                  compact: true,
-                ),
-              ),
-              const SizedBox(width: 12),
-              SizedBox(
-                height: 34,
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: CyberColors.pink,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    minimumSize: Size.zero,
-                    textStyle: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                    ),
+                    ],
                   ),
-                  onPressed: () {
-                    AudioService.instance.play(Sfx.tap);
-                    _endDay(context, ref);
-                  },
-                  child: const Text('RESET'),
                 ),
-              ),
-            ],
-          ),
-        ],
+                StatChip(
+                  label: '¢',
+                  value: '${character.credits}',
+                  color: CyberColors.amber,
+                ),
+                const SizedBox(width: 6),
+                StatChip(
+                  label: 'dia',
+                  value: '${campaign.day}',
+                  color: CyberColors.violet,
+                ),
+                const SizedBox(width: 4),
+                const AudioToggleButton(),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: VitalBar(
+                    label: 'FOME',
+                    value: character.hunger,
+                    max: 100,
+                    compact: true,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: VitalBar(
+                    label: 'SEDE',
+                    value: character.thirst,
+                    max: 100,
+                    compact: true,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: VitalBar(
+                    label: 'HP',
+                    value: character.hp,
+                    max: character.maxHp,
+                    color: CyberColors.pink,
+                    compact: true,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                SizedBox(
+                  height: 34,
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: CyberColors.pink,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      minimumSize: Size.zero,
+                      // `fontFamily` explícito pelo mesmo motivo do tema: um
+                      // TextStyle em ButtonStyle substitui, não herda.
+                      textStyle: const TextStyle(
+                        fontFamily: CyberTheme.bodyFont,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    onPressed: () {
+                      AudioService.instance.play(Sfx.tap);
+                      _endDay(context, ref);
+                    },
+                    child: const Text('RESET'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -275,7 +289,7 @@ class _Hud extends ConsumerWidget {
                         line.upkeep.hunger == 0
                             ? '—'
                             : '${line.upkeep.hunger > 0 ? '-' : '+'}'
-                                '${line.upkeep.hunger.abs()}',
+                                  '${line.upkeep.hunger.abs()}',
                         textAlign: TextAlign.right,
                         style: const TextStyle(
                           fontSize: 12,
@@ -289,7 +303,7 @@ class _Hud extends ConsumerWidget {
                         line.upkeep.thirst == 0
                             ? '—'
                             : '${line.upkeep.thirst > 0 ? '-' : '+'}'
-                                '${line.upkeep.thirst.abs()}',
+                                  '${line.upkeep.thirst.abs()}',
                         textAlign: TextAlign.right,
                         style: const TextStyle(
                           fontSize: 12,
@@ -342,8 +356,11 @@ class _Hud extends ConsumerWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.check_circle,
-                          size: 15, color: CyberColors.green),
+                      const Icon(
+                        Icons.check_circle,
+                        size: 15,
+                        color: CyberColors.green,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Column(
@@ -381,8 +398,10 @@ class _Hud extends ConsumerWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('› ',
-                          style: TextStyle(color: CyberColors.pink)),
+                      const Text(
+                        '› ',
+                        style: TextStyle(color: CyberColors.pink),
+                      ),
                       Expanded(
                         child: Text(
                           event,
@@ -458,7 +477,10 @@ class _DeathScreen extends ConsumerWidget {
               const SizedBox(height: 8),
               Text(
                 'Sobreviveu ${campaign?.day ?? 0} dias.',
-                style: const TextStyle(color: CyberColors.outline, fontSize: 12),
+                style: const TextStyle(
+                  color: CyberColors.outline,
+                  fontSize: 12,
+                ),
               ),
               const SizedBox(height: 32),
               FilledButton(

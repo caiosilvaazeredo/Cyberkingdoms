@@ -54,7 +54,8 @@ flutter:
     - assets/audio/ui/
     - assets/audio/game/
     - assets/audio/jingles/
-    - assets/audio/voice/
+    - assets/audio/combat/
+    - assets/audio/music/
 
   fonts:
     # Fonte de texto da interface. Kenney Future cobre todo o alfabeto latino

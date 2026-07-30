@@ -72,6 +72,7 @@ class CampaignController extends StateNotifier<Campaign?> {
     _today = const DailyActivity();
     lastReport = null;
     state = campaign;
+    syncMusic();
     await _repository.saveCampaign(campaign);
   }
 
@@ -81,6 +82,7 @@ class CampaignController extends StateNotifier<Campaign?> {
     _today = const DailyActivity();
     lastReport = null;
     state = campaign;
+    syncMusic();
     return true;
   }
 
@@ -88,6 +90,7 @@ class CampaignController extends StateNotifier<Campaign?> {
     state = null;
     _today = const DailyActivity();
     lastReport = null;
+    syncMusic();
   }
 
   Future<void> save() async {
@@ -168,6 +171,7 @@ class CampaignController extends StateNotifier<Campaign?> {
     character.travelDaysRemaining = road.travelDays;
     final destination = campaign.world.layout.byId(destinationId);
     AudioService.instance.play(Sfx.travelStart);
+    AudioService.instance.playCombat(CombatSfx.alert, volume: 0.5);
     campaign.log(
       'Partiu para ${destination?.name ?? destinationId} '
       '(${road.travelDays} dia(s), risco ${(road.danger * 100).round()}%).',
@@ -455,6 +459,7 @@ class CampaignController extends StateNotifier<Campaign?> {
     if (!campaign.world.tileAt(tile.x, tile.y).isWalkable) return;
     campaign.character.position = tile;
     AudioService.instance.playStep();
+    syncMusic();
     _bump();
   }
 
@@ -479,6 +484,29 @@ class CampaignController extends StateNotifier<Campaign?> {
     return true;
   }
 
+  /// Ajusta a trilha de fundo ao contexto atual.
+  ///
+  /// Chamado sempre que o estado muda de forma relevante: entrar numa
+  /// campanha, sair para a estrada, chegar num destino.
+  void syncMusic() {
+    final campaign = state;
+    final audio = AudioService.instance;
+
+    if (campaign == null) {
+      unawaited(audio.playMusic(MusicTrack.city));
+      return;
+    }
+    if (campaign.character.isTravelling) {
+      unawaited(audio.playMusic(MusicTrack.tension));
+      return;
+    }
+    unawaited(audio.playMusic(
+      campaign.currentSettlementId == null
+          ? MusicTrack.world
+          : MusicTrack.city,
+    ));
+  }
+
   /// Toca o áudio correspondente ao que aconteceu no reset.
   ///
   /// A ordem importa: morte cala tudo o mais, e uma quest concluída é mais
@@ -487,16 +515,14 @@ class CampaignController extends StateNotifier<Campaign?> {
     final audio = AudioService.instance;
 
     if (campaign.character.dead) {
-      audio.playVoice(Voice.gameOver);
-      audio.playJingle(Jingle.defeat);
+      audio.playCombat(CombatSfx.death);
       return;
     }
 
     if (report.combat case final combat?) {
-      audio.play(combat.rounds > 6 ? Sfx.hit : Sfx.slash);
-      audio.playVoice(
-        combat.winnerId == campaign.character.id ? Voice.win : Voice.lose,
-      );
+      final won = combat.winnerId == campaign.character.id;
+      audio.playCombat(combat.wasLong ? CombatSfx.critical : CombatSfx.impact);
+      audio.playCombat(won ? CombatSfx.victory : CombatSfx.defeat);
       return;
     }
 
@@ -527,6 +553,7 @@ class CampaignController extends StateNotifier<Campaign?> {
 
     final report = const DailyTick().run(campaign, _today);
     _announce(report, campaign);
+    syncMusic();
     lastReport = report;
     _today = const DailyActivity();
     _bump();

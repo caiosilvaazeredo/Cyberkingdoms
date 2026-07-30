@@ -35,11 +35,22 @@ void main() {
       }
     });
 
-    test('toda locução aponta para um arquivo real', () {
-      for (final voice in Voice.values) {
-        final file = File('assets/audio/${voice.asset}');
+    test('todo efeito de combate aponta para um arquivo real', () {
+      for (final sfx in CombatSfx.values) {
+        final file = File('assets/audio/${sfx.asset}');
         expect(file.existsSync(), isTrue,
-            reason: '${voice.name} -> ${voice.asset} não existe');
+            reason: '${sfx.name} -> ${sfx.asset} não existe');
+      }
+    });
+
+    test('toda trilha aponta para um arquivo real e é longa o bastante', () {
+      for (final track in MusicTrack.values) {
+        final file = File('assets/audio/${track.asset}');
+        expect(file.existsSync(), isTrue,
+            reason: '${track.name} -> ${track.asset} não existe');
+        // Um loop curto demais fica repetitivo rápido demais.
+        expect(file.lengthSync(), greaterThan(50 * 1024),
+            reason: '${track.name} parece curta demais para um loop');
       }
     });
 
@@ -52,7 +63,7 @@ void main() {
           .map((e) => e.toString())
           .toSet();
 
-      for (final folder in ['ui', 'game', 'jingles', 'voice']) {
+      for (final folder in ['ui', 'game', 'jingles', 'combat', 'music']) {
         expect(declared, contains('assets/audio/$folder/'),
             reason: 'assets/audio/$folder/ não declarado no pubspec');
       }
@@ -62,7 +73,8 @@ void main() {
       final paths = [
         for (final sfx in Sfx.values) sfx.asset,
         for (final jingle in Jingle.values) jingle.asset,
-        for (final voice in Voice.values) voice.asset,
+        for (final sfx in CombatSfx.values) sfx.asset,
+        for (final track in MusicTrack.values) track.asset,
       ];
       expect(paths.toSet().length, paths.length,
           reason: 'há caminhos de áudio duplicados entre os enums');
@@ -74,7 +86,8 @@ void main() {
       final referenced = {
         for (final sfx in Sfx.values) 'assets/audio/${sfx.asset}',
         for (final jingle in Jingle.values) 'assets/audio/${jingle.asset}',
-        for (final voice in Voice.values) 'assets/audio/${voice.asset}',
+        for (final sfx in CombatSfx.values) 'assets/audio/${sfx.asset}',
+        for (final track in MusicTrack.values) 'assets/audio/${track.asset}',
       };
 
       final onDisk = assetsRoot
@@ -96,7 +109,7 @@ void main() {
       // são os padrões declarados.
       expect(audio.sfxEnabled, isTrue);
       expect(audio.musicEnabled, isTrue);
-      expect(audio.voiceEnabled, isTrue);
+      expect(audio.combatEnabled, isTrue);
       expect(audio.masterVolume, inInclusiveRange(0.0, 1.0));
     });
 

@@ -96,6 +96,9 @@ class StatChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: color.withValues(alpha: 0.35)),
       ),
+      // `Flexible` + elipse nos dois textos: sem isso, um chip dentro de um
+      // `Expanded` estoura quando o valor cresce (um tesouro de 6 dígitos
+      // derrubava a tela de política num celular de 320px).
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -103,20 +106,28 @@ class StatChip extends StatelessWidget {
             Icon(icon, size: 14, color: color),
             const SizedBox(width: 6),
           ],
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.w700,
-              fontSize: 13,
+          Flexible(
+            child: Text(
+              value,
+              overflow: TextOverflow.ellipsis,
+              softWrap: false,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
             ),
           ),
           const SizedBox(width: 5),
-          Text(
-            label,
-            style: const TextStyle(
-              color: CyberColors.textSecondary,
-              fontSize: 11,
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              softWrap: false,
+              style: const TextStyle(
+                color: CyberColors.textSecondary,
+                fontSize: 11,
+              ),
             ),
           ),
         ],

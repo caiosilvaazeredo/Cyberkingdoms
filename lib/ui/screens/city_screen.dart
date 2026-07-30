@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/audio/audio_service.dart';
 import '../../core/theme.dart';
+import '../../domain/economy/item.dart';
 import '../../domain/survival/survival_tables.dart';
 import '../../domain/world/settlement.dart';
 import '../../state/providers.dart';
@@ -234,7 +235,10 @@ class _CityHeader extends StatelessWidget {
               runSpacing: 6,
               children: [
                 for (final item in settlement.vocation.produces)
-                  _Pill(label: item.name, color: CyberColors.green),
+                  _Pill(
+                    label: ItemCatalog.of(item).name,
+                    color: CyberColors.green,
+                  ),
               ],
             ),
             const SizedBox(height: 10),
@@ -252,7 +256,10 @@ class _CityHeader extends StatelessWidget {
               runSpacing: 6,
               children: [
                 for (final item in settlement.vocation.demands)
-                  _Pill(label: item.name, color: CyberColors.amber),
+                  _Pill(
+                    label: ItemCatalog.of(item).name,
+                    color: CyberColors.amber,
+                  ),
               ],
             ),
           ],
