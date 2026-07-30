@@ -295,6 +295,68 @@ void main() {
     });
   });
 
+  group('Chão de mato', () {
+    // O mundo não tem pavimento em lugar nenhum: nem estrada entre cidades,
+    // nem rua dentro delas. Estes testes existem porque a regra é fácil de
+    // reintroduzir sem querer — basta um `case` novo no gerador devolvendo uma
+    // feature de asfalto, e nada mais no projeto reclamaria.
+    test('nenhum tile do mundo é pavimentado', () {
+      final world = World.fromSeed(DeterministicRandom.hashLabel('sem-asfalto'));
+
+      // Amostra grossa cobrindo cidade, entorno e mata aberta.
+      final paved = <String>[];
+      for (final settlement in world.layout.settlements.take(4)) {
+        for (var dy = -40; dy <= 40; dy += 2) {
+          for (var dx = -40; dx <= 40; dx += 2) {
+            final tile = world.tileAt(
+              settlement.center.x + dx,
+              settlement.center.y + dy,
+            );
+            if (_pavedNames.contains(tile.feature.name)) {
+              paved.add('${settlement.id} ($dx,$dy): ${tile.feature.name}');
+            }
+          }
+        }
+      }
+
+      expect(paved, isEmpty, reason: 'pavimento no terreno: ${paved.take(5)}');
+    });
+
+    test('as rotas entre cidades continuam existindo fora do terreno', () {
+      // Tirar o asfalto do chão não pode ter tirado a viagem do jogo: a rota é
+      // uma aresta do grafo de assentamentos, e é ela que a tela de viagem e a
+      // emboscada da estrada usam.
+      final world = World.fromSeed(DeterministicRandom.hashLabel('rotas'));
+
+      expect(world.layout.roads, isNotEmpty);
+      for (final settlement in world.layout.settlements) {
+        expect(world.layout.roadsFrom(settlement.id), isNotEmpty,
+            reason: '${settlement.name} ficou sem rota');
+      }
+
+      // E um tile em cima da rota é mato como qualquer outro.
+      final road = world.layout.roads.first;
+      final onRoute = road.path[road.path.length ~/ 2];
+      final tile = world.tileAt(onRoute.x, onRoute.y);
+      expect(_pavedNames, isNot(contains(tile.feature.name)));
+    });
+
+    test('a viagem não tem mais desconto de estrada', () {
+      // O bônus de 0,5x saiu junto com o asfalto. Se voltar, o custo de um
+      // tile qualquer cairia pela metade sem nada na tela justificando.
+      final world = World.fromSeed(DeterministicRandom.hashLabel('custo'));
+      final road = world.layout.roads.first;
+      final onRoute = road.path[road.path.length ~/ 2];
+
+      final tile = world.tileAt(onRoute.x, onRoute.y);
+      if (!tile.isWalkable) return;
+
+      // O custo tem de estar na faixa do bioma, não abaixo dela.
+      expect(tile.travelCost, greaterThanOrEqualTo(tile.biome.travelCost));
+    });
+
+  });
+
   group('Projeção isométrica', () {
     test('tileToWorld e worldToTile são inversas', () {
       for (final (tx, ty) in [(0.0, 0.0), (5.0, 3.0), (-12.0, 8.0)]) {
@@ -312,3 +374,9 @@ void main() {
     });
   });
 }
+
+/// Nomes de features de pavimento. Escritos como texto de propósito: se
+/// alguém recriar `TileFeature.road`, o teste continua compilando e falha —
+/// que é o comportamento útil. Referenciar o enum faria o teste sumir junto
+/// com a regra que ele protege.
+const _pavedNames = {'road', 'roadJunction', 'pavement', 'highway', 'asphalt'};

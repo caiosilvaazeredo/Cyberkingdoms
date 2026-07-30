@@ -18,13 +18,18 @@ document.body.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 scene.background = null;
 
-// Kenney-style flat-ish lighting: strong key + fill so colormap stays readable.
-const hemi = new THREE.HemisphereLight(0xffffff, 0x404060, 2.0);
+// Kenney-style flat-ish lighting: strong key + fill so the colormap stays
+// readable. The rim used to be a saturated cyan at 0.8, which was fine on the
+// sandstone castle kit but turned every leaf of the nature kit teal — once the
+// ground became grass that cast was the first thing you saw. It is now a pale
+// cool light at a third of the intensity: still separates the silhouette from
+// the dark background, without repainting the model.
+const hemi = new THREE.HemisphereLight(0xffffff, 0x4a4650, 1.9);
 scene.add(hemi);
-const key = new THREE.DirectionalLight(0xffffff, 2.2);
+const key = new THREE.DirectionalLight(0xfff6e8, 2.3);
 key.position.set(5, 10, 7);
 scene.add(key);
-const rim = new THREE.DirectionalLight(0x66ccff, 0.8);
+const rim = new THREE.DirectionalLight(0xbcd8ff, 0.3);
 rim.position.set(-6, 4, -5);
 scene.add(rim);
 
@@ -51,6 +56,12 @@ window.__renderGlb = async (url) => {
         if (!m) continue;
         if (m.map) m.map.colorSpace = THREE.SRGBColorSpace;
         m.side = THREE.DoubleSide;
+        // Quase todo kit da Kenney declara metallicFactor: 1. Sem um
+        // environment map, o three.js renderiza isso como metal polido sem
+        // nada para refletir — o modelo sai escuro e dessaturado. Eles são
+        // arte fosca; forçar metalness 0 devolve a cor que o autor pintou.
+        if ('metalness' in m) m.metalness = 0;
+        if ('roughness' in m) m.roughness = 0.85;
       }
     }
   });

@@ -7,6 +7,7 @@ import 'package:cyberkingdoms/domain/campaign/campaign.dart';
 import 'package:cyberkingdoms/domain/character/attributes.dart';
 import 'package:cyberkingdoms/domain/economy/item.dart';
 import 'package:cyberkingdoms/domain/world/coords.dart';
+import 'package:cyberkingdoms/domain/world/tile.dart';
 import 'package:cyberkingdoms/game/sprite_catalog.dart';
 import 'package:cyberkingdoms/game/world_game.dart';
 import 'package:flame/game.dart';
@@ -120,6 +121,49 @@ void main() {
           reason: 'duas construções desenhadas iguais no terreno são '
               'indistinguíveis:\n'
               '${shared.map((e) => '${e.key}: ${e.value.join(', ')}').join('\n')}');
+    });
+
+    testWidgets('toda feature que o mundo gera tem arte carregada',
+        (tester) async {
+      // Uma feature sem candidato de sprite não desenha nada: o tile fica só
+      // com o chão, e o bioma perde exatamente o detalhe que o define. Nada
+      // mais no projeto liga as duas pontas — dá para acrescentar um
+      // `TileFeature` ao gerador e nunca desenhá-lo.
+      await tester.runAsync(() async {
+        final catalog = await SpriteCatalog.load();
+        await catalog.preloadUsedSprites();
+
+        final campaign = Campaign.create(
+          id: 'arte',
+          seedLabel: 'cobertura-de-arte',
+          characterName: 'Kaia Vex',
+        );
+
+        final generated = <TileFeature>{};
+        for (var y = -900; y <= 900; y += 17) {
+          for (var x = -900; x <= 900; x += 17) {
+            generated.add(campaign.world.tileAt(x, y).feature);
+          }
+        }
+        generated.remove(TileFeature.none);
+
+        // Amostra ampla o bastante para valer como cobertura.
+        expect(generated.length, greaterThan(15),
+            reason: 'a varredura pegou poucas features: $generated');
+
+        final semArte = <String>[];
+        for (final feature in generated) {
+          final meta = catalog.featureFor(feature, 0, 0);
+          if (meta == null) {
+            semArte.add('${feature.name}: sem candidato');
+          } else if (!catalog.isLoaded(meta)) {
+            semArte.add('${feature.name}: ${meta.id} fora do preload');
+          }
+        }
+
+        expect(semArte, isEmpty,
+            reason: 'feature gerada e invisível:\n${semArte.join('\n')}');
+      });
     });
 
     test('toda construção aponta para um sprite que existe', () async {

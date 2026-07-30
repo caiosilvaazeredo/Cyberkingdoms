@@ -25,7 +25,7 @@ biomas, 5 Capitais, 15 Satélites e a malha de estradas PvP que liga tudo.
 | Áudio: trilha em loop, efeitos e combate | Completo |
 | Multiplayer real (Firestore) | **Pendente** — ver "Backend" |
 
-247 testes automatizados cobrindo determinismo, balanceamento, regras de
+251 testes automatizados cobrindo determinismo, balanceamento, regras de
 construção, quests, persistência, navegação, layout em cinco tamanhos de tela e
 capturas de tela versionadas — incluindo o render isométrico do mundo, que é
 desenhado num canvas de teste porque o `GameWidget` do Flame não pinta em widget
@@ -55,7 +55,7 @@ tools/
   audio-synth/      Síntese da trilha e dos efeitos de combate
 ```
 
-### Duas decisões que sustentam o resto
+### Três decisões que sustentam o resto
 
 **1. O terreno não é salvo.** O mundo é uma função pura `(seed, x, y) → tile`,
 como no Minecraft. Um mundo infinito custa zero bytes em disco, e dois
@@ -64,7 +64,17 @@ necessária para o servidor validar o que o cliente afirma ter feito. Só a
 macroestrutura (posição das cidades e traçado das estradas), que depende de uma
 visão global do mapa, é persistida.
 
-**2. Tudo é determinístico e roda em 32 bits.** O RNG usa Mulberry32 com
+**2. O chão é mato, do primeiro ao último tile.** Não existe estrada, rodovia
+nem calçada em lugar nenhum do mapa — nem dentro das capitais, onde os
+quarteirões são separados por vielas de grama pisada. Numa distopia em que a
+manutenção pública é a primeira coisa a falir, asfalto conservado seria a
+mentira mais cara da tela. As rotas entre cidades continuam existindo, mas como
+aresta do grafo de assentamentos: viaja-se por elas na tela de cidade, não
+pisando tile a tile. O que separa um bioma do outro é a vegetação e o tom, não o
+pavimento — o mesmo bloco de grama sai roxo no Núcleo Neon e ocre no
+Descampado.
+
+**3. Tudo é determinístico e roda em 32 bits.** O RNG usa Mulberry32 com
 multiplicação decomposta em metades de 16 bits. Isso não é preciosismo: na web
 o Dart compila `int` para double IEEE-754, e um gerador de 64 bits produz um
 mundo diferente no navegador — ou simplesmente não compila. Ver
@@ -80,10 +90,13 @@ pré-renderizados em projeção isométrica 2:1 pelo pipeline em
 
 | Pacote | Uso |
 |---|---|
-| Castle Kit | Torres, muros, cercos, ruínas |
-| Mini Dungeon | Interiores, baús, personagens, subsolo |
-| Mini Forest | Vegetação, acampamentos, terreno natural |
-| Starter Kit City Builder | Prédios urbanos, ruas, pavimento |
+| Nature Kit | Árvores, flores, cogumelos, tocos, plantio, rochas |
+| Survival Kit | Acampamentos, sucata, cercas, estruturas improvisadas |
+| Tower Defense Kit | Bloco de grama do chão, torres, água |
+| Castle Kit | Torres, muros, ruínas |
+| Mini Dungeon | Baús, barris, personagens |
+| Mini Forest | Vegetação e acampamentos |
+| Starter Kit City Builder | Prédios urbanos |
 | Starter Kit Basic Scene | Arena, colunas, personagem soldado |
 | UI Pack: Space Expansion | Barras vitais e painéis do HUD |
 | Fantasy UI Borders | Molduras de seção |
@@ -148,7 +161,7 @@ empacotado ficou sem uso.
 flutter pub get
 flutter run -d chrome   # navegador (mais rápido para ver funcionando)
 flutter run             # Android / iOS
-flutter test            # 247 testes
+flutter test            # 251 testes
 ```
 
 Requer Flutter 3.35+ / Dart 3.9+.

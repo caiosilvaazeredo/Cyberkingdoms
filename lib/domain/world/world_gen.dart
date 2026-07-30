@@ -390,10 +390,16 @@ class WorldGenerator {
     final elevation = elevationAt(x, y);
 
     if (biome == Biome.deadWater) {
+      // Água parada: só vitória-régia mutante, e mesmo assim rala.
+      final roll = DeterministicRandom.whiteNoise2D(
+        DeterministicRandom.mix(seed, 0x63),
+        x,
+        y,
+      );
       return WorldTile(
         biome: biome,
         elevation: elevation,
-        feature: TileFeature.none,
+        feature: roll < 0.16 ? TileFeature.lily : TileFeature.none,
       );
     }
 
@@ -402,18 +408,16 @@ class WorldGenerator {
       return _urbanTile(x, y, biome, elevation, settlement);
     }
 
-    if (layout.isRoadTile(x, y)) {
-      return WorldTile(
-        biome: biome,
-        elevation: elevation,
-        feature: TileFeature.road,
-      );
-    }
-
     return _wildTile(x, y, biome, elevation);
   }
 
-  /// Tile dentro de uma cidade: malha viária em grade + quarteirões.
+  /// Tile dentro de uma cidade: quarteirões separados por vielas de mato.
+  ///
+  /// A cidade não é pavimentada. A grade a cada 4 tiles continua existindo,
+  /// porque é ela que dá leitura de "cidade" em vez de "amontoado", mas as
+  /// faixas entre os quarteirões são chão limpo com mato nascendo — não
+  /// asfalto. Numa distopia onde a manutenção pública é a primeira coisa a
+  /// falir, rua conservada seria a mentira mais cara da tela.
   WorldTile _urbanTile(
     int x,
     int y,
@@ -424,51 +428,67 @@ class WorldGenerator {
     final lx = x - settlement.center.x;
     final ly = y - settlement.center.y;
 
-    // Grade de ruas a cada 4 tiles — o suficiente para dar leitura de cidade
-    // no zoom de celular sem virar labirinto.
-    const block = 4;
-    final onStreetX = lx % block == 0;
-    final onStreetY = ly % block == 0;
-
-    if (onStreetX && onStreetY) {
-      return WorldTile(
-        biome: Biome.neonCore,
-        elevation: elevation,
-        feature: TileFeature.roadJunction,
-        settlementId: settlement.id,
-      );
-    }
-    if (onStreetX || onStreetY) {
-      return WorldTile(
-        biome: Biome.neonCore,
-        elevation: elevation,
-        feature: TileFeature.road,
-        settlementId: settlement.id,
-      );
-    }
-
     final roll = DeterministicRandom.whiteNoise2D(
       DeterministicRandom.mix(seed, 0x51),
       x,
       y,
     );
 
-    // Densidade cai do centro para a periferia.
+    const block = 4;
+    final onLaneX = lx % block == 0;
+    final onLaneY = ly % block == 0;
+
+    if (onLaneX || onLaneY) {
+      // Cruzamento das vielas: onde a feira se instala.
+      final atCrossing = onLaneX && onLaneY;
+      final feature = switch (roll) {
+        _ when atCrossing && roll < 0.16 => TileFeature.marketStall,
+        _ when roll < 0.14 => TileFeature.grassTuft,
+        _ when roll < 0.18 => TileFeature.crate,
+        _ when roll < 0.20 => TileFeature.wreck,
+        _ => TileFeature.none,
+      };
+      return WorldTile(
+        biome: Biome.neonCore,
+        elevation: elevation,
+        feature: feature,
+        settlementId: settlement.id,
+      );
+    }
+
+    // A praça central fica aberta: é onde a tela de cidade situa mercado e
+    // governo, e um prédio em cima do centro esconde o marcador do jogador.
+    if (lx.abs() <= 1 && ly.abs() <= 1) {
+      return WorldTile(
+        biome: Biome.neonCore,
+        elevation: elevation,
+        feature: roll < 0.34 ? TileFeature.grassTuft : TileFeature.none,
+        settlementId: settlement.id,
+      );
+    }
+
+    // Densidade cai do centro para a periferia. Os números caíram junto com a
+    // troca do asfalto por mato: com 86% de ocupação no centro de uma capital
+    // não sobrava um palmo de chão visível, e o mundo inteiro virou mato
+    // justamente para o chão aparecer.
     final distanceRatio =
         (math.sqrt((lx * lx + ly * ly).toDouble()) / settlement.radius).clamp(0.0, 1.0);
     final buildChance = settlement.isCapital
-        ? 0.86 - distanceRatio * 0.45
-        : 0.70 - distanceRatio * 0.40;
+        ? 0.66 - distanceRatio * 0.38
+        : 0.52 - distanceRatio * 0.32;
 
     TileFeature feature;
     if (roll < buildChance * 0.12) {
       feature = TileFeature.tower;
     } else if (roll < buildChance) {
       feature = TileFeature.building;
-    } else if (roll < buildChance + 0.06) {
-      feature = TileFeature.marketStall;
-    } else if (roll < buildChance + 0.10) {
+    } else if (roll < buildChance + 0.05) {
+      feature = TileFeature.camp;
+    } else if (roll < buildChance + 0.09) {
       feature = TileFeature.crate;
+    } else if (roll < buildChance + 0.13) {
+      // A periferia é onde o mato volta primeiro.
+      feature = distanceRatio > 0.6 ? TileFeature.bush : TileFeature.grassTuft;
     } else {
       feature = TileFeature.none;
     }
@@ -517,55 +537,123 @@ class WorldGenerator {
     );
   }
 
+  /// Escolhe o que nasce num tile selvagem.
+  ///
+  /// Duas entradas, com papéis diferentes. `roll` é ruído branco — decide a
+  /// espécie e é o que quebra a repetição tile a tile. `detail` é ruído
+  /// coerente — decide a *densidade*, e é o que faz a mata fechar em bosques
+  /// e abrir em clareiras em vez de virar um chuvisco uniforme. Antes daqui só
+  /// o ruído branco decidia, e cada bioma parecia o mesmo confete espalhado.
+  ///
+  /// Somando os dois, a leitura é: onde `detail` é alto o bioma mostra a
+  /// vegetação alta que o define; onde é baixo, sobra rasteira e chão.
   TileFeature _scatterFeature(Biome biome, double roll, double detail) {
+    /// Compacta a escala: `detail` fica quase todo entre 0,3 e 0,7, então
+    /// usá-lo cru como probabilidade quase nunca chega nos extremos.
+    final density = ((detail - 0.35) / 0.30).clamp(0.0, 1.0);
+
     switch (biome) {
+      // Mata mutante que retomou o subúrbio. É o bioma mais fechado do mapa.
       case Biome.reclaimedForest:
-        if (roll < 0.34) return TileFeature.denseTree;
-        if (roll < 0.62) return TileFeature.tree;
-        if (roll < 0.68) return TileFeature.rock;
+        if (roll < 0.30 * density + 0.06) return TileFeature.denseTree;
+        if (roll < 0.58 * density + 0.14) return TileFeature.tree;
+        if (roll < 0.68) return TileFeature.bush;
+        if (roll < 0.74) return TileFeature.mushroom;
+        if (roll < 0.79) return TileFeature.fallenLog;
+        if (roll < 0.83) return TileFeature.stump;
+        if (roll < 0.88) return TileFeature.grassTuft;
+        if (roll < 0.90) return TileFeature.boulder;
         return TileFeature.none;
+
+      // Lavoura. Fileiras de plantio, cercas e o pasto entre elas.
       case Biome.bioFarm:
-        if (roll < 0.16) return TileFeature.tree;
-        if (roll < 0.24) return TileFeature.fence;
-        if (roll < 0.30) return TileFeature.crate;
+        if (roll < 0.34 * density + 0.10) return TileFeature.crops;
+        if (roll < 0.52) return TileFeature.grassTuft;
+        if (roll < 0.58) return TileFeature.fence;
+        if (roll < 0.63) return TileFeature.flowers;
+        if (roll < 0.67) return TileFeature.tree;
+        if (roll < 0.70) return TileFeature.crate;
         return TileFeature.none;
+
+      // Lixão: sucata sobre mato pisado, com acampamentos de catadores.
       case Biome.scrapyard:
-        if (roll < 0.30) return TileFeature.scrapPile;
-        if (roll < 0.38) return TileFeature.rubble;
-        if (roll < 0.44) return TileFeature.crate;
+        if (roll < 0.28 * density + 0.10) return TileFeature.scrapPile;
+        if (roll < 0.46) return TileFeature.wreck;
+        if (roll < 0.53) return TileFeature.rubble;
+        if (roll < 0.59) return TileFeature.crate;
+        if (roll < 0.63) return TileFeature.camp;
+        if (roll < 0.70) return TileFeature.grassTuft;
         return TileFeature.none;
+
+      // Campo de petróleo: mato queimado, bombas e árvores mortas.
       case Biome.oilFields:
-        if (roll < 0.10) return TileFeature.oilPump;
-        if (roll < 0.18) return TileFeature.rock;
-        if (roll < 0.24) return TileFeature.crate;
+        if (roll < 0.10 * density + 0.03) return TileFeature.oilPump;
+        if (roll < 0.20) return TileFeature.deadTree;
+        if (roll < 0.27) return TileFeature.rock;
+        if (roll < 0.32) return TileFeature.crate;
+        if (roll < 0.36) return TileFeature.wreck;
+        if (roll < 0.44) return TileFeature.grassTuft;
         return TileFeature.none;
+
+      // Mina: pedra exposta, torres de extração e pouca vegetação.
       case Biome.rareEarthMine:
-        if (roll < 0.24) return TileFeature.rock;
-        if (roll < 0.32) return TileFeature.extractionRig;
-        if (roll < 0.38) return TileFeature.rubble;
+        if (roll < 0.18 * density + 0.08) return TileFeature.boulder;
+        if (roll < 0.34) return TileFeature.rock;
+        if (roll < 0.41) return TileFeature.extractionRig;
+        if (roll < 0.47) return TileFeature.cliff;
+        if (roll < 0.52) return TileFeature.rubble;
+        if (roll < 0.58) return TileFeature.grassTuft;
         return TileFeature.none;
+
+      // Ruínas: o que sobrou de uma cidade, sendo comido pelo mato.
       case Biome.ruins:
-        if (roll < 0.22) return TileFeature.rubble;
-        if (roll < 0.34) return TileFeature.wall;
-        if (roll < 0.42) return TileFeature.tower;
-        if (roll < 0.50) return TileFeature.rock;
+        if (roll < 0.20 * density + 0.06) return TileFeature.rubble;
+        if (roll < 0.36) return TileFeature.wall;
+        if (roll < 0.44) return TileFeature.tower;
+        if (roll < 0.50) return TileFeature.wreck;
+        if (roll < 0.58) return TileFeature.bush;
+        if (roll < 0.66) return TileFeature.grassTuft;
+        if (roll < 0.70) return TileFeature.tree;
         return TileFeature.none;
+
+      // Cortiço: construção improvisada, cerca e horta de fundo de quintal.
       case Biome.sprawl:
-        if (roll < 0.20) return TileFeature.building;
-        if (roll < 0.28) return TileFeature.fence;
-        if (roll < 0.34) return TileFeature.crate;
+        if (roll < 0.20 * density + 0.08) return TileFeature.building;
+        if (roll < 0.36) return TileFeature.camp;
+        if (roll < 0.44) return TileFeature.fence;
+        if (roll < 0.50) return TileFeature.crate;
+        if (roll < 0.55) return TileFeature.crops;
+        if (roll < 0.63) return TileFeature.grassTuft;
         return TileFeature.none;
+
+      // Charco tóxico: cogumelos, árvores mortas e água parada.
       case Biome.toxicMarsh:
-        if (roll < 0.14) return TileFeature.tree;
-        if (roll < 0.22) return TileFeature.rubble;
+        if (roll < 0.20 * density + 0.06) return TileFeature.mushroom;
+        if (roll < 0.34) return TileFeature.deadTree;
+        if (roll < 0.42) return TileFeature.lily;
+        if (roll < 0.50) return TileFeature.bush;
+        if (roll < 0.56) return TileFeature.rubble;
+        if (roll < 0.64) return TileFeature.grassTuft;
         return TileFeature.none;
+
+      // Descampado: mato ralo, cacto e pedra. É o vazio entre as cidades.
       case Biome.wasteland:
-        if (roll < 0.09) return TileFeature.rock;
-        if (roll < 0.14) return TileFeature.rubble;
+        if (roll < 0.10 * density + 0.02) return TileFeature.cactus;
+        if (roll < 0.18) return TileFeature.rock;
+        if (roll < 0.23) return TileFeature.deadTree;
+        if (roll < 0.27) return TileFeature.stump;
+        if (roll < 0.31) return TileFeature.rubble;
+        if (roll < 0.42) return TileFeature.grassTuft;
         return TileFeature.none;
+
+      // Fora do raio de um assentamento, o núcleo é prédio esparso no mato.
       case Biome.neonCore:
-        if (roll < 0.40) return TileFeature.building;
+        if (roll < 0.30 * density + 0.12) return TileFeature.building;
+        if (roll < 0.50) return TileFeature.tower;
+        if (roll < 0.58) return TileFeature.crate;
+        if (roll < 0.66) return TileFeature.grassTuft;
         return TileFeature.none;
+
       case Biome.deadWater:
         return TileFeature.none;
     }

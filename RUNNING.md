@@ -94,7 +94,7 @@ flutter run -d <id-do-iphone>
 ## 4. Testes
 
 ```sh
-flutter test                       # a suíte inteira (247 testes)
+flutter test                       # a suíte inteira (251 testes)
 flutter test test/quest_test.dart  # um arquivo só
 flutter test --reporter=expanded   # saída detalhada
 ```
@@ -103,7 +103,7 @@ Os testes cobrem:
 
 | Arquivo | O que valida |
 |---|---|
-| `world_gen_test.dart` | Determinismo da seed, distribuição de biomas, 5 capitais + 15 satélites, estradas |
+| `world_gen_test.dart` | Determinismo da seed, distribuição de biomas, 5 capitais + 15 satélites, rotas, e a regra de que nenhum tile é pavimentado |
 | `survival_test.dart` | As tabelas de Fome/Sede do GDD, incluindo o exemplo resolvido do documento |
 | `economy_test.dart` | Cadeia produtiva de 3 camadas, mercados, inventário |
 | `building_test.dart` | Regras de construção, terreno, produção diária |
@@ -113,7 +113,7 @@ Os testes cobrem:
 | `audio_test.dart` | Todo som referenciado existe, está declarado e é usado |
 | `ux_test.dart` | Overflow em 5 tamanhos de tela, escala de texto, alvos de toque, contraste, tipografia |
 | `golden_test.dart` | Capturas de tela versionadas de 10 telas |
-| `world_render_test.dart` | Render isométrico do mundo: cobertura da tela, sprites carregados, contorno do terreno, custo por nível de zoom |
+| `world_render_test.dart` | Render isométrico do mundo: cobertura da tela, sprites carregados, contorno do terreno, arte de toda feature gerada, custo por nível de zoom |
 
 ### Capturas de tela
 
@@ -231,6 +231,10 @@ O script usa Chromium headless e three.js para renderizar cada `.glb` em
 projeção isométrica 2:1. Ajuste `executablePath` em `render.mjs` se o Chromium
 estiver em outro caminho na sua máquina.
 
+Um kit novo quase sempre precisa da pasta `Textures/` ao lado dos `.glb`: sem
+ela o modelo renderiza sem cor e ninguém avisa — o script só reclama no console
+do navegador. Se os sprites saírem cinzas, é isso.
+
 ---
 
 ## 9. Problemas comuns
@@ -242,6 +246,12 @@ própria linha em `pubspec.yaml`. Se adicionar `assets/ui/algo/`, declare-a.
 **`MissingPluginException`**
 Rode `flutter clean && flutter pub get` e recompile. Acontece quando o
 registrador de plugins fica defasado depois de mexer nas dependências.
+
+**O chão do mundo aparece xadrez, ou com faixas pretas entre os tiles**
+A arte do chão precisa cobrir o tile inteiro. Um modelo menor que 1x1, ou um
+adereço sobre fundo transparente, deixa o bloco de terra aparecendo por baixo.
+Ver o comentário em `_grass` (`lib/game/sprite_catalog.dart`), que registra as
+duas tentativas que falharam por esse motivo.
 
 **Texto aparece como quadradinhos**
 Alguma parte da UI está usando a fonte `KenneyInput`, que só tem glifos de
@@ -276,6 +286,9 @@ Abra o console do navegador. Se aparecer erro buscando `canvaskit.js` de
 | Módulos e níveis de construção | `lib/domain/building/building_module.dart` |
 | Quests da campanha | `lib/domain/campaign/quest.dart` |
 | Geração do mundo, biomas | `lib/domain/world/world_gen.dart` |
+| O que nasce em cada bioma | `_scatterFeature` em `lib/domain/world/world_gen.dart` |
+| Arte de cada feature do terreno | `_featureSprites` em `lib/game/sprite_catalog.dart` |
+| O bloco de grama do chão | `_grass` em `lib/game/sprite_catalog.dart` |
 | Regras do reset diário | `lib/domain/campaign/daily_tick.dart` |
 | Cores e tipografia | `lib/core/theme.dart` |
 | Telas | `lib/ui/screens/` |

@@ -6,6 +6,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
 import '../domain/building/plot.dart';
+import '../domain/world/biome.dart';
 import '../domain/world/coords.dart';
 import '../domain/world/tile.dart';
 import '../domain/world/world.dart' as domain;
@@ -217,11 +218,45 @@ class CyberWorldGame extends FlameGame with ScaleDetector, TapCallbacks {
       elevation: elevation.toDouble(),
     );
 
-    final ground = catalog.groundFor(tile.biome, coord.x, coord.y);
+    // Terra por baixo, losango por cima — nesta ordem, sempre.
+    //
+    // Não é fallback: é o que fecha as costuras. O renderizador de sprites
+    // enquadra cada modelo com 6% de folga, então a arte do chão nunca encosta
+    // na borda do losango; e um degrau de elevação abre 16px entre um tile e o
+    // vizinho mais baixo. A primeira captura com chão de mato saiu com o fundo
+    // preto vazando pelos dois buracos. O losango também é onde a cor do bioma
+    // aparece de verdade: com o chão inteiro virando grama, o tom é o que
+    // diferencia o Charco do Descampado.
+    final base = _groundColor(tile.biome);
+    _drawTileSides(canvas, wx, wy, base);
+    _drawFallbackDiamond(canvas, wx, wy, base);
+
+    // Dentro do lote o chão é grama aparada: uma única variante, tingida com a
+    // cor do vilarejo. Quando o mundo inteiro virou mato, o terreno do jogador
+    // deixou de se distinguir da cidade em volta — o contorno sozinho não
+    // bastava. Um gramado uniforme no meio do mato irregular resolve sem
+    // pavimentar nada.
+    final ground = insidePlot
+        ? catalog.mowedGrass
+        : catalog.groundFor(tile.biome, coord.x, coord.y);
     if (ground != null) {
-      _drawSprite(canvas, ground, wx, wy, tile.biome.primary);
-    } else {
-      _drawFallbackDiamond(canvas, wx, wy, tile.biome.primary);
+      _drawSprite(
+        canvas,
+        ground,
+        wx,
+        wy,
+        insidePlot ? Color(plot!.identity.primaryColor) : tile.biome.primary,
+        // Mesma grama em todo o mapa, com a força do tint variando de tile
+        // para tile. É o que dá textura ao chão sem misturar artes de kits
+        // diferentes: três modelos de grama sorteados produziam um xadrez,
+        // porque o verde do Nature Kit é bem mais escuro que o do Tower
+        // Defense.
+        tintStrength: insidePlot ? 0.30 : 0.36 + _mottle(coord) * 0.14,
+        // Um pouco maior que o tile, para cobrir a folga de enquadramento do
+        // renderizador de sprites — sem isso sobra um fio da cor de terra na
+        // divisa de cada tile.
+        overdraw: 1.16,
+      );
     }
 
     // O lote é terreno limpo. A cidade procedural continua gerando prédios,
@@ -271,6 +306,8 @@ class CyberWorldGame extends FlameGame with ScaleDetector, TapCallbacks {
     Color? tint, {
     double opacity = 1,
     int? footprint,
+    double tintStrength = 0.22,
+    double overdraw = 1,
   }) {
     // Um sprite fora do cache lançaria e derrubaria o frame inteiro.
     if (!catalog.isLoaded(meta)) return;
@@ -284,7 +321,8 @@ class CyberWorldGame extends FlameGame with ScaleDetector, TapCallbacks {
     // regra do jogo, não o tamanho do modelo: uma refinaria ocupa 3x2 tiles e
     // precisa parecer que ocupa. Antes disso ela era desenhada com a largura do
     // `.glb` — do tamanho de um barril, sobre um lote de 3 tiles vazios.
-    final targetWidth = WorldMetrics.tileWidth * (footprint ?? meta.footprint);
+    final targetWidth =
+        WorldMetrics.tileWidth * (footprint ?? meta.footprint) * overdraw;
     final scale = targetWidth / image.width;
     final targetHeight = image.height * scale;
 
@@ -296,9 +334,12 @@ class CyberWorldGame extends FlameGame with ScaleDetector, TapCallbacks {
       paint.color = Color.fromRGBO(0, 0, 0, opacity.clamp(0.0, 1.0));
     }
     if (tint != null) {
-      // Tint sutil deixa o mesmo asset servir a vários biomas sem re-render.
+      // O tint deixa o mesmo asset servir a vários biomas sem re-render. No
+      // chão ele é forte, porque a grama é a mesma em todo o mapa e a cor é a
+      // única coisa que separa um bioma do outro; nos objetos é sutil, para
+      // não apagar a arte.
       paint.colorFilter = ui.ColorFilter.mode(
-        tint.withValues(alpha: 0.22),
+        tint.withValues(alpha: tintStrength),
         BlendMode.srcATop,
       );
     }
@@ -308,6 +349,68 @@ class CyberWorldGame extends FlameGame with ScaleDetector, TapCallbacks {
       Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
       Rect.fromLTWH(dx, dy, targetWidth, targetHeight),
       paint,
+    );
+  }
+
+  /// Variação estável de 0 a 1 por tile, para manchar a grama.
+  ///
+  /// Sem guardar nada: o mesmo tile devolve sempre o mesmo valor, dois
+  /// vizinhos quase nunca devolvem o mesmo.
+  double _mottle(TileCoord coord) {
+    final hash = (coord.x * 374761393) ^ (coord.y * 668265263);
+    return ((hash >>> 8) & 0xFF) / 255.0;
+  }
+
+  /// Cor do bloco de terra sob a grama.
+  ///
+  /// Não é `biome.primary` cru. As cores dos biomas foram escolhidas para
+  /// *tingir* arte — são quase pretas de propósito — e usar uma delas como
+  /// chão exposto abria um buraco na tela onde deveria haver barranco. Aqui a
+  /// cor do bioma entra como tempero de uma terra que já é terra.
+  Color _groundColor(Biome biome) =>
+      Color.lerp(const Color(0xFF4E7A3A), biome.primary, 0.42)!;
+
+  /// As duas faces laterais do bloco de terra sob o tile.
+  ///
+  /// Desenhadas com profundidade fixa, maior que o maior desnível possível
+  /// entre dois tiles do mapa (9 degraus de elevação). Sobra muito pano
+  /// embaixo, e é de propósito: como os tiles são pintados de trás para a
+  /// frente e a saia só cresce *para baixo na tela* — que é para onde ficam os
+  /// tiles desenhados depois —, o excesso é sempre coberto por quem vem na
+  /// frente. É o mesmo truque de um tilemap de cubos.
+  ///
+  /// A primeira versão usava 3 degraus e parecia certa até a captura da Terra
+  /// Devastada, onde o relevo é mais quebrado: cada barranco de 4 degraus ou
+  /// mais virava uma fatia preta no meio do mato.
+  static const double _sideDepth = WorldMetrics.elevationUnit * 12;
+
+  void _drawTileSides(Canvas canvas, double wx, double wy, Color color) {
+    final halfW = WorldMetrics.tileWidth / 2;
+    final halfH = WorldMetrics.tileHeight / 2;
+
+    // Terra: a cor do bioma escurecida, não preta. Preto puro faria o relevo
+    // parecer um buraco em vez de um barranco.
+    final soil = Color.lerp(color, const Color(0xFF120E0A), 0.45)!;
+
+    // A face esquerda pega menos luz que a direita — é o que dá volume ao
+    // degrau sem precisar de sombra calculada.
+    canvas.drawPath(
+      Path()
+        ..moveTo(wx - halfW, wy)
+        ..lineTo(wx, wy + halfH)
+        ..lineTo(wx, wy + halfH + _sideDepth)
+        ..lineTo(wx - halfW, wy + _sideDepth)
+        ..close(),
+      Paint()..color = Color.lerp(soil, Colors.black, 0.28)!,
+    );
+    canvas.drawPath(
+      Path()
+        ..moveTo(wx, wy + halfH)
+        ..lineTo(wx + halfW, wy)
+        ..lineTo(wx + halfW, wy + _sideDepth)
+        ..lineTo(wx, wy + halfH + _sideDepth)
+        ..close(),
+      Paint()..color = soil,
     );
   }
 
