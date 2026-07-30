@@ -22,9 +22,10 @@ biomas, 5 Capitais, 15 Satélites e a malha de estradas PvP que liga tudo.
 | Campanha principal com 17 quests | Completo |
 | Combate determinístico | Completo |
 | Política, eleições e rebeliões | Completo |
+| Áudio (efeitos, jingles, locução) | Completo |
 | Multiplayer real (Firestore) | **Pendente** — ver "Backend" |
 
-154 testes automatizados cobrindo determinismo, balanceamento, regras de
+163 testes automatizados cobrindo determinismo, balanceamento, regras de
 construção, quests, persistência e navegação entre telas.
 
 ---
@@ -83,7 +84,40 @@ pré-renderizados em projeção isométrica 2:1 pelo pipeline em
 | UI Pack: Space Expansion | Barras vitais e painéis do HUD |
 | Fantasy UI Borders | Molduras de seção |
 | UI Pack Adventure | Ícones de minimapa e bússola |
-| Input Prompts | Fonte e ícones de toque |
+| Input Prompts | Ícones de toque |
+| UI Audio | Cliques, toggles e navegação |
+| RPG Audio | Moedas, construção, viagem, passos, combate |
+| Music Jingles | Quest concluída, promoção, obra pronta, fim de dia |
+| Voice-over: Fighter | Narração dos combates de estrada |
+
+### Áudio
+
+Três canais independentes — **efeitos**, **jingles** e **locução** — cada um
+desligável em separado, com volume geral. O controle fica no HUD, não enterrado
+num menu: som em jogo de celular precisa ser silenciável no instante em que
+incomoda.
+
+O `AudioService` **nunca lança**. Se um arquivo faltar, se o navegador bloquear
+a reprodução antes do primeiro gesto do usuário, ou se o dispositivo não tiver
+saída, o jogo segue em silêncio. O preço dessa robustez é que um caminho errado
+não aparece em runtime — por isso há um teste que confere que todo som
+referenciado existe em disco, está declarado no `pubspec`, e que nenhum arquivo
+empacotado ficou sem uso.
+
+| Momento | Som |
+|---|---|
+| Troca de aba | clique curto |
+| Escolher trabalho / construção | switch |
+| Compra, venda, salário | moedas |
+| Iniciar obra | metal |
+| Evoluir construção, instalar módulo | trava metálica |
+| Demolir | rangido |
+| Viajar | porta abrindo |
+| Andar no mundo | passos alternados |
+| Emboscada na estrada | golpe + locução de vitória/derrota |
+| Quest concluída | jingle chiptune |
+| Promoção de nível | jingle chiptune |
+| Morte permanente | jingle grave + "game over" |
 
 ---
 

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/audio/audio_service.dart';
 import '../core/seed/deterministic_random.dart';
 import '../data/campaign_repository.dart';
 import '../domain/building/building_module.dart';
@@ -139,6 +140,7 @@ class CampaignController extends StateNotifier<Campaign?> {
       _today = _today.copyWith(consumed: [..._today.consumed, item]);
     }
     campaign.log('Consumiu ${def.name}.');
+    AudioService.instance.play(Sfx.equip);
     _bump();
     unawaited(save());
     return true;
@@ -165,6 +167,7 @@ class CampaignController extends StateNotifier<Campaign?> {
     character.travellingTo = destinationId;
     character.travelDaysRemaining = road.travelDays;
     final destination = campaign.world.layout.byId(destinationId);
+    AudioService.instance.play(Sfx.travelStart);
     campaign.log(
       'Partiu para ${destination?.name ?? destinationId} '
       '(${road.travelDays} dia(s), risco ${(road.danger * 100).round()}%).',
@@ -205,6 +208,7 @@ class CampaignController extends StateNotifier<Campaign?> {
       campaign.character.credits -= result.totalPaid;
       campaign.character.inventory.add(result.item, result.quantity);
       government.collectTax(result.tax);
+      AudioService.instance.play(Sfx.coins);
       campaign.log(
         'Comprou ${result.quantity}x ${ItemCatalog.of(result.item).name} '
         'por ${result.totalPaid} créditos.',
@@ -247,6 +251,7 @@ class CampaignController extends StateNotifier<Campaign?> {
       unitPrice: unitPrice,
       day: campaign.day,
     );
+    AudioService.instance.play(Sfx.coins);
     campaign.log(
       'Anunciou ${quantity}x ${ItemCatalog.of(item).name} a $unitPrice cada.',
     );
@@ -291,6 +296,7 @@ class CampaignController extends StateNotifier<Campaign?> {
 
     if (result is BuildAccepted) {
       campaign.character.credits -= result.building.def.creditCost;
+      AudioService.instance.play(Sfx.build);
       campaign.log('Obra iniciada: ${result.building.def.name}.');
       _bump();
       unawaited(save());
@@ -321,6 +327,7 @@ class CampaignController extends StateNotifier<Campaign?> {
 
     if (result is BuildAccepted) {
       campaign.character.credits -= costBefore;
+      AudioService.instance.play(Sfx.moduleInstall);
       campaign.log(
         '${result.building.displayName} evoluindo para nível '
         '${BuildingUpgrade.romanFor(result.building.level)}.',
@@ -350,6 +357,7 @@ class CampaignController extends StateNotifier<Campaign?> {
 
     if (result is BuildAccepted) {
       campaign.character.credits -= module.creditCost;
+      AudioService.instance.play(Sfx.moduleInstall);
       campaign.log(
         '${module.label} instalado em ${result.building.displayName}.',
       );
@@ -363,6 +371,7 @@ class CampaignController extends StateNotifier<Campaign?> {
     final campaign = state;
     if (campaign == null) return;
     if (campaign.plot.uninstallModule(instanceId, module)) {
+      AudioService.instance.play(Sfx.drop);
       _bump();
       unawaited(save());
     }
@@ -387,6 +396,7 @@ class CampaignController extends StateNotifier<Campaign?> {
     final campaign = state;
     if (campaign == null) return;
     campaign.plot.identity = identity;
+    AudioService.instance.play(Sfx.select);
     campaign.log('Vilarejo renomeado para "${identity.name}".');
     _bump();
     unawaited(save());
@@ -397,6 +407,7 @@ class CampaignController extends StateNotifier<Campaign?> {
     final campaign = state;
     if (campaign == null) return const {};
 
+    AudioService.instance.play(Sfx.demolish);
     final refund = campaign.plot.demolish(instanceId);
     for (final entry in refund.entries) {
       campaign.character.inventory.add(entry.key, entry.value);
@@ -422,6 +433,7 @@ class CampaignController extends StateNotifier<Campaign?> {
     if (campaign == null) return false;
     final ok = campaign.character.inventory.equip(item);
     if (ok) {
+      AudioService.instance.play(Sfx.equip);
       _bump();
       unawaited(save());
     }
@@ -442,6 +454,7 @@ class CampaignController extends StateNotifier<Campaign?> {
     if (campaign == null || !campaign.character.canAct) return;
     if (!campaign.world.tileAt(tile.x, tile.y).isWalkable) return;
     campaign.character.position = tile;
+    AudioService.instance.playStep();
     _bump();
   }
 
@@ -466,6 +479,45 @@ class CampaignController extends StateNotifier<Campaign?> {
     return true;
   }
 
+  /// Toca o áudio correspondente ao que aconteceu no reset.
+  ///
+  /// A ordem importa: morte cala tudo o mais, e uma quest concluída é mais
+  /// digna de jingle do que o fim de dia comum.
+  void _announce(TickReport report, Campaign campaign) {
+    final audio = AudioService.instance;
+
+    if (campaign.character.dead) {
+      audio.playVoice(Voice.gameOver);
+      audio.playJingle(Jingle.defeat);
+      return;
+    }
+
+    if (report.combat case final combat?) {
+      audio.play(combat.rounds > 6 ? Sfx.hit : Sfx.slash);
+      audio.playVoice(
+        combat.winnerId == campaign.character.id ? Voice.win : Voice.lose,
+      );
+      return;
+    }
+
+    if (report.completedQuests.isNotEmpty) {
+      audio.playJingle(Jingle.questComplete);
+      return;
+    }
+
+    if (report.events.any((e) => e.startsWith('PROMOÇÃO'))) {
+      audio.playJingle(Jingle.levelUp);
+      return;
+    }
+
+    if (report.events.any((e) => e.startsWith('Obra concluída'))) {
+      audio.playJingle(Jingle.buildComplete);
+      return;
+    }
+
+    audio.playJingle(Jingle.dayEnd, volume: 0.7);
+  }
+
   /// Fecha o dia — o reset da meia-noite.
   TickReport endDay() {
     final campaign = state;
@@ -474,6 +526,7 @@ class CampaignController extends StateNotifier<Campaign?> {
     }
 
     final report = const DailyTick().run(campaign, _today);
+    _announce(report, campaign);
     lastReport = report;
     _today = const DailyActivity();
     _bump();

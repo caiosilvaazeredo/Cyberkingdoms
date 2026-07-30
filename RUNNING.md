@@ -94,7 +94,7 @@ flutter run -d <id-do-iphone>
 ## 4. Testes
 
 ```sh
-flutter test                       # a suíte inteira (154 testes)
+flutter test                       # a suíte inteira (163 testes)
 flutter test test/quest_test.dart  # um arquivo só
 flutter test --reporter=expanded   # saída detalhada
 ```
@@ -110,6 +110,7 @@ Os testes cobrem:
 | `quest_test.dart` | Campanha principal, recompensas, persistência |
 | `campaign_test.dart` | Reset diário, viagem, combate, política, save/load |
 | `ui_flow_test.dart` | Navegação entre telas e criação de campanha |
+| `audio_test.dart` | Todo som referenciado existe, está declarado e é usado |
 
 Análise estática:
 
@@ -210,6 +211,10 @@ Alguma parte da UI está usando a fonte `KenneyInput`, que só tem glifos de
 `flutter devices` lista o que está visível. No Android, confirme a autorização
 de depuração USB que aparece na tela do celular.
 
+**Não sai som no navegador**
+Navegadores bloqueiam áudio até o usuário interagir com a página. O primeiro
+toque destrava; até lá o jogo roda em silêncio de propósito.
+
 **Build web mostra tela branca**
 Abra o console do navegador. Se aparecer erro buscando `canvaskit.js` de
 `gstatic.com`, recompile com `--no-web-resources-cdn`.
@@ -229,5 +234,6 @@ Abra o console do navegador. Se aparecer erro buscando `canvaskit.js` de
 | Regras do reset diário | `lib/domain/campaign/daily_tick.dart` |
 | Cores e tipografia | `lib/core/theme.dart` |
 | Telas | `lib/ui/screens/` |
+| Sons e onde tocam | `lib/core/audio/audio_service.dart` |
 
 Toda alteração de regra deve vir com teste. A suíte roda em ~30 segundos.

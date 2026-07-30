@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/audio/audio_service.dart';
 import '../../core/theme.dart';
 import '../../domain/building/building_module.dart';
 import '../../domain/building/building_type.dart';
@@ -241,7 +242,10 @@ class _PlotScreenState extends ConsumerState<PlotScreen> {
             category: category,
             level: campaign.character.level,
             enabled: onSite,
-            onPick: (id) => setState(() => _pending = id),
+            onPick: (id) {
+              AudioService.instance.play(Sfx.select);
+              setState(() => _pending = id);
+            },
           ),
       ],
     );

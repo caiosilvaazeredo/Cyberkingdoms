@@ -13,6 +13,10 @@ dependencies:
   # Rendering do mundo isometrico.
   flame: ^1.32.0
 
+  # Audio. `flame_audio` usa o prefixo `assets/audio/` por padrao, que e
+  # exatamente como os sons estao organizados aqui.
+  flame_audio: ^2.11.0
+
   # Estado.
   flutter_riverpod: ^2.6.1
 
@@ -31,6 +35,8 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  # Usado nos testes para verificar que os assets estao declarados no pubspec.
+  yaml: ^3.1.2
 
 flutter:
   uses-material-design: true
@@ -45,6 +51,10 @@ flutter:
     - assets/ui/bars/
     - assets/ui/panels/
     - assets/ui/hud/
+    - assets/audio/ui/
+    - assets/audio/game/
+    - assets/audio/jingles/
+    - assets/audio/voice/
 
   fonts:
     # Fonte de texto da interface. Kenney Future cobre todo o alfabeto latino

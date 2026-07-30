@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/audio/audio_service.dart';
 import '../../core/theme.dart';
 import '../../domain/survival/survival_tables.dart';
 import '../../domain/world/settlement.dart';
@@ -93,7 +94,10 @@ class CityScreen extends ConsumerWidget {
                 label: work.label,
                 upkeep: work.upkeep,
                 selected: today.publicWork == work,
-                onTap: () => controller.chooseWork(publicWork: work),
+                onTap: () {
+                  AudioService.instance.play(Sfx.toggle);
+                  controller.chooseWork(publicWork: work);
+                },
               ),
           ],
         ),
@@ -107,7 +111,10 @@ class CityScreen extends ConsumerWidget {
                 label: work.label,
                 upkeep: work.upkeep,
                 selected: today.farmWork == work,
-                onTap: () => controller.chooseWork(farmWork: work),
+                onTap: () {
+                  AudioService.instance.play(Sfx.toggle);
+                  controller.chooseWork(farmWork: work);
+                },
               ),
           ],
         ),
@@ -121,7 +128,10 @@ class CityScreen extends ConsumerWidget {
                 label: work.label,
                 upkeep: work.upkeep,
                 selected: today.workshopWork == work,
-                onTap: () => controller.chooseWork(workshopWork: work),
+                onTap: () {
+                  AudioService.instance.play(Sfx.toggle);
+                  controller.chooseWork(workshopWork: work);
+                },
               ),
           ],
         ),

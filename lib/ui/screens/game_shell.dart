@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/audio/audio_service.dart';
 import '../../core/theme.dart';
 import '../../state/providers.dart';
+import '../widgets/audio_controls.dart';
 import '../widgets/vital_bar.dart';
 import 'campaign_screen.dart';
 import 'character_screen.dart';
@@ -76,7 +78,10 @@ class _GameShellState extends ConsumerState<GameShell> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
-        onDestinationSelected: (index) => setState(() => _tab = index),
+        onDestinationSelected: (index) {
+          AudioService.instance.play(Sfx.navigate);
+          setState(() => _tab = index);
+        },
         backgroundColor: CyberColors.surface,
         indicatorColor: CyberColors.cyan.withValues(alpha: 0.18),
         height: 64,
@@ -161,6 +166,8 @@ class _Hud extends ConsumerWidget {
                 value: '${campaign.day}',
                 color: CyberColors.violet,
               ),
+              const SizedBox(width: 4),
+              const AudioToggleButton(),
             ],
           ),
           const SizedBox(height: 10),
@@ -207,7 +214,10 @@ class _Hud extends ConsumerWidget {
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  onPressed: () => _endDay(context, ref),
+                  onPressed: () {
+                    AudioService.instance.play(Sfx.tap);
+                    _endDay(context, ref);
+                  },
                   child: const Text('RESET'),
                 ),
               ),
