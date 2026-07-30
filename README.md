@@ -25,9 +25,11 @@ biomas, 5 Capitais, 15 Satélites e a malha de estradas PvP que liga tudo.
 | Áudio: trilha em loop, efeitos e combate | Completo |
 | Multiplayer real (Firestore) | **Pendente** — ver "Backend" |
 
-242 testes automatizados cobrindo determinismo, balanceamento, regras de
+247 testes automatizados cobrindo determinismo, balanceamento, regras de
 construção, quests, persistência, navegação, layout em cinco tamanhos de tela e
-capturas de tela versionadas.
+capturas de tela versionadas — incluindo o render isométrico do mundo, que é
+desenhado num canvas de teste porque o `GameWidget` do Flame não pinta em widget
+test.
 
 ---
 
@@ -146,7 +148,7 @@ empacotado ficou sem uso.
 flutter pub get
 flutter run -d chrome   # navegador (mais rápido para ver funcionando)
 flutter run             # Android / iOS
-flutter test            # 242 testes
+flutter test            # 247 testes
 ```
 
 Requer Flutter 3.35+ / Dart 3.9+.

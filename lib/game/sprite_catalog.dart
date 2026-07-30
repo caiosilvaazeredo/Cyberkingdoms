@@ -42,8 +42,14 @@ class SpriteMeta {
   final double baseY;
 
   /// Quantos tiles de largura o modelo ocupa. Os kits da Kenney usam 1 unidade
-  /// = 1 tile, então arredondar para cima dá a footprint correta.
-  int get footprint => sizeX.ceil().clamp(1, 4);
+  /// = 1 tile.
+  ///
+  /// Arredondar para o inteiro **mais próximo**, não para cima: quase todo
+  /// modelo de 1 tile passa um pouco do cubo (um telhado que avança, a lança de
+  /// uma balista). Com `ceil`, uma barraca de 1,26 unidade virava um sprite de
+  /// dois tiles de largura — na captura do mundo ela aparecia como um borrão
+  /// azul cobrindo os vizinhos.
+  int get footprint => sizeX.round().clamp(1, 4);
 
   String get assetPath => 'sprites/$file';
 

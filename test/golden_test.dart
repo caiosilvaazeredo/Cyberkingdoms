@@ -51,6 +51,12 @@ void main() {
       final fields = find.byType(TextField);
       await tester.enterText(fields.at(0), 'Kaia Vex');
       await tester.enterText(fields.at(1), 'aurora-krom-191');
+
+      // Tirar o foco antes de fotografar. O cursor do campo pisca: com ele
+      // ativo a captura sai com ou sem o traço conforme o instante em que o
+      // teste roda, e o golden falha de forma intermitente — foi assim que
+      // este teste reprovou uma vez na suíte cheia e passou sozinho.
+      FocusManager.instance.primaryFocus?.unfocus();
       await tester.pumpAndSettle();
 
       await expectLater(

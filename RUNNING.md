@@ -94,7 +94,7 @@ flutter run -d <id-do-iphone>
 ## 4. Testes
 
 ```sh
-flutter test                       # a suíte inteira (242 testes)
+flutter test                       # a suíte inteira (247 testes)
 flutter test test/quest_test.dart  # um arquivo só
 flutter test --reporter=expanded   # saída detalhada
 ```
@@ -113,6 +113,7 @@ Os testes cobrem:
 | `audio_test.dart` | Todo som referenciado existe, está declarado e é usado |
 | `ux_test.dart` | Overflow em 5 tamanhos de tela, escala de texto, alvos de toque, contraste, tipografia |
 | `golden_test.dart` | Capturas de tela versionadas de 10 telas |
+| `world_render_test.dart` | Render isométrico do mundo: cobertura da tela, sprites carregados, contorno do terreno, custo por nível de zoom |
 
 ### Capturas de tela
 
@@ -124,6 +125,16 @@ enxerga nem consegue clicar em nada.
 ```sh
 flutter test test/golden_test.dart                  # compara com o commitado
 flutter test test/golden_test.dart --update-goldens # regrava depois de mudar a UI
+```
+
+A aba Mundo não entra por aí: o `GameWidget` do Flame pinta a partir do próprio
+laço de render, que nunca roda num widget test, e a captura saía preta. O
+`world_render_test.dart` contorna isso instanciando o jogo e chamando `render`
+num canvas próprio — mesmo código de projeção, culling e ancoragem que roda no
+celular:
+
+```sh
+flutter test test/world_render_test.dart --update-goldens
 ```
 
 As imagens entram no controle de versão de propósito: assim uma regressão visual
@@ -269,6 +280,8 @@ Abra o console do navegador. Se aparecer erro buscando `canvaskit.js` de
 | Cores e tipografia | `lib/core/theme.dart` |
 | Telas | `lib/ui/screens/` |
 | Sons e onde tocam | `lib/core/audio/audio_service.dart` |
+| Arte de cada construção | campo `spriteId` em `lib/domain/building/building_type.dart` |
+| Como o mundo é desenhado | `lib/game/world_game.dart` |
 | Trilha e efeitos de combate | `tools/audio-synth/synth.py` |
 
 Toda alteração de regra deve vir com teste. A suíte roda em ~30 segundos.

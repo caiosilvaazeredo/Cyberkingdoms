@@ -65,9 +65,13 @@ class CyberWorldGame extends FlameGame with ScaleDetector, TapCallbacks {
     _cameraTarget = Vector2(px, py);
   }
 
-  /// Centraliza a câmera num tile — usado ao trocar de cidade.
+  /// Centraliza a câmera num tile — usado ao trocar de cidade, ao tocar no
+  /// minimapa e nos botões de foco.
+  ///
+  /// Move **só a câmera**. Antes daqui também movia `playerPosition`, o que
+  /// fazia o pino do jogador saltar para onde a câmera olhasse: tocar um ponto
+  /// distante no minimapa desenhava o personagem lá até o próximo rebuild.
   void focusOn(TileCoord tile) {
-    playerPosition = tile;
     final (px, py) = IsoProjection.tileToWorld(
       tile.x.toDouble(),
       tile.y.toDouble(),
@@ -201,10 +205,16 @@ class CyberWorldGame extends FlameGame with ScaleDetector, TapCallbacks {
   }
 
   void _renderTile(Canvas canvas, TileCoord coord, WorldTile tile) {
+    // Dentro do terreno o mundo é terraplenado: a mesma altura para todos os
+    // tiles do lote. Sem isso as construções ficam em degraus diferentes
+    // enquanto o contorno do lote é plano, e o conjunto parece quebrado.
+    final insidePlot = plot?.containsWorldTile(coord) ?? false;
+    final elevation = insidePlot ? _plotElevation : tile.elevation;
+
     final (wx, wy) = IsoProjection.tileToWorld(
       coord.x.toDouble(),
       coord.y.toDouble(),
-      elevation: tile.elevation.toDouble(),
+      elevation: elevation.toDouble(),
     );
 
     final ground = catalog.groundFor(tile.biome, coord.x, coord.y);
@@ -213,6 +223,12 @@ class CyberWorldGame extends FlameGame with ScaleDetector, TapCallbacks {
     } else {
       _drawFallbackDiamond(canvas, wx, wy, tile.biome.primary);
     }
+
+    // O lote é terreno limpo. A cidade procedural continua gerando prédios,
+    // postes e barracas ali — desenhá-los enterraria as construções do jogador
+    // no meio do cenário, que foi exatamente o que a primeira captura mostrou:
+    // o próprio terreno era impossível de achar no mapa.
+    if (insidePlot) return;
 
     final feature = catalog.featureFor(tile.feature, coord.x, coord.y);
     if (feature != null) {
@@ -228,6 +244,24 @@ class CyberWorldGame extends FlameGame with ScaleDetector, TapCallbacks {
     }
   }
 
+  /// Altura única do lote, tirada do tile de origem.
+  ///
+  /// Recalculada quando o terreno muda de lugar (o jogador pode se mudar de
+  /// cidade), e não a cada tile: `tileAt` gera a chunk inteira na primeira
+  /// consulta.
+  int get _plotElevation {
+    final plot = this.plot!;
+    if (_plotElevationOrigin != plot.origin) {
+      _plotElevationOrigin = plot.origin;
+      _plotElevationCache =
+          gameWorld.tileAt(plot.origin.x, plot.origin.y).elevation;
+    }
+    return _plotElevationCache;
+  }
+
+  TileCoord? _plotElevationOrigin;
+  int _plotElevationCache = 0;
+
   /// Desenha um sprite ancorado na base do losango do tile.
   void _drawSprite(
     Canvas canvas,
@@ -236,6 +270,7 @@ class CyberWorldGame extends FlameGame with ScaleDetector, TapCallbacks {
     double wy,
     Color? tint, {
     double opacity = 1,
+    int? footprint,
   }) {
     // Um sprite fora do cache lançaria e derrubaria o frame inteiro.
     if (!catalog.isLoaded(meta)) return;
@@ -244,7 +279,12 @@ class CyberWorldGame extends FlameGame with ScaleDetector, TapCallbacks {
     // O sprite foi renderizado com o modelo centralizado; `baseY` diz onde o
     // chão do modelo caiu na imagem. Escalamos pela footprint em tiles e
     // deslocamos para que esse ponto coincida com o centro do losango.
-    final targetWidth = WorldMetrics.tileWidth * meta.footprint;
+    //
+    // Para as construções do terreno quem manda é a footprint declarada na
+    // regra do jogo, não o tamanho do modelo: uma refinaria ocupa 3x2 tiles e
+    // precisa parecer que ocupa. Antes disso ela era desenhada com a largura do
+    // `.glb` — do tamanho de um barril, sobre um lote de 3 tiles vazios.
+    final targetWidth = WorldMetrics.tileWidth * (footprint ?? meta.footprint);
     final scale = targetWidth / image.width;
     final targetHeight = image.height * scale;
 
@@ -293,17 +333,18 @@ class CyberWorldGame extends FlameGame with ScaleDetector, TapCallbacks {
     if (plot == null) return;
 
     final primary = Color(plot.identity.primaryColor);
+    final elevation = _plotElevation.toDouble();
 
     // Contorno do lote, para o jogador achar o próprio terreno no mapa.
     final corners = [
-      IsoProjection.tileToWorld(
-          plot.origin.x.toDouble() - 0.5, plot.origin.y.toDouble() - 0.5),
-      IsoProjection.tileToWorld(
-          plot.origin.x + plot.width - 0.5, plot.origin.y.toDouble() - 0.5),
-      IsoProjection.tileToWorld(
-          plot.origin.x + plot.width - 0.5, plot.origin.y + plot.height - 0.5),
-      IsoProjection.tileToWorld(
-          plot.origin.x.toDouble() - 0.5, plot.origin.y + plot.height - 0.5),
+      IsoProjection.tileToWorld(plot.origin.x.toDouble() - 0.5,
+          plot.origin.y.toDouble() - 0.5, elevation: elevation),
+      IsoProjection.tileToWorld(plot.origin.x + plot.width - 0.5,
+          plot.origin.y.toDouble() - 0.5, elevation: elevation),
+      IsoProjection.tileToWorld(plot.origin.x + plot.width - 0.5,
+          plot.origin.y + plot.height - 0.5, elevation: elevation),
+      IsoProjection.tileToWorld(plot.origin.x.toDouble() - 0.5,
+          plot.origin.y + plot.height - 0.5, elevation: elevation),
     ];
 
     final outline = Path()..moveTo(corners.first.$1, corners.first.$2);
@@ -330,7 +371,6 @@ class CyberWorldGame extends FlameGame with ScaleDetector, TapCallbacks {
 
     for (final building in buildings) {
       final tile = plot.worldTileFor(building.x, building.y);
-      final terrain = gameWorld.tileAt(tile.x, tile.y);
 
       // Ancora no centro da footprint para prédios maiores que 1x1.
       final centerX = tile.x + (building.def.width - 1) / 2;
@@ -338,15 +378,21 @@ class CyberWorldGame extends FlameGame with ScaleDetector, TapCallbacks {
       final (wx, wy) = IsoProjection.tileToWorld(
         centerX,
         centerY,
-        elevation: terrain.elevation.toDouble(),
+        elevation: elevation,
       );
 
       final meta = catalog.byId(building.def.spriteId);
       if (meta == null) continue;
 
+      // Prédios altos (torres) usam a footprint declarada; prédios largos e
+      // baixos ficariam esticados se usassem a largura cheia, então a diagonal
+      // média das duas dimensões dá um resultado mais próximo do esperado.
+      final span = ((building.def.width + building.def.height) / 2).round();
+
       if (!building.isReady) {
         // Obra em andamento: silhueta translúcida em âmbar.
-        _drawSprite(canvas, meta, wx, wy, const Color(0xFFFFB300), opacity: 0.45);
+        _drawSprite(canvas, meta, wx, wy, const Color(0xFFFFB300),
+            opacity: 0.45, footprint: span);
         continue;
       }
 
@@ -356,6 +402,7 @@ class CyberWorldGame extends FlameGame with ScaleDetector, TapCallbacks {
         wx,
         wy,
         building.accentColor == null ? null : Color(building.accentColor!),
+        footprint: span,
       );
 
       // Prédio parado ganha um alerta visível de longe.
