@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 import { describe, expect, it } from 'vitest';
 
 import { PerspectiveCamera } from 'three';
@@ -256,5 +258,31 @@ describe('Limites de zoom', () => {
     expect(l.minDistance).toBeGreaterThanOrEqual(12);
     expect(l.maxDistance).toBeLessThanOrEqual(130);
     expect(l.maxDistance / l.minDistance).toBeLessThan(10);
+  });
+});
+
+describe('Regras de visibilidade das telas', () => {
+  it('a folha de estilo esconde o atributo hidden com !important', () => {
+    // Regressão real: `.tela { display: flex }` vencia a regra
+    // `[hidden] { display: none }` do navegador, e as quatro telas apareciam
+    // empilhadas numa página rolável. O atributo estava certo o tempo todo —
+    // um teste que perguntasse `elemento.hidden` teria passado.
+    const css = readFileSync(
+      new URL('../index.html', import.meta.url),
+      'utf8',
+    );
+    expect(css).toMatch(/\[hidden\]\s*\{\s*display:\s*none\s*!important/);
+  });
+
+  it('nenhuma regra de .tela declara display sem cobrir o hidden', () => {
+    // Guarda contra a mesma pegadinha voltando por outro seletor.
+    const css = readFileSync(
+      new URL('../index.html', import.meta.url),
+      'utf8',
+    );
+    const importante = css.indexOf('[hidden]');
+    const telaDisplay = css.indexOf('.tela {');
+    expect(importante).toBeGreaterThan(-1);
+    expect(importante).toBeLessThan(telaDisplay);
   });
 });

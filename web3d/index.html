@@ -140,6 +140,19 @@
       }
 
       /* ---------------------------------------------------------- telas */
+
+      /* `display: none` explícito para o atributo `hidden`.
+         A regra do navegador é `[hidden] { display: none }`, com a
+         especificidade de uma folha de estilo padrão. Qualquer regra de autor
+         com `display` — e `.tela { display: flex }` logo abaixo é uma — vence
+         essa disputa e faz o elemento reaparecer. O resultado foi o menu, a
+         nova campanha, os modos e as configurações empilhados numa página
+         rolável só.
+         Pior: um teste que pergunta `elemento.hidden` continua respondendo
+         `true`, porque a propriedade está certa. É o CSS que a ignora. Só
+         medir o que a tela mostra pega isto. */
+      [hidden] { display: none !important; }
+
       #telas { position: fixed; inset: 0; overflow-y: auto; }
       .tela {
         display: flex;
