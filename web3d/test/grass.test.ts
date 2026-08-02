@@ -4,7 +4,12 @@ import { InstancedBufferAttribute } from 'three';
 
 import { DensityField } from '../src/render/density';
 import { createGrassField, defaultGrassOptions } from '../src/render/grass';
-import { budgetFor, grassOptionsFor } from '../src/render/quality';
+import {
+  budgetFor,
+  grassOptionsFor,
+  maxBladesForPatch,
+  patchSizeForView,
+} from '../src/render/quality';
 import { Biome, biomeDef } from '../src/world/biome';
 import {
   nearestLandBiome,
@@ -208,5 +213,45 @@ describe('Chão do terreno do jogador', () => {
     const a = plotOrigin(WorldGenerator.fromLabel('neon-tokyo'));
     const b = plotOrigin(WorldGenerator.fromLabel('neon-tokyo'));
     expect(a).toEqual(b);
+  });
+});
+
+describe('Trecho e orçamento acompanhando o zoom', () => {
+  const budget = budgetFor('medio');
+  const FOV = 58;
+
+  it('o trecho cresce com a distância, dentro de um teto', () => {
+    const perto = patchSizeForView(budget, 14, FOV);
+    const longe = patchSizeForView(budget, 110, FOV);
+    // De perto nunca encolhe abaixo do tamanho base: semear menos que isso
+    // deixaria o campo acabar dentro da tela.
+    expect(perto).toBe(budget.patchSize);
+    expect(longe).toBeGreaterThan(perto);
+    expect(longe).toBeLessThanOrEqual(budget.patchSize * 2.4);
+  });
+
+  it('o teto de lâminas acompanha a área, senão o campo abre careca', () => {
+    // Preso ao tamanho base, o teto espalhava as mesmas lâminas por uma área
+    // cinco vezes maior no enquadramento de abertura: 38 caíam para 3 por
+    // metro quadrado, e a primeira impressão do jogo era chão pelado.
+    const patch = patchSizeForView(budget, 85, FOV);
+    const teto = maxBladesForPatch(budget, patch);
+    expect(teto).toBeGreaterThan(budget.maxBlades);
+
+    const porMetro = teto / (patch * patch);
+    expect(porMetro).toBeGreaterThan(8);
+  });
+
+  it('o teto não cresce indefinidamente', () => {
+    // Área cresce com o quadrado do lado; acompanhar lâmina a lâmina
+    // quadruplicaria o custo a cada duplicação, e nenhum celular paga.
+    const enorme = maxBladesForPatch(budget, budget.patchSize * 10);
+    expect(enorme).toBeLessThanOrEqual(budget.maxBlades * 1.8);
+  });
+
+  it('trecho igual ao base não infla o teto', () => {
+    expect(maxBladesForPatch(budget, budget.patchSize)).toBe(budget.maxBlades);
+    // Nem trecho menor o reduz: encolher aqui seria ralear justamente de perto.
+    expect(maxBladesForPatch(budget, budget.patchSize / 2)).toBe(budget.maxBlades);
   });
 });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { gameModeInfo, gameModes } from '../src/net/gameServer';
+import { gameModeInfo, gameModes, type ServerInfo } from '../src/net/gameServer';
+import { joinBlocker, sortServers } from '../src/ui/serverBrowser';
 import { LocalGameServer, MemoryStore } from '../src/net/localServer';
 
 function servidor(): LocalGameServer {
@@ -143,5 +144,55 @@ describe('Servidor local', () => {
     for (let i = 1; i < saves.length; i++) {
       expect(saves[i - 1]!.updatedAt).toBeGreaterThanOrEqual(saves[i]!.updatedAt);
     }
+  });
+});
+
+describe('Navegador de servidores', () => {
+  const base = {
+    region: 'local (simulado)',
+    mode: 'persistent' as const,
+    seedLabel: 's',
+    capacity: 200,
+    day: 1,
+  };
+  const srv = (
+    id: string,
+    ping: number | null,
+    players = 10,
+    online = true,
+  ): ServerInfo => ({ ...base, id, name: id, ping, players, online });
+
+  it('ordena pelo ping, e não pela lotação', () => {
+    // Ordenar por gente põe o pior lag no topo sempre que ele for popular.
+    const ordem = sortServers([
+      srv('c', 90, 190),
+      srv('a', 12, 3),
+      srv('b', 40, 150),
+    ]).map((s) => s.id);
+    expect(ordem).toEqual(['a', 'b', 'c']);
+  });
+
+  it('lotado e fora do ar caem para o fim, nessa ordem', () => {
+    // Nenhum dos dois é escolha, mas lotado pode esvaziar e fora do ar não.
+    const ordem = sortServers([
+      srv('fora', 5, 10, false),
+      srv('lotado', 6, 200),
+      srv('livre', 300),
+    ]).map((s) => s.id);
+    expect(ordem).toEqual(['livre', 'lotado', 'fora']);
+  });
+
+  it('ping desconhecido vai para o fim dos disponíveis, não para o topo', () => {
+    // `null` comparado como número viraria 0 e ganharia de todo mundo.
+    const ordem = sortServers([srv('sem', null), srv('com', 200)]).map((s) => s.id);
+    expect(ordem).toEqual(['com', 'sem']);
+  });
+
+  it('o motivo do bloqueio é dito, não escondido', () => {
+    expect(joinBlocker(srv('a', 10))).toBeNull();
+    expect(joinBlocker(srv('a', 10, 200))).toBe('lotado');
+    expect(joinBlocker(srv('a', 10, 10, false))).toBe('fora do ar');
+    // Fora do ar ganha de lotado: é o impedimento mais forte.
+    expect(joinBlocker(srv('a', 10, 200, false))).toBe('fora do ar');
   });
 });

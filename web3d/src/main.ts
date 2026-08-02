@@ -6,6 +6,7 @@ import {
   QualityGovernor,
   grassOptionsFor,
   guessTier,
+  maxBladesForPatch,
   patchSizeForView,
 } from './render/quality';
 import { CityCamera } from './render/cityCamera';
@@ -36,6 +37,7 @@ import {
 import { buildingsAvailableAt, type CitizenLevel } from './building/buildingType';
 import { Inventory } from './economy/inventory';
 import { allItems } from './economy/item';
+import { settings } from './net/settings';
 
 /**
  * O mundo do CyberKingdoms em três dimensões.
@@ -53,6 +55,10 @@ import { allItems } from './economy/item';
  */
 
 const FOG_COLOR = 0x8fa6b8;
+
+/** Vento padrão do campo. Desligá-lo zera a força, não a direção. */
+const VENTO_DIRECAO = new THREE.Vector2(1, 0.35);
+const VENTO_FORCA = 0.22;
 
 export interface WorldHandle {
   readonly canvas: HTMLCanvasElement;
@@ -146,10 +152,17 @@ export function bootWorld(seedLabel: string): WorldHandle {
     return Math.abs(desejado - seededPatch) / seededPatch > 0.25;
   }
 
-  const governor = new QualityGovernor(guessTier(), () => {
-    applyResolution();
-    rebuild();
-  });
+  // As preferências valem desde o primeiro quadro, inclusive a de qualidade —
+  // é ela que decide o orçamento com que a cena é montada.
+  const prefs = settings();
+  const governor = new QualityGovernor(
+    prefs.current.quality === 'auto' ? guessTier() : prefs.current.quality,
+    () => {
+      applyResolution();
+      rebuild();
+    },
+  );
+  governor.setLocked(prefs.current.quality === 'auto' ? null : prefs.current.quality);
 
   // Câmera de construtor de cidade: o alvo é um ponto do terreno, o dedo
   // arrasta o chão, e a inclinação sobe junto com o afastamento.
@@ -173,13 +186,30 @@ export function bootWorld(seedLabel: string): WorldHandle {
     // orçamento de render, e num lote de 40 m a tela inteira caía dentro da
     // cerca — não dava para saber onde o terreno começava ou acabava.
     if (!enquadrado) {
-      // A câmera nasce com giro de 0,7 rad, então o lote entra em quadro como
-      // losango e quem manda no enquadramento é a **diagonal**, não o lado.
-      // Enquadrar pelo lado deixava só a ponta do terreno na tela.
-      const fundo = plot.height * TILE * Math.SQRT2 * 1.1;
+      // Enquadrar o lote é um problema de duas dimensões, e a errada mandava.
+      //
+      // O campo de visão declarado é o **vertical**; o horizontal sai dele pela
+      // proporção da tela. Num celular em retrato a proporção é ~0,46, então a
+      // largura visível é menos da metade da altura — e uma conta feita só pela
+      // altura deixava a tela inteira dentro da cerca, sem nenhuma borda à
+      // vista. Quem decide é o eixo mais apertado, que é o que exige mais
+      // distância.
+      //
+      // A meta é o **lado** do lote, e não a diagonal: com o giro de 0,7 rad o
+      // terreno entra como losango, e enquadrar a diagonal inteira num celular
+      // empurraria a câmera para o limite do zoom logo na abertura — o vilarejo
+      // viraria mapa antes de o jogador ver que é um vilarejo.
+      const meta = plot.height * TILE * 1.05;
+      const tanV = Math.tan((camera.fov * Math.PI) / 360);
+      const aspecto = Number.isFinite(camera.aspect) && camera.aspect > 0
+        ? camera.aspect
+        : 1;
+      const porAltura = meta / (2 * tanV);
+      const porLargura = meta / (2 * tanV * aspecto);
+
       view.distance = Math.min(
         view.limits.maxDistance,
-        fundo / (2 * Math.tan((camera.fov * Math.PI) / 360)),
+        Math.max(view.limits.minDistance, porAltura, porLargura),
       );
       enquadrado = true;
     }
@@ -215,10 +245,18 @@ export function bootWorld(seedLabel: string): WorldHandle {
       density,
       center.x,
       center.y,
-      { ...grassOptionsFor(budget), patchSize: patch },
+      {
+        ...grassOptionsFor(budget),
+        patchSize: patch,
+        maxBlades: maxBladesForPatch(budget, patch),
+      },
       bounds,
     );
     scene.add(terrain.mesh, terrain.water, grass.mesh);
+    // O campo acabou de ser refeito com os uniformes padrão; a preferência de
+    // vento tem de ser reimposta, senão desligar o vento duraria só até o
+    // próximo ressemeio.
+    grass.setWind(VENTO_DIRECAO, prefs.current.wind ? VENTO_FORCA : 0);
 
     if (!plotView) {
       plotView = createPlotView(plot, lote.x, lote.z);
@@ -234,13 +272,30 @@ export function bootWorld(seedLabel: string): WorldHandle {
 
   function report(): void {
     const biome = biomeDef(density.biomes.at(center.x, center.y));
-    const el = document.querySelector('#readout');
-    if (el) {
-      el.textContent =
-        `${biome.label} · ${(grass?.bladeCount ?? 0).toLocaleString('pt-BR')} lâminas` +
-        ` · ${governor.tier}`;
-    }
+    const el = document.querySelector<HTMLElement>('#readout');
+    if (!el) return;
+    el.hidden = !prefs.current.showStats;
+    el.textContent =
+      `${biome.label} · ${(grass?.bladeCount ?? 0).toLocaleString('pt-BR')} lâminas` +
+      ` · ${governor.tier}${governor.isLocked ? ' (fixo)' : ''}`;
   }
+
+  /**
+   * Aplica as preferências à cena que já existe.
+   *
+   * O mundo fica montado enquanto o jogador vai ao menu e volta, então uma
+   * mudança feita nas configurações precisa alcançar uma cena viva. Ler as
+   * preferências só na montagem faria o ajuste só valer na próxima abertura do
+   * jogo — que é o mesmo que não valer.
+   */
+  function aplicarPreferencias(): void {
+    const s = prefs.current;
+    governor.setLocked(s.quality === 'auto' ? null : s.quality);
+    grass?.setWind(VENTO_DIRECAO, s.wind ? VENTO_FORCA : 0);
+    report();
+  }
+
+  prefs.subscribe(aplicarPreferencias);
 
   // ------------------------------------------------------- barra de recursos
   //
@@ -495,7 +550,11 @@ export function bootWorld(seedLabel: string): WorldHandle {
             atualizarFantasma(state.x, state.y);
             break;
           }
-          view.pan(state.dx, state.dy, window.innerHeight);
+          // Sinal e velocidade saem das preferências. Invertido, o dedo move a
+          // câmera; normal, arrasta o chão sob o dedo.
+          const sentido = prefs.current.invertDrag ? -1 : 1;
+          const ganho = sentido * prefs.current.cameraSpeed;
+          view.pan(state.dx * ganho, state.dy * ganho, window.innerHeight);
 
           // Freio na borda em vez de trava seca: a câmera desliza ao longo do
           // limite. Parede dura parece defeito; freio parece regra.
@@ -625,7 +684,7 @@ export function bootWorld(seedLabel: string): WorldHandle {
 
     // Velocidade proporcional ao afastamento: de longe cada passo cobre mais
     // chão, senão atravessar a vila afastado leva o dobro do tempo.
-    const passo = view.distance * 2.2 * delta;
+    const passo = view.distance * 2.2 * delta * prefs.current.cameraSpeed;
     let dx = 0;
     let dz = 0;
     if (teclas.has('frente')) dz -= passo;

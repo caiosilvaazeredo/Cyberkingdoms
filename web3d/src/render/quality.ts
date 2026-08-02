@@ -85,7 +85,38 @@ export function budgetFor(tier: DeviceTier): QualityBudget {
 }
 
 /** Quanto o trecho pode crescer além do tamanho base, ao afastar a câmera. */
-const PATCH_MAX_GROWTH = 2.4;
+const PATCH_MAX_GROWTH = 2.2;
+
+/**
+ * Quanto o teto de lâminas pode crescer junto com o trecho.
+ *
+ * Menor que o crescimento da **área**, e é aí que está a decisão. O trecho
+ * dobrando de lado quadruplica a área; acompanhar isso lâmina a lâmina
+ * quadruplicaria o custo, e nenhum celular paga. Segurar o teto em 1,8 mantém
+ * o campo fechado na faixa de zoom em que o jogador constrói, e aceita ralear
+ * no zoom máximo — onde uma lâmina de 5 cm não chega a ocupar um pixel e quem
+ * carrega a leitura é a cor do terreno.
+ */
+const BLADE_MAX_GROWTH = 1.8;
+
+/**
+ * Teto de lâminas para um trecho que cresceu com o zoom.
+ *
+ * Sem isto o teto ficava preso ao tamanho base enquanto o trecho crescia até
+ * 2,2×: no enquadramento de abertura, as mesmas 95 mil lâminas se espalhavam
+ * por uma área cinco vezes maior e o campo caía de 38 para 3 lâminas por metro
+ * quadrado. Denso de perto e careca ao abrir o jogo é a pior das combinações —
+ * a primeira impressão é a careca.
+ */
+export function maxBladesForPatch(
+  budget: QualityBudget,
+  patchSize: number,
+): number {
+  const razaoArea = (patchSize / budget.patchSize) ** 2;
+  return Math.round(
+    budget.maxBlades * Math.min(BLADE_MAX_GROWTH, Math.max(1, razaoArea)),
+  );
+}
 
 /**
  * Lado do trecho de grama que cobre o que a câmera enxerga desta distância.
@@ -144,11 +175,33 @@ export class QualityGovernor {
   private frames = 0;
   private accumulated = 0;
   private goodStreak = 0;
+  private locked = false;
 
   constructor(
     private currentTier: DeviceTier = guessTier(),
     private readonly onChange: (tier: DeviceTier) => void = () => {},
   ) {}
+
+  /**
+   * Trava a classe numa escolha do jogador, ou devolve o volante ao medidor.
+   *
+   * Travar significa travar de verdade, inclusive quando não couber: quem fixa
+   * "alto" num aparelho fraco quer alto, e um governador que "corrige" a
+   * escolha silenciosamente é um ajuste que não ajusta nada. O medidor continua
+   * rodando — só não decide.
+   */
+  setLocked(tier: DeviceTier | null): void {
+    this.locked = tier !== null;
+    this.goodStreak = 0;
+    if (tier !== null && tier !== this.currentTier) {
+      this.currentTier = tier;
+      this.onChange(tier);
+    }
+  }
+
+  get isLocked(): boolean {
+    return this.locked;
+  }
 
   get tier(): DeviceTier {
     return this.currentTier;
@@ -160,6 +213,7 @@ export class QualityGovernor {
 
   /** Alimenta o medidor com o delta do quadro, em segundos. */
   sample(delta: number): void {
+    if (this.locked) return;
     // Quadros absurdos (aba oculta, depurador aberto) não são sintoma de
     // aparelho lento e envenenariam a média.
     if (delta <= 0 || delta > 0.5) return;

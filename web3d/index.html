@@ -228,6 +228,116 @@
         .tela { max-width: 460px; margin: 0 auto; }
       }
 
+      /* ------------------------------------------ modos, servidores, ajustes */
+
+      /* Selos do modo: o jogador precisa saber, antes de escolher, se aquele
+         modo pode falhar por motivo que não é dele — servidor fora, lotado,
+         sem rede. */
+      .selos { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+      .selo {
+        padding: 2px 7px;
+        border: 1px solid var(--borda);
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: normal;
+        letter-spacing: 0.04em;
+        opacity: 0.75;
+      }
+      .selo.ok { border-color: rgba(140, 240, 200, 0.55); color: #9ff0cf; }
+      .selo.rede { border-color: rgba(255, 200, 130, 0.55); color: #ffd28a; }
+
+      .aviso-simulado {
+        margin: 0 0 6px;
+        padding: 8px 10px;
+        border: 1px solid rgba(255, 200, 130, 0.4);
+        border-radius: 10px;
+        background: rgba(255, 200, 130, 0.08);
+        color: #ffd28a;
+        font-size: 11px;
+      }
+
+      .servidores { margin-top: 8px; }
+      .servidor {
+        display: flex !important;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 3px;
+        background: rgba(255, 255, 255, 0.04);
+        text-align: left;
+      }
+      .servidor-topo { display: flex; align-items: baseline; gap: 8px; }
+      .servidor-topo strong { flex: 1; }
+      .servidor span { font-size: 11px; font-weight: normal; opacity: 0.62; letter-spacing: 0; }
+      .servidor .ping { flex: 0 0 auto; opacity: 0.8; font-variant-numeric: tabular-nums; }
+      .servidor .ping.ruim { color: #ff9d9d; opacity: 0.9; }
+      .servidor .seed { opacity: 0.4; }
+      /* Indisponível continua na lista, e continua legível: sumir com ele faria
+         a lista dançar entre atualizações e o jogador perder a referência. */
+      .servidor.bloqueado { opacity: 0.42; }
+
+      /* O que já foi decidido antes de chegar na tela. */
+      .contexto {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        margin-bottom: 6px;
+        padding: 9px 11px;
+        border: 1px solid rgba(140, 240, 200, 0.35);
+        border-radius: 10px;
+        background: rgba(90, 200, 160, 0.1);
+      }
+      .contexto span { font-size: 11px; opacity: 0.68; }
+      .servidor-escolhido { color: #9ff0cf; opacity: 0.9 !important; }
+      /* Seed travada é do servidor: o campo mostra, não convida. */
+      .tela input[readonly] { opacity: 0.6; cursor: not-allowed; }
+
+      .linha-chips { flex-direction: row !important; flex-wrap: wrap; }
+      .chip {
+        flex: 1 1 auto;
+        min-width: 72px;
+        min-height: var(--toque);
+        padding: 8px 10px;
+        border: 1px solid var(--borda);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--texto);
+        font: 12px/1 ui-monospace, Menlo, Consolas, monospace;
+        cursor: pointer;
+      }
+      .chip[aria-pressed="true"] {
+        background: rgba(90, 200, 160, 0.3);
+        border-color: rgba(140, 240, 200, 0.65);
+      }
+
+      .faixa { display: flex; align-items: center; gap: 10px; }
+      .faixa input[type="range"] {
+        flex: 1;
+        min-height: 0;
+        padding: 0;
+        background: none;
+        border: none;
+        /* Sem isto o controle sai no azul do sistema, que é a única peça de
+           cromo do navegador visível numa tela que devia parecer jogo. */
+        accent-color: #63e6a4;
+      }
+      .valor-faixa { min-width: 40px; font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
+
+      .interruptor { position: relative; padding-right: 84px !important; }
+      .interruptor .estado {
+        position: absolute;
+        top: 50%;
+        right: 12px;
+        transform: translateY(-50%);
+        opacity: 0.75 !important;
+        font-size: 10px;
+        letter-spacing: 0.06em;
+      }
+      .interruptor[aria-checked="true"] {
+        background: rgba(90, 200, 160, 0.22);
+        border-color: rgba(140, 240, 200, 0.55);
+      }
+      .interruptor[aria-checked="true"] .estado { color: #9ff0cf; }
+
       /* ------------------------------------------------ catálogo de obras */
       /* Dentro do painel, e não solto no rodapé: os dois disputavam o mesmo
          canto e o painel cobria o botão — clicar nele era impossível. */

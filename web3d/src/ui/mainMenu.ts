@@ -18,6 +18,15 @@ export interface MainMenuDeps {
   readonly router: ScreenRouter;
   /** Entra num save existente. */
   readonly onContinue: (slot: SaveSlot) => Promise<void>;
+  /**
+   * Começa uma campanha sem modo decidido.
+   *
+   * O menu não empilha a tela nova sozinho porque ela guarda o modo escolhido
+   * na visita anterior: quem passou pelos modos, escolheu "Mundo Persistente" e
+   * voltou ao menu encontraria esse modo ainda grudado ao apertar "Nova
+   * campanha". Quem sabe limpar é quem montou as telas.
+   */
+  readonly onNewCampaign: () => void;
 }
 
 export function createMainMenu(deps: MainMenuDeps): Screen {
@@ -118,7 +127,7 @@ export function createMainMenu(deps: MainMenuDeps): Screen {
     const mais = saves[0];
     if (mais) void deps.onContinue(mais);
   });
-  novo.addEventListener('click', () => void deps.router.push('nova'));
+  novo.addEventListener('click', () => deps.onNewCampaign());
   modos.addEventListener('click', () => void deps.router.push('modos'));
   config.addEventListener('click', () => void deps.router.push('config'));
 
