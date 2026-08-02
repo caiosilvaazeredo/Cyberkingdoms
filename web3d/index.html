@@ -214,6 +214,68 @@
         .tela { max-width: 460px; margin: 0 auto; }
       }
 
+      /* ------------------------------------------------ catálogo de obras */
+      /* Dentro do painel, e não solto no rodapé: os dois disputavam o mesmo
+         canto e o painel cobria o botão — clicar nele era impossível. */
+      #abrir-catalogo {
+        width: 100%;
+        min-height: var(--toque);
+        margin-bottom: 6px;
+        padding: 0 18px;
+        border: 1px solid var(--borda);
+        border-radius: 12px;
+        background: rgba(90, 200, 160, 0.28);
+        backdrop-filter: blur(8px);
+        color: var(--texto);
+        font: 13px/1 ui-monospace, Menlo, Consolas, monospace;
+        letter-spacing: 0.08em;
+        cursor: pointer;
+      }
+      #catalogo {
+        position: fixed;
+        left: max(10px, env(safe-area-inset-left));
+        right: max(10px, env(safe-area-inset-right));
+        bottom: calc(max(10px, env(safe-area-inset-bottom)) + 12px);
+        max-height: 42vh;
+        z-index: 2;
+        padding: 12px;
+        border: 1px solid var(--borda);
+        border-radius: 14px;
+        background: var(--painel);
+        backdrop-filter: blur(10px);
+        color: var(--texto);
+        font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace;
+        overflow-y: auto;
+        display: none;
+      }
+      #catalogo.aberto { display: block; }
+      #catalogo h2 { margin: 0 0 6px; font-size: 11px; letter-spacing: 0.12em; opacity: 0.7; }
+      #status-obra { min-height: 16px; margin: 0 0 8px; font-size: 11px; color: #9ff0cf; }
+      #lista-construcoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+      .item-constr {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+        min-height: var(--toque);
+        padding: 8px;
+        border: 1px solid var(--borda);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--texto);
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+      .item-constr span { font-size: 10px; opacity: 0.6; }
+      .item-constr[aria-pressed="true"] {
+        background: rgba(90, 200, 160, 0.34);
+        border-color: rgba(140, 240, 200, 0.7);
+      }
+      @media (min-width: 640px) {
+        #catalogo { right: auto; width: 340px; }
+      }
+
       #ajuda { margin: 10px 0 0; font-size: 11px; line-height: 1.6; opacity: 0.62; }
       #ajuda kbd {
         display: inline-block;
@@ -273,6 +335,12 @@
       <span id="aviso-texto"></span>
     </div>
 
+    <aside id="catalogo">
+      <h2>CONSTRUÇÕES</h2>
+      <p id="status-obra"></p>
+      <div id="lista-construcoes"></div>
+    </aside>
+
     <aside id="painel">
       <div id="cabecalho">
         <h1>CyberKingdoms</h1>
@@ -281,6 +349,7 @@
       <p id="readout">carregando…</p>
 
       <div id="corpo">
+        <button id="abrir-catalogo" type="button">CONSTRUIR</button>
         <button id="sair" type="button">SAIR PARA O MENU</button>
 
         <p id="ajuda">

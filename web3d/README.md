@@ -77,6 +77,28 @@ jogo; enterrar isso sob "Novo" cobra um toque extra de todo mundo, todo dia,
 para servir a quem chega uma vez. Sem save ele não some — fica desabilitado e
 explicado, senão o menu dança entre aberturas.
 
+## Construir
+
+O catálogo abre pelo painel, filtrado pelo nível de cidadão. Escolhida uma
+construção, a grade aparece, o fantasma segue o dedo em verde ou vermelho, e o
+motivo da recusa fica escrito — "Sobrepõe Barraco", "Não cabe dentro do
+terreno", "Créditos insuficientes". Toque confirma.
+
+Duas decisões que a interação obrigou:
+
+- **Com uma construção escolhida, arrastar posiciona o fantasma em vez de mover
+  a câmera.** As duas coisas competiriam pelo mesmo dedo, e perder a câmera é
+  menos grave que não conseguir mirar.
+- **`canPlace` não cobra nada.** Ele roda a cada quadro enquanto o dedo
+  arrasta; se cobrasse, o jogador ficaria sem material só de olhar. Há teste
+  para isso.
+
+As construções são **blocos**, com a cor da categoria e a altura crescendo com
+o nível — não os sprites da Kenney. Um sprite é uma foto de um ângulo, e aqui a
+câmera gira. Trazer os `.glb` de volta é uma rodada inteira. Até lá, o bloco
+respeita a footprint correta, e num construtor de cidade o que se lê de longe é
+silhueta e cor, não detalhe.
+
 ## Cliente e servidor
 
 O jogo é um MMO: o estado que vale é o do servidor, não o da tela. Por isso a

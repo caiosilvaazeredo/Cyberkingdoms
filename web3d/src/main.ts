@@ -9,6 +9,7 @@ import {
 } from './render/quality';
 import { CityCamera } from './render/cityCamera';
 import { createTerrain, type Terrain } from './render/terrain';
+import { createPlotView, type PlotView } from './render/plotView';
 import { GestureRecognizer } from './render/touch';
 import {
   blockedHint,
@@ -19,6 +20,10 @@ import {
 } from './render/villageBounds';
 import { biomeDef } from './world/biome';
 import { WorldGenerator } from './world/worldGen';
+import { Plot, plotSizeForLevel } from './building/plot';
+import { buildingsAvailableAt, type CitizenLevel } from './building/buildingType';
+import { Inventory } from './economy/inventory';
+import { allItems } from './economy/item';
 
 /**
  * O mundo do CyberKingdoms em três dimensões.
@@ -70,6 +75,18 @@ export function bootWorld(seedLabel: string): WorldHandle {
   let grass: GrassField | null = null;
   const center = new THREE.Vector2(0, 0);
   const seededAt = new THREE.Vector2(0, 0);
+
+  // Terreno do jogador. Enquanto a campanha não estiver portada, ele nasce
+  // vazio com recursos de teste — o suficiente para a colocação funcionar de
+  // verdade, cobrando custo e recusando encaixe inválido.
+  const nivel: CitizenLevel = 'elite';
+  const [pw, ph] = plotSizeForLevel(nivel);
+  const plot = new Plot('p1', 'cap_0', { x: 0, y: 0 }, pw, ph);
+  const inventario = new Inventory();
+  for (const item of allItems) inventario.add(item.id, 300);
+  let creditos = 250_000;
+  let plotView: PlotView | null = null;
+  let selecionada: string | null = null;
 
   // Limite da vila. Por enquanto o centro é a origem e o nome sai do layout do
   // mundo; quando a campanha estiver portada, isto passa a vir do terreno do
@@ -135,6 +152,12 @@ export function bootWorld(seedLabel: string): WorldHandle {
       bounds,
     );
     scene.add(terrain.mesh, terrain.water, grass.mesh);
+
+    if (!plotView) {
+      plotView = createPlotView(plot);
+      scene.add(plotView.group);
+      plotView.sync(plot);
+    }
     seededAt.copy(center);
 
     // Enquadramento amarrado ao trecho semeado, e não a uma distância fixa.
@@ -177,10 +200,88 @@ export function bootWorld(seedLabel: string): WorldHandle {
     }
   }
 
+  const raycaster = new THREE.Raycaster();
+  const ponteiro = new THREE.Vector2();
+  const planoChao = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+  const alvo = new THREE.Vector3();
+  const statusEl = document.querySelector<HTMLElement>('#status-obra');
+
+  /** Célula da grade sob um ponto de tela, ou `null`. */
+  function celulaEm(clientX: number, clientY: number) {
+    ponteiro.set(
+      (clientX / window.innerWidth) * 2 - 1,
+      -(clientY / window.innerHeight) * 2 + 1,
+    );
+    raycaster.setFromCamera(ponteiro, camera);
+    // Intersecção com o plano do chão, e não com a malha de terreno: o plano
+    // é exato e não depende da densidade de vértices, e o cenário é liso.
+    if (!raycaster.ray.intersectPlane(planoChao, alvo)) return null;
+    return plotView?.cellAt(alvo.x, alvo.z) ?? null;
+  }
+
+  function atualizarFantasma(clientX: number, clientY: number): void {
+    if (!selecionada || !plotView) return;
+    const celula = celulaEm(clientX, clientY);
+    if (!celula) {
+      plotView.showGhost(null, 0, 0, false);
+      if (statusEl) statusEl.textContent = 'Fora do terreno.';
+      return;
+    }
+    const check = plot.canPlace(selecionada, celula.x, celula.y, {
+      level: nivel,
+      credits: creditos,
+      inventory: inventario,
+    });
+    plotView.showGhost(selecionada, celula.x, celula.y, check.valid);
+    if (statusEl) {
+      statusEl.textContent = check.valid
+        ? 'Toque de novo para confirmar.'
+        : check.reason ?? '';
+    }
+  }
+
+  function confirmar(clientX: number, clientY: number): boolean {
+    if (!selecionada || !plotView) return false;
+    const celula = celulaEm(clientX, clientY);
+    if (!celula) return false;
+
+    const def = selecionada;
+    const r = plot.build(def, celula.x, celula.y, {
+      level: nivel,
+      credits: creditos,
+      inventory: inventario,
+    });
+    if (!r.ok) {
+      if (statusEl) statusEl.textContent = r.reason;
+      return false;
+    }
+    // Os créditos são do personagem, não do terreno — por isso o débito
+    // acontece aqui e não dentro de `build`.
+    creditos -= r.building.def.creditCost;
+    plotView.sync(plot);
+    if (statusEl) {
+      statusEl.textContent =
+        `${r.building.def.name} em obra · ${r.building.daysRemaining} dia(s) · ` +
+        `${creditos.toLocaleString('pt-BR')} cr`;
+    }
+    return true;
+  }
+
   const gestures = new GestureRecognizer(canvas, {
+    onStart(state) {
+      if (state.kind === 'pan' && selecionada) {
+        atualizarFantasma(state.x, state.y);
+      }
+    },
     onMove(state) {
       switch (state.kind) {
         case 'pan': {
+          // Com uma construção escolhida, arrastar posiciona o fantasma em vez
+          // de mover a câmera: as duas coisas competiriam pelo mesmo dedo.
+          if (selecionada) {
+            atualizarFantasma(state.x, state.y);
+            break;
+          }
           view.pan(state.dx, state.dy, window.innerHeight);
 
           // Freio na borda em vez de trava seca: a câmera desliza ao longo do
@@ -216,6 +317,48 @@ export function bootWorld(seedLabel: string): WorldHandle {
     },
   });
   void gestures;
+
+  // Confirmação por toque simples, separada do arrasto.
+  canvas.addEventListener('click', (event) => {
+    if (!selecionada) return;
+    confirmar(event.clientX, event.clientY);
+  });
+
+  // ------------------------------------------------------- catálogo lateral
+  const catalogo = document.querySelector<HTMLElement>('#catalogo');
+  const listaEl = document.querySelector<HTMLElement>('#lista-construcoes');
+
+  function montarCatalogo(): void {
+    if (!listaEl) return;
+    listaEl.textContent = '';
+    for (const def of buildingsAvailableAt(nivel)) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'item-constr';
+      b.innerHTML =
+        `<strong>${def.name}</strong>` +
+        `<span>${def.width}x${def.height} · ${def.creditCost} cr · ${def.buildDays}d</span>`;
+      b.addEventListener('click', () => {
+        selecionada = selecionada === def.id ? null : def.id;
+        for (const outro of Array.from(listaEl.querySelectorAll('button'))) {
+          outro.setAttribute('aria-pressed', String(outro === b && selecionada !== null));
+        }
+        plotView?.setGridVisible(selecionada !== null);
+        if (!selecionada) plotView?.showGhost(null, 0, 0, false);
+        if (statusEl) {
+          statusEl.textContent = selecionada
+            ? 'Arraste para posicionar, toque para confirmar.'
+            : '';
+        }
+      });
+      listaEl.appendChild(b);
+    }
+  }
+  montarCatalogo();
+
+  document.querySelector('#abrir-catalogo')?.addEventListener('click', () => {
+    catalogo?.classList.toggle('aberto');
+  });
 
   // ------------------------------------------------------------ teclado (PC)
   //
