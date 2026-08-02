@@ -2,62 +2,146 @@
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <!-- `viewport-fit=cover` deixa a cena ir até a borda; as áreas seguras
+         entram no CSS abaixo, para o painel não cair sob o notch. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#8fa6b8" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <title>CyberKingdoms — mundo em 3D</title>
     <style>
       :root {
         color-scheme: dark;
-        --painel: rgba(10, 16, 26, 0.82);
-        --borda: rgba(120, 200, 170, 0.28);
+        --painel: rgba(10, 16, 26, 0.86);
+        --borda: rgba(120, 200, 170, 0.3);
         --texto: #d6e4dd;
+        --toque: 48px; /* alvo mínimo de toque */
       }
-      * { box-sizing: border-box; }
-      html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1220; }
-      #viewport { display: block; width: 100%; height: 100%; touch-action: none; }
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+      html, body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #0b1220;
+        /* Impede o "puxar para atualizar" e o quique elástico enquanto o dedo
+           arrasta a câmera. Sem isto, orbitar recarrega a página no Android. */
+        overscroll-behavior: none;
+        touch-action: none;
+      }
+
+      #viewport {
+        display: block;
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+      }
 
       #painel {
         position: fixed;
-        top: 12px;
-        right: 12px;
-        width: min(280px, calc(100vw - 24px));
-        padding: 14px;
+        left: max(10px, env(safe-area-inset-left));
+        right: max(10px, env(safe-area-inset-right));
+        bottom: max(10px, env(safe-area-inset-bottom));
+        padding: 12px;
+        border: 1px solid var(--borda);
+        border-radius: 14px;
+        background: var(--painel);
+        backdrop-filter: blur(10px);
+        color: var(--texto);
+        font: 13px/1.4 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        transition: transform 0.18s ease;
+      }
+      /* Recolhido, sobra só a barra de cima — o mundo fica inteiro visível. */
+      #painel.recolhido #corpo { display: none; }
+
+      #cabecalho {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      #cabecalho h1 {
+        flex: 1;
+        margin: 0;
+        font-size: 12px;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+      }
+      #alternar-painel {
+        width: var(--toque);
+        height: var(--toque);
+        flex: 0 0 auto;
+        padding: 0;
         border: 1px solid var(--borda);
         border-radius: 10px;
-        background: var(--painel);
-        backdrop-filter: blur(8px);
-        color: var(--texto);
-        font: 13px/1.45 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-      }
-      #painel h1 { margin: 0 0 10px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; }
-      #painel label { display: block; margin-bottom: 4px; opacity: 0.72; font-size: 11px; }
-      #painel input {
-        width: 100%;
-        padding: 7px 8px;
-        border: 1px solid var(--borda);
-        border-radius: 6px;
-        background: rgba(0, 0, 0, 0.35);
+        background: rgba(0, 0, 0, 0.3);
         color: var(--texto);
         font: inherit;
-      }
-      #painel button {
-        width: 100%;
-        margin-top: 8px;
-        padding: 8px;
-        border: 1px solid var(--borda);
-        border-radius: 6px;
-        background: rgba(90, 200, 160, 0.16);
-        color: var(--texto);
-        font: inherit;
+        font-size: 18px;
         cursor: pointer;
       }
-      #painel button:hover { background: rgba(90, 200, 160, 0.28); }
-      #readout { margin: 10px 0 0; padding-top: 10px; border-top: 1px solid var(--borda); opacity: 0.85; }
-      #ajuda { margin: 8px 0 0; font-size: 11px; opacity: 0.6; }
-      #ajuda kbd {
-        padding: 1px 4px;
+
+      #readout {
+        margin: 8px 0 0;
+        font-size: 12px;
+        opacity: 0.86;
+      }
+
+      #corpo { margin-top: 10px; }
+
+      label { display: block; margin-bottom: 4px; font-size: 11px; opacity: 0.7; }
+
+      input {
+        width: 100%;
+        min-height: var(--toque);
+        padding: 8px 10px;
         border: 1px solid var(--borda);
-        border-radius: 3px;
-        font: inherit;
+        border-radius: 10px;
+        background: rgba(0, 0, 0, 0.35);
+        color: var(--texto);
+        /* 16px evita o zoom automático do Safari ao focar um campo. */
+        font: 16px/1 ui-monospace, Menlo, Consolas, monospace;
+      }
+
+      #botoes {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      #botoes button, #regenerate {
+        min-height: var(--toque);
+        padding: 8px;
+        border: 1px solid var(--borda);
+        border-radius: 10px;
+        background: rgba(90, 200, 160, 0.16);
+        color: var(--texto);
+        font: 13px/1 ui-monospace, Menlo, Consolas, monospace;
+        letter-spacing: 0.04em;
+        cursor: pointer;
+      }
+      #regenerate { width: 100%; margin-top: 8px; }
+      button[aria-pressed="true"] {
+        background: rgba(90, 200, 160, 0.42);
+        border-color: rgba(140, 240, 200, 0.7);
+      }
+
+      #ajuda { margin: 10px 0 0; font-size: 11px; line-height: 1.5; opacity: 0.6; }
+
+      /* Numa tela larga o painel volta para o canto, sem esticar. */
+      @media (min-width: 640px) {
+        #painel {
+          left: auto;
+          top: max(12px, env(safe-area-inset-top));
+          bottom: auto;
+          right: max(12px, env(safe-area-inset-right));
+          width: 300px;
+        }
+      }
+      /* Celular deitado: a altura é o recurso escasso, some com a ajuda. */
+      @media (max-height: 460px) {
+        #ajuda { display: none; }
       }
     </style>
   </head>
@@ -65,17 +149,27 @@
     <canvas id="viewport"></canvas>
 
     <aside id="painel">
-      <h1>CyberKingdoms</h1>
-      <label for="seed">Seed do mundo</label>
-      <input id="seed" value="captura-do-mundo" spellcheck="false" />
-      <button id="regenerate" type="button">GERAR MUNDO</button>
+      <div id="cabecalho">
+        <h1>CyberKingdoms</h1>
+        <button id="alternar-painel" type="button" aria-label="Mostrar ou esconder o painel">≡</button>
+      </div>
       <p id="readout">carregando…</p>
-      <p id="ajuda">
-        arraste para orbitar · roda para aproximar ·
-        <kbd>shift</kbd>+arraste ou botão direito para plantar grama ·
-        <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> para caminhar ·
-        <kbd>C</kbd> limpa a pintura
-      </p>
+
+      <div id="corpo">
+        <label for="seed">Seed do mundo</label>
+        <input id="seed" value="captura-do-mundo" spellcheck="false" autocapitalize="off" autocomplete="off" enterkeyhint="go" />
+        <button id="regenerate" type="button">GERAR MUNDO</button>
+
+        <div id="botoes">
+          <button id="modo-pincel" type="button" aria-pressed="false">PINCEL</button>
+          <button id="limpar" type="button">LIMPAR</button>
+        </div>
+
+        <p id="ajuda">
+          um dedo gira · dois dedos aproximam e deslocam ·
+          <strong>PINCEL</strong> planta grama onde você tocar
+        </p>
+      </div>
     </aside>
 
     <script type="module" src="/src/main.ts"></script>

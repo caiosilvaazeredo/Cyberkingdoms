@@ -65,6 +65,33 @@ O three.js vai substituir o cliente Flutter. Ordem do porte:
 | Vegetação | sprite por tile | lâminas com vento no vertex shader |
 | Pintura de grama | — | pincel aditivo/subtrativo |
 
+## Mobile-first depois da troca de motor
+
+O aparelho de referência é um celular mediano, não um desktop. Três decisões
+concretas:
+
+**O orçamento se mede, não se adivinha.** `render/quality.ts` começa num
+palpite pela classe do aparelho e ajusta pelo tempo de quadro real: cai de
+classe depois de meio segundo ruim, sobe só depois de quatro segundos bons.
+A assimetria é de propósito — engasgo o jogador sente na hora, ganho de
+qualidade ele nem repara. A faixa morta entre 45 e 58 FPS impede que um
+aparelho parado no limite troque de classe a cada segundo, o que custaria
+refazer o campo inteiro.
+
+A resolução cai antes da grama: num celular o gargalo é preenchimento, e baixar
+o `devicePixelRatio` de 2,0 para 1,5 corta 44% dos pixels sem quase se ver.
+
+**Gestos, não atalhos.** Um dedo gira, dois dedos aproximam e deslocam, e o
+pincel é um botão na tela — não há `shift` num celular, e toque longo
+competiria com o menu do navegador.
+
+**O laço para com a aba oculta.** Render em segundo plano é o motivo número um
+de um jogo web esquentar o celular no bolso.
+
+Ainda não medi em aparelho real: o que existe neste ambiente é rasterizador por
+software, que não diz nada sobre um Snapdragon. É justamente por isso que o
+orçamento se ajusta sozinho em vez de vir de constante.
+
 ## Estilo
 
 Quatro coisas fazem a grama parecer pintada em vez de plástica, em ordem de

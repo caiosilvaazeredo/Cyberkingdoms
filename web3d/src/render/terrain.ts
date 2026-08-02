@@ -43,8 +43,13 @@ export function createTerrain(
 
     position.setY(i, world.heightAt(x, z));
 
+    // Solo puxado para o tom da grama.
+    //
+    // O chão entre as folhas não é terra à mostra: é sombra da própria moita.
+    // Com a cor de solo pura, um trecho ralo — que é o caso num aparelho de
+    // orçamento baixo — lia como campo pelado com fiapos verdes em cima.
     const biome = biomeDef(biomes.at(x, z));
-    color.setHex(biome.soil);
+    color.setHex(biome.soil).lerp(new THREE.Color(biome.grassBase), 0.55);
     colors[i * 3] = color.r;
     colors[i * 3 + 1] = color.g;
     colors[i * 3 + 2] = color.b;
