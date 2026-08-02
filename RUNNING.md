@@ -289,11 +289,59 @@ do navegador. Se os sprites saírem cinzas, é isso.
 A declaração de assets do Flutter **não é recursiva**. Cada subpasta precisa da
 própria linha em `pubspec.yaml`. Se adicionar `assets/ui/algo/`, declare-a.
 
-**`Because cyberkingdoms requires SDK version ..., version solving failed`**
-O Flutter instalado é anterior ao 3.32. `flutter upgrade` resolve. Se o upgrade
-recusar com *"your flutter checkout has local changes"*, é a instalação do
-Flutter que está suja, não este projeto: `git -C <pasta-do-flutter> stash` e
-tente de novo, ou `flutter upgrade --force` se não houver nada seu ali.
+**`version solving failed` reclamando do SDK ou do `flame`**
+O Flutter que está sendo usado é anterior ao 3.32. Duas mensagens diferentes,
+mesma causa:
+
+```
+Because cyberkingdoms requires SDK version ^3.9.0, version solving failed.
+Because cyberkingdoms depends on flame >=1.24.0 which requires
+  Flutter SDK version >=3.27.1, version solving failed.
+```
+
+`flutter upgrade` resolve. Se recusar com *"your flutter checkout has local
+changes"*, é a instalação do Flutter que está suja, não este projeto:
+`git -C <pasta-do-flutter> stash` e tente de novo, ou `flutter upgrade --force`
+se não houver nada seu ali.
+
+**Duas mensagens de erro citando versões de SDK diferentes na mesma pasta**
+Há mais de um Flutter instalado, e o `PATH` está resolvendo para o antigo. É
+mais comum do que parece: o Android Studio instala um por conta, e o `fvm`
+mantém outro. Descubra quais existem e qual está ganhando:
+
+```powershell
+# Windows (PowerShell) — em ordem de prioridade no PATH
+where.exe flutter
+where.exe flutter | ForEach-Object { "$_ -> " + (& $_ --version 2>$null | Select-String '^Flutter ') }
+```
+
+```sh
+# macOS / Linux
+type -a flutter
+```
+
+Se o de cima for o antigo, ponha o novo na frente. Só nesta sessão:
+
+```powershell
+$env:Path = "C:\caminho\ate\flutter\bin;$env:Path"
+flutter --version   # confirme Flutter 3.32+ / Dart 3.8+
+```
+
+Permanentemente, para o seu usuário (reabra o terminal depois):
+
+```powershell
+[Environment]::SetEnvironmentVariable(
+  'Path',
+  "C:\caminho\ate\flutter\bin;" + [Environment]::GetEnvironmentVariable('Path','User'),
+  'User')
+```
+
+Se o `where.exe` só listar o antigo, procure os outros no disco:
+
+```powershell
+Get-ChildItem C:\,D:\ -Filter flutter.bat -Recurse -Depth 5 -ErrorAction SilentlyContinue |
+  ForEach-Object { $_.FullName }
+```
 
 **`MissingPluginException`**
 Rode `flutter clean && flutter pub get` e recompile. Acontece quando o
