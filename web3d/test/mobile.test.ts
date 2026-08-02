@@ -286,3 +286,53 @@ describe('Regras de visibilidade das telas', () => {
     expect(importante).toBeLessThan(telaDisplay);
   });
 });
+
+describe('Barra de recursos e ponteiro', () => {
+  const html = (): string =>
+    readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+
+  it('dinheiro, dia, prazo e obras têm lugar fixo no HUD', () => {
+    // Nenhum dos quatro aparecia em lugar nenhum: o jogador escolhia uma
+    // construção sem saber se tinha crédito e via a obra começar sem saber
+    // quando acabava.
+    const css = html();
+    for (const id of ['rec-creditos', 'rec-dia', 'rec-reset', 'rec-obras']) {
+      expect(css).toContain(`id="${id}"`);
+    }
+  });
+
+  it('a barra recua o painel em tela larga, e a regra vem depois da base', () => {
+    // Mesma especificidade: quem vem por último vence. Escrita antes, a regra
+    // perdia em silêncio e o indicador de obras ficava atrás do painel.
+    const css = html();
+    const base = css.indexOf('#recursos {');
+    const recuo = css.indexOf('#recursos { right: calc(');
+    expect(base).toBeGreaterThan(-1);
+    expect(recuo).toBeGreaterThan(base);
+  });
+
+  it('o catálogo tem o próprio fechar', () => {
+    // Ele é `fixed` no rodapé com z-index acima do painel: aberto, cobria o
+    // botão que o abriu, e só dava para sair escolhendo uma construção.
+    expect(html()).toContain('id="fechar-catalogo"');
+  });
+
+  it('os cursores do jogo cobrem os quatro estados', () => {
+    const css = html();
+    expect(css).toMatch(/#viewport\s*\{\s*cursor:\s*url\('ui\/cursor\/hand_open/);
+    expect(css).toContain('body.arrastando');
+    expect(css).toContain('body.construindo');
+    expect(css).toContain('body.sobre-construcao');
+  });
+
+  it('o ponto quente do cursor não fica no canto', () => {
+    // Com `0 0` o cursor mira 16 px acima e à esquerda de onde parece mirar, e
+    // numa grade de 4 m isso é uma célula inteira de erro.
+    const css = html();
+    const usos = [...css.matchAll(/cursor:\s*url\('ui\/cursor\/[a-z_]+\.png'\)\s+(\d+)\s+(\d+)/g)];
+    expect(usos.length).toBeGreaterThanOrEqual(4);
+    for (const [, x, y] of usos) {
+      expect(Number(x) + Number(y)).toBeGreaterThan(0);
+    }
+  });
+});

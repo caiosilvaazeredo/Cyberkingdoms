@@ -127,7 +127,7 @@
         border-color: rgba(140, 240, 200, 0.7);
       }
 
-      #sair {
+      #sair, #encerrar-dia {
         width: 100%;
         min-height: var(--toque);
         margin-top: 4px;
@@ -138,6 +138,7 @@
         font: 13px/1 ui-monospace, Menlo, Consolas, monospace;
         cursor: pointer;
       }
+      #encerrar-dia { background: rgba(255, 210, 130, 0.16); }
 
       /* ---------------------------------------------------------- telas */
 
@@ -262,7 +263,25 @@
         display: none;
       }
       #catalogo.aberto { display: block; }
-      #catalogo h2 { margin: 0 0 6px; font-size: 11px; letter-spacing: 0.12em; opacity: 0.7; }
+      #catalogo-cabecalho {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+      }
+      #catalogo h2 { flex: 1; margin: 0; font-size: 11px; letter-spacing: 0.12em; opacity: 0.7; }
+      #fechar-catalogo {
+        width: 36px;
+        height: 36px;
+        flex: 0 0 auto;
+        padding: 0;
+        border: 1px solid var(--borda);
+        border-radius: 10px;
+        background: rgba(0, 0, 0, 0.3);
+        color: var(--texto);
+        font: 14px/1 ui-monospace, Menlo, Consolas, monospace;
+        cursor: pointer;
+      }
       #status-obra { min-height: 16px; margin: 0 0 8px; font-size: 11px; color: #9ff0cf; }
       #lista-construcoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
       .item-constr {
@@ -336,6 +355,104 @@
       @media (max-height: 460px) {
         #ajuda { display: none; }
       }
+
+      /* ---------------------------------------------- barra de recursos */
+
+      #recursos {
+        position: fixed;
+        top: max(8px, env(safe-area-inset-top));
+        left: max(8px, env(safe-area-inset-left));
+        right: max(8px, env(safe-area-inset-right));
+        display: flex;
+        gap: 6px;
+        justify-content: space-between;
+        padding: 6px;
+        border: 1px solid var(--borda);
+        border-radius: 12px;
+        background: var(--painel);
+        backdrop-filter: blur(10px);
+        color: var(--texto);
+        font: 12px/1 ui-monospace, Menlo, Consolas, monospace;
+        pointer-events: none;
+      }
+      .recurso {
+        display: flex;
+        flex: 1 1 0;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        min-width: 0;
+        padding: 5px 2px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.04);
+      }
+      /* Os ícones da Kenney são chapa clara com o desenho escuro — feitos para
+         caixa de jogo de tabuleiro, impressa em branco. Invertidos viram
+         desenho claro sobre fundo escuro, que é o que este HUD é. */
+      .recurso img { filter: invert(1); opacity: 0.85; flex: 0 0 auto; }
+      .recurso .valor {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+      }
+      .recurso .moeda { font-size: 15px; opacity: 0.8; }
+      /* Crédito é o número que o jogador procura primeiro: ganha o dobro de
+         espaço e o destaque de cor. */
+      #rec-creditos { flex: 1.6 1 0; color: #ffe3a1; }
+      /* Prazo vencendo. A cor só entra quando há motivo — um HUD sempre
+         vermelho é um HUD que ninguém lê. */
+      #rec-reset.urgente .valor { color: #ffb0b0; }
+
+      /* -------------------------------------------------- inspetor (hover) */
+
+      #inspetor {
+        position: fixed;
+        top: calc(max(8px, env(safe-area-inset-top)) + 52px);
+        left: max(8px, env(safe-area-inset-left));
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        max-width: min(260px, calc(100vw - 24px));
+        padding: 8px 10px;
+        border: 1px solid var(--borda);
+        border-radius: 10px;
+        background: var(--painel);
+        backdrop-filter: blur(10px);
+        color: var(--texto);
+        font: 11px/1.35 ui-monospace, Menlo, Consolas, monospace;
+        pointer-events: none;
+      }
+      /* Numa tela larga o painel sobe para o canto superior direito — bem onde
+         a barra terminava —, e o último indicador ficava escondido atrás dele.
+         A barra recua os 300 px do painel mais a folga.
+         Esta regra mora **depois** da definição base de propósito: ela tem a
+         mesma especificidade, então quem vem por último vence. Escrita junto
+         com o `@media` do painel, lá em cima, ela perdia em silêncio — a barra
+         continuava colada na borda e o indicador de obras seguia coberto. */
+      @media (min-width: 640px) {
+        #recursos { right: calc(max(12px, env(safe-area-inset-right)) + 312px); }
+        #inspetor { top: calc(max(8px, env(safe-area-inset-top)) + 56px); }
+      }
+
+      #inspetor strong { font-size: 12px; letter-spacing: 0.06em; }
+      #inspetor span { opacity: 0.7; }
+      #inspetor-prazo { color: #9ff0cf; }
+      #inspetor-prazo:empty { display: none; }
+
+      /* ------------------------------------------------------- ponteiros */
+      /*
+         Cursor do pacote da Kenney no lugar da seta do sistema. Num jogo em
+         tela cheia a seta do SO entrega que aquilo é uma página; a mão aberta
+         diz "isto se arrasta" antes de o jogador tentar.
+         O ponto quente vai no dedo, e não no canto: com 0 0 o cursor mira
+         16 px acima e à esquerda de onde parece mirar.
+      */
+      #viewport { cursor: url('ui/cursor/hand_open.png') 10 6, grab; }
+      body.arrastando #viewport { cursor: url('ui/cursor/hand_closed.png') 10 8, grabbing; }
+      body.construindo #viewport { cursor: url('ui/cursor/tool_hammer.png') 6 6, crosshair; }
+      body.construindo.invalido #viewport { cursor: url('ui/cursor/cursor_disabled.png') 10 10, not-allowed; }
+      body.sobre-construcao #viewport { cursor: url('ui/cursor/hand_point.png') 10 4, pointer; }
     </style>
   </head>
   <body>
@@ -343,13 +460,50 @@
     <div id="telas"></div>
 
     <div id="hud" hidden>
+    <!-- Barra de recursos. Fica no topo e nunca recolhe: dinheiro e prazo são
+         o que decide toda jogada, e um número que só aparece depois de abrir
+         um menu não é informação, é consulta. -->
+    <div id="recursos" role="status" aria-live="polite">
+      <div class="recurso" id="rec-creditos" title="Créditos disponíveis">
+        <span class="moeda" aria-hidden="true">¤</span>
+        <span class="valor">—</span>
+      </div>
+      <div class="recurso" id="rec-dia" title="Dia da campanha">
+        <img src="ui/info/hourglass.png" alt="" width="20" height="20" />
+        <span class="valor">—</span>
+      </div>
+      <div class="recurso" id="rec-reset" title="Tempo até o próximo dia">
+        <img src="ui/info/stopwatch.png" alt="" width="20" height="20" />
+        <span class="valor">—</span>
+      </div>
+      <div class="recurso" id="rec-obras" title="Construções em obra">
+        <img src="ui/info/duration.png" alt="" width="20" height="20" />
+        <span class="valor">—</span>
+      </div>
+    </div>
+
+    <!-- O que está sob o ponteiro. Aparece só quando há algo, e some sozinho:
+         uma caixa vazia permanente rouba tela num celular. -->
+    <div id="inspetor" hidden>
+      <strong id="inspetor-titulo"></strong>
+      <span id="inspetor-linha"></span>
+      <span id="inspetor-prazo"></span>
+    </div>
+
     <div id="aviso" role="status" aria-live="polite">
       <strong id="aviso-titulo">Acesso bloqueado</strong>
       <span id="aviso-texto"></span>
     </div>
 
     <aside id="catalogo">
-      <h2>CONSTRUÇÕES</h2>
+      <!-- O catálogo tem o próprio fechar. Ele é `position: fixed` no rodapé
+           com z-index acima do painel, então enquanto estava aberto ele cobria
+           o botão CONSTRUIR que o abriu — e não havia como voltar a não ser
+           escolhendo uma construção. -->
+      <div id="catalogo-cabecalho">
+        <h2>CONSTRUÇÕES</h2>
+        <button id="fechar-catalogo" type="button" aria-label="Fechar catálogo">✕</button>
+      </div>
       <p id="status-obra"></p>
       <div id="lista-construcoes"></div>
     </aside>
@@ -363,6 +517,11 @@
 
       <div id="corpo">
         <button id="abrir-catalogo" type="button">CONSTRUIR</button>
+        <!-- O dia vira sozinho a cada 24 h. Este botão adianta a virada, que é
+             mecânica de sobrevivência conhecida — dormir — e a única forma de
+             o jogador ver uma obra de três dias terminar sem esperar três
+             dias de verdade. -->
+        <button id="encerrar-dia" type="button">ENCERRAR O DIA</button>
         <button id="sair" type="button">SAIR PARA O MENU</button>
 
         <p id="ajuda">

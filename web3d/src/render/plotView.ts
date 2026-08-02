@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 
-import { buildingDef, type BuildingDef } from '../building/buildingType';
+import { buildingDef, upgradeDays, type BuildingDef } from '../building/buildingType';
 import type { PlacedBuilding, Plot } from '../building/plot';
+import { createBuildLabel, type BuildLabel } from './buildLabel';
 import { instantiate } from './models';
 
 /**
@@ -52,9 +53,44 @@ export interface PlotView {
   showGhost(type: string | null, px: number, py: number, valid: boolean): void;
   /** Redesenha os prédios a partir do terreno. */
   sync(plot: Plot): void;
+  /** Avança as animações. Chame uma vez por quadro. */
+  update(elapsedSeconds: number): void;
+  /** Realça a construção sob o ponteiro. `null` limpa. */
+  setHovered(instanceId: string | null): void;
+  /** Realça a célula sob o ponteiro. `null` esconde. */
+  setHoveredCell(px: number, py: number, valid: boolean): void;
+  clearHoveredCell(): void;
+  /** A construção num ponto do mundo, se houver. */
+  buildingAt(worldX: number, worldZ: number): PlacedBuilding | null;
   /** Converte um ponto do mundo na célula da grade, ou `null` se fora. */
   cellAt(worldX: number, worldZ: number): { x: number; y: number } | null;
   dispose(): void;
+}
+
+/** Total de dias que aquela obra leva, para virar barra de progresso. */
+function totalBuildDays(b: PlacedBuilding): number {
+  const total = b.upgrading
+    ? upgradeDays(b.def, Math.max(1, b.level - 1))
+    : b.def.buildDays;
+  // Nunca zero: a fração vira divisão por zero e a peça pisca entre 0% e 100%.
+  return Math.max(1, total);
+}
+
+interface EmObra {
+  readonly building: PlacedBuilding;
+  readonly raiz: THREE.Object3D;
+  readonly label: BuildLabel;
+  readonly alturaCheia: number;
+  /**
+   * Escala da peça pronta.
+   *
+   * A animação **multiplica** esta escala em vez de escrever por cima. Escrever
+   * `scale.set(1, altura, 1)` jogava fora a largura e a profundidade que
+   * `place()` (na caixa) e `instantiate()` (no modelo) tinham acabado de
+   * calcular: toda construção em obra virava um bloco de 1 m de lado esmagado
+   * contra o chão.
+   */
+  readonly escalaBase: THREE.Vector3;
 }
 
 export function createPlotView(plot: Plot, originX = 0, originZ = 0): PlotView {
@@ -143,6 +179,31 @@ export function createPlotView(plot: Plot, originX = 0, originZ = 0): PlotView {
   const buildings = new THREE.Group();
   group.add(buildings);
 
+  // ---------------------------------------------------------- célula sob o mouse
+  //
+  // Um quadrado rente ao chão, do tamanho de um tile. É o retorno que faltava
+  // no PC: sem ele o jogador move o mouse sobre o terreno e nada responde, e a
+  // única forma de descobrir onde a peça vai cair é soltar e ver.
+  const cellGeom = new THREE.PlaneGeometry(TILE, TILE);
+  cellGeom.rotateX(-Math.PI / 2);
+  const cellMat = new THREE.MeshBasicMaterial({
+    color: VALID,
+    transparent: true,
+    opacity: 0.3,
+    depthTest: false,
+  });
+  const cell = new THREE.Mesh(cellGeom, cellMat);
+  cell.visible = false;
+  cell.renderOrder = 1;
+  group.add(cell);
+
+  /** Obras em andamento, para animar. */
+  const emObra: EmObra[] = [];
+  /** Peças por instância, para o realce do hover. */
+  const porInstancia = new Map<string, THREE.Object3D>();
+  let realcada: string | null = null;
+  let plotAtual: Plot = plot;
+
   function boxFor(def: BuildingDef, level: number): THREE.Vector3 {
     // Altura pelo nível, para o jogador ler evolução de longe sem abrir menu.
     return new THREE.Vector3(
@@ -189,6 +250,8 @@ export function createPlotView(plot: Plot, originX = 0, originZ = 0): PlotView {
     },
 
     sync(current) {
+      plotAtual = current;
+
       // Limpa e refaz. Com algumas dezenas de peças isso custa menos que
       // manter um índice de instâncias em dia — e não erra.
       for (const child of [...buildings.children]) {
@@ -202,6 +265,12 @@ export function createPlotView(plot: Plot, originX = 0, originZ = 0): PlotView {
           }
         });
       }
+      for (const o of emObra) {
+        buildings.remove(o.label.sprite);
+        o.label.dispose();
+      }
+      emObra.length = 0;
+      porInstancia.clear();
 
       for (const b of current.buildings as readonly PlacedBuilding[]) {
         const def = b.def;
@@ -219,6 +288,8 @@ export function createPlotView(plot: Plot, originX = 0, originZ = 0): PlotView {
         place(provisorio, def, b.x, b.y, b.level);
         provisorio.userData.instanceId = b.instanceId;
         buildings.add(provisorio);
+        porInstancia.set(b.instanceId, provisorio);
+        if (!b.isReady) registrarObra(b, provisorio, boxFor(def, b.level).y);
 
         void instantiate(def.spriteId, def.width * TILE, def.height * TILE).then(
           (modelo) => {
@@ -234,7 +305,7 @@ export function createPlotView(plot: Plot, originX = 0, originZ = 0): PlotView {
                 if (o instanceof THREE.Mesh) {
                   const m = (o.material as THREE.Material).clone();
                   m.transparent = true;
-                  m.opacity = 0.45;
+                  m.opacity = 0.5;
                   o.material = m;
                 }
               });
@@ -242,11 +313,87 @@ export function createPlotView(plot: Plot, originX = 0, originZ = 0): PlotView {
             modelo.userData.instanceId = b.instanceId;
             buildings.add(modelo);
             buildings.remove(provisorio);
+            porInstancia.set(b.instanceId, modelo);
             provisorio.geometry.dispose();
             material.dispose();
+
+            if (!b.isReady) {
+              // A placa muda de dono junto com a peça. Sem isto ela ficaria
+              // presa à caixa que acabou de sair de cena, e o prazo sumiria no
+              // instante em que o modelo aparecesse.
+              const antiga = emObra.findIndex(
+                (o) => o.building.instanceId === b.instanceId,
+              );
+              if (antiga >= 0) {
+                const o = emObra[antiga]!;
+                buildings.remove(o.label.sprite);
+                o.label.dispose();
+                emObra.splice(antiga, 1);
+              }
+              const caixa = new THREE.Box3().setFromObject(modelo);
+              registrarObra(b, modelo, Math.max(1.5, caixa.max.y - caixa.min.y));
+            }
           },
         );
       }
+    },
+
+    update(elapsed) {
+      for (const o of emObra) {
+        const total = totalBuildDays(o.building);
+        const restante = Math.max(0, o.building.daysRemaining);
+        // O progresso do dia em curso não existe: `daysRemaining` só anda no
+        // tick. Por isso a obra cresce em degraus de um dia, e é a **pulsação**
+        // que diz "isto está vivo" entre uma virada e outra.
+        const progresso = Math.min(1, (total - restante) / total);
+        const altura = 0.28 + 0.72 * progresso;
+
+        const pulso = 1 + Math.sin(elapsed * 2.6) * 0.018;
+        o.raiz.scale.set(
+          o.escalaBase.x,
+          o.escalaBase.y * altura * pulso,
+          o.escalaBase.z,
+        );
+
+        o.label.setDays(restante);
+        // A placa acompanha o topo da obra em vez de ficar numa altura fixa:
+        // parada, ela some dentro da peça conforme o galpão sobe.
+        o.label.sprite.position.y = o.alturaCheia * altura + 1.6;
+      }
+    },
+
+    setHovered(instanceId) {
+      if (instanceId === realcada) return;
+      aplicarRealce(realcada, false);
+      realcada = instanceId;
+      aplicarRealce(realcada, true);
+    },
+
+    setHoveredCell(px, py, valid) {
+      const [wx, wz] = toWorld(px + 0.5, py + 0.5);
+      cell.position.set(wx, 0.12, wz);
+      cellMat.color.setHex(valid ? VALID : INVALID);
+      cell.visible = true;
+    },
+
+    clearHoveredCell() {
+      cell.visible = false;
+    },
+
+    buildingAt(worldX, worldZ) {
+      const px = Math.floor((worldX - cornerX) / TILE);
+      const py = Math.floor((worldZ - cornerZ) / TILE);
+      for (const b of plotAtual.buildings as readonly PlacedBuilding[]) {
+        if (
+          px >= b.x &&
+          px < b.x + b.def.width &&
+          py >= b.y &&
+          py < b.y + b.def.height
+        ) {
+          return b;
+        }
+      }
+      return null;
     },
 
     cellAt(worldX, worldZ) {
@@ -262,10 +409,55 @@ export function createPlotView(plot: Plot, originX = 0, originZ = 0): PlotView {
       outlineGeom.dispose();
       ghostGeom.dispose();
       ghostMat.dispose();
+      cellGeom.dispose();
+      cellMat.dispose();
+      for (const o of emObra) o.label.dispose();
       for (const child of buildings.children) {
         (child as THREE.Mesh).geometry.dispose();
         ((child as THREE.Mesh).material as THREE.Material).dispose();
       }
     },
   };
+
+  function registrarObra(
+    b: PlacedBuilding,
+    raiz: THREE.Object3D,
+    alturaCheia: number,
+  ): void {
+    // Entre 3 e 6 metros. Amarrada só à footprint, a placa de uma refinaria
+    // 3×2 saía com quase 10 m e cobria a obra que ela estava explicando.
+    const larguraPlaca = Math.min(6, Math.max(3, b.def.width * TILE * 0.7));
+    const label = createBuildLabel(b.daysRemaining, larguraPlaca);
+    const escalaBase = raiz.scale.clone();
+
+    // A placa é irmã da peça, não filha dela. Como filha, ela herdaria a escala
+    // animada e apareceria achatada contra o chão a 28% de altura — que é
+    // exatamente quando o jogador mais precisa ler o prazo.
+    const [wx, wz] = toWorld(b.x + b.def.width / 2, b.y + b.def.height / 2);
+    label.sprite.position.set(wx, alturaCheia + 1.6, wz);
+    buildings.add(label.sprite);
+
+    emObra.push({ building: b, raiz, label, alturaCheia, escalaBase });
+  }
+
+  /**
+   * Realce por emissividade, e não por trocar o material.
+   *
+   * Trocar material perderia a textura do `.glb` e faria a peça piscar de cor
+   * a cada passada do mouse. Mexer só no `emissive` mantém a arte da Kenney e
+   * ainda funciona nas caixas provisórias, que usam o mesmo tipo de material.
+   */
+  function aplicarRealce(instanceId: string | null, ligado: boolean): void {
+    if (!instanceId) return;
+    const alvo = porInstancia.get(instanceId);
+    alvo?.traverse((o) => {
+      if (!(o instanceof THREE.Mesh)) return;
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      for (const m of mats) {
+        if ('emissive' in m && m.emissive instanceof THREE.Color) {
+          m.emissive.setHex(ligado ? 0x2f6b52 : 0x000000);
+        }
+      }
+    });
+  }
 }
