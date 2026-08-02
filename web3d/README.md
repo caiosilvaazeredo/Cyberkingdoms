@@ -93,11 +93,24 @@ Duas decisões que a interação obrigou:
   arrasta; se cobrasse, o jogador ficaria sem material só de olhar. Há teste
   para isso.
 
-As construções são **blocos**, com a cor da categoria e a altura crescendo com
-o nível — não os sprites da Kenney. Um sprite é uma foto de um ângulo, e aqui a
-câmera gira. Trazer os `.glb` de volta é uma rodada inteira. Até lá, o bloco
-respeita a footprint correta, e num construtor de cidade o que se lê de longe é
-silhueta e cor, não detalhe.
+As construções usam os **modelos `.glb` da Kenney**, escolhidos pelo mesmo
+`spriteId` que o cliente isométrico já mapeava — o mapeamento não mudou uma
+linha. Os arquivos ficam em `public/models/<kit>/<nome>.glb`.
+
+A estrutura de pastas espelha o `spriteId` de propósito: o `GLTFLoader` resolve
+textura **relativa ao `.glb`**, então achatar o nome fazia o modelo procurar a
+textura na pasta errada. Os prédios apareciam brancos, sem um erro sequer no
+console.
+
+Cada modelo é medido e **normalizado** na hora de instanciar: escala para a
+footprint que a regra declara e assenta a base no chão. Cada kit tem sua escala
+e sua origem; confiar nisso deixaria uma construção 3x2 ocupando 1x1.
+
+A caixa colorida continua no código como **rede**: marca o lugar enquanto o
+`.glb` chega e some quando ele entra. Um terreno vazio esperando download
+parece quebrado. O fantasma também segue sendo caixa — ele precisa aparecer no
+mesmo quadro do dedo, e esperar um modelo transformaria a mira num arrasto com
+atraso.
 
 ## Cliente e servidor
 

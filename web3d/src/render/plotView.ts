@@ -2,21 +2,23 @@ import * as THREE from 'three';
 
 import { buildingDef, type BuildingDef } from '../building/buildingType';
 import type { PlacedBuilding, Plot } from '../building/plot';
+import { instantiate } from './models';
 
 /**
  * A grade do terreno, o fantasma da construção e os prédios já erguidos.
  *
- * ## Por que caixas, e não os sprites da Kenney
+ * ## Os modelos da Kenney, e a caixa como rede
  *
- * O cliente isométrico desenhava sprites pré-renderizados. Em três dimensões
- * eles não servem: um sprite é uma foto de um ângulo, e aqui a câmera gira.
- * Trazer os modelos `.glb` de volta é trabalho de uma rodada inteira — carregar,
- * escalar, orientar, e um orçamento de memória de textura que ainda não existe.
+ * Cada construção usa o `.glb` que o catálogo já mapeava — o mesmo `spriteId`
+ * que o cliente isométrico usava para escolher o sprite. Cheguei a desenhar
+ * caixas coloridas argumentando que silhueta e cor bastam de longe; o
+ * argumento não era falso, mas a conclusão era: a arte já existia e já estava
+ * mapeada, e trocá-la por primitiva foi economia no lugar errado.
  *
- * Até lá, cada construção é um bloco com a cor da categoria e a altura do
- * nível. Isso não é placeholder preguiçoso: num construtor de cidade, o que o
- * jogador lê de longe é **silhueta e cor**, não detalhe. Um bloco que respeita
- * a footprint correta comunica mais que um modelo bonito no lugar errado.
+ * A caixa continua no código como **rede**: o modelo chega por rede e pode
+ * demorar ou faltar. Enquanto isso o bloco marca o lugar com a footprint
+ * correta, e some quando o modelo entra. Um terreno que fica vazio esperando
+ * download parece quebrado.
  *
  * ## Por que a grade só aparece no modo de construção
  *
@@ -160,6 +162,9 @@ export function createPlotView(plot: Plot, originX = 0, originZ = 0): PlotView {
         ghost.visible = false;
         return;
       }
+      // O fantasma segue sendo uma caixa, e de propósito: ele precisa aparecer
+      // no mesmo quadro em que o dedo se move. Esperar um `.glb` para mostrar
+      // onde a peça vai cair transformaria a mira num arrasto com atraso.
       const def = buildingDef(type);
       ghost.visible = true;
       ghostMat.color.setHex(valid ? VALID : INVALID);
@@ -167,28 +172,63 @@ export function createPlotView(plot: Plot, originX = 0, originZ = 0): PlotView {
     },
 
     sync(current) {
-      // Limpa e refaz. Com algumas dezenas de blocos isso custa menos que
+      // Limpa e refaz. Com algumas dezenas de peças isso custa menos que
       // manter um índice de instâncias em dia — e não erra.
       for (const child of [...buildings.children]) {
         buildings.remove(child);
-        (child as THREE.Mesh).geometry.dispose();
-        ((child as THREE.Mesh).material as THREE.Material).dispose();
+        child.traverse((o) => {
+          if (o instanceof THREE.Mesh) {
+            o.geometry.dispose();
+            const m = o.material;
+            if (Array.isArray(m)) m.forEach((x) => x.dispose());
+            else m.dispose();
+          }
+        });
       }
 
       for (const b of current.buildings as readonly PlacedBuilding[]) {
         const def = b.def;
+
+        // Caixa primeiro, modelo depois. O bloco marca o lugar enquanto o
+        // `.glb` carrega — um terreno vazio esperando download parece
+        // quebrado — e sai de cena quando o modelo chega.
         const material = new THREE.MeshStandardMaterial({
           color: b.accentColor ?? CATEGORY_COLORS[def.category] ?? 0xaaaaaa,
-          roughness: 0.85,
-          // Obra em andamento fica translúcida: é o mesmo sinal do cliente
-          // isométrico, e o jogador já o conhece.
-          transparent: !b.isReady,
-          opacity: b.isReady ? 1 : 0.45,
+          roughness: 0.9,
+          transparent: true,
+          opacity: b.isReady ? 0.55 : 0.4,
         });
-        const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), material);
-        place(mesh, def, b.x, b.y, b.level);
-        mesh.userData.instanceId = b.instanceId;
-        buildings.add(mesh);
+        const provisorio = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), material);
+        place(provisorio, def, b.x, b.y, b.level);
+        provisorio.userData.instanceId = b.instanceId;
+        buildings.add(provisorio);
+
+        void instantiate(def.spriteId, def.width * TILE, def.height * TILE).then(
+          (modelo) => {
+            // A construção pode ter sido demolida enquanto o modelo carregava.
+            if (!modelo || provisorio.parent !== buildings) return;
+
+            const [wx, wz] = toWorld(b.x + def.width / 2, b.y + def.height / 2);
+            modelo.position.set(wx, 0, wz);
+            // Obra em andamento fica translúcida: mesmo sinal do cliente
+            // isométrico, que o jogador já conhece.
+            if (!b.isReady) {
+              modelo.traverse((o) => {
+                if (o instanceof THREE.Mesh) {
+                  const m = (o.material as THREE.Material).clone();
+                  m.transparent = true;
+                  m.opacity = 0.45;
+                  o.material = m;
+                }
+              });
+            }
+            modelo.userData.instanceId = b.instanceId;
+            buildings.add(modelo);
+            buildings.remove(provisorio);
+            provisorio.geometry.dispose();
+            material.dispose();
+          },
+        );
       }
     },
 
