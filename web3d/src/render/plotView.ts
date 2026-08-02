@@ -73,14 +73,22 @@ export function createPlotView(plot: Plot, originX = 0, originZ = 0): PlotView {
   ];
 
   // ------------------------------------------------------------------ grade
+  //
+  // A grade flutua a 75 cm do chão, e não rente a ele. Rente ela não existe: a
+  // grama tem meio metro e uma linha de um pixel a 6 cm some por baixo — foi
+  // assim que a grade e o contorno do lote ficaram invisíveis por completo.
+  // Acima do mato ela vira o que já é convenção em jogo de construção: uma
+  // planta projetada sobre o terreno.
+  const GRID_Y = 0.75;
+
   const gridPoints: number[] = [];
   for (let i = 0; i <= plot.width; i++) {
     const x = cornerX + i * TILE;
-    gridPoints.push(x, 0.06, cornerZ, x, 0.06, cornerZ + depth);
+    gridPoints.push(x, GRID_Y, cornerZ, x, GRID_Y, cornerZ + depth);
   }
   for (let j = 0; j <= plot.height; j++) {
     const z = cornerZ + j * TILE;
-    gridPoints.push(cornerX, 0.06, z, cornerX + width, 0.06, z);
+    gridPoints.push(cornerX, GRID_Y, z, cornerX + width, GRID_Y, z);
   }
   const gridGeom = new THREE.BufferGeometry();
   gridGeom.setAttribute(
@@ -90,24 +98,33 @@ export function createPlotView(plot: Plot, originX = 0, originZ = 0): PlotView {
   const gridMat = new THREE.LineBasicMaterial({
     color: 0x9ff0cf,
     transparent: true,
-    opacity: 0.42,
+    opacity: 0.55,
+    // Sem teste de profundidade a grade atravessa o que já está construído.
+    // É o comportamento certo aqui: no modo de construção o que importa é onde
+    // a peça encaixa, e uma grade escondida atrás de um galpão não ajuda.
+    depthTest: false,
   });
   const grid = new THREE.LineSegments(gridGeom, gridMat);
   grid.visible = false;
+  grid.renderOrder = 2;
   group.add(grid);
 
   // Contorno do lote, sempre visível: é o que separa "seu" de "da cidade".
+  //
+  // Quem faz o trabalho pesado é a trilha batida no chão (`world/plotArea.ts`),
+  // que é ausência de grama e por isso nunca some. Esta linha é o realce por
+  // cima dela — na mesma altura da grade, pelo mesmo motivo.
   const outlineGeom = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(cornerX, 0.08, cornerZ),
-    new THREE.Vector3(cornerX + width, 0.08, cornerZ),
-    new THREE.Vector3(cornerX + width, 0.08, cornerZ + depth),
-    new THREE.Vector3(cornerX, 0.08, cornerZ + depth),
-    new THREE.Vector3(cornerX, 0.08, cornerZ),
+    new THREE.Vector3(cornerX, GRID_Y, cornerZ),
+    new THREE.Vector3(cornerX + width, GRID_Y, cornerZ),
+    new THREE.Vector3(cornerX + width, GRID_Y, cornerZ + depth),
+    new THREE.Vector3(cornerX, GRID_Y, cornerZ + depth),
+    new THREE.Vector3(cornerX, GRID_Y, cornerZ),
   ]);
   group.add(
     new THREE.Line(
       outlineGeom,
-      new THREE.LineBasicMaterial({ color: 0x63e6a4, transparent: true, opacity: 0.8 }),
+      new THREE.LineBasicMaterial({ color: 0x8dffc8, transparent: true, opacity: 0.9 }),
     ),
   );
 

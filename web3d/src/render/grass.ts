@@ -214,7 +214,24 @@ export function createGrassField(
 ): GrassField {
   const { patchSize, bladesPerSquareMeter, maxBlades } = options;
 
-  const cells = Math.floor(Math.sqrt(patchSize * patchSize * bladesPerSquareMeter));
+  // A resolução da grade sai do **menor** entre a densidade pedida e o teto do
+  // aparelho — e é aqui que morava um buraco de verdade.
+  //
+  // Antes a grade vinha só da densidade e o teto era um `break` no meio do
+  // laço. Como o laço varre linha por linha em +Z, estourar o teto não ralava
+  // o campo: cortava fora tudo a partir da linha em que a conta fechou. Num
+  // aparelho de orçamento médio, 52 m a 70 lâminas/m² pedem ~174 mil lâminas
+  // para um teto de 60 mil — ou seja, **dois terços do trecho nasciam
+  // pelados**, sempre no mesmo lado. Era o "tabuleiro sem mato".
+  //
+  // Derivando a grade do teto, o desbaste é espacialmente uniforme: as mesmas
+  // 60 mil lâminas cobrem o trecho inteiro, só que mais espaçadas. E ainda sai
+  // mais barato, porque o laço deixa de visitar células que seriam descartadas.
+  const pedidas = patchSize * patchSize * bladesPerSquareMeter;
+  const cells = Math.max(
+    1,
+    Math.floor(Math.sqrt(Math.min(pedidas, maxBlades))),
+  );
   const step = patchSize / cells;
   const half = patchSize / 2;
 
@@ -266,7 +283,10 @@ export function createGrassField(
       offsets.push(x, y, z);
       rotations.push(hash2(ix, iz, 7) * Math.PI * 2);
       heights.push(local.grassHeight * (0.6 + r4 * 0.8));
-      widths.push(0.032 + r5 * 0.030);
+      // Lâmina mais larga é o jeito barato de fechar o campo: cobre mais chão
+      // sem custar um vértice a mais. Dobrar o número de instâncias para o
+      // mesmo efeito custaria doze vértices por lâmina extra.
+      widths.push(0.048 + r5 * 0.042);
       phases.push(r6 * Math.PI * 2);
       tints.push(hash2(ix, iz, 8));
       leans.push(0.12 + hash2(ix, iz, 9) * 0.35);

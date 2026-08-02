@@ -2,6 +2,7 @@ import * as THREE from 'three';
 
 import { biomeDef } from '../world/biome';
 import { BiomeCache } from '../world/biomeCache';
+import { onPlotBorder, type PlotArea } from '../world/plotArea';
 import { WATER_HEIGHT, type WorldGenerator } from '../world/worldGen';
 import { outsideRatio, type VillageBounds } from './villageBounds';
 
@@ -31,6 +32,7 @@ export function createTerrain(
   segments = 200,
   biomes: BiomeCache = new BiomeCache(world),
   bounds: VillageBounds | null = null,
+  plotArea: PlotArea | null = null,
 ): Terrain {
   const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
   geometry.rotateX(-Math.PI / 2);
@@ -52,6 +54,14 @@ export function createTerrain(
     // orçamento baixo — lia como campo pelado com fiapos verdes em cima.
     const biome = biomeDef(biomes.at(x, z));
     color.setHex(biome.soil).lerp(new THREE.Color(biome.grassBase), 0.55);
+
+    // A divisa do lote é terra batida: lá a grama não nasce (ver
+    // `DensityField.at`), então o chão tem de deixar de fingir que nasce. Sem
+    // isto a trilha continuaria pintada com o verde da moita que não existe, e
+    // a divisa só apareceria como uma falha na textura.
+    if (plotArea && onPlotBorder(plotArea, x, z)) {
+      color.setHex(biome.soil).multiplyScalar(0.82);
+    }
 
     // Fora da vila o terreno perde cor. Continua desenhado — sumir criaria a
     // borda no vazio que a visão de cima existe para esconder —, mas lê como

@@ -2,6 +2,7 @@ import { GradientNoise } from '../core/noise';
 import { mix } from '../core/rng';
 import { biomeDef } from '../world/biome';
 import { BiomeCache } from '../world/biomeCache';
+import { onPlotBorder, type PlotArea } from '../world/plotArea';
 import type { WorldGenerator } from '../world/worldGen';
 
 /**
@@ -34,13 +35,25 @@ export class DensityField {
    */
   private static readonly FLOOR = 0.92;
 
-  constructor(world: WorldGenerator) {
+  constructor(
+    world: WorldGenerator,
+    private readonly plotArea: PlotArea | null = null,
+  ) {
     this.detail = new GradientNoise(mix(world.seed, 0x6d));
-    this.biomes = new BiomeCache(world);
+    // O lote entra pelo cache de bioma, e não por uma exceção aqui: assim a
+    // densidade, a cor do terreno e o tom da grama passam a concordar sozinhos.
+    // Uma exceção só na densidade daria mato crescendo sobre chão pintado de
+    // água.
+    this.biomes = new BiomeCache(world, plotArea);
   }
 
   /** Densidade final em `[0, 1]` na coordenada de mundo dada. */
   at(x: number, z: number): number {
+    // A divisa do lote é trilha batida, não linha desenhada: uma `Line` de um
+    // pixel a 8 cm do chão desaparecia sob meio metro de grama. Ver
+    // `world/plotArea.ts`.
+    if (this.plotArea && onPlotBorder(this.plotArea, x, z)) return 0;
+
     const biome = biomeDef(this.biomes.at(x, z));
     // Água continua sem grama. É a única exceção.
     if (biome.grassDensity <= 0) return 0;

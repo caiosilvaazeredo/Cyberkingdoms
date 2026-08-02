@@ -1,4 +1,5 @@
 import { Biome } from './biome';
+import { insidePlotArea, type PlotArea } from './plotArea';
 import type { WorldGenerator } from './worldGen';
 
 /**
@@ -20,9 +21,22 @@ import type { WorldGenerator } from './worldGen';
 export class BiomeCache {
   private readonly cache = new Map<number, Biome>();
 
-  constructor(private readonly world: WorldGenerator) {}
+  /**
+   * @param plotArea Terreno do jogador, se houver. Dentro dele o bioma é
+   * imposto — ver `world/plotArea.ts` para o porquê. O teste vem antes do cache
+   * de propósito: são quatro comparações de número, mais baratas que a busca no
+   * `Map`, e assim a resposta nunca depende de quem perguntou primeiro.
+   */
+  constructor(
+    private readonly world: WorldGenerator,
+    private readonly plotArea: PlotArea | null = null,
+  ) {}
 
   at(x: number, z: number): Biome {
+    if (this.plotArea && insidePlotArea(this.plotArea, x, z)) {
+      return this.plotArea.biome;
+    }
+
     const ix = Math.round(x);
     const iz = Math.round(z);
     // Chave num inteiro só. Um `Map` de string alocaria uma string por

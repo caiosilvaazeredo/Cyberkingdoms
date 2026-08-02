@@ -6,10 +6,11 @@ import {
   QualityGovernor,
   grassOptionsFor,
   guessTier,
+  patchSizeForView,
 } from './render/quality';
 import { CityCamera } from './render/cityCamera';
 import { createTerrain, type Terrain } from './render/terrain';
-import { createPlotView, type PlotView } from './render/plotView';
+import { TILE, createPlotView, type PlotView } from './render/plotView';
 import { GestureRecognizer } from './render/touch';
 import {
   blockedHint,
@@ -19,6 +20,7 @@ import {
   type VillageBounds,
 } from './render/villageBounds';
 import { biomeDef } from './world/biome';
+import { plotAreaFor, plotOrigin } from './world/plotArea';
 import { WorldGenerator } from './world/worldGen';
 import { Plot, plotSizeForLevel } from './building/plot';
 import { buildingsAvailableAt, type CitizenLevel } from './building/buildingType';
@@ -70,35 +72,69 @@ export function bootWorld(seedLabel: string): WorldHandle {
   scene.add(sun);
 
   const world = WorldGenerator.fromLabel(seedLabel);
-  const density = new DensityField(world);
-  let terrain: Terrain | null = null;
-  let grass: GrassField | null = null;
-  const center = new THREE.Vector2(0, 0);
-  const seededAt = new THREE.Vector2(0, 0);
 
   // Terreno do jogador. Enquanto a campanha não estiver portada, ele nasce
   // vazio com recursos de teste — o suficiente para a colocação funcionar de
   // verdade, cobrando custo e recusando encaixe inválido.
-  const nivel: CitizenLevel = 'elite';
+  // `farmer` e não `elite`: o lote de elite tem 16×16 tiles, ou 64 m de lado, e
+  // num celular em retrato a tela inteira cabia dentro da cerca — não dava para
+  // ver onde o terreno começava. 10×10 enquadra, e ainda abre 27 das 41
+  // construções. O nível de verdade passa a vir da campanha quando ela for
+  // portada.
+  const nivel: CitizenLevel = 'farmer';
   const [pw, ph] = plotSizeForLevel(nivel);
   const plot = new Plot('p1', 'cap_0', { x: 0, y: 0 }, pw, ph);
+
+  // O lote sai do ponto de rede da origem — ver `world/plotArea.ts` — e impõe
+  // o próprio chão, para que nenhum trecho de Água Morta caia dentro do
+  // tabuleiro virando mancha pelada num cenário sem relevo.
+  const lote = plotOrigin(world);
+  const plotArea = plotAreaFor(world, lote.x, lote.z, pw * TILE, ph * TILE);
+
+  const density = new DensityField(world, plotArea);
+  let terrain: Terrain | null = null;
+  let grass: GrassField | null = null;
+  const center = new THREE.Vector2(lote.x, lote.z);
+  const seededAt = new THREE.Vector2(lote.x, lote.z);
+
   const inventario = new Inventory();
   for (const item of allItems) inventario.add(item.id, 300);
   let creditos = 250_000;
   let plotView: PlotView | null = null;
   let selecionada: string | null = null;
 
-  // Limite da vila. Por enquanto o centro é a origem e o nome sai do layout do
+  // Limite da vila. Por enquanto o centro é o lote e o nome sai do layout do
   // mundo; quando a campanha estiver portada, isto passa a vir do terreno do
   // jogador e do assentamento vizinho de verdade.
   const bounds: VillageBounds = {
-    centerX: 0,
-    centerZ: 0,
+    centerX: lote.x,
+    centerZ: lote.z,
     radius: 46,
     settlementName: 'seu vilarejo',
     neighbourName: 'Krom Central',
   };
   let enquadrado = false;
+  /** Lado do trecho realmente semeado. Muda com o zoom. */
+  let seededPatch = 0;
+
+  /**
+   * Se o trecho semeado ainda serve para onde a câmera está.
+   *
+   * Duas causas independentes: o alvo andou o bastante para o trecho ficar
+   * descentrado, ou o zoom mudou o bastante para o trecho ficar curto (ou
+   * folgado demais). A margem de 25% no zoom evita ressemear a cada pinçada —
+   * refazer o campo é caro, e um zoom nervoso viraria engasgo.
+   */
+  function precisaResemear(): boolean {
+    if (seededPatch <= 0) return true;
+    if (center.distanceTo(seededAt) > seededPatch * 0.3) return true;
+    const desejado = patchSizeForView(
+      governor.budget,
+      view.distance,
+      camera.fov,
+    );
+    return Math.abs(desejado - seededPatch) / seededPatch > 0.25;
+  }
 
   const governor = new QualityGovernor(guessTier(), () => {
     applyResolution();
@@ -122,6 +158,26 @@ export function bootWorld(seedLabel: string): WorldHandle {
   function rebuild(): void {
     const budget = governor.budget;
 
+    // O enquadramento inicial mira o **lote**, não o trecho de grama: o que o
+    // jogador quer ver ao entrar é o terreno dele. Antes a distância vinha do
+    // orçamento de render, e num lote de 40 m a tela inteira caía dentro da
+    // cerca — não dava para saber onde o terreno começava ou acabava.
+    if (!enquadrado) {
+      // A câmera nasce com giro de 0,7 rad, então o lote entra em quadro como
+      // losango e quem manda no enquadramento é a **diagonal**, não o lado.
+      // Enquadrar pelo lado deixava só a ponta do terreno na tela.
+      const fundo = plot.height * TILE * Math.SQRT2 * 1.1;
+      view.distance = Math.min(
+        view.limits.maxDistance,
+        fundo / (2 * Math.tan((camera.fov * Math.PI) / 360)),
+      );
+      enquadrado = true;
+    }
+
+    // O trecho acompanha o zoom: ver `patchSizeForView`.
+    const patch = patchSizeForView(budget, view.distance, camera.fov);
+    seededPatch = patch;
+
     if (terrain) {
       scene.remove(terrain.mesh, terrain.water);
       terrain.dispose();
@@ -138,36 +194,28 @@ export function bootWorld(seedLabel: string): WorldHandle {
       // Terreno bem maior que o trecho com grama: numa visão de cima quase
       // vertical, a borda da malha entraria em quadro no zoom máximo e
       // apareceria como um precipício no vazio.
-      budget.patchSize * 3.2,
+      patch * 3.2,
       budget.terrainSegments,
       density.biomes,
       bounds,
+      plotArea,
     );
     grass = createGrassField(
       world,
       density,
       center.x,
       center.y,
-      grassOptionsFor(budget),
+      { ...grassOptionsFor(budget), patchSize: patch },
       bounds,
     );
     scene.add(terrain.mesh, terrain.water, grass.mesh);
 
     if (!plotView) {
-      plotView = createPlotView(plot);
+      plotView = createPlotView(plot, lote.x, lote.z);
       scene.add(plotView.group);
       plotView.sync(plot);
     }
     seededAt.copy(center);
-
-    // Enquadramento amarrado ao trecho semeado, e não a uma distância fixa.
-    // Um aparelho de orçamento baixo semeia 42 m; a mesma distância que
-    // enquadra 64 m deixaria o campo como um tapete manchado no horizonte.
-    // Só na primeira montagem — depois quem manda é o jogador.
-    if (!enquadrado) {
-      view.distance = budget.patchSize * 0.75;
-      enquadrado = true;
-    }
     view.focusOn(center.x, center.y);
 
     report();
@@ -311,7 +359,7 @@ export function bootWorld(seedLabel: string): WorldHandle {
     },
     onEnd() {
       mostrarLimite(false);
-      if (center.distanceTo(seededAt) > governor.budget.patchSize * 0.3) {
+      if (precisaResemear()) {
         rebuild();
       }
     },
@@ -425,7 +473,7 @@ export function bootWorld(seedLabel: string): WorldHandle {
 
     view.apply();
 
-    if (center.distanceTo(seededAt) > governor.budget.patchSize * 0.3) {
+    if (precisaResemear()) {
       rebuild();
     }
   }

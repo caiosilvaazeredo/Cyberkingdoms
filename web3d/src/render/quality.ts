@@ -37,13 +37,27 @@ export interface QualityBudget {
   readonly terrainSegments: number;
 }
 
+/**
+ * Os tetos subiram junto com a correção do corte por linha.
+ *
+ * Enquanto o teto truncava o laço, o campo era denso num pedaço e pelado no
+ * resto — e a densidade *aparente* onde havia grama enganava: parecia
+ * suficiente. Espalhando as mesmas lâminas pelo trecho inteiro, o número
+ * antigo virou um tapete ralo por igual, que é justamente o que este
+ * renderizador existe para evitar.
+ *
+ * A conta que importa é lâminas por metro quadrado: `maxBlades / patchSize²`.
+ * Com os números antigos dava de 15 a 27; agora dá de 28 a 42. Custa 12
+ * vértices por lâmina, e vértice é o que sobra num celular — o gargalo dele é
+ * preenchimento, e uma lâmina cobre poucos pixels.
+ */
 const budgets: Record<DeviceTier, QualityBudget> = {
   // Aparelho de entrada: um trecho menor, e o suficiente de grama para o campo
   // ainda ler como campo. Abaixo disso é melhor mostrar menos mundo do que
   // mostrar mundo pelado.
-  baixo: { pixelRatio: 1, maxBlades: 26_000, patchSize: 42, terrainSegments: 96 },
-  medio: { pixelRatio: 1.5, maxBlades: 60_000, patchSize: 52, terrainSegments: 140 },
-  alto: { pixelRatio: 2, maxBlades: 110_000, patchSize: 64, terrainSegments: 200 },
+  baixo: { pixelRatio: 1, maxBlades: 45_000, patchSize: 40, terrainSegments: 96 },
+  medio: { pixelRatio: 1.5, maxBlades: 95_000, patchSize: 50, terrainSegments: 140 },
+  alto: { pixelRatio: 2, maxBlades: 150_000, patchSize: 60, terrainSegments: 200 },
 };
 
 /**
@@ -68,6 +82,37 @@ export function guessTier(nav: Navigator = navigator): DeviceTier {
 
 export function budgetFor(tier: DeviceTier): QualityBudget {
   return budgets[tier];
+}
+
+/** Quanto o trecho pode crescer além do tamanho base, ao afastar a câmera. */
+const PATCH_MAX_GROWTH = 2.4;
+
+/**
+ * Lado do trecho de grama que cobre o que a câmera enxerga desta distância.
+ *
+ * ## Por que o trecho não pode ser fixo
+ *
+ * `patchSize` era constante, e o zoom vai de 14 a 110 metros. De perto isso
+ * semeava grama muito além da tela — orçamento gasto onde ninguém olha. De
+ * longe acontecia o contrário e pior: o campo acabava no meio da tela e o
+ * terreno seguia pelado até o horizonte, exatamente a borda visível que a
+ * visão de cima existe para não ter.
+ *
+ * O teto de lâminas **não** cresce junto, e isso é de propósito. Afastado, o
+ * jogador vê 120 m de chão numa tela de 900 px: uma lâmina de 5 cm não chega a
+ * ocupar um pixel. Espalhar o mesmo orçamento é a resposta certa — quem
+ * carrega a leitura de longe é a cor do terreno, não a folha.
+ */
+export function patchSizeForView(
+  budget: QualityBudget,
+  distance: number,
+  verticalFovDegrees: number,
+): number {
+  const visivel = 2 * distance * Math.tan((verticalFovDegrees * Math.PI) / 360);
+  return Math.max(
+    budget.patchSize,
+    Math.min(budget.patchSize * PATCH_MAX_GROWTH, visivel * 1.25),
+  );
 }
 
 export function grassOptionsFor(budget: QualityBudget): GrassOptions {
