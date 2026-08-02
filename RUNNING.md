@@ -304,6 +304,27 @@ changes"*, é a instalação do Flutter que está suja, não este projeto:
 `git -C <pasta-do-flutter> stash` e tente de novo, ou `flutter upgrade --force`
 se não houver nada seu ali.
 
+**`flutter --version` mostra Framework e Dart de épocas diferentes**
+Instalação corrompida. Exemplo real:
+
+```
+Framework • revision 2663184aa7 • 2024-09-11    <- Flutter 3.24.3
+Tools     • Dart 3.8.1                          <- Dart de maio/2025
+```
+
+Um Flutter 3.24.3 íntegro traz Dart 3.5.3. Framework de 2024 com Dart de 2025
+quer dizer que o checkout do framework ficou parado enquanto o cache (engine +
+Dart SDK) foi atualizado por cima. O `pub` então lê duas versões diferentes e
+reclama ora do Dart, ora do Flutter, pela mesma causa.
+
+Acontece muito com **Flutter que veio dentro do zip de outro projeto** — repare
+se o caminho é algo como `...\Downloads\ProjetoX\front\flutter\bin`. Esse
+checkout costuma ter alterações de terceiros, que é o que faz o
+`flutter upgrade` recusar com *"local changes"*.
+
+Não vale a pena consertar: instale um Flutter limpo (seção 1), aponte o `PATH`
+para ele e tire o antigo da frente.
+
 **Duas mensagens de erro citando versões de SDK diferentes na mesma pasta**
 Há mais de um Flutter instalado, e o `PATH` está resolvendo para o antigo. É
 mais comum do que parece: o Android Studio instala um por conta, e o `fvm`
