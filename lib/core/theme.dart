@@ -71,6 +71,18 @@ abstract final class CyberTheme {
       colorScheme: scheme,
       scaffoldBackgroundColor: CyberColors.background,
       fontFamily: bodyFont,
+      // Ondulação clássica no lugar do `InkSparkle` do Material 3.
+      //
+      // O `InkSparkle` é desenhado por um shader (`shaders/ink_sparkle.frag`)
+      // que o ambiente de teste do Flutter 3.44 não consegue carregar —
+      // "Unsupported runtime stages format version". Todo teste que toca um
+      // botão morre com isso, e não há nada do lado do projeto para consertar
+      // além de não usar o shader.
+      //
+      // O `InkRipple` é a ondulação do Material 2: não depende de shader, é
+      // idêntica em toda plataforma, e sai de graça — o efeito com brilho do
+      // Material 3 só aparece no Android mesmo.
+      splashFactory: InkRipple.splashFactory,
     );
 
     return base.copyWith(

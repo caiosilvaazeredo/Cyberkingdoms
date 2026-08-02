@@ -164,9 +164,9 @@ flutter run             # Android / iOS
 flutter test            # 251 testes (12 capturas são puladas fora do Dart 3.8)
 ```
 
-Requer Flutter 3.32+ / Dart 3.8+. A suíte é verificada nas duas pontas dessa
-faixa — 3.32.4/3.8.1 e 3.35.5/3.9.2 — porque manter as duas funcionando é mais
-barato que obrigar quem clona o repositório a atualizar o SDK.
+Requer Flutter 3.32+ / Dart 3.8+. A suíte é verificada em 3.32.4, 3.35.5 e
+3.44.8 — do piso ao último stable — porque manter a faixa inteira funcionando é
+mais barato que obrigar quem clona o repositório a trocar de SDK.
 
 **[→ Guia completo em RUNNING.md](RUNNING.md)** — instalação, emuladores,
 builds de release, Firebase, re-render de sprites e solução de problemas.

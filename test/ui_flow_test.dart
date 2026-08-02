@@ -1,3 +1,4 @@
+import 'package:cyberkingdoms/core/theme.dart';
 import 'package:cyberkingdoms/data/campaign_repository.dart';
 import 'package:cyberkingdoms/domain/campaign/campaign.dart';
 import 'package:cyberkingdoms/state/providers.dart';
@@ -31,7 +32,7 @@ void main() {
         overrides: [
           campaignRepositoryProvider.overrideWithValue(repository),
         ],
-        child: const MaterialApp(home: CampaignSelectScreen()),
+        child: MaterialApp(theme: CyberTheme.build(), home: const CampaignSelectScreen()),
       );
 
   group('Criação de campanha pela UI', () {
@@ -145,7 +146,7 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: const MaterialApp(home: GameShell()),
+          child: MaterialApp(theme: CyberTheme.build(), home: const GameShell()),
         ),
       );
       await pumpFrames(tester);
@@ -185,7 +186,7 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: const MaterialApp(home: GameShell()),
+          child: MaterialApp(theme: CyberTheme.build(), home: const GameShell()),
         ),
       );
       await pumpFrames(tester);
@@ -215,7 +216,7 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: const MaterialApp(home: GameShell()),
+          child: MaterialApp(theme: CyberTheme.build(), home: const GameShell()),
         ),
       );
       await pumpFrames(tester);

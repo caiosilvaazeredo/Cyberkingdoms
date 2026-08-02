@@ -30,18 +30,31 @@ no navegador, basta a linha do Chrome estar verde.
 
 ### Duas versões, de propósito
 
-O projeto compila e passa a suíte em **Flutter 3.32.4 / Dart 3.8.1** e em
-**Flutter 3.35.5 / Dart 3.9.2**. Não é acaso: as versões novas de
-`shared_preferences` e `path_provider` exigem Dart 3.9, mas as faixas do
-`pubspec.yaml` deixam o `pub` resolver para versões anteriores, e o
+O projeto compila e passa a suíte em três versões, verificadas de ponta a
+ponta:
+
+| Flutter | Dart | Resultado |
+|---|---|---|
+| 3.32.4 | 3.8.1 | `+251` — inclui as capturas de tela |
+| 3.35.5 | 3.9.2 | `+239 ~12` — capturas puladas |
+| 3.44.8 | 3.12.2 | `+239 ~12` — capturas puladas |
+
+As versões novas de `shared_preferences` e `path_provider` exigem Dart 3.9, mas
+as faixas do `pubspec.yaml` deixam o `pub` resolver para versões anteriores, e o
 `pubspec.lock` versionado já está resolvido assim.
 
-Duas armadilhas conhecidas nessa faixa:
+Três armadilhas conhecidas nessa faixa:
 
 - **`DropdownButtonFormField`** renomeou o parâmetro de seleção (`value` até o
   3.32, `initialValue` do 3.35 em diante, com o antigo deprecado). Não há
   grafia que passe limpo nas duas — por isso o mercado usa `DropdownButton`
   dentro de um `InputDecorator`, cujo nome não mudou.
+- **O `InkSparkle`**, ondulação de toque padrão do Material 3, é desenhado por
+  um shader que o ambiente de teste do Flutter 3.44 não carrega
+  (*"Unsupported runtime stages format version"*). Todo teste que tocava um
+  botão morria com isso. O tema fixa `splashFactory: InkRipple.splashFactory`,
+  que não depende de shader — e por isso todo `MaterialApp` de teste precisa
+  usar `CyberTheme.build()`, nunca o tema padrão.
 - **As capturas de tela** só valem no SDK que as gerou; ver a seção 4.
 
 Ao mexer numa dependência, rode a suíte nas duas pontas antes de subir: é fácil
@@ -324,6 +337,26 @@ checkout costuma ter alterações de terceiros, que é o que faz o
 
 Não vale a pena consertar: instale um Flutter limpo (seção 1), aponte o `PATH`
 para ele e tire o antigo da frente.
+
+**`flutter upgrade --force` falha com `Filename too long`**
+Limite de caminho do Windows (260 caracteres). O repositório do Flutter 3.44
+traz o engine dentro dele, com arquivos de teste de nome longuíssimo; se o
+Flutter estiver numa pasta funda — `C:\Users\voce\Downloads\ProjetoX\front\
+flutter` — o `git checkout` estoura no meio e deixa a instalação quebrada
+(*"Could not reset index file"*).
+
+Duas coisas evitam isso, e valem as duas:
+
+```powershell
+# 1. Permitir caminhos longos no git (precisa de terminal como Administrador)
+git config --system core.longpaths true
+```
+
+2. Mantenha o Flutter num caminho curto: `C:\src\flutter`, nunca dentro de
+   `Downloads` ou de outro projeto.
+
+Se já quebrou no meio do upgrade, não tente consertar o checkout: apague a
+pasta e instale limpo.
 
 **Duas mensagens de erro citando versões de SDK diferentes na mesma pasta**
 Há mais de um Flutter instalado, e o `PATH` está resolvendo para o antigo. É
