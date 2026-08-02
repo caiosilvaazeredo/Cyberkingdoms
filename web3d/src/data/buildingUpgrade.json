@@ -1,0 +1,26 @@
+{
+  "maxLevel": 3,
+  "levels": [
+    {
+      "level": 1,
+      "outputMultiplier": 1.0,
+      "upkeepMultiplier": 1.0,
+      "flatMultiplier": 1.0,
+      "moduleSlots": 1
+    },
+    {
+      "level": 2,
+      "outputMultiplier": 1.6,
+      "upkeepMultiplier": 1.8,
+      "flatMultiplier": 1.5,
+      "moduleSlots": 2
+    },
+    {
+      "level": 3,
+      "outputMultiplier": 2.4,
+      "upkeepMultiplier": 3.0,
+      "flatMultiplier": 2.0,
+      "moduleSlots": 3
+    }
+  ]
+}

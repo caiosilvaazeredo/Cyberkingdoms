@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:cyberkingdoms/domain/building/building_module.dart';
+import 'package:cyberkingdoms/domain/building/building_type.dart';
+import 'package:cyberkingdoms/domain/building/village_identity.dart';
 import 'package:cyberkingdoms/domain/economy/item.dart';
 import 'package:cyberkingdoms/domain/economy/recipe.dart';
 import 'package:cyberkingdoms/domain/survival/survival_tables.dart';
@@ -25,7 +28,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// flutter test test/catalog_export_test.dart
 /// ```
 void main() {
-  test('exporta itens, receitas e tabelas de sobrevivência', () {
+  test('exporta itens, receitas, construções e tabelas', () {
     final items = [
       for (final id in ItemId.values)
         () {
@@ -109,6 +112,88 @@ void main() {
       },
     };
 
+    final buildings = [
+      for (final d in BuildingCatalog.all)
+        {
+          'id': d.id.name,
+          'name': d.name,
+          'category': d.category.name,
+          'width': d.width,
+          'height': d.height,
+          'creditCost': d.creditCost,
+          'materialCost': {
+            for (final e in d.materialCost.entries) e.key.name: e.value,
+          },
+          'buildDays': d.buildDays,
+          'spriteId': d.spriteId,
+          'requiredLevel': d.requiredLevel.name,
+          'jobSlots': d.jobSlots,
+          'produces': d.produces?.name,
+          'outputPerDay': d.outputPerDay,
+          'consumes': {
+            for (final e in d.consumes.entries) e.key.name: e.value,
+          },
+          'unlocksStation': d.unlocksStation?.name,
+          'storageBonus': d.storageBonus,
+          'defenseBonus': d.defenseBonus,
+          'statusBonus': d.statusBonus,
+          'populationCapacity': d.populationCapacity,
+          'dailyUpkeep': d.dailyUpkeep,
+          'hungerUpkeepModifier': d.hungerUpkeepModifier,
+          'thirstUpkeepModifier': d.thirstUpkeepModifier,
+          'legal': d.legal,
+          'description': d.description,
+        },
+    ];
+
+    final modules = [
+      for (final m in BuildingModule.values)
+        {
+          'id': m.name,
+          'label': m.label,
+          'description': m.description,
+          'creditCost': m.creditCost,
+          'materialCost': {
+            for (final e in m.materialCost.entries) e.key.name: e.value,
+          },
+          'categories': [for (final c in m.categories) c.name],
+          'outputMultiplier': m.outputMultiplier,
+          'storageBonus': m.storageBonus,
+          'defenseBonus': m.defenseBonus,
+          'statusBonus': m.statusBonus,
+          'jobSlotBonus': m.jobSlotBonus,
+          'populationBonus': m.populationBonus,
+          'upkeepDelta': m.upkeepDelta,
+          'upkeepMultiplier': m.upkeepMultiplier,
+          'thirstUpkeepModifier': m.thirstUpkeepModifier,
+          'hungerUpkeepModifier': m.hungerUpkeepModifier,
+          'removesStaffingPenalty': m.removesStaffingPenalty,
+        },
+    ];
+
+    final upgrade = {
+      'maxLevel': BuildingUpgrade.maxLevel,
+      'levels': [
+        for (var level = 1; level <= BuildingUpgrade.maxLevel; level++)
+          {
+            'level': level,
+            'outputMultiplier': BuildingUpgrade.outputMultiplierFor(level),
+            'upkeepMultiplier': BuildingUpgrade.upkeepMultiplierFor(level),
+            'flatMultiplier': BuildingUpgrade.flatMultiplierFor(level),
+            'moduleSlots': BuildingUpgrade.moduleSlotsFor(level),
+          },
+      ],
+    };
+
+    final emblems = [
+      for (final e in VillageEmblem.values)
+        {'id': e.name, 'label': e.label, 'spriteId': e.spriteId},
+    ];
+
+    _write('buildings', buildings);
+    _write('modules', modules);
+    _write('buildingUpgrade', upgrade);
+    _write('emblems', emblems);
     _write('items', items);
     _write('recipes', recipes);
     _write('survival', survival);
@@ -118,6 +203,9 @@ void main() {
     expect(items, hasLength(ItemId.values.length));
     expect(recipes, isNotEmpty);
     expect(items.where((i) => (i['baseValue'] as int) > 0), isNotEmpty);
+    expect(buildings, hasLength(BuildingId.values.length));
+    expect(modules, hasLength(BuildingModule.values.length));
+    expect(emblems, isNotEmpty);
   });
 }
 

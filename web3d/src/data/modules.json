@@ -1,0 +1,241 @@
+[
+  {
+    "id": "extraArm",
+    "label": "Braço Industrial",
+    "description": "+30% de produção. Consome mais manutenção.",
+    "creditCost": 1800,
+    "materialCost": {
+      "scrap": 20,
+      "polymer": 8
+    },
+    "categories": [
+      "extraction",
+      "refining",
+      "manufacturing"
+    ],
+    "outputMultiplier": 0.3,
+    "storageBonus": 0,
+    "defenseBonus": 0,
+    "statusBonus": 0,
+    "jobSlotBonus": 0,
+    "populationBonus": 0,
+    "upkeepDelta": 18,
+    "upkeepMultiplier": 0.0,
+    "thirstUpkeepModifier": 0.0,
+    "hungerUpkeepModifier": 0.0,
+    "removesStaffingPenalty": false
+  },
+  {
+    "id": "storageAnnex",
+    "label": "Anexo de Estoque",
+    "description": "+120 de capacidade de armazenamento.",
+    "creditCost": 1200,
+    "materialCost": {
+      "scrap": 16,
+      "polymer": 4
+    },
+    "categories": [
+      "extraction",
+      "refining",
+      "manufacturing",
+      "commerce",
+      "infrastructure"
+    ],
+    "outputMultiplier": 0.0,
+    "storageBonus": 120,
+    "defenseBonus": 0,
+    "statusBonus": 0,
+    "jobSlotBonus": 0,
+    "populationBonus": 0,
+    "upkeepDelta": 6,
+    "upkeepMultiplier": 0.0,
+    "thirstUpkeepModifier": 0.0,
+    "hungerUpkeepModifier": 0.0,
+    "removesStaffingPenalty": false
+  },
+  {
+    "id": "dedicatedGenerator",
+    "label": "Gerador Dedicado",
+    "description": "Corta 60% da manutenção — a construção se paga sozinha.",
+    "creditCost": 3200,
+    "materialCost": {
+      "circuitBoard": 6,
+      "scrap": 24
+    },
+    "categories": [
+      "extraction",
+      "refining",
+      "manufacturing",
+      "commerce"
+    ],
+    "outputMultiplier": 0.0,
+    "storageBonus": 0,
+    "defenseBonus": 0,
+    "statusBonus": 0,
+    "jobSlotBonus": 0,
+    "populationBonus": 0,
+    "upkeepDelta": 0,
+    "upkeepMultiplier": -0.6,
+    "thirstUpkeepModifier": 0.0,
+    "hungerUpkeepModifier": 0.0,
+    "removesStaffingPenalty": false
+  },
+  {
+    "id": "automationCore",
+    "label": "Núcleo de Automação",
+    "description": "A construção rende cheio mesmo sem funcionários.",
+    "creditCost": 6500,
+    "materialCost": {
+      "chip": 4,
+      "circuitBoard": 8
+    },
+    "categories": [
+      "extraction",
+      "refining",
+      "manufacturing"
+    ],
+    "outputMultiplier": 0.0,
+    "storageBonus": 0,
+    "defenseBonus": 0,
+    "statusBonus": 0,
+    "jobSlotBonus": 0,
+    "populationBonus": 0,
+    "upkeepDelta": 40,
+    "upkeepMultiplier": 0.0,
+    "thirstUpkeepModifier": 0.0,
+    "hungerUpkeepModifier": 0.0,
+    "removesStaffingPenalty": true
+  },
+  {
+    "id": "securityGrid",
+    "label": "Grade de Segurança",
+    "description": "+18 de defesa do terreno.",
+    "creditCost": 2200,
+    "materialCost": {
+      "scrap": 22,
+      "circuitBoard": 4
+    },
+    "categories": [
+      "defense",
+      "commerce",
+      "housing",
+      "civic"
+    ],
+    "outputMultiplier": 0.0,
+    "storageBonus": 0,
+    "defenseBonus": 18,
+    "statusBonus": 0,
+    "jobSlotBonus": 0,
+    "populationBonus": 0,
+    "upkeepDelta": 14,
+    "upkeepMultiplier": 0.0,
+    "thirstUpkeepModifier": 0.0,
+    "hungerUpkeepModifier": 0.0,
+    "removesStaffingPenalty": false
+  },
+  {
+    "id": "neonSign",
+    "label": "Letreiro Neon",
+    "description": "+2 de Status. Aparência é poder político.",
+    "creditCost": 900,
+    "materialCost": {
+      "polymer": 6,
+      "circuitBoard": 2
+    },
+    "categories": [
+      "commerce",
+      "civic",
+      "housing"
+    ],
+    "outputMultiplier": 0.0,
+    "storageBonus": 0,
+    "defenseBonus": 0,
+    "statusBonus": 2,
+    "jobSlotBonus": 0,
+    "populationBonus": 0,
+    "upkeepDelta": 8,
+    "upkeepMultiplier": 0.0,
+    "thirstUpkeepModifier": 0.0,
+    "hungerUpkeepModifier": 0.0,
+    "removesStaffingPenalty": false
+  },
+  {
+    "id": "filtrationUnit",
+    "label": "Unidade de Filtragem",
+    "description": "-10% de consumo de Sede enquanto você estiver no terreno.",
+    "creditCost": 2600,
+    "materialCost": {
+      "polymer": 12,
+      "catalyst": 3
+    },
+    "categories": [
+      "infrastructure",
+      "housing",
+      "extraction"
+    ],
+    "outputMultiplier": 0.0,
+    "storageBonus": 0,
+    "defenseBonus": 0,
+    "statusBonus": 0,
+    "jobSlotBonus": 0,
+    "populationBonus": 0,
+    "upkeepDelta": 12,
+    "upkeepMultiplier": 0.0,
+    "thirstUpkeepModifier": -0.1,
+    "hungerUpkeepModifier": 0.0,
+    "removesStaffingPenalty": false
+  },
+  {
+    "id": "insulationLayer",
+    "label": "Camada Térmica",
+    "description": "-10% de consumo de Fome enquanto você estiver no terreno.",
+    "creditCost": 2400,
+    "materialCost": {
+      "fabric": 10,
+      "polymer": 8
+    },
+    "categories": [
+      "infrastructure",
+      "housing",
+      "civic"
+    ],
+    "outputMultiplier": 0.0,
+    "storageBonus": 0,
+    "defenseBonus": 0,
+    "statusBonus": 0,
+    "jobSlotBonus": 0,
+    "populationBonus": 0,
+    "upkeepDelta": 12,
+    "upkeepMultiplier": 0.0,
+    "thirstUpkeepModifier": 0.0,
+    "hungerUpkeepModifier": -0.1,
+    "removesStaffingPenalty": false
+  },
+  {
+    "id": "workerQuarters",
+    "label": "Alojamento Anexo",
+    "description": "+3 vagas de emprego e +6 de população.",
+    "creditCost": 1600,
+    "materialCost": {
+      "scrap": 14,
+      "fabric": 6
+    },
+    "categories": [
+      "extraction",
+      "refining",
+      "manufacturing",
+      "civic"
+    ],
+    "outputMultiplier": 0.0,
+    "storageBonus": 0,
+    "defenseBonus": 0,
+    "statusBonus": 0,
+    "jobSlotBonus": 3,
+    "populationBonus": 6,
+    "upkeepDelta": 10,
+    "upkeepMultiplier": 0.0,
+    "thirstUpkeepModifier": 0.0,
+    "hungerUpkeepModifier": 0.0,
+    "removesStaffingPenalty": false
+  }
+]

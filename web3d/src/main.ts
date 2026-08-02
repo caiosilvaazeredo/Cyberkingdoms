@@ -7,6 +7,7 @@ import {
   grassOptionsFor,
   guessTier,
 } from './render/quality';
+import { CityCamera } from './render/cityCamera';
 import { createTerrain, type Terrain } from './render/terrain';
 import { GestureRecognizer } from './render/touch';
 import { biomeDef } from './world/biome';
@@ -58,15 +59,16 @@ function boot(): void {
   let grass: GrassField | null = null;
   const center = new THREE.Vector2(0, 0);
   const seededAt = new THREE.Vector2(0, 0);
+  let enquadrado = false;
 
   const governor = new QualityGovernor(guessTier(), () => {
     applyResolution();
     rebuild();
   });
 
-  // Câmera baixa e perto: é o ângulo em que a grama tem volume. De cima ela
-  // vira textura, que é o que o campo instanciado existe para evitar.
-  const orbit = { azimuth: 0.7, elevation: 0.16, distance: 22 };
+  // Câmera de construtor de cidade: o alvo é um ponto do terreno, o dedo
+  // arrasta o chão, e a inclinação sobe junto com o afastamento.
+  const view = new CityCamera(camera, (x, z) => world.heightAt(x, z));
 
   function applyResolution(): void {
     const budget = governor.budget;
@@ -76,33 +78,7 @@ function boot(): void {
     camera.updateProjectionMatrix();
   }
 
-  /**
-   * Inclinação extra em telas altas.
-   *
-   * A câmera de campo aberto foi calibrada num monitor deitado. Em retrato o
-   * campo de visão vertical dobra, e o mesmo ângulo entrega uma tela com 60% de
-   * céu — a primeira captura em celular saiu assim, com a grama espremida no
-   * terço de baixo. Olhar mais para baixo devolve o chão à tela sem mexer no
-   * enquadramento de quem está no desktop.
-   */
-  function pitchForAspect(): number {
-    const aspect = window.innerWidth / Math.max(1, window.innerHeight);
-    if (aspect >= 1.2) return 0;
-    // De 0 (quadrado) a ~0.42 rad no retrato mais estreito.
-    return Math.min(0.42, (1.2 - aspect) * 0.5);
-  }
-
-  function placeCamera(): void {
-    const y = world.heightAt(center.x, center.y);
-    const elevation = Math.min(1.45, orbit.elevation + pitchForAspect());
-    const r = orbit.distance * Math.cos(elevation);
-    camera.position.set(
-      center.x + r * Math.sin(orbit.azimuth),
-      y + orbit.distance * Math.sin(elevation) + 2,
-      center.y + r * Math.cos(orbit.azimuth),
-    );
-    camera.lookAt(center.x, y + 1.5, center.y);
-  }
+  const placeCamera = (): void => view.apply();
 
   function rebuild(): void {
     const budget = governor.budget;
@@ -133,6 +109,16 @@ function boot(): void {
     );
     scene.add(terrain.mesh, terrain.water, grass.mesh);
     seededAt.copy(center);
+
+    // Enquadramento amarrado ao trecho semeado, e não a uma distância fixa.
+    // Um aparelho de orçamento baixo semeia 42 m; a mesma distância que
+    // enquadra 64 m deixaria o campo como um tapete manchado no horizonte.
+    // Só na primeira montagem — depois quem manda é o jogador.
+    if (!enquadrado) {
+      view.distance = budget.patchSize * 0.62;
+      enquadrado = true;
+    }
+    view.focusOn(center.x, center.y);
 
     report();
     placeCamera();
@@ -201,34 +187,30 @@ function boot(): void {
         case 'paint':
           paintAt(state.x, state.y);
           break;
-        case 'orbit':
-          orbit.azimuth -= state.dx * 0.006;
-          orbit.elevation = Math.min(
-            1.45,
-            Math.max(0.05, orbit.elevation + state.dy * 0.005),
-          );
-          placeCamera();
+
+        case 'pan':
+          // Um dedo arrasta o terreno, como em qualquer construtor de cidade.
+          view.pan(state.dx, state.dy, window.innerHeight);
+          view.apply();
+          center.set(view.target.x, view.target.z);
           break;
-        case 'pinch':
-          orbit.distance = Math.min(160, Math.max(6, orbit.distance / state.scale));
-          placeCamera();
+
+        case 'transform':
+          // Pinça, torção e inclinação juntas: é o que a mão faz de verdade.
+          if (state.scale !== 1) view.zoomBy(state.scale);
+          if (state.rotation !== 0) view.rotateBy(-state.rotation);
+          // Arrasto vertical com dois dedos inclina, desde que não esteja
+          // girando nem pinçando — senão a câmera cabeceia a cada gesto.
+          if (state.scale === 1 && state.rotation === 0) {
+            view.tiltBy(state.dy * 0.004);
+          }
+          view.apply();
           break;
-        case 'pan': {
-          // O deslocamento acompanha a direção da câmera; sem isso, arrastar
-          // para a direita move o mundo para um lado imprevisível.
-          const speed = orbit.distance * 0.0015;
-          const cos = Math.cos(orbit.azimuth);
-          const sin = Math.sin(orbit.azimuth);
-          center.x -= (state.dx * cos - state.dy * sin) * speed;
-          center.y += (state.dx * sin + state.dy * cos) * speed;
-          placeCamera();
-          break;
-        }
       }
     },
     onEnd() {
-      // Ao soltar depois de deslocar, o trecho semeado pode ter ficado para
-      // trás. Refazer só aqui evita reconstruir durante o arrasto.
+      // Ao soltar depois de arrastar, o trecho semeado pode ter ficado para
+      // trás. Refazer só aqui evita reconstruir durante o movimento.
       if (center.distanceTo(seededAt) > governor.budget.patchSize * 0.3) {
         rebuild();
       }
@@ -252,6 +234,7 @@ function boot(): void {
     world = WorldGenerator.fromLabel(seedInput?.value.trim() || 'captura-do-mundo');
     density = new DensityField(world);
     center.set(0, 0);
+    enquadrado = false;
     rebuild();
   };
   document.querySelector('#regenerate')?.addEventListener('click', regenerate);
@@ -271,8 +254,9 @@ function boot(): void {
   // `resize` também dispara ao rodar o aparelho e ao abrir o teclado virtual.
   const onResize = (): void => {
     applyResolution();
-    // O enquadramento depende da proporção, então rodar o aparelho precisa
-    // reposicionar a câmera, não só redimensionar o buffer.
+    // O enquadramento depende da proporção — a `CityCamera` soma inclinação em
+    // telas altas —, então rodar o aparelho precisa reposicionar a câmera, não
+    // só redimensionar o buffer.
     placeCamera();
   };
   window.addEventListener('resize', onResize);

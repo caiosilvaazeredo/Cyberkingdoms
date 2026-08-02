@@ -102,12 +102,22 @@ gargalo no celular. Ver o comentário no topo de `src/render/grass.ts`.
 O orçamento é de **90 mil lâminas**, 12 vértices cada. Dobrar derruba o frame
 rate de um celular mediano e a diferença a 30 m é quase nenhuma.
 
-## Controles
+## Controles, no vocabulário de construtor de cidade
 
 | | |
 |---|---|
-| arrastar | orbitar |
-| roda | aproximar |
-| `shift`+arrastar, ou botão direito | plantar grama |
-| `W` `A` `S` `D` | caminhar |
-| `C` | limpar a pintura |
+| um dedo arrastando | **arrastar o terreno** |
+| dois dedos, pinça | aproximar e afastar |
+| dois dedos, torção | girar |
+| dois dedos, vertical | inclinar |
+| botão **PINCEL** ligado, um dedo | plantar grama |
+| roda do mouse | aproximar |
+| botão direito, ou `shift`+arrastar | plantar grama |
+
+Um dedo arrastar o chão em vez de orbitar é a diferença que a mão sente: o
+ponto sob o dedo continua sob o dedo, e um mapa grande vira navegável. É a
+convenção de City Skylines e dos tycoons, e o jogador já chega sabendo.
+
+A inclinação segue o zoom: longe o jogador está planejando e quer ver o
+traçado, então a câmera sobe; perto está apreciando, e ela baixa. Isso define o
+**piso** do ângulo — inclinar à mão continua funcionando.

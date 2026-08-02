@@ -1,0 +1,62 @@
+[
+  {
+    "id": "banner",
+    "label": "Estandarte",
+    "spriteId": "minidungeon/banner"
+  },
+  {
+    "id": "flagTall",
+    "label": "Bandeira Alta",
+    "spriteId": "castlekit/flag"
+  },
+  {
+    "id": "flagWide",
+    "label": "Bandeira Larga",
+    "spriteId": "castlekit/flag-wide"
+  },
+  {
+    "id": "pennant",
+    "label": "Flâmula",
+    "spriteId": "castlekit/flag-pennant"
+  },
+  {
+    "id": "bannerLong",
+    "label": "Faixa Longa",
+    "spriteId": "castlekit/flag-banner-long"
+  },
+  {
+    "id": "bannerShort",
+    "label": "Faixa Curta",
+    "spriteId": "castlekit/flag-banner-short"
+  },
+  {
+    "id": "forestFlag",
+    "label": "Bandeira de Mata",
+    "spriteId": "miniforest/flag"
+  },
+  {
+    "id": "tower",
+    "label": "Torre",
+    "spriteId": "castlekit/tower-square-top"
+  },
+  {
+    "id": "gate",
+    "label": "Portão",
+    "spriteId": "castlekit/gate"
+  },
+  {
+    "id": "chest",
+    "label": "Baú",
+    "spriteId": "minidungeon/chest"
+  },
+  {
+    "id": "shield",
+    "label": "Escudo",
+    "spriteId": "minidungeon/shield-round"
+  },
+  {
+    "id": "drone",
+    "label": "Drone",
+    "spriteId": "castlekit/siege-ballista"
+  }
+]

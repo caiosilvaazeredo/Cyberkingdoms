@@ -1,23 +1,29 @@
 /**
- * Gestos de toque para a câmera orbital.
+ * Gestos de toque, no vocabulário de construtor de cidade.
  *
- * O mouse tem três botões e uma roda; o dedo não tem nenhum dos quatro. O
- * primeiro controle que escrevi usava botão direito para pintar e roda para
- * aproximar — no celular, as duas ações simplesmente não existiam. Este módulo
- * é a tradução:
+ * O mouse tem três botões e uma roda; o dedo não tem nenhum dos quatro. Este
+ * módulo é a tradução — e a divisão segue a convenção de City Skylines e dos
+ * tycoons, que é o que a mão do jogador já espera:
  *
  * | Gesto | Ação |
  * |---|---|
- * | um dedo arrastando | orbitar, ou pintar se o modo pincel estiver ligado |
- * | dois dedos pinçando | aproximar e afastar |
- * | dois dedos arrastando | deslocar o centro |
+ * | um dedo arrastando | **arrastar o terreno** (ou pintar, no modo pincel) |
+ * | dois dedos, pinça | aproximar e afastar |
+ * | dois dedos, torção | girar a câmera |
+ * | dois dedos, vertical | inclinar |
+ *
+ * Um dedo arrastar o chão em vez de orbitar é a diferença que se sente: o
+ * ponto sob o dedo continua sob o dedo, e um mapa grande vira navegável.
+ *
+ * Pinça, torção e inclinação chegam juntas num só evento `transform`, porque
+ * na prática a mão faz as três ao mesmo tempo e separar em modos exclusivos
+ * produz um controle que "engasga" quando o jogador gira e aproxima junto.
  *
  * O modo pincel é um **botão na tela**, não um modificador: não há `shift` num
- * celular, e um toque longo para alternar competiria com o menu de contexto do
- * navegador.
+ * celular, e toque longo competiria com o menu do navegador.
  */
 
-export type GestureKind = 'orbit' | 'paint' | 'pinch' | 'pan';
+export type GestureKind = 'pan' | 'paint' | 'transform';
 
 export interface GestureState {
   readonly kind: GestureKind;
@@ -26,6 +32,8 @@ export interface GestureState {
   readonly dy: number;
   /** Razão da distância entre os dedos desde o quadro anterior. 1 = parado. */
   readonly scale: number;
+  /** Giro entre os dedos desde o quadro anterior, em radianos. */
+  readonly rotation: number;
   /** Ponto médio dos dedos, em pixels de tela. */
   readonly x: number;
   readonly y: number;
@@ -53,6 +61,7 @@ export interface GestureHandlers {
 export class GestureRecognizer {
   private readonly points = new Map<number, Point>();
   private lastDistance = 0;
+  private lastAngle = 0;
   private lastCenter = { x: 0, y: 0 };
   private active: GestureKind | null = null;
 
@@ -98,16 +107,17 @@ export class GestureRecognizer {
     const paintingWithMouse = event.button === 2 || event.shiftKey;
     this.active =
       this.points.size >= 2
-        ? 'pinch'
+        ? 'transform'
         : this.paintMode || paintingWithMouse
           ? 'paint'
-          : 'orbit';
+          : 'pan';
 
     this.handlers.onStart?.({
       kind: this.active,
       dx: 0,
       dy: 0,
       scale: 1,
+      rotation: 0,
       x: event.clientX,
       y: event.clientY,
     });
@@ -125,6 +135,7 @@ export class GestureRecognizer {
     const dy = center.y - this.lastCenter.y;
 
     let scale = 1;
+    let rotation = 0;
     if (this.points.size >= 2) {
       const distance = this.distance();
       // Guarda contra divisão por zero quando os dois dedos se encostam.
@@ -133,9 +144,17 @@ export class GestureRecognizer {
       }
       this.lastDistance = distance;
 
-      // Dois dedos: pinça quando a distância muda, arrasto quando não muda.
-      // O limiar evita que o tremor natural da mão vire zoom.
-      this.active = Math.abs(scale - 1) > 0.008 ? 'pinch' : 'pan';
+      const angle = this.angle();
+      // Normaliza para (-π, π]: sem isso, cruzar 180° vira um giro de volta
+      // inteira num quadro só.
+      let delta = angle - this.lastAngle;
+      while (delta > Math.PI) delta -= Math.PI * 2;
+      while (delta < -Math.PI) delta += Math.PI * 2;
+      // Limiar contra o tremor natural da mão parada.
+      rotation = Math.abs(delta) > 0.004 ? delta : 0;
+      this.lastAngle = angle;
+
+      this.active = 'transform';
     }
 
     this.lastCenter = center;
@@ -144,6 +163,7 @@ export class GestureRecognizer {
       dx,
       dy,
       scale,
+      rotation,
       x: center.x,
       y: center.y,
     });
@@ -163,18 +183,19 @@ export class GestureRecognizer {
     // Levantar um dedo de dois: recomeça a linha de base para o dedo que ficou,
     // senão a câmera dá um salto do tamanho da distância entre eles.
     this.refreshBaseline();
-    this.active = this.paintMode ? 'paint' : 'orbit';
+    this.active = this.paintMode ? 'paint' : 'pan';
   };
 
   private wheel = (event: WheelEvent): void => {
     event.preventDefault();
     this.handlers.onMove?.({
-      kind: 'pinch',
+      kind: 'transform',
       dx: 0,
       dy: 0,
       // Roda para cima aproxima. O fator mantém o passo suave em trackpads,
       // que mandam dezenas de eventos pequenos.
       scale: Math.exp(-event.deltaY * 0.0016),
+      rotation: 0,
       x: event.clientX,
       y: event.clientY,
     });
@@ -183,6 +204,7 @@ export class GestureRecognizer {
   private refreshBaseline(): void {
     this.lastCenter = this.center();
     this.lastDistance = this.distance();
+    this.lastAngle = this.angle();
   }
 
   private center(): { x: number; y: number } {
@@ -200,5 +222,12 @@ export class GestureRecognizer {
     const list = [...this.points.values()];
     if (list.length < 2) return 0;
     return Math.hypot(list[0]!.x - list[1]!.x, list[0]!.y - list[1]!.y);
+  }
+
+  /** Ângulo da linha entre os dois primeiros dedos. */
+  private angle(): number {
+    const list = [...this.points.values()];
+    if (list.length < 2) return 0;
+    return Math.atan2(list[1]!.y - list[0]!.y, list[1]!.x - list[0]!.x);
   }
 }

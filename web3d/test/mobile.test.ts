@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { PerspectiveCamera } from 'three';
+
+import { CityCamera } from '../src/render/cityCamera';
 import { QualityGovernor, budgetFor, grassOptionsFor, guessTier } from '../src/render/quality';
 
 /**
@@ -108,5 +111,76 @@ describe('Governador de qualidade', () => {
     const governor = new QualityGovernor('alto', (tier) => trocas.push(tier));
     feed(governor, 20, 2);
     expect(trocas).toContain('medio');
+  });
+});
+
+describe('Câmera de construtor de cidade', () => {
+  const flat = () => 0;
+
+  function make(): CityCamera {
+    const camera = new PerspectiveCamera(58, 0.5, 0.1, 900);
+    return new CityCamera(camera, flat);
+  }
+
+  it('arrastar move o alvo, não gira em volta dele', () => {
+    // É a diferença entre uma câmera orbital e a de um tycoon: o ponto sob o
+    // dedo continua sob o dedo.
+    const view = make();
+    const antes = view.target.clone();
+    view.pan(120, 0, 800);
+    view.apply();
+    expect(view.target.distanceTo(antes)).toBeGreaterThan(0);
+  });
+
+  it('o arrasto rende mais longe do que perto', () => {
+    // Com fator fixo, arrastar de perto atravessa o mapa e arrastar de longe
+    // não sai do lugar.
+    const perto = make();
+    perto.distance = 15;
+    const a = perto.target.clone();
+    perto.pan(100, 0, 800);
+    const dPerto = perto.target.distanceTo(a);
+
+    const longe = make();
+    longe.distance = 150;
+    const b = longe.target.clone();
+    longe.pan(100, 0, 800);
+    expect(longe.target.distanceTo(b)).toBeGreaterThan(dPerto);
+  });
+
+  it('afastar levanta a câmera sozinho', () => {
+    // Longe o jogador planeja e quer ver o traçado; perto quer ver volume.
+    const view = make();
+    view.distance = view.limits.minDistance;
+    const baixo = view.pitch;
+    view.distance = view.limits.maxDistance;
+    expect(view.pitch).toBeGreaterThan(baixo);
+  });
+
+  it('a inclinação respeita os limites em qualquer entrada', () => {
+    const view = make();
+    view.tiltBy(-99);
+    expect(view.pitch).toBeGreaterThanOrEqual(view.limits.minPitch);
+    view.tiltBy(99);
+    expect(view.pitch).toBeLessThanOrEqual(view.limits.maxPitch);
+  });
+
+  it('o zoom respeita os limites', () => {
+    const view = make();
+    for (let i = 0; i < 50; i++) view.zoomBy(2);
+    expect(view.distance).toBe(view.limits.minDistance);
+    for (let i = 0; i < 50; i++) view.zoomBy(0.5);
+    expect(view.distance).toBe(view.limits.maxDistance);
+  });
+
+  it('a câmera nunca entra no morro', () => {
+    // Sem a trava, aproximar numa encosta enfia a câmera dentro do terreno e a
+    // tela fica preta — um jeito rápido de o jogo parecer quebrado.
+    const morro = new PerspectiveCamera(58, 1, 0.1, 900);
+    const view = new CityCamera(morro, () => 40);
+    view.distance = view.limits.minDistance;
+    view.tiltBy(-99);
+    view.apply();
+    expect(morro.position.y).toBeGreaterThan(40);
   });
 });
