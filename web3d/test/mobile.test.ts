@@ -148,13 +148,25 @@ describe('Câmera de construtor de cidade', () => {
     expect(longe.target.distanceTo(b)).toBeGreaterThan(dPerto);
   });
 
-  it('afastar levanta a câmera sozinho', () => {
-    // Longe o jogador planeja e quer ver o traçado; perto quer ver volume.
+  it('nunca olha baixo o bastante para mostrar o horizonte', () => {
+    // Ver o horizonte é ver a borda do trecho carregado — o mundo ganha fim
+    // visível, e a ilusão de mapa infinito acaba.
+    const view = make();
+    view.tiltBy(-99);
+    view.distance = view.limits.minDistance;
+    expect(view.pitch).toBeGreaterThan(1.1);
+  });
+
+  it('afastar nunca abaixa a câmera', () => {
+    // O acoplamento zoom -> inclinação sobrou pouco depois que a faixa virou
+    // top-down (1,18 a 1,45 rad): numa tela alta o extra de retrato já
+    // encosta no teto nas duas pontas. O que ainda precisa valer é a direção —
+    // afastar jamais pode rebaixar a câmera e trazer o horizonte de volta.
     const view = make();
     view.distance = view.limits.minDistance;
-    const baixo = view.pitch;
+    const perto = view.pitch;
     view.distance = view.limits.maxDistance;
-    expect(view.pitch).toBeGreaterThan(baixo);
+    expect(view.pitch).toBeGreaterThanOrEqual(perto);
   });
 
   it('a inclinação respeita os limites em qualquer entrada', () => {

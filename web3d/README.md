@@ -42,6 +42,23 @@ São algumas centenas de números já conferidos contra o GDD. Copiá-los à mã
 aparece meses depois como uma economia que não fecha. Dados como dados,
 comportamento como código.
 
+## Cenário plano e visão de cima
+
+O terreno é **plano** e a câmera fica **de cima**, entre 68° e 83°. As duas
+coisas se sustentam:
+
+- Morro esconde construção, obriga a câmera a desviar e estraga a leitura da
+  grade em que o jogador encaixa. `heightAt` devolve zero de propósito.
+- Abaixo de 68° a câmera enxerga o horizonte, e com ele a **borda do trecho
+  carregado**. Um mundo com fim visível deixa de parecer mundo.
+
+O relevo não foi apagado do modelo: `rawElevation` continua classificando bioma
+e marcando a linha d'água, e há teste que reprova se ele for zerado junto. Se um
+dia couber relevo suave, a assinatura está lá.
+
+A malha de terreno é 3,2× o trecho semeado, e não 1,6×: quase na vertical, a
+borda entrava em quadro no zoom máximo e aparecia como um precipício no vazio.
+
 ## Porte em andamento
 
 O three.js vai substituir o cliente Flutter. Ordem do porte:
@@ -51,7 +68,7 @@ O three.js vai substituir o cliente Flutter. Ordem do porte:
 | Geração do mundo | pronta, com contrato verificado |
 | Itens, inventário, sobrevivência | pronta |
 | Receitas e mercados | catálogo exportado, lógica pendente |
-| Construções, terreno, vilarejo | pendente |
+| Construções, terreno, vilarejo | pronta |
 | Campanha, tick diário, quests | pendente |
 | Política e combate | pendente |
 | Interface e persistência | pendente |

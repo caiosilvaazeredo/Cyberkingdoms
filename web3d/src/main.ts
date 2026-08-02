@@ -96,7 +96,10 @@ function boot(): void {
       world,
       center.x,
       center.y,
-      budget.patchSize * 1.6,
+      // Terreno bem maior que o trecho com grama: numa visão de cima quase
+      // vertical, a borda da malha entraria em quadro no zoom máximo e
+      // apareceria como um precipício no vazio.
+      budget.patchSize * 3.2,
       budget.terrainSegments,
       density.biomes,
     );
@@ -115,7 +118,7 @@ function boot(): void {
     // enquadra 64 m deixaria o campo como um tapete manchado no horizonte.
     // Só na primeira montagem — depois quem manda é o jogador.
     if (!enquadrado) {
-      view.distance = budget.patchSize * 0.62;
+      view.distance = budget.patchSize * 0.75;
       enquadrado = true;
     }
     view.focusOn(center.x, center.y);

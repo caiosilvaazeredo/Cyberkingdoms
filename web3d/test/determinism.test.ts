@@ -115,15 +115,18 @@ describe('Contrato com o gerador do cliente Flutter', () => {
   describe('Extensões só da web', () => {
     const generator = new WorldGenerator(fixture.seed);
 
-    it('heightAt é contínuo e concorda em sinal com os degraus do app', () => {
-      // O cliente isométrico arredonda para 9 degraus porque sprites não
-      // interpolam; a malha 3D usa a altura contínua. Os dois têm de descrever
-      // o mesmo relevo, não a mesma quantização.
+    it('o cenário 3D é plano, mas o relevo continua no modelo', () => {
+      // `heightAt` devolve zero de propósito: numa visão de cima, morro esconde
+      // construção e atrapalha a leitura da grade. O relevo não sumiu — é ele
+      // que classifica bioma e marca a linha d'água, e o cliente Flutter
+      // continua desenhando os nove degraus.
+      let variouNoModelo = false;
       for (const tile of fixture.tiles.slice(0, 120)) {
-        const height = generator.heightAt(tile.x, tile.y);
-        if (tile.elevation > 0) expect(height).toBeGreaterThan(0);
-        if (tile.elevation < 0) expect(height).toBeLessThan(0);
+        expect(generator.heightAt(tile.x, tile.y)).toBe(0);
+        if (tile.elevation !== 0) variouNoModelo = true;
       }
+      expect(variouNoModelo, 'o relevo do modelo não pode ter sido apagado')
+        .toBe(true);
     });
 
     it('isWater concorda com o bioma de Água Morta', () => {

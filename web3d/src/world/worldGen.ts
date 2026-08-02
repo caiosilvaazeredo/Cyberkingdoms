@@ -142,14 +142,20 @@ export class WorldGenerator {
   }
 
   /**
-   * Altura em metros para o renderizador 3D.
+   * Altura em metros para o renderizador 3D. **Sempre zero.**
    *
-   * O cliente isométrico desenhava 9 degraus discretos porque sprites não
-   * interpolam. Aqui o terreno é uma malha, então usar a altura contínua sai de
-   * graça e evita o serrilhado de escada.
+   * O cenário é plano de propósito. O relevo continua existindo no modelo —
+   * `rawElevation` classifica bioma e define a linha d'água, e o cliente
+   * Flutter desenha os nove degraus —, mas a visão de cima de um construtor de
+   * cidade não ganha nada com morro: encosta esconde construção, a câmera
+   * precisa desviar de pico, e o jogador perde a leitura da grade em que ele
+   * está encaixando.
+   *
+   * Guardar a assinatura em vez de apagar o método mantém a porta aberta para
+   * relevo suave depois, sem mexer em quem chama.
    */
-  heightAt(x: number, y: number): number {
-    return this.rawElevation(x, y) * TERRAIN_AMPLITUDE;
+  heightAt(_x: number, _y: number): number {
+    return 0;
   }
 
   /** `true` se o ponto está abaixo da linha d'água. */

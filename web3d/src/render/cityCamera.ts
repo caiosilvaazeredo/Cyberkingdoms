@@ -20,15 +20,15 @@ import * as THREE from 'three';
  * | dois dedos, torção | girar em torno do alvo |
  * | dois dedos, vertical | inclinar |
  *
- * ## Por que a inclinação segue o zoom
+ * ## Por que a faixa de inclinação é estreita e alta
  *
- * Longe, o jogador está planejando: quer ver o traçado, então a câmera sobe
- * para quase o topo. Perto, está apreciando: quer ver volume e silhueta, então
- * a câmera baixa. Amarrar as duas coisas evita o estado inútil de estar
- * afastado *e* rasante, onde só se vê horizonte.
+ * A visão é de cima. O piso de 1,18 rad (68°) não é preferência estética: é o
+ * ângulo abaixo do qual a câmera começa a enxergar o horizonte, e com ele a
+ * borda do trecho carregado. Um mundo com fim visível deixa de parecer mundo.
  *
- * O jogador ainda pode inclinar à mão; o acoplamento define o **piso** do
- * ângulo, não o valor.
+ * Sobra pouco espaço para o acoplamento zoom -> inclinação — de perto e de
+ * longe a câmera fica quase igual. Ele continua aqui porque define a direção
+ * (afastar nunca rebaixa) e porque volta a ter efeito se a faixa reabrir.
  */
 
 export interface CityCameraLimits {
@@ -42,9 +42,11 @@ export interface CityCameraLimits {
 export const defaultLimits: CityCameraLimits = {
   minDistance: 12,
   maxDistance: 220,
-  // 0,18 rad ≈ 10°: baixo o bastante para a grama ter volume, alto o bastante
-  // para o terreno não virar uma linha.
-  minPitch: 0.18,
+  // 0,95 rad ≈ 54°. É o piso de uma visão de cima: abaixo disso a câmera
+  // começa a enxergar o horizonte, e com ele a borda do trecho carregado — o
+  // mundo passa a ter fim visível, que é exatamente o que quebra a ilusão.
+  // O teto de grama ainda aparece em ângulo, então a silhueta não se perde.
+  minPitch: 1.18,
   // 1,45 rad ≈ 83°. Noventa graus exatos degeneram o `lookAt` — o vetor "para
   // cima" fica paralelo à direção de visão e a câmera dá um giro sem motivo.
   maxPitch: 1.45,
@@ -82,7 +84,8 @@ export class CityCamera {
    */
   get pitch(): number {
     const { minPitch, maxPitch } = this.limits;
-    const floor = minPitch + (maxPitch - minPitch) * 0.55 * this.zoomRatio;
+    // Afastar levanta ainda mais: de longe o jogador planeja e quer a planta.
+    const floor = minPitch + (maxPitch - minPitch) * 0.7 * this.zoomRatio;
     const portraitBoost = this.portraitBoost();
     return Math.min(
       maxPitch,
