@@ -339,11 +339,24 @@ Não vale a pena consertar: instale um Flutter limpo (seção 1), aponte o `PATH
 para ele e tire o antigo da frente.
 
 **`flutter upgrade --force` falha com `Filename too long`**
-Limite de caminho do Windows (260 caracteres). O repositório do Flutter 3.44
-traz o engine dentro dele, com arquivos de teste de nome longuíssimo; se o
-Flutter estiver numa pasta funda — `C:\Users\voce\Downloads\ProjetoX\front\
-flutter` — o `git checkout` estoura no meio e deixa a instalação quebrada
-(*"Could not reset index file"*).
+Limite de caminho do Windows, e a conta fecha exatamente:
+
+| | |
+|---|---|
+| Limite do Windows | 260 |
+| Caminho interno mais longo do SDK do Flutter | 196 |
+| **Sobra para a pasta onde o Flutter mora** | **~63** |
+
+Os 196 vêm de `engine/src/flutter/testing/ios_scenario_app/.../golden_platform_
+view_large_cliprrect_with_transform_multiple_clips_impeller_iPhone SE (3rd
+generation)_26.2_simulator.png`. Medido no 3.32.4 e no 3.44.8: **é igual nos
+dois**, então trocar de versão não resolve — só mudar de pasta.
+
+Um Flutter em `C:\Users\voce\Downloads\ProjetoX\front\flutter` já gasta 78
+caracteres: 78 + 196 = 275, estoura por 15. Em `C:\src\flutter` são 14, e
+sobra folga de sobra. Quando estoura, o `git checkout` morre no meio e deixa a
+instalação quebrada (*"Could not reset index file"*) — pior do que antes de
+tentar.
 
 Duas coisas evitam isso, e valem as duas:
 
