@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { biomeDef } from '../world/biome';
 import { BiomeCache } from '../world/biomeCache';
 import { WATER_HEIGHT, type WorldGenerator } from '../world/worldGen';
+import { outsideRatio, type VillageBounds } from './villageBounds';
 
 /**
  * A malha de terreno sob a grama.
@@ -29,6 +30,7 @@ export function createTerrain(
   size: number,
   segments = 200,
   biomes: BiomeCache = new BiomeCache(world),
+  bounds: VillageBounds | null = null,
 ): Terrain {
   const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
   geometry.rotateX(-Math.PI / 2);
@@ -50,6 +52,19 @@ export function createTerrain(
     // orçamento baixo — lia como campo pelado com fiapos verdes em cima.
     const biome = biomeDef(biomes.at(x, z));
     color.setHex(biome.soil).lerp(new THREE.Color(biome.grassBase), 0.55);
+
+    // Fora da vila o terreno perde cor. Continua desenhado — sumir criaria a
+    // borda no vazio que a visão de cima existe para esconder —, mas lê como
+    // "não é seu". A transição é gradual: uma linha dura no chão pareceria
+    // falha de render.
+    if (bounds) {
+      const fora = outsideRatio(bounds, x, z);
+      if (fora > 0) {
+        const cinza = (color.r + color.g + color.b) / 3;
+        color.lerp(new THREE.Color(cinza, cinza, cinza), fora * 0.85);
+        color.multiplyScalar(1 - fora * 0.3);
+      }
+    }
     colors[i * 3] = color.r;
     colors[i * 3 + 1] = color.g;
     colors[i * 3 + 2] = color.b;

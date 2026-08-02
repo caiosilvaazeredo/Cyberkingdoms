@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { biomeDef } from '../world/biome';
 import type { WorldGenerator } from '../world/worldGen';
 import type { DensityField } from './density';
+import { outsideRatio, type VillageBounds } from './villageBounds';
 
 /**
  * Campo de grama estilizada.
@@ -209,6 +210,7 @@ export function createGrassField(
   centerX: number,
   centerZ: number,
   options: GrassOptions = defaultGrassOptions,
+  bounds: VillageBounds | null = null,
 ): GrassField {
   const { patchSize, bladesPerSquareMeter, maxBlades } = options;
 
@@ -240,10 +242,17 @@ export function createGrassField(
       const x = centerX - half + (ix + j1) * step;
       const z = centerZ - half + (iz + j2) * step;
 
-      const d = density.at(x, z);
+      let d = density.at(x, z);
       if (d <= 0) continue;
+      // A grama rareia junto com a cor ao passar do limite. Cortar de vez
+      // desenharia um círculo perfeito de mato, que denuncia o truque.
+      if (bounds) {
+        const fora = outsideRatio(bounds, x, z);
+        if (fora >= 1) continue;
+        d *= 1 - fora;
+      }
       // A densidade vira probabilidade de nascer, não altura: reduzir altura
-      // deixaria um tapete rasteiro onde deveria haver chão pelado.
+      // deixaria um tapete rasteiro onde deveria haver mato alto.
       if (hash2(ix, iz, 3) > d) continue;
 
       const y = world.heightAt(x, z);

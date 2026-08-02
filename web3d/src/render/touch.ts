@@ -7,7 +7,7 @@
  *
  * | Gesto | Ação |
  * |---|---|
- * | um dedo arrastando | **arrastar o terreno** (ou pintar, no modo pincel) |
+ * | um dedo arrastando | **arrastar o terreno** |
  * | dois dedos, pinça | aproximar e afastar |
  * | dois dedos, torção | girar a câmera |
  * | dois dedos, vertical | inclinar |
@@ -18,12 +18,9 @@
  * Pinça, torção e inclinação chegam juntas num só evento `transform`, porque
  * na prática a mão faz as três ao mesmo tempo e separar em modos exclusivos
  * produz um controle que "engasga" quando o jogador gira e aproxima junto.
- *
- * O modo pincel é um **botão na tela**, não um modificador: não há `shift` num
- * celular, e toque longo competiria com o menu do navegador.
  */
 
-export type GestureKind = 'pan' | 'paint' | 'transform';
+export type GestureKind = 'pan' | 'transform';
 
 export interface GestureState {
   readonly kind: GestureKind;
@@ -65,9 +62,6 @@ export class GestureRecognizer {
   private lastCenter = { x: 0, y: 0 };
   private active: GestureKind | null = null;
 
-  /** Quando ligado, um dedo pinta em vez de orbitar. */
-  paintMode = false;
-
   constructor(
     private readonly element: HTMLElement,
     private readonly handlers: GestureHandlers,
@@ -102,15 +96,7 @@ export class GestureRecognizer {
     });
     this.refreshBaseline();
 
-    // O botão direito do mouse continua pintando: quem está no desktop não
-    // deveria ter de procurar o botão de modo.
-    const paintingWithMouse = event.button === 2 || event.shiftKey;
-    this.active =
-      this.points.size >= 2
-        ? 'transform'
-        : this.paintMode || paintingWithMouse
-          ? 'paint'
-          : 'pan';
+    this.active = this.points.size >= 2 ? 'transform' : 'pan';
 
     this.handlers.onStart?.({
       kind: this.active,
@@ -183,7 +169,7 @@ export class GestureRecognizer {
     // Levantar um dedo de dois: recomeça a linha de base para o dedo que ficou,
     // senão a câmera dá um salto do tamanho da distância entre eles.
     this.refreshBaseline();
-    this.active = this.paintMode ? 'paint' : 'pan';
+    this.active = 'pan';
   };
 
   private wheel = (event: WheelEvent): void => {

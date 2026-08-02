@@ -127,7 +127,38 @@
         border-color: rgba(140, 240, 200, 0.7);
       }
 
-      #ajuda { margin: 10px 0 0; font-size: 11px; line-height: 1.5; opacity: 0.6; }
+      #ajuda { margin: 10px 0 0; font-size: 11px; line-height: 1.6; opacity: 0.62; }
+      #ajuda kbd {
+        display: inline-block;
+        min-width: 16px;
+        padding: 1px 4px;
+        border: 1px solid var(--borda);
+        border-radius: 3px;
+        text-align: center;
+      }
+
+      /* Aviso do limite da vila. Aparece por cima da cena, sem roubar o toque:
+         o jogador continua arrastando enquanto lê. */
+      #aviso {
+        position: fixed;
+        top: max(16px, env(safe-area-inset-top));
+        left: 50%;
+        transform: translate(-50%, -12px);
+        max-width: min(420px, calc(100vw - 32px));
+        padding: 12px 16px;
+        border: 1px solid rgba(255, 190, 120, 0.45);
+        border-radius: 12px;
+        background: rgba(28, 20, 12, 0.9);
+        backdrop-filter: blur(8px);
+        color: #f2dfc4;
+        font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace;
+        text-align: center;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.16s ease, transform 0.16s ease;
+      }
+      #aviso.visivel { opacity: 1; transform: translate(-50%, 0); }
+      #aviso strong { display: block; margin-bottom: 4px; font-size: 13px; letter-spacing: 0.06em; }
 
       /* Numa tela larga o painel volta para o canto, sem esticar. */
       @media (min-width: 640px) {
@@ -148,6 +179,11 @@
   <body>
     <canvas id="viewport"></canvas>
 
+    <div id="aviso" role="status" aria-live="polite">
+      <strong id="aviso-titulo">Acesso bloqueado</strong>
+      <span id="aviso-texto"></span>
+    </div>
+
     <aside id="painel">
       <div id="cabecalho">
         <h1>CyberKingdoms</h1>
@@ -160,14 +196,12 @@
         <input id="seed" value="captura-do-mundo" spellcheck="false" autocapitalize="off" autocomplete="off" enterkeyhint="go" />
         <button id="regenerate" type="button">GERAR MUNDO</button>
 
-        <div id="botoes">
-          <button id="modo-pincel" type="button" aria-pressed="false">PINCEL</button>
-          <button id="limpar" type="button">LIMPAR</button>
-        </div>
-
         <p id="ajuda">
-          um dedo arrasta o terreno · dois dedos aproximam, giram e inclinam ·
-          <strong>PINCEL</strong> planta grama onde você tocar
+          <strong>Celular:</strong> um dedo arrasta o terreno, dois dedos
+          aproximam, giram e inclinam.<br />
+          <strong>PC:</strong> <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>
+          movem · <kbd>Q</kbd><kbd>E</kbd> giram · <kbd>R</kbd><kbd>F</kbd>
+          aproximam · roda do mouse também.
         </p>
       </div>
     </aside>

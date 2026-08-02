@@ -2,7 +2,15 @@ import { describe, expect, it } from 'vitest';
 
 import { PerspectiveCamera } from 'three';
 
-import { CityCamera } from '../src/render/cityCamera';
+import { CityCamera, defaultLimits } from '../src/render/cityCamera';
+import {
+  FADE_WIDTH,
+  blockedHint,
+  blockedMessage,
+  clampToBounds,
+  isBlocked,
+  outsideRatio,
+} from '../src/render/villageBounds';
 import { QualityGovernor, budgetFor, grassOptionsFor, guessTier } from '../src/render/quality';
 
 /**
@@ -194,5 +202,59 @@ describe('Câmera de construtor de cidade', () => {
     view.tiltBy(-99);
     view.apply();
     expect(morro.position.y).toBeGreaterThan(40);
+  });
+});
+
+describe('Limite da vila', () => {
+  const bounds = {
+    centerX: 0,
+    centerZ: 0,
+    radius: 46,
+    settlementName: 'Aurora',
+    neighbourName: 'Krom Central',
+  };
+
+  it('dentro do raio nada muda', () => {
+    expect(outsideRatio(bounds, 0, 0)).toBe(0);
+    expect(outsideRatio(bounds, 40, 0)).toBe(0);
+    expect(isBlocked(bounds, 20, 20)).toBe(false);
+  });
+
+  it('a transição é gradual, não um degrau', () => {
+    // Linha dura no chão pareceria falha de render.
+    const meio = outsideRatio(bounds, bounds.radius + FADE_WIDTH / 2, 0);
+    expect(meio).toBeGreaterThan(0);
+    expect(meio).toBeLessThan(1);
+  });
+
+  it('além da faixa está bloqueado', () => {
+    expect(isBlocked(bounds, bounds.radius + FADE_WIDTH + 10, 0)).toBe(true);
+  });
+
+  it('o freio desliza pela borda em vez de empurrar ao centro', () => {
+    // Empurrar de volta ao centro daria um solavanco a cada quadro contra a
+    // parede; deslizar mantém o movimento lateral funcionando.
+    const fora = clampToBounds(bounds, 300, 0);
+    expect(Math.hypot(fora.x, fora.z)).toBeCloseTo(bounds.radius + FADE_WIDTH, 4);
+    expect(fora.z).toBe(0);
+    // Direção preservada.
+    const diagonal = clampToBounds(bounds, 300, 300);
+    expect(diagonal.x).toBeCloseTo(diagonal.z, 4);
+  });
+
+  it('o aviso nomeia o destino', () => {
+    expect(blockedMessage(bounds)).toContain('Krom Central');
+    expect(blockedHint(bounds)).toContain('Aurora');
+  });
+});
+
+describe('Limites de zoom', () => {
+  it('a faixa acompanha o tamanho da vila', () => {
+    // Afastar além de enquadrar a vila só mostra o cinza de fora do limite: o
+    // mapa vira decoração e a escala se perde.
+    const l = defaultLimits;
+    expect(l.minDistance).toBeGreaterThanOrEqual(12);
+    expect(l.maxDistance).toBeLessThanOrEqual(130);
+    expect(l.maxDistance / l.minDistance).toBeLessThan(10);
   });
 });

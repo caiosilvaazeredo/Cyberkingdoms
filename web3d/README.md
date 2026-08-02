@@ -148,17 +148,51 @@ gargalo no celular. Ver o comentário no topo de `src/render/grass.ts`.
 O orçamento é de **90 mil lâminas**, 12 vértices cada. Dobrar derruba o frame
 rate de um celular mediano e a diferença a 30 m é quase nenhuma.
 
-## Controles, no vocabulário de construtor de cidade
+## Controles
+
+**Celular**
 
 | | |
 |---|---|
-| um dedo arrastando | **arrastar o terreno** |
+| um dedo arrastando | arrastar o terreno |
 | dois dedos, pinça | aproximar e afastar |
 | dois dedos, torção | girar |
 | dois dedos, vertical | inclinar |
-| botão **PINCEL** ligado, um dedo | plantar grama |
-| roda do mouse | aproximar |
-| botão direito, ou `shift`+arrastar | plantar grama |
+
+**PC** — não é porta de segunda: no computador os gestos de dois dedos não
+existem, e arrastar com o mouse para atravessar a vila cansa.
+
+| | |
+|---|---|
+| `W` `A` `S` `D`, ou setas | mover |
+| `Q` `E` | girar |
+| `R` `F` | aproximar e afastar |
+| roda do mouse | aproximar e afastar |
+| arrastar | arrastar o terreno |
+
+A velocidade do teclado é proporcional ao afastamento: de longe cada passo
+cobre mais chão, senão atravessar a vila afastado leva o dobro do tempo.
+
+## O limite da vila
+
+O mundo é infinito, mas o **jogo** acaba na borda da vila. Fora dela não se
+constrói, não se trabalha e não se guarda nada — a viagem entre cidades é uma
+decisão da tela de cidade, com custo de Fome e Sede e risco de emboscada, não
+uma caminhada.
+
+Deixar a câmera sair livremente ensinava a coisa errada. O limite se apresenta
+em três camadas: o terreno perde cor e a grama rareia ao longo de uma faixa de
+18 m; a câmera **desacelera e desliza** pela borda em vez de bater, porque
+trava seca parece defeito e freio parece regra; e ao encostar aparece o nome do
+destino com a explicação de como se chega lá.
+
+## Grama
+
+Densidade alta em todo lugar. Havia um pincel para plantar, herdado da
+ferramenta que inspirou o renderizador — saiu inteiro: o que se queria dele era
+o resultado, não o trabalho de pintar. O ruído de clareira continua, senão o
+campo vira carpete, mas o piso é alto e a clareira agora é uma moita menos
+fechada, nunca chão pelado.
 
 Um dedo arrastar o chão em vez de orbitar é a diferença que a mão sente: o
 ponto sob o dedo continua sob o dedo, e um mapa grande vira navegável. É a

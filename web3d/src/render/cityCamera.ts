@@ -40,8 +40,18 @@ export interface CityCameraLimits {
 }
 
 export const defaultLimits: CityCameraLimits = {
-  minDistance: 12,
-  maxDistance: 220,
+  // A vila tem ~46 m de raio. Os limites acompanham isso:
+  //
+  // - 14 m é perto o bastante para ver uma construção de 1 tile inteira, sem
+  //   a câmera entrar dentro dela.
+  // - 110 m enquadra a vila inteira com folga. Passar disso não mostra mais
+  //   jogo — só mostra o cinza de fora do limite, e o mapa vira decoração.
+  //
+  // Antes eram 12 e 220. O teto de 220 deixava afastar até o mundo virar uma
+  // mancha verde sem escala, que é o oposto do que uma visão de planejamento
+  // deveria dar.
+  minDistance: 14,
+  maxDistance: 110,
   // 0,95 rad ≈ 54°. É o piso de uma visão de cima: abaixo disso a câmera
   // começa a enxergar o horizonte, e com ele a borda do trecho carregado — o
   // mundo passa a ter fim visível, que é exatamente o que quebra a ilusão.

@@ -10,6 +10,13 @@ import {
 import { CityCamera } from './render/cityCamera';
 import { createTerrain, type Terrain } from './render/terrain';
 import { GestureRecognizer } from './render/touch';
+import {
+  blockedHint,
+  blockedMessage,
+  clampToBounds,
+  isBlocked,
+  type VillageBounds,
+} from './render/villageBounds';
 import { biomeDef } from './world/biome';
 import { WorldGenerator } from './world/worldGen';
 
@@ -59,6 +66,17 @@ function boot(): void {
   let grass: GrassField | null = null;
   const center = new THREE.Vector2(0, 0);
   const seededAt = new THREE.Vector2(0, 0);
+
+  // Limite da vila. Por enquanto o centro é a origem e o nome sai do layout do
+  // mundo; quando a campanha estiver portada, isto passa a vir do terreno do
+  // jogador e do assentamento vizinho de verdade.
+  let bounds: VillageBounds = {
+    centerX: 0,
+    centerZ: 0,
+    radius: 46,
+    settlementName: 'seu vilarejo',
+    neighbourName: 'Krom Central',
+  };
   let enquadrado = false;
 
   const governor = new QualityGovernor(guessTier(), () => {
@@ -102,6 +120,7 @@ function boot(): void {
       budget.patchSize * 3.2,
       budget.terrainSegments,
       density.biomes,
+      bounds,
     );
     grass = createGrassField(
       world,
@@ -109,6 +128,7 @@ function boot(): void {
       center.x,
       center.y,
       grassOptionsFor(budget),
+      bounds,
     );
     scene.add(terrain.mesh, terrain.water, grass.mesh);
     seededAt.copy(center);
@@ -137,73 +157,46 @@ function boot(): void {
     }
   }
 
-  /**
-   * Refaz só a grama. O relevo não mudou, e reconstruir a malha de terreno a
-   * cada pincelada derrubaria o frame rate justamente enquanto o dedo está na
-   * tela.
-   */
-  function reseedGrass(): void {
-    if (grass) {
-      scene.remove(grass.mesh);
-      grass.dispose();
-    }
-    grass = createGrassField(
-      world,
-      density,
-      center.x,
-      center.y,
-      grassOptionsFor(governor.budget),
-    );
-    scene.add(grass.mesh);
-    report();
-  }
-
   // ---------------------------------------------------------------- entrada
-  const brush = { radius: 6, strength: 0.5, falloff: 0.7 };
-  const raycaster = new THREE.Raycaster();
-  const pointer = new THREE.Vector2();
-  let paintPending = false;
+  const aviso = document.querySelector<HTMLElement>('#aviso');
+  const avisoTitulo = document.querySelector<HTMLElement>('#aviso-titulo');
+  const avisoTexto = document.querySelector<HTMLElement>('#aviso-texto');
+  let avisoVisivel = false;
 
-  function paintAt(clientX: number, clientY: number): void {
-    if (!terrain) return;
-    pointer.set(
-      (clientX / window.innerWidth) * 2 - 1,
-      -(clientY / window.innerHeight) * 2 + 1,
-    );
-    raycaster.setFromCamera(pointer, camera);
-    const hit = raycaster.intersectObject(terrain.mesh, false)[0];
-    if (!hit) return;
-
-    density.paint(hit.point.x, hit.point.z, brush);
-    // A semeadura custa alguns quadros; refazer a cada evento de movimento
-    // engasgaria o arrasto. Marcar e resolver no próximo quadro mantém o dedo
-    // respondendo.
-    paintPending = true;
+  function mostrarLimite(visivel: boolean): void {
+    if (visivel === avisoVisivel) return;
+    avisoVisivel = visivel;
+    aviso?.classList.toggle('visivel', visivel);
+    if (visivel) {
+      if (avisoTitulo) avisoTitulo.textContent = blockedMessage(bounds);
+      if (avisoTexto) avisoTexto.textContent = blockedHint(bounds);
+    }
   }
 
   const gestures = new GestureRecognizer(canvas, {
-    onStart(state) {
-      if (state.kind === 'paint') paintAt(state.x, state.y);
-    },
     onMove(state) {
       switch (state.kind) {
-        case 'paint':
-          paintAt(state.x, state.y);
-          break;
-
-        case 'pan':
-          // Um dedo arrasta o terreno, como em qualquer construtor de cidade.
+        case 'pan': {
           view.pan(state.dx, state.dy, window.innerHeight);
+
+          // Freio na borda em vez de trava seca: a câmera desliza ao longo do
+          // limite. Parede dura parece defeito; freio parece regra.
+          const preso = clampToBounds(bounds, view.target.x, view.target.z);
+          const bateu =
+            preso.x !== view.target.x || preso.z !== view.target.z;
+          view.target.x = preso.x;
+          view.target.z = preso.z;
+
           view.apply();
           center.set(view.target.x, view.target.z);
+          mostrarLimite(bateu || isBlocked(bounds, center.x, center.y));
           break;
+        }
 
         case 'transform':
           // Pinça, torção e inclinação juntas: é o que a mão faz de verdade.
           if (state.scale !== 1) view.zoomBy(state.scale);
           if (state.rotation !== 0) view.rotateBy(-state.rotation);
-          // Arrasto vertical com dois dedos inclina, desde que não esteja
-          // girando nem pinçando — senão a câmera cabeceia a cada gesto.
           if (state.scale === 1 && state.rotation === 0) {
             view.tiltBy(state.dy * 0.004);
           }
@@ -212,32 +205,93 @@ function boot(): void {
       }
     },
     onEnd() {
-      // Ao soltar depois de arrastar, o trecho semeado pode ter ficado para
-      // trás. Refazer só aqui evita reconstruir durante o movimento.
+      mostrarLimite(false);
       if (center.distanceTo(seededAt) > governor.budget.patchSize * 0.3) {
         rebuild();
       }
     },
   });
+  void gestures;
 
-  const paintButton = document.querySelector<HTMLButtonElement>('#modo-pincel');
-  paintButton?.addEventListener('click', () => {
-    gestures.paintMode = !gestures.paintMode;
-    paintButton.setAttribute('aria-pressed', String(gestures.paintMode));
-    paintButton.textContent = gestures.paintMode ? 'PINCEL ✓' : 'PINCEL';
-  });
+  // ------------------------------------------------------------ teclado (PC)
+  //
+  // O jogo é mobile-first, mas isso nunca quis dizer "só no celular": no PC os
+  // gestos de dois dedos não existem, e arrastar com o mouse para atravessar a
+  // vila inteira é cansativo. Teclado dá o que o dedo dá.
+  const teclas = new Set<string>();
+  const atalhos: Record<string, string> = {
+    w: 'frente', arrowup: 'frente',
+    s: 'tras', arrowdown: 'tras',
+    a: 'esquerda', arrowleft: 'esquerda',
+    d: 'direita', arrowright: 'direita',
+    q: 'giraEsq', e: 'giraDir',
+    r: 'aproxima', f: 'afasta',
+  };
 
-  document.querySelector('#limpar')?.addEventListener('click', () => {
-    density.clearPaint();
-    reseedGrass();
+  window.addEventListener('keydown', (event) => {
+    // Não sequestra o teclado enquanto o jogador digita a seed.
+    if (event.target instanceof HTMLInputElement) return;
+    const acao = atalhos[event.key.toLowerCase()];
+    if (!acao) return;
+    event.preventDefault();
+    teclas.add(acao);
   });
+  window.addEventListener('keyup', (event) => {
+    const acao = atalhos[event.key.toLowerCase()];
+    if (acao) teclas.delete(acao);
+  });
+  // Sem isto, trocar de aba com a tecla pressionada deixa a câmera correndo
+  // sozinha para sempre.
+  window.addEventListener('blur', () => teclas.clear());
+
+  function moverPorTeclado(delta: number): void {
+    if (teclas.size === 0) return;
+
+    // Velocidade proporcional ao afastamento: de longe cada passo cobre mais
+    // chão, senão atravessar a vila afastado leva o dobro do tempo.
+    const passo = view.distance * 2.2 * delta;
+    let dx = 0;
+    let dz = 0;
+    if (teclas.has('frente')) dz -= passo;
+    if (teclas.has('tras')) dz += passo;
+    if (teclas.has('esquerda')) dx -= passo;
+    if (teclas.has('direita')) dx += passo;
+
+    if (dx !== 0 || dz !== 0) {
+      const cos = Math.cos(view.yaw);
+      const sin = Math.sin(view.yaw);
+      view.target.x += dx * cos - dz * sin;
+      view.target.z += -dx * sin - dz * cos;
+
+      const preso = clampToBounds(bounds, view.target.x, view.target.z);
+      const bateu = preso.x !== view.target.x || preso.z !== view.target.z;
+      view.target.x = preso.x;
+      view.target.z = preso.z;
+      center.set(view.target.x, view.target.z);
+      mostrarLimite(bateu);
+    }
+
+    if (teclas.has('giraEsq')) view.rotateBy(1.6 * delta);
+    if (teclas.has('giraDir')) view.rotateBy(-1.6 * delta);
+    if (teclas.has('aproxima')) view.zoomBy(1 + 1.4 * delta);
+    if (teclas.has('afasta')) view.zoomBy(1 / (1 + 1.4 * delta));
+
+    view.apply();
+
+    if (center.distanceTo(seededAt) > governor.budget.patchSize * 0.3) {
+      rebuild();
+    }
+  }
 
   const seedInput = document.querySelector<HTMLInputElement>('#seed');
   const regenerate = (): void => {
     world = WorldGenerator.fromLabel(seedInput?.value.trim() || 'captura-do-mundo');
     density = new DensityField(world);
     center.set(0, 0);
+    view.target.set(0, 0, 0);
+    bounds = { ...bounds, centerX: 0, centerZ: 0 };
     enquadrado = false;
+    mostrarLimite(false);
     rebuild();
   };
   document.querySelector('#regenerate')?.addEventListener('click', regenerate);
@@ -284,11 +338,7 @@ function boot(): void {
 
     const delta = clock.getDelta();
     governor.sample(delta);
-
-    if (paintPending) {
-      paintPending = false;
-      reseedGrass();
-    }
+    moverPorTeclado(delta);
 
     grass?.update(clock.getElapsedTime());
     renderer.render(scene, camera);
