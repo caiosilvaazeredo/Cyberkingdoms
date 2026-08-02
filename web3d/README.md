@@ -59,6 +59,24 @@ dia couber relevo suave, a assinatura está lá.
 A malha de terreno é 3,2× o trecho semeado, e não 1,6×: quase na vertical, a
 borda entrava em quadro no zoom máximo e aparecia como um precipício no vazio.
 
+## Telas
+
+O jogo abre no **menu**, não no mapa. O mapa é uma tela entre várias — tratá-lo
+como abertura escondia as decisões que precisam ser tomadas antes de entrar.
+
+O mundo 3D só é montado quando alguém entra nele. Não é arrumação: carregar
+three.js, semear as lâminas e subir a malha leva segundos num celular, e fazer
+isso antes do jogador escolher gasta bateria e paciência à toa.
+
+`ui/screens.ts` é uma pilha de telas, não `display:none` espalhado. Com a pilha
+explícita, "voltar" existe de graça e o botão físico do Android faz o que deve —
+sem isso ele fecha o jogo no meio de um submenu.
+
+**Continuar vem primeiro e é o botão maior.** Quem volta ao jogo quer voltar ao
+jogo; enterrar isso sob "Novo" cobra um toque extra de todo mundo, todo dia,
+para servir a quem chega uma vez. Sem save ele não some — fica desabilitado e
+explicado, senão o menu dança entre aberturas.
+
 ## Cliente e servidor
 
 O jogo é um MMO: o estado que vale é o do servidor, não o da tela. Por isso a

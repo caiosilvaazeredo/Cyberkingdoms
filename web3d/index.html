@@ -127,6 +127,93 @@
         border-color: rgba(140, 240, 200, 0.7);
       }
 
+      #sair {
+        width: 100%;
+        min-height: var(--toque);
+        margin-top: 4px;
+        border: 1px solid var(--borda);
+        border-radius: 10px;
+        background: rgba(90, 200, 160, 0.16);
+        color: var(--texto);
+        font: 13px/1 ui-monospace, Menlo, Consolas, monospace;
+        cursor: pointer;
+      }
+
+      /* ---------------------------------------------------------- telas */
+      #telas { position: fixed; inset: 0; overflow-y: auto; }
+      .tela {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-height: 100%;
+        padding: max(24px, env(safe-area-inset-top)) 20px
+                 max(24px, env(safe-area-inset-bottom));
+        background: linear-gradient(160deg, #0d1a18 0%, #0b1220 60%, #131018 100%);
+        color: var(--texto);
+        font: 13px/1.5 ui-monospace, Menlo, Consolas, monospace;
+      }
+      .menu { justify-content: center; }
+      .marca { margin-bottom: 18px; text-align: center; }
+      .marca h1 { margin: 0; font-size: 28px; letter-spacing: 0.16em; }
+      .subtitulo { margin: 6px 0 0; font-size: 11px; letter-spacing: 0.2em; opacity: 0.55; }
+      .tela h1 { margin: 0 0 4px; font-size: 18px; letter-spacing: 0.1em; }
+      .tela h2 { margin: 14px 0 4px; font-size: 12px; letter-spacing: 0.12em; opacity: 0.65; }
+      .acoes { display: flex; flex-direction: column; gap: 8px; }
+      .tela button {
+        min-height: var(--toque);
+        padding: 10px;
+        border: 1px solid var(--borda);
+        border-radius: 12px;
+        color: var(--texto);
+        font: 14px/1.2 ui-monospace, Menlo, Consolas, monospace;
+        letter-spacing: 0.08em;
+        cursor: pointer;
+      }
+      .tela button.principal { background: rgba(90, 200, 160, 0.34); font-size: 16px; }
+      .tela button.secundario { background: rgba(255, 255, 255, 0.05); }
+      .tela button:disabled { opacity: 0.35; cursor: not-allowed; }
+      .lista { margin-top: 18px; display: flex; flex-direction: column; gap: 6px; }
+      .save {
+        display: flex !important;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+        background: rgba(255, 255, 255, 0.04);
+        text-align: left;
+      }
+      .save span { font-size: 11px; opacity: 0.6; }
+      .vazio, .nota { margin: 4px 0; font-size: 11px; opacity: 0.55; }
+      .erro { min-height: 16px; margin: 4px 0; color: #ff9d9d; font-size: 11px; }
+      .rodape { margin-top: auto; padding-top: 20px; text-align: center; font-size: 10px; opacity: 0.35; }
+      .escolhas { display: flex; flex-direction: column; gap: 8px; }
+      .escolha {
+        display: flex !important;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+        background: rgba(255, 255, 255, 0.04);
+        text-align: left;
+      }
+      .escolha span { font-size: 11px; font-weight: normal; opacity: 0.6; letter-spacing: 0; }
+      .escolha[aria-pressed="true"] {
+        background: rgba(90, 200, 160, 0.26);
+        border-color: rgba(140, 240, 200, 0.6);
+      }
+      .tela label { display: block; margin: 8px 0 2px; font-size: 11px; opacity: 0.7; }
+      .tela input {
+        width: 100%;
+        min-height: var(--toque);
+        padding: 8px 10px;
+        border: 1px solid var(--borda);
+        border-radius: 10px;
+        background: rgba(0, 0, 0, 0.35);
+        color: var(--texto);
+        font: 16px/1 ui-monospace, Menlo, Consolas, monospace;
+      }
+      @media (min-width: 640px) {
+        .tela { max-width: 460px; margin: 0 auto; }
+      }
+
       #ajuda { margin: 10px 0 0; font-size: 11px; line-height: 1.6; opacity: 0.62; }
       #ajuda kbd {
         display: inline-block;
@@ -178,7 +265,9 @@
   </head>
   <body>
     <canvas id="viewport"></canvas>
+    <div id="telas"></div>
 
+    <div id="hud" hidden>
     <div id="aviso" role="status" aria-live="polite">
       <strong id="aviso-titulo">Acesso bloqueado</strong>
       <span id="aviso-texto"></span>
@@ -192,9 +281,7 @@
       <p id="readout">carregando…</p>
 
       <div id="corpo">
-        <label for="seed">Seed do mundo</label>
-        <input id="seed" value="captura-do-mundo" spellcheck="false" autocapitalize="off" autocomplete="off" enterkeyhint="go" />
-        <button id="regenerate" type="button">GERAR MUNDO</button>
+        <button id="sair" type="button">SAIR PARA O MENU</button>
 
         <p id="ajuda">
           <strong>Celular:</strong> um dedo arrasta o terreno, dois dedos
@@ -205,7 +292,8 @@
         </p>
       </div>
     </aside>
+    </div>
 
-    <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="/src/app.ts"></script>
   </body>
 </html>

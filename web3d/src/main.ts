@@ -37,7 +37,11 @@ import { WorldGenerator } from './world/worldGen';
 
 const FOG_COLOR = 0x8fa6b8;
 
-function boot(): void {
+export interface WorldHandle {
+  readonly canvas: HTMLCanvasElement;
+}
+
+export function bootWorld(seedLabel: string): WorldHandle {
   const canvas = document.querySelector<HTMLCanvasElement>('#viewport')!;
 
   const renderer = new THREE.WebGLRenderer({
@@ -60,8 +64,8 @@ function boot(): void {
   sun.position.set(60, 90, 40);
   scene.add(sun);
 
-  let world = WorldGenerator.fromLabel('captura-do-mundo');
-  let density = new DensityField(world);
+  const world = WorldGenerator.fromLabel(seedLabel);
+  const density = new DensityField(world);
   let terrain: Terrain | null = null;
   let grass: GrassField | null = null;
   const center = new THREE.Vector2(0, 0);
@@ -70,7 +74,7 @@ function boot(): void {
   // Limite da vila. Por enquanto o centro é a origem e o nome sai do layout do
   // mundo; quando a campanha estiver portada, isto passa a vir do terreno do
   // jogador e do assentamento vizinho de verdade.
-  let bounds: VillageBounds = {
+  const bounds: VillageBounds = {
     centerX: 0,
     centerZ: 0,
     radius: 46,
@@ -283,29 +287,14 @@ function boot(): void {
     }
   }
 
-  const seedInput = document.querySelector<HTMLInputElement>('#seed');
-  const regenerate = (): void => {
-    world = WorldGenerator.fromLabel(seedInput?.value.trim() || 'captura-do-mundo');
-    density = new DensityField(world);
-    center.set(0, 0);
-    view.target.set(0, 0, 0);
-    bounds = { ...bounds, centerX: 0, centerZ: 0 };
-    enquadrado = false;
-    mostrarLimite(false);
-    rebuild();
-  };
-  document.querySelector('#regenerate')?.addEventListener('click', regenerate);
-  seedInput?.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') {
-      seedInput.blur(); // fecha o teclado do celular
-      regenerate();
-    }
-  });
-
   // O painel recolhe: numa tela de 360px ele ocuparia metade do mundo.
   const panel = document.querySelector('#painel');
   document.querySelector('#alternar-painel')?.addEventListener('click', () => {
     panel?.classList.toggle('recolhido');
+  });
+
+  document.querySelector('#sair')?.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('ck:sair'));
   });
 
   // `resize` também dispara ao rodar o aparelho e ao abrir o teclado virtual.
@@ -350,6 +339,6 @@ function boot(): void {
 
   // Sinal para a captura automatizada saber que a cena está pronta.
   (window as unknown as { __pronto?: boolean }).__pronto = true;
-}
 
-boot();
+  return { canvas };
+}
