@@ -1,0 +1,2645 @@
+{
+  "seedLabel": "contrato-dart-ts",
+  "seed": 3318950441,
+  "hashLabel": {
+    "": 2166136261,
+    "a": 3826002220,
+    "neon-tokyo": 3647524686,
+    "contrato-dart-ts": 3318950441,
+    "ãé漢": 2956257785
+  },
+  "mix": [
+    {
+      "a": 0,
+      "b": 0,
+      "out": 0
+    },
+    {
+      "a": 1,
+      "b": 2,
+      "out": 232174035
+    },
+    {
+      "a": 3318950441,
+      "b": 49,
+      "out": 2311223020
+    },
+    {
+      "a": 4294967295,
+      "b": 2654435761,
+      "out": 4052899859
+    }
+  ],
+  "nextInt32": [
+    1054883861,
+    859461567,
+    2474406900,
+    682547836,
+    3289346260,
+    871261560,
+    2839528677,
+    875327396,
+    4117072,
+    2047041211,
+    1541886936,
+    2242864809,
+    805541764,
+    644002813,
+    1515655801,
+    2824553229
+  ],
+  "whiteNoise2D": [
+    {
+      "x": 0,
+      "y": 0,
+      "out": 0.5364538000430912
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "out": 0.31424701656214893
+    },
+    {
+      "x": -13,
+      "y": 47,
+      "out": 0.3779260751325637
+    },
+    {
+      "x": 1000,
+      "y": -1000,
+      "out": 0.21484196884557605
+    }
+  ],
+  "noiseSample": [
+    {
+      "x": -4.0,
+      "y": 2.0,
+      "sample": 0.0,
+      "fbmUniform": 0.5,
+      "cellular": 0.8100648634571262
+    },
+    {
+      "x": -3.63,
+      "y": 1.81,
+      "sample": 0.02798509331904553,
+      "fbmUniform": 0.823372347740388,
+      "cellular": 0.8076893418157828
+    },
+    {
+      "x": -3.26,
+      "y": 1.62,
+      "sample": 0.17688719512677453,
+      "fbmUniform": 0.4920822245126687,
+      "cellular": 0.8053242134431403
+    },
+    {
+      "x": -2.89,
+      "y": 1.43,
+      "sample": -0.096353872379847,
+      "fbmUniform": 0.30152588625606314,
+      "cellular": 0.8029695701786043
+    },
+    {
+      "x": -2.52,
+      "y": 1.24,
+      "sample": -0.1651532962707844,
+      "fbmUniform": 0.07914013451564283,
+      "cellular": 0.8006255045324328
+    },
+    {
+      "x": -2.15,
+      "y": 1.05,
+      "sample": -0.09731201712162099,
+      "fbmUniform": 0.3718901026608875,
+      "cellular": 0.7982921096834243
+    },
+    {
+      "x": -1.7800000000000002,
+      "y": 0.8599999999999999,
+      "sample": 0.08695654454794596,
+      "fbmUniform": 0.7056721564550046,
+      "cellular": 0.7959694794763255
+    },
+    {
+      "x": -1.4100000000000001,
+      "y": 0.6699999999999999,
+      "sample": 0.24877475226385184,
+      "fbmUniform": 0.7711330080298344,
+      "cellular": 0.7936577084189459
+    },
+    {
+      "x": -1.04,
+      "y": 0.48,
+      "sample": 0.00446923033722002,
+      "fbmUniform": 0.49391045117474347,
+      "cellular": 0.7913568916789772
+    },
+    {
+      "x": -0.6699999999999999,
+      "y": 0.29000000000000004,
+      "sample": -0.18881695579803498,
+      "fbmUniform": 0.3254119874669248,
+      "cellular": 0.7890671250805045
+    },
+    {
+      "x": -0.2999999999999998,
+      "y": 0.10000000000000009,
+      "sample": 0.19736389440000002,
+      "fbmUniform": 0.7139806574163923,
+      "cellular": 0.7867885051002032
+    },
+    {
+      "x": 0.07000000000000028,
+      "y": -0.08999999999999986,
+      "sample": -0.16408182655552794,
+      "fbmUniform": 0.06014806784527709,
+      "cellular": 0.7845211288632147
+    },
+    {
+      "x": 0.4399999999999995,
+      "y": -0.28000000000000025,
+      "sample": -0.4884618117120002,
+      "fbmUniform": 0.04428500382540277,
+      "cellular": 0.7822650941386894
+    },
+    {
+      "x": 0.8099999999999996,
+      "y": -0.4700000000000002,
+      "sample": -0.13455925360466936,
+      "fbmUniform": 0.5338438151674796,
+      "cellular": 0.7800204993349935
+    },
+    {
+      "x": 1.1799999999999997,
+      "y": -0.6600000000000001,
+      "sample": 0.268659770186597,
+      "fbmUniform": 0.6295536167431783,
+      "cellular": 0.7777874434945659
+    },
+    {
+      "x": 1.5499999999999998,
+      "y": -0.8500000000000001,
+      "sample": 0.36173261627478515,
+      "fbmUniform": 0.936447147822898,
+      "cellular": 0.7755660262884214
+    },
+    {
+      "x": 1.92,
+      "y": -1.04,
+      "sample": -0.036441154605773685,
+      "fbmUniform": 0.3186097925310868,
+      "cellular": 0.7733563480102899
+    },
+    {
+      "x": 2.29,
+      "y": -1.23,
+      "sample": -0.319803572054969,
+      "fbmUniform": 0.16726480176317865,
+      "cellular": 0.7711585095703817
+    },
+    {
+      "x": 2.66,
+      "y": -1.42,
+      "sample": -0.318834920960207,
+      "fbmUniform": 0.3422048289689551,
+      "cellular": 0.7689726124887756
+    },
+    {
+      "x": 3.0300000000000002,
+      "y": -1.6099999999999999,
+      "sample": 0.029859667787562456,
+      "fbmUniform": 0.6524762397897091,
+      "cellular": 0.7667987588884143
+    },
+    {
+      "x": 3.4000000000000004,
+      "y": -1.7999999999999998,
+      "sample": 0.15707967487999994,
+      "fbmUniform": 0.5921274003978405,
+      "cellular": 0.7646370514877058
+    },
+    {
+      "x": 3.7699999999999996,
+      "y": -1.9900000000000002,
+      "sample": -0.1372710537818763,
+      "fbmUniform": 0.37151428744168263,
+      "cellular": 0.7624875935927171
+    },
+    {
+      "x": 4.140000000000001,
+      "y": -2.1799999999999997,
+      "sample": -0.02829974426438915,
+      "fbmUniform": 0.1340541126903041,
+      "cellular": 0.7603504890889546
+    },
+    {
+      "x": 4.51,
+      "y": -2.37,
+      "sample": 0.11674021168528996,
+      "fbmUniform": 0.5937198832349371,
+      "cellular": 0.7582258424327231
+    }
+  ],
+  "tiles": [
+    {
+      "x": -1000,
+      "y": -1000,
+      "biome": "sprawl",
+      "elevation": 0
+    },
+    {
+      "x": -863,
+      "y": -911,
+      "biome": "bioFarm",
+      "elevation": 2
+    },
+    {
+      "x": -726,
+      "y": -822,
+      "biome": "ruins",
+      "elevation": -1
+    },
+    {
+      "x": -589,
+      "y": -733,
+      "biome": "ruins",
+      "elevation": 1
+    },
+    {
+      "x": -452,
+      "y": -644,
+      "biome": "oilFields",
+      "elevation": 0
+    },
+    {
+      "x": -315,
+      "y": -555,
+      "biome": "toxicMarsh",
+      "elevation": -1
+    },
+    {
+      "x": -178,
+      "y": -466,
+      "biome": "bioFarm",
+      "elevation": 0
+    },
+    {
+      "x": -41,
+      "y": -377,
+      "biome": "toxicMarsh",
+      "elevation": -2
+    },
+    {
+      "x": 96,
+      "y": -288,
+      "biome": "toxicMarsh",
+      "elevation": -1
+    },
+    {
+      "x": 233,
+      "y": -199,
+      "biome": "rareEarthMine",
+      "elevation": 3
+    },
+    {
+      "x": 370,
+      "y": -110,
+      "biome": "rareEarthMine",
+      "elevation": 3
+    },
+    {
+      "x": 507,
+      "y": -21,
+      "biome": "scrapyard",
+      "elevation": 0
+    },
+    {
+      "x": 644,
+      "y": 68,
+      "biome": "bioFarm",
+      "elevation": 3
+    },
+    {
+      "x": 781,
+      "y": 157,
+      "biome": "scrapyard",
+      "elevation": -1
+    },
+    {
+      "x": 918,
+      "y": 246,
+      "biome": "reclaimedForest",
+      "elevation": 0
+    },
+    {
+      "x": -948,
+      "y": 335,
+      "biome": "toxicMarsh",
+      "elevation": -2
+    },
+    {
+      "x": -811,
+      "y": 424,
+      "biome": "toxicMarsh",
+      "elevation": -2
+    },
+    {
+      "x": -674,
+      "y": 513,
+      "biome": "wasteland",
+      "elevation": 3
+    },
+    {
+      "x": -537,
+      "y": 602,
+      "biome": "rareEarthMine",
+      "elevation": 3
+    },
+    {
+      "x": -400,
+      "y": 691,
+      "biome": "reclaimedForest",
+      "elevation": 1
+    },
+    {
+      "x": -263,
+      "y": 780,
+      "biome": "sprawl",
+      "elevation": 0
+    },
+    {
+      "x": -126,
+      "y": 869,
+      "biome": "bioFarm",
+      "elevation": 1
+    },
+    {
+      "x": 11,
+      "y": 958,
+      "biome": "sprawl",
+      "elevation": 2
+    },
+    {
+      "x": 148,
+      "y": -952,
+      "biome": "wasteland",
+      "elevation": -1
+    },
+    {
+      "x": 285,
+      "y": -863,
+      "biome": "bioFarm",
+      "elevation": 0
+    },
+    {
+      "x": 422,
+      "y": -774,
+      "biome": "bioFarm",
+      "elevation": 0
+    },
+    {
+      "x": 559,
+      "y": -685,
+      "biome": "wasteland",
+      "elevation": -2
+    },
+    {
+      "x": 696,
+      "y": -596,
+      "biome": "scrapyard",
+      "elevation": -3
+    },
+    {
+      "x": 833,
+      "y": -507,
+      "biome": "reclaimedForest",
+      "elevation": 3
+    },
+    {
+      "x": 970,
+      "y": -418,
+      "biome": "deadWater",
+      "elevation": -4
+    },
+    {
+      "x": -896,
+      "y": -329,
+      "biome": "wasteland",
+      "elevation": 0
+    },
+    {
+      "x": -759,
+      "y": -240,
+      "biome": "sprawl",
+      "elevation": -2
+    },
+    {
+      "x": -622,
+      "y": -151,
+      "biome": "reclaimedForest",
+      "elevation": 3
+    },
+    {
+      "x": -485,
+      "y": -62,
+      "biome": "reclaimedForest",
+      "elevation": 1
+    },
+    {
+      "x": -348,
+      "y": 27,
+      "biome": "rareEarthMine",
+      "elevation": 4
+    },
+    {
+      "x": -211,
+      "y": 116,
+      "biome": "scrapyard",
+      "elevation": -2
+    },
+    {
+      "x": -74,
+      "y": 205,
+      "biome": "reclaimedForest",
+      "elevation": -1
+    },
+    {
+      "x": 63,
+      "y": 294,
+      "biome": "scrapyard",
+      "elevation": 0
+    },
+    {
+      "x": 200,
+      "y": 383,
+      "biome": "scrapyard",
+      "elevation": -1
+    },
+    {
+      "x": 337,
+      "y": 472,
+      "biome": "toxicMarsh",
+      "elevation": -2
+    },
+    {
+      "x": 474,
+      "y": 561,
+      "biome": "wasteland",
+      "elevation": 3
+    },
+    {
+      "x": 611,
+      "y": 650,
+      "biome": "wasteland",
+      "elevation": 4
+    },
+    {
+      "x": 748,
+      "y": 739,
+      "biome": "deadWater",
+      "elevation": -4
+    },
+    {
+      "x": 885,
+      "y": 828,
+      "biome": "sprawl",
+      "elevation": 2
+    },
+    {
+      "x": -981,
+      "y": 917,
+      "biome": "sprawl",
+      "elevation": 1
+    },
+    {
+      "x": -844,
+      "y": -993,
+      "biome": "bioFarm",
+      "elevation": -1
+    },
+    {
+      "x": -707,
+      "y": -904,
+      "biome": "scrapyard",
+      "elevation": 0
+    },
+    {
+      "x": -570,
+      "y": -815,
+      "biome": "wasteland",
+      "elevation": 0
+    },
+    {
+      "x": -433,
+      "y": -726,
+      "biome": "reclaimedForest",
+      "elevation": 3
+    },
+    {
+      "x": -296,
+      "y": -637,
+      "biome": "wasteland",
+      "elevation": 3
+    },
+    {
+      "x": -159,
+      "y": -548,
+      "biome": "rareEarthMine",
+      "elevation": 4
+    },
+    {
+      "x": -22,
+      "y": -459,
+      "biome": "wasteland",
+      "elevation": -3
+    },
+    {
+      "x": 115,
+      "y": -370,
+      "biome": "toxicMarsh",
+      "elevation": -1
+    },
+    {
+      "x": 252,
+      "y": -281,
+      "biome": "bioFarm",
+      "elevation": 0
+    },
+    {
+      "x": 389,
+      "y": -192,
+      "biome": "sprawl",
+      "elevation": 0
+    },
+    {
+      "x": 526,
+      "y": -103,
+      "biome": "rareEarthMine",
+      "elevation": 3
+    },
+    {
+      "x": 663,
+      "y": -14,
+      "biome": "bioFarm",
+      "elevation": -2
+    },
+    {
+      "x": 800,
+      "y": 75,
+      "biome": "oilFields",
+      "elevation": 3
+    },
+    {
+      "x": 937,
+      "y": 164,
+      "biome": "bioFarm",
+      "elevation": 0
+    },
+    {
+      "x": -929,
+      "y": 253,
+      "biome": "bioFarm",
+      "elevation": 4
+    },
+    {
+      "x": -792,
+      "y": 342,
+      "biome": "bioFarm",
+      "elevation": 0
+    },
+    {
+      "x": -655,
+      "y": 431,
+      "biome": "wasteland",
+      "elevation": 2
+    },
+    {
+      "x": -518,
+      "y": 520,
+      "biome": "sprawl",
+      "elevation": -3
+    },
+    {
+      "x": -381,
+      "y": 609,
+      "biome": "sprawl",
+      "elevation": 1
+    },
+    {
+      "x": -244,
+      "y": 698,
+      "biome": "reclaimedForest",
+      "elevation": 2
+    },
+    {
+      "x": -107,
+      "y": 787,
+      "biome": "oilFields",
+      "elevation": 0
+    },
+    {
+      "x": 30,
+      "y": 876,
+      "biome": "reclaimedForest",
+      "elevation": 3
+    },
+    {
+      "x": 167,
+      "y": 965,
+      "biome": "reclaimedForest",
+      "elevation": 0
+    },
+    {
+      "x": 304,
+      "y": -945,
+      "biome": "bioFarm",
+      "elevation": 0
+    },
+    {
+      "x": 441,
+      "y": -856,
+      "biome": "reclaimedForest",
+      "elevation": 1
+    },
+    {
+      "x": 578,
+      "y": -767,
+      "biome": "sprawl",
+      "elevation": 2
+    },
+    {
+      "x": 715,
+      "y": -678,
+      "biome": "wasteland",
+      "elevation": -2
+    },
+    {
+      "x": 852,
+      "y": -589,
+      "biome": "bioFarm",
+      "elevation": 3
+    },
+    {
+      "x": 989,
+      "y": -500,
+      "biome": "bioFarm",
+      "elevation": 3
+    },
+    {
+      "x": -877,
+      "y": -411,
+      "biome": "oilFields",
+      "elevation": 3
+    },
+    {
+      "x": -740,
+      "y": -322,
+      "biome": "scrapyard",
+      "elevation": 0
+    },
+    {
+      "x": -603,
+      "y": -233,
+      "biome": "deadWater",
+      "elevation": -3
+    },
+    {
+      "x": -466,
+      "y": -144,
+      "biome": "reclaimedForest",
+      "elevation": 1
+    },
+    {
+      "x": -329,
+      "y": -55,
+      "biome": "toxicMarsh",
+      "elevation": -3
+    },
+    {
+      "x": -192,
+      "y": 34,
+      "biome": "scrapyard",
+      "elevation": 0
+    },
+    {
+      "x": -55,
+      "y": 123,
+      "biome": "wasteland",
+      "elevation": 2
+    },
+    {
+      "x": 82,
+      "y": 212,
+      "biome": "bioFarm",
+      "elevation": 1
+    },
+    {
+      "x": 219,
+      "y": 301,
+      "biome": "wasteland",
+      "elevation": 2
+    },
+    {
+      "x": 356,
+      "y": 390,
+      "biome": "reclaimedForest",
+      "elevation": 2
+    },
+    {
+      "x": 493,
+      "y": 479,
+      "biome": "reclaimedForest",
+      "elevation": 1
+    },
+    {
+      "x": 630,
+      "y": 568,
+      "biome": "ruins",
+      "elevation": 1
+    },
+    {
+      "x": 767,
+      "y": 657,
+      "biome": "deadWater",
+      "elevation": -4
+    },
+    {
+      "x": 904,
+      "y": 746,
+      "biome": "deadWater",
+      "elevation": -4
+    },
+    {
+      "x": -962,
+      "y": 835,
+      "biome": "wasteland",
+      "elevation": 1
+    },
+    {
+      "x": -825,
+      "y": 924,
+      "biome": "oilFields",
+      "elevation": -3
+    },
+    {
+      "x": -688,
+      "y": -986,
+      "biome": "sprawl",
+      "elevation": -3
+    },
+    {
+      "x": -551,
+      "y": -897,
+      "biome": "deadWater",
+      "elevation": -4
+    },
+    {
+      "x": -414,
+      "y": -808,
+      "biome": "reclaimedForest",
+      "elevation": 1
+    },
+    {
+      "x": -277,
+      "y": -719,
+      "biome": "wasteland",
+      "elevation": -2
+    },
+    {
+      "x": -140,
+      "y": -630,
+      "biome": "wasteland",
+      "elevation": 2
+    },
+    {
+      "x": -3,
+      "y": -541,
+      "biome": "toxicMarsh",
+      "elevation": -3
+    },
+    {
+      "x": 134,
+      "y": -452,
+      "biome": "bioFarm",
+      "elevation": 2
+    },
+    {
+      "x": 271,
+      "y": -363,
+      "biome": "sprawl",
+      "elevation": -2
+    },
+    {
+      "x": 408,
+      "y": -274,
+      "biome": "wasteland",
+      "elevation": 2
+    },
+    {
+      "x": 545,
+      "y": -185,
+      "biome": "sprawl",
+      "elevation": -2
+    },
+    {
+      "x": 682,
+      "y": -96,
+      "biome": "reclaimedForest",
+      "elevation": 0
+    },
+    {
+      "x": 819,
+      "y": -7,
+      "biome": "bioFarm",
+      "elevation": -2
+    },
+    {
+      "x": 956,
+      "y": 82,
+      "biome": "bioFarm",
+      "elevation": 3
+    },
+    {
+      "x": -910,
+      "y": 171,
+      "biome": "sprawl",
+      "elevation": 3
+    },
+    {
+      "x": -773,
+      "y": 260,
+      "biome": "wasteland",
+      "elevation": -3
+    },
+    {
+      "x": -636,
+      "y": 349,
+      "biome": "bioFarm",
+      "elevation": 4
+    },
+    {
+      "x": -499,
+      "y": 438,
+      "biome": "wasteland",
+      "elevation": 2
+    },
+    {
+      "x": -362,
+      "y": 527,
+      "biome": "oilFields",
+      "elevation": -1
+    },
+    {
+      "x": -225,
+      "y": 616,
+      "biome": "toxicMarsh",
+      "elevation": -3
+    },
+    {
+      "x": -88,
+      "y": 705,
+      "biome": "oilFields",
+      "elevation": -1
+    },
+    {
+      "x": 49,
+      "y": 794,
+      "biome": "deadWater",
+      "elevation": -4
+    },
+    {
+      "x": 186,
+      "y": 883,
+      "biome": "reclaimedForest",
+      "elevation": 3
+    },
+    {
+      "x": 323,
+      "y": 972,
+      "biome": "bioFarm",
+      "elevation": 3
+    },
+    {
+      "x": 460,
+      "y": -938,
+      "biome": "bioFarm",
+      "elevation": 2
+    },
+    {
+      "x": 597,
+      "y": -849,
+      "biome": "scrapyard",
+      "elevation": -2
+    },
+    {
+      "x": 734,
+      "y": -760,
+      "biome": "oilFields",
+      "elevation": -3
+    },
+    {
+      "x": 871,
+      "y": -671,
+      "biome": "bioFarm",
+      "elevation": 0
+    },
+    {
+      "x": -995,
+      "y": -582,
+      "biome": "reclaimedForest",
+      "elevation": 0
+    },
+    {
+      "x": -858,
+      "y": -493,
+      "biome": "oilFields",
+      "elevation": 1
+    },
+    {
+      "x": -721,
+      "y": -404,
+      "biome": "toxicMarsh",
+      "elevation": -1
+    },
+    {
+      "x": -584,
+      "y": -315,
+      "biome": "bioFarm",
+      "elevation": 3
+    },
+    {
+      "x": -447,
+      "y": -226,
+      "biome": "oilFields",
+      "elevation": 2
+    },
+    {
+      "x": -310,
+      "y": -137,
+      "biome": "deadWater",
+      "elevation": -4
+    },
+    {
+      "x": -173,
+      "y": -48,
+      "biome": "sprawl",
+      "elevation": 3
+    },
+    {
+      "x": -36,
+      "y": 41,
+      "biome": "wasteland",
+      "elevation": 1
+    },
+    {
+      "x": 101,
+      "y": 130,
+      "biome": "wasteland",
+      "elevation": 1
+    },
+    {
+      "x": 238,
+      "y": 219,
+      "biome": "sprawl",
+      "elevation": 0
+    },
+    {
+      "x": 375,
+      "y": 308,
+      "biome": "wasteland",
+      "elevation": 4
+    },
+    {
+      "x": 512,
+      "y": 397,
+      "biome": "bioFarm",
+      "elevation": 1
+    },
+    {
+      "x": 649,
+      "y": 486,
+      "biome": "deadWater",
+      "elevation": -3
+    },
+    {
+      "x": 786,
+      "y": 575,
+      "biome": "sprawl",
+      "elevation": 3
+    },
+    {
+      "x": 923,
+      "y": 664,
+      "biome": "sprawl",
+      "elevation": -2
+    },
+    {
+      "x": -943,
+      "y": 753,
+      "biome": "sprawl",
+      "elevation": -3
+    },
+    {
+      "x": -806,
+      "y": 842,
+      "biome": "deadWater",
+      "elevation": -3
+    },
+    {
+      "x": -669,
+      "y": 931,
+      "biome": "bioFarm",
+      "elevation": 0
+    },
+    {
+      "x": -532,
+      "y": -979,
+      "biome": "deadWater",
+      "elevation": -3
+    },
+    {
+      "x": -395,
+      "y": -890,
+      "biome": "reclaimedForest",
+      "elevation": 1
+    },
+    {
+      "x": -258,
+      "y": -801,
+      "biome": "sprawl",
+      "elevation": 3
+    },
+    {
+      "x": -121,
+      "y": -712,
+      "biome": "deadWater",
+      "elevation": -3
+    },
+    {
+      "x": 16,
+      "y": -623,
+      "biome": "wasteland",
+      "elevation": 0
+    },
+    {
+      "x": 153,
+      "y": -534,
+      "biome": "reclaimedForest",
+      "elevation": 2
+    },
+    {
+      "x": 290,
+      "y": -445,
+      "biome": "reclaimedForest",
+      "elevation": 2
+    },
+    {
+      "x": 427,
+      "y": -356,
+      "biome": "wasteland",
+      "elevation": 2
+    },
+    {
+      "x": 564,
+      "y": -267,
+      "biome": "wasteland",
+      "elevation": 2
+    },
+    {
+      "x": 701,
+      "y": -178,
+      "biome": "sprawl",
+      "elevation": 2
+    },
+    {
+      "x": 838,
+      "y": -89,
+      "biome": "deadWater",
+      "elevation": -4
+    },
+    {
+      "x": 975,
+      "y": 0,
+      "biome": "oilFields",
+      "elevation": -1
+    },
+    {
+      "x": -891,
+      "y": 89,
+      "biome": "bioFarm",
+      "elevation": 0
+    },
+    {
+      "x": -754,
+      "y": 178,
+      "biome": "rareEarthMine",
+      "elevation": 2
+    },
+    {
+      "x": -617,
+      "y": 267,
+      "biome": "deadWater",
+      "elevation": -4
+    },
+    {
+      "x": -480,
+      "y": 356,
+      "biome": "sprawl",
+      "elevation": -2
+    },
+    {
+      "x": -343,
+      "y": 445,
+      "biome": "scrapyard",
+      "elevation": 0
+    },
+    {
+      "x": -206,
+      "y": 534,
+      "biome": "sprawl",
+      "elevation": -2
+    },
+    {
+      "x": -69,
+      "y": 623,
+      "biome": "toxicMarsh",
+      "elevation": -2
+    },
+    {
+      "x": 68,
+      "y": 712,
+      "biome": "deadWater",
+      "elevation": -3
+    },
+    {
+      "x": 205,
+      "y": 801,
+      "biome": "reclaimedForest",
+      "elevation": 3
+    },
+    {
+      "x": 342,
+      "y": 890,
+      "biome": "scrapyard",
+      "elevation": -1
+    },
+    {
+      "x": 479,
+      "y": 979,
+      "biome": "deadWater",
+      "elevation": -4
+    },
+    {
+      "x": 616,
+      "y": -931,
+      "biome": "sprawl",
+      "elevation": -3
+    },
+    {
+      "x": 753,
+      "y": -842,
+      "biome": "scrapyard",
+      "elevation": 0
+    },
+    {
+      "x": 890,
+      "y": -753,
+      "biome": "toxicMarsh",
+      "elevation": -1
+    },
+    {
+      "x": -976,
+      "y": -664,
+      "biome": "bioFarm",
+      "elevation": 0
+    },
+    {
+      "x": -839,
+      "y": -575,
+      "biome": "wasteland",
+      "elevation": 2
+    },
+    {
+      "x": -702,
+      "y": -486,
+      "biome": "sprawl",
+      "elevation": 0
+    },
+    {
+      "x": -565,
+      "y": -397,
+      "biome": "wasteland",
+      "elevation": 4
+    },
+    {
+      "x": -428,
+      "y": -308,
+      "biome": "oilFields",
+      "elevation": 2
+    },
+    {
+      "x": -291,
+      "y": -219,
+      "biome": "wasteland",
+      "elevation": -3
+    },
+    {
+      "x": -154,
+      "y": -130,
+      "biome": "deadWater",
+      "elevation": -3
+    },
+    {
+      "x": -17,
+      "y": -41,
+      "biome": "scrapyard",
+      "elevation": 1
+    },
+    {
+      "x": 120,
+      "y": 48,
+      "biome": "reclaimedForest",
+      "elevation": 4
+    },
+    {
+      "x": 257,
+      "y": 137,
+      "biome": "sprawl",
+      "elevation": 2
+    },
+    {
+      "x": 394,
+      "y": 226,
+      "biome": "sprawl",
+      "elevation": 1
+    },
+    {
+      "x": 531,
+      "y": 315,
+      "biome": "wasteland",
+      "elevation": 1
+    },
+    {
+      "x": 668,
+      "y": 404,
+      "biome": "bioFarm",
+      "elevation": 0
+    },
+    {
+      "x": 805,
+      "y": 493,
+      "biome": "deadWater",
+      "elevation": -3
+    },
+    {
+      "x": 942,
+      "y": 582,
+      "biome": "sprawl",
+      "elevation": 3
+    },
+    {
+      "x": -924,
+      "y": 671,
+      "biome": "reclaimedForest",
+      "elevation": 0
+    },
+    {
+      "x": -787,
+      "y": 760,
+      "biome": "reclaimedForest",
+      "elevation": 0
+    },
+    {
+      "x": -650,
+      "y": 849,
+      "biome": "wasteland",
+      "elevation": -2
+    },
+    {
+      "x": -513,
+      "y": 938,
+      "biome": "oilFields",
+      "elevation": 3
+    },
+    {
+      "x": -376,
+      "y": -972,
+      "biome": "sprawl",
+      "elevation": 0
+    },
+    {
+      "x": -239,
+      "y": -883,
+      "biome": "toxicMarsh",
+      "elevation": -3
+    },
+    {
+      "x": -102,
+      "y": -794,
+      "biome": "rareEarthMine",
+      "elevation": 1
+    },
+    {
+      "x": 35,
+      "y": -705,
+      "biome": "wasteland",
+      "elevation": -1
+    },
+    {
+      "x": 172,
+      "y": -616,
+      "biome": "wasteland",
+      "elevation": 3
+    },
+    {
+      "x": 309,
+      "y": -527,
+      "biome": "wasteland",
+      "elevation": -2
+    },
+    {
+      "x": 446,
+      "y": -438,
+      "biome": "deadWater",
+      "elevation": -3
+    },
+    {
+      "x": 583,
+      "y": -349,
+      "biome": "oilFields",
+      "elevation": -1
+    },
+    {
+      "x": 720,
+      "y": -260,
+      "biome": "scrapyard",
+      "elevation": 0
+    },
+    {
+      "x": 857,
+      "y": -171,
+      "biome": "wasteland",
+      "elevation": 2
+    },
+    {
+      "x": 994,
+      "y": -82,
+      "biome": "scrapyard",
+      "elevation": -1
+    },
+    {
+      "x": -872,
+      "y": 7,
+      "biome": "wasteland",
+      "elevation": 1
+    },
+    {
+      "x": -735,
+      "y": 96,
+      "biome": "oilFields",
+      "elevation": 4
+    },
+    {
+      "x": -598,
+      "y": 185,
+      "biome": "sprawl",
+      "elevation": 0
+    },
+    {
+      "x": -461,
+      "y": 274,
+      "biome": "bioFarm",
+      "elevation": 1
+    },
+    {
+      "x": -324,
+      "y": 363,
+      "biome": "deadWater",
+      "elevation": -4
+    },
+    {
+      "x": -187,
+      "y": 452,
+      "biome": "sprawl",
+      "elevation": -1
+    },
+    {
+      "x": -50,
+      "y": 541,
+      "biome": "reclaimedForest",
+      "elevation": 0
+    },
+    {
+      "x": 87,
+      "y": 630,
+      "biome": "scrapyard",
+      "elevation": -2
+    },
+    {
+      "x": 224,
+      "y": 719,
+      "biome": "rareEarthMine",
+      "elevation": 3
+    },
+    {
+      "x": 361,
+      "y": 808,
+      "biome": "scrapyard",
+      "elevation": 0
+    },
+    {
+      "x": 498,
+      "y": 897,
+      "biome": "deadWater",
+      "elevation": -3
+    },
+    {
+      "x": 635,
+      "y": 986,
+      "biome": "ruins",
+      "elevation": -1
+    },
+    {
+      "x": 772,
+      "y": -924,
+      "biome": "scrapyard",
+      "elevation": 0
+    },
+    {
+      "x": 909,
+      "y": -835,
+      "biome": "bioFarm",
+      "elevation": 0
+    },
+    {
+      "x": -957,
+      "y": -746,
+      "biome": "wasteland",
+      "elevation": 0
+    },
+    {
+      "x": -820,
+      "y": -657,
+      "biome": "deadWater",
+      "elevation": -3
+    },
+    {
+      "x": -683,
+      "y": -568,
+      "biome": "reclaimedForest",
+      "elevation": -1
+    },
+    {
+      "x": -546,
+      "y": -479,
+      "biome": "wasteland",
+      "elevation": 2
+    },
+    {
+      "x": -409,
+      "y": -390,
+      "biome": "oilFields",
+      "elevation": 1
+    },
+    {
+      "x": -272,
+      "y": -301,
+      "biome": "scrapyard",
+      "elevation": -1
+    },
+    {
+      "x": -135,
+      "y": -212,
+      "biome": "deadWater",
+      "elevation": -3
+    },
+    {
+      "x": 2,
+      "y": -123,
+      "biome": "rareEarthMine",
+      "elevation": 2
+    },
+    {
+      "x": 139,
+      "y": -34,
+      "biome": "toxicMarsh",
+      "elevation": -1
+    },
+    {
+      "x": 276,
+      "y": 55,
+      "biome": "wasteland",
+      "elevation": -2
+    },
+    {
+      "x": 413,
+      "y": 144,
+      "biome": "wasteland",
+      "elevation": 1
+    },
+    {
+      "x": 550,
+      "y": 233,
+      "biome": "wasteland",
+      "elevation": 0
+    },
+    {
+      "x": 687,
+      "y": 322,
+      "biome": "deadWater",
+      "elevation": -3
+    },
+    {
+      "x": 824,
+      "y": 411,
+      "biome": "wasteland",
+      "elevation": 2
+    },
+    {
+      "x": 961,
+      "y": 500,
+      "biome": "sprawl",
+      "elevation": 3
+    },
+    {
+      "x": -905,
+      "y": 589,
+      "biome": "toxicMarsh",
+      "elevation": -3
+    },
+    {
+      "x": -768,
+      "y": 678,
+      "biome": "reclaimedForest",
+      "elevation": 1
+    },
+    {
+      "x": -631,
+      "y": 767,
+      "biome": "sprawl",
+      "elevation": 2
+    },
+    {
+      "x": -494,
+      "y": 856,
+      "biome": "oilFields",
+      "elevation": 0
+    },
+    {
+      "x": -357,
+      "y": 945,
+      "biome": "bioFarm",
+      "elevation": 0
+    },
+    {
+      "x": -220,
+      "y": -965,
+      "biome": "deadWater",
+      "elevation": -3
+    },
+    {
+      "x": -83,
+      "y": -876,
+      "biome": "bioFarm",
+      "elevation": 1
+    },
+    {
+      "x": 54,
+      "y": -787,
+      "biome": "wasteland",
+      "elevation": 0
+    },
+    {
+      "x": 191,
+      "y": -698,
+      "biome": "wasteland",
+      "elevation": -2
+    },
+    {
+      "x": 328,
+      "y": -609,
+      "biome": "sprawl",
+      "elevation": 3
+    },
+    {
+      "x": 465,
+      "y": -520,
+      "biome": "wasteland",
+      "elevation": 3
+    },
+    {
+      "x": 602,
+      "y": -431,
+      "biome": "rareEarthMine",
+      "elevation": 3
+    },
+    {
+      "x": 739,
+      "y": -342,
+      "biome": "sprawl",
+      "elevation": 0
+    },
+    {
+      "x": 876,
+      "y": -253,
+      "biome": "sprawl",
+      "elevation": 2
+    },
+    {
+      "x": -990,
+      "y": -164,
+      "biome": "wasteland",
+      "elevation": 2
+    },
+    {
+      "x": -853,
+      "y": -75,
+      "biome": "bioFarm",
+      "elevation": 2
+    },
+    {
+      "x": -716,
+      "y": 14,
+      "biome": "oilFields",
+      "elevation": -1
+    },
+    {
+      "x": -579,
+      "y": 103,
+      "biome": "wasteland",
+      "elevation": 3
+    },
+    {
+      "x": -442,
+      "y": 192,
+      "biome": "toxicMarsh",
+      "elevation": -1
+    },
+    {
+      "x": -305,
+      "y": 281,
+      "biome": "wasteland",
+      "elevation": -2
+    },
+    {
+      "x": -168,
+      "y": 370,
+      "biome": "deadWater",
+      "elevation": -3
+    },
+    {
+      "x": -31,
+      "y": 459,
+      "biome": "wasteland",
+      "elevation": -3
+    },
+    {
+      "x": 106,
+      "y": 548,
+      "biome": "ruins",
+      "elevation": -2
+    },
+    {
+      "x": 243,
+      "y": 637,
+      "biome": "toxicMarsh",
+      "elevation": -1
+    },
+    {
+      "x": 380,
+      "y": 726,
+      "biome": "deadWater",
+      "elevation": -3
+    },
+    {
+      "x": 517,
+      "y": 815,
+      "biome": "oilFields",
+      "elevation": -1
+    },
+    {
+      "x": 654,
+      "y": 904,
+      "biome": "bioFarm",
+      "elevation": 0
+    },
+    {
+      "x": 791,
+      "y": 993,
+      "biome": "deadWater",
+      "elevation": -3
+    },
+    {
+      "x": 928,
+      "y": -917,
+      "biome": "scrapyard",
+      "elevation": -1
+    },
+    {
+      "x": -938,
+      "y": -828,
+      "biome": "sprawl",
+      "elevation": 0
+    },
+    {
+      "x": -801,
+      "y": -739,
+      "biome": "deadWater",
+      "elevation": -3
+    },
+    {
+      "x": -664,
+      "y": -650,
+      "biome": "bioFarm",
+      "elevation": 2
+    },
+    {
+      "x": -527,
+      "y": -561,
+      "biome": "scrapyard",
+      "elevation": -2
+    },
+    {
+      "x": -390,
+      "y": -472,
+      "biome": "reclaimedForest",
+      "elevation": 0
+    },
+    {
+      "x": -253,
+      "y": -383,
+      "biome": "bioFarm",
+      "elevation": 0
+    },
+    {
+      "x": -116,
+      "y": -294,
+      "biome": "sprawl",
+      "elevation": -2
+    },
+    {
+      "x": 21,
+      "y": -205,
+      "biome": "sprawl",
+      "elevation": 1
+    },
+    {
+      "x": 158,
+      "y": -116,
+      "biome": "oilFields",
+      "elevation": -1
+    },
+    {
+      "x": 295,
+      "y": -27,
+      "biome": "sprawl",
+      "elevation": 3
+    },
+    {
+      "x": 432,
+      "y": 62,
+      "biome": "scrapyard",
+      "elevation": -2
+    },
+    {
+      "x": 569,
+      "y": 151,
+      "biome": "bioFarm",
+      "elevation": 1
+    },
+    {
+      "x": 706,
+      "y": 240,
+      "biome": "deadWater",
+      "elevation": -3
+    },
+    {
+      "x": 843,
+      "y": 329,
+      "biome": "wasteland",
+      "elevation": 0
+    },
+    {
+      "x": 980,
+      "y": 418,
+      "biome": "sprawl",
+      "elevation": 0
+    },
+    {
+      "x": -886,
+      "y": 507,
+      "biome": "bioFarm",
+      "elevation": 3
+    },
+    {
+      "x": -749,
+      "y": 596,
+      "biome": "sprawl",
+      "elevation": 4
+    },
+    {
+      "x": -612,
+      "y": 685,
+      "biome": "bioFarm",
+      "elevation": 1
+    },
+    {
+      "x": -475,
+      "y": 774,
+      "biome": "bioFarm",
+      "elevation": 2
+    },
+    {
+      "x": -338,
+      "y": 863,
+      "biome": "wasteland",
+      "elevation": -1
+    },
+    {
+      "x": -201,
+      "y": 952,
+      "biome": "bioFarm",
+      "elevation": 0
+    },
+    {
+      "x": -64,
+      "y": -958,
+      "biome": "toxicMarsh",
+      "elevation": -1
+    },
+    {
+      "x": 73,
+      "y": -869,
+      "biome": "bioFarm",
+      "elevation": 3
+    },
+    {
+      "x": 210,
+      "y": -780,
+      "biome": "sprawl",
+      "elevation": 4
+    },
+    {
+      "x": 347,
+      "y": -691,
+      "biome": "sprawl",
+      "elevation": -3
+    },
+    {
+      "x": 484,
+      "y": -602,
+      "biome": "wasteland",
+      "elevation": 3
+    },
+    {
+      "x": 621,
+      "y": -513,
+      "biome": "sprawl",
+      "elevation": -3
+    },
+    {
+      "x": 758,
+      "y": -424,
+      "biome": "sprawl",
+      "elevation": 1
+    },
+    {
+      "x": 895,
+      "y": -335,
+      "biome": "deadWater",
+      "elevation": -4
+    },
+    {
+      "x": -971,
+      "y": -246,
+      "biome": "sprawl",
+      "elevation": -2
+    },
+    {
+      "x": -834,
+      "y": -157,
+      "biome": "bioFarm",
+      "elevation": 3
+    },
+    {
+      "x": -697,
+      "y": -68,
+      "biome": "rareEarthMine",
+      "elevation": 1
+    },
+    {
+      "x": -560,
+      "y": 21,
+      "biome": "sprawl",
+      "elevation": -1
+    },
+    {
+      "x": -423,
+      "y": 110,
+      "biome": "sprawl",
+      "elevation": -2
+    },
+    {
+      "x": -286,
+      "y": 199,
+      "biome": "wasteland",
+      "elevation": 1
+    },
+    {
+      "x": -149,
+      "y": 288,
+      "biome": "deadWater",
+      "elevation": -4
+    },
+    {
+      "x": -12,
+      "y": 377,
+      "biome": "scrapyard",
+      "elevation": 0
+    },
+    {
+      "x": 125,
+      "y": 466,
+      "biome": "deadWater",
+      "elevation": -3
+    },
+    {
+      "x": 262,
+      "y": 555,
+      "biome": "bioFarm",
+      "elevation": -2
+    },
+    {
+      "x": 399,
+      "y": 644,
+      "biome": "reclaimedForest",
+      "elevation": 1
+    },
+    {
+      "x": 536,
+      "y": 733,
+      "biome": "oilFields",
+      "elevation": 3
+    },
+    {
+      "x": 673,
+      "y": 822,
+      "biome": "bioFarm",
+      "elevation": 1
+    },
+    {
+      "x": 810,
+      "y": 911,
+      "biome": "reclaimedForest",
+      "elevation": 2
+    },
+    {
+      "x": 947,
+      "y": -999,
+      "biome": "deadWater",
+      "elevation": -3
+    },
+    {
+      "x": -919,
+      "y": -910,
+      "biome": "bioFarm",
+      "elevation": 3
+    },
+    {
+      "x": -782,
+      "y": -821,
+      "biome": "ruins",
+      "elevation": 3
+    },
+    {
+      "x": -645,
+      "y": -732,
+      "biome": "oilFields",
+      "elevation": 1
+    },
+    {
+      "x": -508,
+      "y": -643,
+      "biome": "rareEarthMine",
+      "elevation": 2
+    },
+    {
+      "x": -371,
+      "y": -554,
+      "biome": "bioFarm",
+      "elevation": -1
+    },
+    {
+      "x": -234,
+      "y": -465,
+      "biome": "sprawl",
+      "elevation": -1
+    },
+    {
+      "x": -97,
+      "y": -376,
+      "biome": "sprawl",
+      "elevation": 3
+    },
+    {
+      "x": 40,
+      "y": -287,
+      "biome": "sprawl",
+      "elevation": 3
+    },
+    {
+      "x": 177,
+      "y": -198,
+      "biome": "scrapyard",
+      "elevation": -2
+    },
+    {
+      "x": 314,
+      "y": -109,
+      "biome": "rareEarthMine",
+      "elevation": 4
+    },
+    {
+      "x": 451,
+      "y": -20,
+      "biome": "scrapyard",
+      "elevation": -2
+    },
+    {
+      "x": 588,
+      "y": 69,
+      "biome": "sprawl",
+      "elevation": 1
+    },
+    {
+      "x": 725,
+      "y": 158,
+      "biome": "deadWater",
+      "elevation": -3
+    },
+    {
+      "x": 862,
+      "y": 247,
+      "biome": "bioFarm",
+      "elevation": 0
+    },
+    {
+      "x": 999,
+      "y": 336,
+      "biome": "bioFarm",
+      "elevation": 4
+    },
+    {
+      "x": -867,
+      "y": 425,
+      "biome": "sprawl",
+      "elevation": 1
+    },
+    {
+      "x": -730,
+      "y": 514,
+      "biome": "wasteland",
+      "elevation": 4
+    },
+    {
+      "x": -593,
+      "y": 603,
+      "biome": "scrapyard",
+      "elevation": -2
+    },
+    {
+      "x": -456,
+      "y": 692,
+      "biome": "reclaimedForest",
+      "elevation": 2
+    },
+    {
+      "x": -319,
+      "y": 781,
+      "biome": "sprawl",
+      "elevation": 0
+    },
+    {
+      "x": -182,
+      "y": 870,
+      "biome": "toxicMarsh",
+      "elevation": -1
+    },
+    {
+      "x": -45,
+      "y": 959,
+      "biome": "toxicMarsh",
+      "elevation": -2
+    },
+    {
+      "x": 92,
+      "y": -951,
+      "biome": "wasteland",
+      "elevation": -3
+    },
+    {
+      "x": 229,
+      "y": -862,
+      "biome": "toxicMarsh",
+      "elevation": -1
+    },
+    {
+      "x": 366,
+      "y": -773,
+      "biome": "bioFarm",
+      "elevation": -2
+    },
+    {
+      "x": 503,
+      "y": -684,
+      "biome": "deadWater",
+      "elevation": -4
+    },
+    {
+      "x": 640,
+      "y": -595,
+      "biome": "rareEarthMine",
+      "elevation": 3
+    },
+    {
+      "x": 777,
+      "y": -506,
+      "biome": "bioFarm",
+      "elevation": 0
+    },
+    {
+      "x": 914,
+      "y": -417,
+      "biome": "wasteland",
+      "elevation": 2
+    },
+    {
+      "x": -952,
+      "y": -328,
+      "biome": "sprawl",
+      "elevation": 1
+    },
+    {
+      "x": -815,
+      "y": -239,
+      "biome": "toxicMarsh",
+      "elevation": -1
+    },
+    {
+      "x": -678,
+      "y": -150,
+      "biome": "sprawl",
+      "elevation": 1
+    },
+    {
+      "x": -541,
+      "y": -61,
+      "biome": "bioFarm",
+      "elevation": 1
+    },
+    {
+      "x": -404,
+      "y": 28,
+      "biome": "wasteland",
+      "elevation": 3
+    },
+    {
+      "x": -267,
+      "y": 117,
+      "biome": "scrapyard",
+      "elevation": 0
+    },
+    {
+      "x": -130,
+      "y": 206,
+      "biome": "bioFarm",
+      "elevation": -1
+    },
+    {
+      "x": 7,
+      "y": 295,
+      "biome": "bioFarm",
+      "elevation": 0
+    },
+    {
+      "x": 144,
+      "y": 384,
+      "biome": "oilFields",
+      "elevation": 0
+    },
+    {
+      "x": 281,
+      "y": 473,
+      "biome": "bioFarm",
+      "elevation": 3
+    },
+    {
+      "x": 418,
+      "y": 562,
+      "biome": "wasteland",
+      "elevation": 3
+    },
+    {
+      "x": 555,
+      "y": 651,
+      "biome": "wasteland",
+      "elevation": 3
+    },
+    {
+      "x": 692,
+      "y": 740,
+      "biome": "rareEarthMine",
+      "elevation": 1
+    },
+    {
+      "x": 829,
+      "y": 829,
+      "biome": "sprawl",
+      "elevation": 2
+    },
+    {
+      "x": 966,
+      "y": 918,
+      "biome": "bioFarm",
+      "elevation": 4
+    },
+    {
+      "x": -900,
+      "y": -992,
+      "biome": "deadWater",
+      "elevation": -3
+    },
+    {
+      "x": -763,
+      "y": -903,
+      "biome": "bioFarm",
+      "elevation": 1
+    },
+    {
+      "x": -626,
+      "y": -814,
+      "biome": "wasteland",
+      "elevation": 1
+    },
+    {
+      "x": -489,
+      "y": -725,
+      "biome": "bioFarm",
+      "elevation": -1
+    },
+    {
+      "x": -352,
+      "y": -636,
+      "biome": "sprawl",
+      "elevation": 1
+    },
+    {
+      "x": -215,
+      "y": -547,
+      "biome": "scrapyard",
+      "elevation": -1
+    },
+    {
+      "x": -78,
+      "y": -458,
+      "biome": "sprawl",
+      "elevation": 4
+    },
+    {
+      "x": 59,
+      "y": -369,
+      "biome": "reclaimedForest",
+      "elevation": 2
+    },
+    {
+      "x": 196,
+      "y": -280,
+      "biome": "deadWater",
+      "elevation": -4
+    },
+    {
+      "x": 333,
+      "y": -191,
+      "biome": "deadWater",
+      "elevation": -3
+    },
+    {
+      "x": 470,
+      "y": -102,
+      "biome": "scrapyard",
+      "elevation": -1
+    },
+    {
+      "x": 607,
+      "y": -13,
+      "biome": "sprawl",
+      "elevation": -1
+    },
+    {
+      "x": 744,
+      "y": 76,
+      "biome": "sprawl",
+      "elevation": 2
+    },
+    {
+      "x": 881,
+      "y": 165,
+      "biome": "bioFarm",
+      "elevation": 4
+    },
+    {
+      "x": -985,
+      "y": 254,
+      "biome": "reclaimedForest",
+      "elevation": 4
+    },
+    {
+      "x": -848,
+      "y": 343,
+      "biome": "toxicMarsh",
+      "elevation": -3
+    },
+    {
+      "x": -711,
+      "y": 432,
+      "biome": "wasteland",
+      "elevation": 4
+    },
+    {
+      "x": -574,
+      "y": 521,
+      "biome": "wasteland",
+      "elevation": 0
+    },
+    {
+      "x": -437,
+      "y": 610,
+      "biome": "bioFarm",
+      "elevation": 0
+    },
+    {
+      "x": -300,
+      "y": 699,
+      "biome": "reclaimedForest",
+      "elevation": 0
+    },
+    {
+      "x": -163,
+      "y": 788,
+      "biome": "ruins",
+      "elevation": 3
+    },
+    {
+      "x": -26,
+      "y": 877,
+      "biome": "bioFarm",
+      "elevation": 1
+    },
+    {
+      "x": 111,
+      "y": 966,
+      "biome": "sprawl",
+      "elevation": 0
+    },
+    {
+      "x": 248,
+      "y": -944,
+      "biome": "scrapyard",
+      "elevation": -1
+    },
+    {
+      "x": 385,
+      "y": -855,
+      "biome": "sprawl",
+      "elevation": -3
+    },
+    {
+      "x": 522,
+      "y": -766,
+      "biome": "reclaimedForest",
+      "elevation": 4
+    },
+    {
+      "x": 659,
+      "y": -677,
+      "biome": "wasteland",
+      "elevation": 2
+    },
+    {
+      "x": 796,
+      "y": -588,
+      "biome": "rareEarthMine",
+      "elevation": 2
+    },
+    {
+      "x": 933,
+      "y": -499,
+      "biome": "sprawl",
+      "elevation": 2
+    },
+    {
+      "x": -933,
+      "y": -410,
+      "biome": "oilFields",
+      "elevation": 0
+    },
+    {
+      "x": -796,
+      "y": -321,
+      "biome": "scrapyard",
+      "elevation": 0
+    },
+    {
+      "x": -659,
+      "y": -232,
+      "biome": "toxicMarsh",
+      "elevation": -1
+    },
+    {
+      "x": -522,
+      "y": -143,
+      "biome": "sprawl",
+      "elevation": 2
+    },
+    {
+      "x": -385,
+      "y": -54,
+      "biome": "toxicMarsh",
+      "elevation": -1
+    },
+    {
+      "x": -248,
+      "y": 35,
+      "biome": "toxicMarsh",
+      "elevation": -2
+    },
+    {
+      "x": -111,
+      "y": 124,
+      "biome": "wasteland",
+      "elevation": 0
+    },
+    {
+      "x": 26,
+      "y": 213,
+      "biome": "bioFarm",
+      "elevation": -3
+    },
+    {
+      "x": 163,
+      "y": 302,
+      "biome": "wasteland",
+      "elevation": 0
+    },
+    {
+      "x": 300,
+      "y": 391,
+      "biome": "bioFarm",
+      "elevation": 1
+    },
+    {
+      "x": 437,
+      "y": 480,
+      "biome": "sprawl",
+      "elevation": 3
+    },
+    {
+      "x": 574,
+      "y": 569,
+      "biome": "sprawl",
+      "elevation": 3
+    },
+    {
+      "x": 711,
+      "y": 658,
+      "biome": "sprawl",
+      "elevation": -1
+    },
+    {
+      "x": 848,
+      "y": 747,
+      "biome": "deadWater",
+      "elevation": -4
+    },
+    {
+      "x": 985,
+      "y": 836,
+      "biome": "sprawl",
+      "elevation": 1
+    },
+    {
+      "x": -881,
+      "y": 925,
+      "biome": "wasteland",
+      "elevation": -3
+    },
+    {
+      "x": -744,
+      "y": -985,
+      "biome": "sprawl",
+      "elevation": -1
+    },
+    {
+      "x": -607,
+      "y": -896,
+      "biome": "sprawl",
+      "elevation": -1
+    },
+    {
+      "x": -470,
+      "y": -807,
+      "biome": "toxicMarsh",
+      "elevation": -2
+    },
+    {
+      "x": -333,
+      "y": -718,
+      "biome": "sprawl",
+      "elevation": 0
+    },
+    {
+      "x": -196,
+      "y": -629,
+      "biome": "oilFields",
+      "elevation": 4
+    },
+    {
+      "x": -59,
+      "y": -540,
+      "biome": "sprawl",
+      "elevation": 0
+    },
+    {
+      "x": 78,
+      "y": -451,
+      "biome": "sprawl",
+      "elevation": 0
+    },
+    {
+      "x": 215,
+      "y": -362,
+      "biome": "bioFarm",
+      "elevation": -2
+    },
+    {
+      "x": 352,
+      "y": -273,
+      "biome": "wasteland",
+      "elevation": 2
+    },
+    {
+      "x": 489,
+      "y": -184,
+      "biome": "reclaimedForest",
+      "elevation": 2
+    },
+    {
+      "x": 626,
+      "y": -95,
+      "biome": "deadWater",
+      "elevation": -3
+    },
+    {
+      "x": 763,
+      "y": -6,
+      "biome": "bioFarm",
+      "elevation": 4
+    },
+    {
+      "x": 900,
+      "y": 83,
+      "biome": "scrapyard",
+      "elevation": 0
+    },
+    {
+      "x": -966,
+      "y": 172,
+      "biome": "sprawl",
+      "elevation": 3
+    },
+    {
+      "x": -829,
+      "y": 261,
+      "biome": "sprawl",
+      "elevation": -2
+    },
+    {
+      "x": -692,
+      "y": 350,
+      "biome": "wasteland",
+      "elevation": 3
+    },
+    {
+      "x": -555,
+      "y": 439,
+      "biome": "wasteland",
+      "elevation": 3
+    },
+    {
+      "x": -418,
+      "y": 528,
+      "biome": "oilFields",
+      "elevation": 1
+    }
+  ]
+}
