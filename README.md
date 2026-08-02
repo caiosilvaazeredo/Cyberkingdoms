@@ -161,12 +161,12 @@ empacotado ficou sem uso.
 flutter pub get
 flutter run -d chrome   # navegador (mais rápido para ver funcionando)
 flutter run             # Android / iOS
-flutter test            # 251 testes
+flutter test            # 251 testes (12 capturas são puladas fora do Dart 3.8)
 ```
 
-Requer Flutter 3.35+ / Dart 3.9+. Se o `flutter pub get` reclamar da versão do
-SDK, `flutter upgrade` — o piso vem do `shared_preferences` e do
-`path_provider`, não de escolha nossa.
+Requer Flutter 3.32+ / Dart 3.8+. A suíte é verificada nas duas pontas dessa
+faixa — 3.32.4/3.8.1 e 3.35.5/3.9.2 — porque manter as duas funcionando é mais
+barato que obrigar quem clona o repositório a atualizar o SDK.
 
 **[→ Guia completo em RUNNING.md](RUNNING.md)** — instalação, emuladores,
 builds de release, Firebase, re-render de sprites e solução de problemas.

@@ -8,8 +8,8 @@ Guia completo para clonar, rodar, testar e publicar o jogo.
 
 | Ferramenta | Versão | Para quê |
 |---|---|---|
-| **Flutter SDK** | 3.35 ou superior | Obrigatório |
-| **Dart** | 3.9.0 ou superior | Vem junto com o Flutter |
+| **Flutter SDK** | 3.32 ou superior | Obrigatório |
+| **Dart** | 3.8.0 ou superior | Vem junto com o Flutter |
 | **Android Studio** ou **Xcode** | recente | Só para rodar em celular |
 | **Node.js** | 20+ | Só para re-renderizar sprites |
 
@@ -28,21 +28,25 @@ no navegador, basta a linha do Chrome estar verde.
 - **Windows / macOS / Linux**: siga https://docs.flutter.dev/get-started/install
 - Depois de descompactar, adicione `flutter/bin` ao `PATH`.
 
-### Já tem Flutter, mas mais antigo
+### Duas versões, de propósito
 
-```sh
-flutter upgrade
-```
+O projeto compila e passa a suíte em **Flutter 3.32.4 / Dart 3.8.1** e em
+**Flutter 3.35.5 / Dart 3.9.2**. Não é acaso: as versões novas de
+`shared_preferences` e `path_provider` exigem Dart 3.9, mas as faixas do
+`pubspec.yaml` deixam o `pub` resolver para versões anteriores, e o
+`pubspec.lock` versionado já está resolvido assim.
 
-O Dart 3.9 é piso de verdade, não capricho: `shared_preferences` e
-`path_provider` — este último puxado pelo Firebase — declaram `^3.9.0`. Não dá
-para baixar a exigência do projeto sem regredir esses pacotes junto. Um Flutter
-com Dart 3.8 falha assim, ainda no `pub get`:
+Duas armadilhas conhecidas nessa faixa:
 
-```
-The current Dart SDK version is 3.8.1.
-Because cyberkingdoms requires SDK version ^3.9.0, version solving failed.
-```
+- **`DropdownButtonFormField`** renomeou o parâmetro de seleção (`value` até o
+  3.32, `initialValue` do 3.35 em diante, com o antigo deprecado). Não há
+  grafia que passe limpo nas duas — por isso o mercado usa `DropdownButton`
+  dentro de um `InputDecorator`, cujo nome não mudou.
+- **As capturas de tela** só valem no SDK que as gerou; ver a seção 4.
+
+Ao mexer numa dependência, rode a suíte nas duas pontas antes de subir: é fácil
+um `pub upgrade` puxar uma versão que só compila em 3.9 sem que o 3.9 acuse
+nada.
 
 Se aparecer **`Waiting for another flutter command to release the startup
 lock...`** e não sair do lugar, sobrou um processo travado. Feche os terminais e
@@ -155,6 +159,19 @@ enxerga nem consegue clicar em nada.
 flutter test test/golden_test.dart                  # compara com o commitado
 flutter test test/golden_test.dart --update-goldens # regrava depois de mudar a UI
 ```
+
+**As imagens têm um SDK de referência: Dart 3.8.x.** O Flutter não garante que
+dois lançamentos rasterizem igual, e não rasterizam mesmo — a mesma tela do
+menu difere em 7% dos pixels entre o 3.32 e o 3.35, só de antialiasing de
+fonte. Sete por cento é folga demais para virar tolerância: uma regressão
+visual de verdade caberia dentro dela. Então, fora do Dart 3.8, a comparação é
+**pulada e reportada como tal**, nunca afrouxada — a suíte acusa
+`+239 ~12` em vez de `+251`. Todo o resto roda normalmente, inclusive as
+medições de pixel do `world_render_test.dart`, que verificam que o mundo
+desenhou alguma coisa sem depender de rasterização exata.
+
+Para trocar o SDK de referência, mude `goldenDartVersion` em
+`test/support/goldens.dart` e regrave tudo com `--update-goldens`.
 
 A aba Mundo não entra por aí: o `GameWidget` do Flame pinta a partir do próprio
 laço de render, que nunca roda num widget test, e a captura saía preta. O
@@ -272,8 +289,11 @@ do navegador. Se os sprites saírem cinzas, é isso.
 A declaração de assets do Flutter **não é recursiva**. Cada subpasta precisa da
 própria linha em `pubspec.yaml`. Se adicionar `assets/ui/algo/`, declare-a.
 
-**`Because cyberkingdoms requires SDK version ^3.9.0, version solving failed`**
-O Flutter instalado é antigo demais. `flutter upgrade` resolve. Ver a seção 1.
+**`Because cyberkingdoms requires SDK version ..., version solving failed`**
+O Flutter instalado é anterior ao 3.32. `flutter upgrade` resolve. Se o upgrade
+recusar com *"your flutter checkout has local changes"*, é a instalação do
+Flutter que está suja, não este projeto: `git -C <pasta-do-flutter> stash` e
+tente de novo, ou `flutter upgrade --force` se não houver nada seu ali.
 
 **`MissingPluginException`**
 Rode `flutter clean && flutter pub get` e recompile. Acontece quando o

@@ -14,6 +14,8 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/goldens.dart';
+
 /// Captura do mundo isométrico.
 ///
 /// Os goldens da aba Mundo saíam vazios: o `GameWidget` do Flame pinta a partir
@@ -63,10 +65,7 @@ void main() {
           reason: 'só ${probe.outlinePixels} pixels do contorno do lote: o '
               'terreno do jogador sumiu no meio da cidade procedural');
 
-      await expectLater(
-        capture,
-        matchesGoldenFile('goldens/11-mundo-isometrico.png'),
-      );
+      await expectGolden(capture, 'goldens/11-mundo-isometrico.png');
       capture.dispose();
     });
 
@@ -79,10 +78,7 @@ void main() {
         capture = await scene.shoot(focus: scene.plotCenter, zoom: 0.42);
       });
 
-      await expectLater(
-        capture,
-        matchesGoldenFile('goldens/12-terreno-no-mundo.png'),
-      );
+      await expectGolden(capture, 'goldens/12-terreno-no-mundo.png');
       capture.dispose();
     });
 

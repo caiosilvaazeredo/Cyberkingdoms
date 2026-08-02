@@ -4,11 +4,18 @@ publish_to: 'none'
 version: 0.1.0
 
 environment:
-  # Piso real do grafo de dependencias, nao preferencia: shared_preferences e
-  # path_provider (via firebase) declaram `^3.9.0`. Estava `^3.9.2` so porque
-  # era a versao da maquina de desenvolvimento — pedir mais que o necessario
-  # quebra quem esta um patch atras sem motivo.
-  sdk: ^3.9.0
+  # Dart 3.8, nao 3.9.
+  #
+  # As versoes mais recentes de shared_preferences e path_provider exigem
+  # `^3.9.0`, mas as faixas abaixo permitem que o `pub` resolva para versoes
+  # anteriores, que rodam em 3.8. O `pubspec.lock` versionado ja esta resolvido
+  # assim — resolvido e testado com Flutter 3.32.4 / Dart 3.8.1, e conferido
+  # tambem em 3.35.5 / 3.9.2.
+  #
+  # Ao mexer numa dependencia, rode a suite nas duas pontas antes de subir: e
+  # facil um `pub upgrade` puxar uma versao que so compila em 3.9 e o CI de 3.9
+  # nao acusar nada.
+  sdk: '>=3.8.0 <4.0.0'
 
 dependencies:
   flutter:

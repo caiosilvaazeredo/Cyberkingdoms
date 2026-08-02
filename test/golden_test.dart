@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/goldens.dart';
 import 'support/harness.dart';
 
 /// Capturas de tela das telas do jogo.
@@ -31,10 +32,7 @@ void main() {
       await tester.pumpWidget(menuApp(InMemoryCampaignRepository()));
       await tester.pumpAndSettle();
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('goldens/01-menu.png'),
-      );
+      await expectGolden(find.byType(MaterialApp), 'goldens/01-menu.png');
     });
 
     testWidgets('folha de nova campanha', (tester) async {
@@ -59,27 +57,18 @@ void main() {
       FocusManager.instance.primaryFocus?.unfocus();
       await tester.pumpAndSettle();
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('goldens/02-nova-campanha.png'),
-      );
+      await expectGolden(find.byType(MaterialApp), 'goldens/02-nova-campanha.png');
     });
 
     testWidgets('campanha — missões', (tester) async {
       final harness = await GameHarness.start(tester, tab: 'Quests');
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('goldens/03-missoes.png'),
-      );
+      await expectGolden(find.byType(MaterialApp), 'goldens/03-missoes.png');
       harness.dispose();
     });
 
     testWidgets('terreno', (tester) async {
       final harness = await GameHarness.start(tester, tab: 'Terreno');
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('goldens/04-terreno.png'),
-      );
+      await expectGolden(find.byType(MaterialApp), 'goldens/04-terreno.png');
       harness.dispose();
     });
 
@@ -119,28 +108,19 @@ void main() {
           }
         },
       );
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('goldens/05-terreno-construido.png'),
-      );
+      await expectGolden(find.byType(MaterialApp), 'goldens/05-terreno-construido.png');
       harness.dispose();
     });
 
     testWidgets('cidade', (tester) async {
       final harness = await GameHarness.start(tester, tab: 'Cidade');
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('goldens/06-cidade.png'),
-      );
+      await expectGolden(find.byType(MaterialApp), 'goldens/06-cidade.png');
       harness.dispose();
     });
 
     testWidgets('mercado', (tester) async {
       final harness = await GameHarness.start(tester, tab: 'Mercado');
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('goldens/07-mercado.png'),
-      );
+      await expectGolden(find.byType(MaterialApp), 'goldens/07-mercado.png');
       harness.dispose();
     });
 
@@ -157,19 +137,13 @@ void main() {
           campaign.character.inventory.equip(ItemId.hydrationPack);
         },
       );
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('goldens/08-ficha.png'),
-      );
+      await expectGolden(find.byType(MaterialApp), 'goldens/08-ficha.png');
       harness.dispose();
     });
 
     testWidgets('política', (tester) async {
       final harness = await GameHarness.start(tester, tab: 'Poder');
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('goldens/09-politica.png'),
-      );
+      await expectGolden(find.byType(MaterialApp), 'goldens/09-politica.png');
       harness.dispose();
     });
 
@@ -178,10 +152,7 @@ void main() {
       await tester.tap(find.text('RESET'));
       await harness.pumpFrames(tester, frames: 20);
 
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('goldens/10-reset.png'),
-      );
+      await expectGolden(find.byType(MaterialApp), 'goldens/10-reset.png');
       harness.dispose();
     });
   });

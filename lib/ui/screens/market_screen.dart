@@ -432,28 +432,45 @@ Future<void> _showSellSheet(
                 ),
               ),
               const SizedBox(height: 16),
-              DropdownButtonFormField<ItemId>(
-                initialValue: selected,
+              // `DropdownButton` dentro de um `InputDecorator`, e não
+              // `DropdownButtonFormField`.
+              //
+              // O campo do formulário renomeou o parâmetro de seleção: até o
+              // Flutter 3.32 é `value`, do 3.35 em diante é `initialValue` e
+              // `value` virou deprecado. Não existe grafia que passe limpo nas
+              // duas versões, e o projeto precisa compilar em ambas. O
+              // `DropdownButton` cru não mexeu nesse nome em nenhuma delas; o
+              // `InputDecorator` devolve a moldura e o rótulo que o
+              // `FormField` desenhava.
+              InputDecorator(
                 decoration: const InputDecoration(labelText: 'Item'),
-                dropdownColor: CyberColors.surfaceHigh,
-                items: [
-                  for (final entry in owned)
-                    DropdownMenuItem(
-                      value: entry.key,
-                      child: Text(
-                        '${ItemCatalog.of(entry.key).name} (${entry.value})',
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    ),
-                ],
-                onChanged: (value) {
-                  if (value == null) return;
-                  setSheetState(() {
-                    selected = value;
-                    quantity = 1;
-                    priceController.text = '${ItemCatalog.of(value).baseValue}';
-                  });
-                },
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<ItemId>(
+                    value: selected,
+                    isDense: true,
+                    isExpanded: true,
+                    dropdownColor: CyberColors.surfaceHigh,
+                    items: [
+                      for (final entry in owned)
+                        DropdownMenuItem(
+                          value: entry.key,
+                          child: Text(
+                            '${ItemCatalog.of(entry.key).name} (${entry.value})',
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setSheetState(() {
+                        selected = value;
+                        quantity = 1;
+                        priceController.text =
+                            '${ItemCatalog.of(value).baseValue}';
+                      });
+                    },
+                  ),
+                ),
               ),
               const SizedBox(height: 12),
               Row(
