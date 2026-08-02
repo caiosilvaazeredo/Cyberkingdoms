@@ -4,7 +4,11 @@ publish_to: 'none'
 version: 0.1.0
 
 environment:
-  sdk: ^3.9.2
+  # Piso real do grafo de dependencias, nao preferencia: shared_preferences e
+  # path_provider (via firebase) declaram `^3.9.0`. Estava `^3.9.2` so porque
+  # era a versao da maquina de desenvolvimento — pedir mais que o necessario
+  # quebra quem esta um patch atras sem motivo.
+  sdk: ^3.9.0
 
 dependencies:
   flutter:

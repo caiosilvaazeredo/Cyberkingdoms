@@ -164,7 +164,9 @@ flutter run             # Android / iOS
 flutter test            # 251 testes
 ```
 
-Requer Flutter 3.35+ / Dart 3.9+.
+Requer Flutter 3.35+ / Dart 3.9+. Se o `flutter pub get` reclamar da versão do
+SDK, `flutter upgrade` — o piso vem do `shared_preferences` e do
+`path_provider`, não de escolha nossa.
 
 **[→ Guia completo em RUNNING.md](RUNNING.md)** — instalação, emuladores,
 builds de release, Firebase, re-render de sprites e solução de problemas.

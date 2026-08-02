@@ -9,7 +9,7 @@ Guia completo para clonar, rodar, testar e publicar o jogo.
 | Ferramenta | Versão | Para quê |
 |---|---|---|
 | **Flutter SDK** | 3.35 ou superior | Obrigatório |
-| **Dart** | 3.9+ | Vem junto com o Flutter |
+| **Dart** | 3.9.0 ou superior | Vem junto com o Flutter |
 | **Android Studio** ou **Xcode** | recente | Só para rodar em celular |
 | **Node.js** | 20+ | Só para re-renderizar sprites |
 
@@ -27,6 +27,35 @@ no navegador, basta a linha do Chrome estar verde.
 
 - **Windows / macOS / Linux**: siga https://docs.flutter.dev/get-started/install
 - Depois de descompactar, adicione `flutter/bin` ao `PATH`.
+
+### Já tem Flutter, mas mais antigo
+
+```sh
+flutter upgrade
+```
+
+O Dart 3.9 é piso de verdade, não capricho: `shared_preferences` e
+`path_provider` — este último puxado pelo Firebase — declaram `^3.9.0`. Não dá
+para baixar a exigência do projeto sem regredir esses pacotes junto. Um Flutter
+com Dart 3.8 falha assim, ainda no `pub get`:
+
+```
+The current Dart SDK version is 3.8.1.
+Because cyberkingdoms requires SDK version ^3.9.0, version solving failed.
+```
+
+Se aparecer **`Waiting for another flutter command to release the startup
+lock...`** e não sair do lugar, sobrou um processo travado. Feche os terminais e
+qualquer IDE com o projeto aberto; se persistir, apague o arquivo de trava:
+
+```sh
+# Windows (PowerShell)
+Remove-Item "$env:LOCALAPPDATA\..\..\flutter\bin\cache\lockfile" -ErrorAction SilentlyContinue
+# ou, mais direto, apague <pasta-do-flutter>\bin\cache\lockfile
+
+# macOS / Linux
+rm -f "$(dirname "$(dirname "$(which flutter)")")/bin/cache/lockfile"
+```
 
 ---
 
@@ -242,6 +271,9 @@ do navegador. Se os sprites saírem cinzas, é isso.
 **`Unable to load asset: assets/ui/bars/...`**
 A declaração de assets do Flutter **não é recursiva**. Cada subpasta precisa da
 própria linha em `pubspec.yaml`. Se adicionar `assets/ui/algo/`, declare-a.
+
+**`Because cyberkingdoms requires SDK version ^3.9.0, version solving failed`**
+O Flutter instalado é antigo demais. `flutter upgrade` resolve. Ver a seção 1.
 
 **`MissingPluginException`**
 Rode `flutter clean && flutter pub get` e recompile. Acontece quando o
