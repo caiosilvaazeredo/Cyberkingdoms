@@ -59,6 +59,35 @@ dia couber relevo suave, a assinatura está lá.
 A malha de terreno é 3,2× o trecho semeado, e não 1,6×: quase na vertical, a
 borda entrava em quadro no zoom máximo e aparecia como um precipício no vazio.
 
+## Cliente e servidor
+
+O jogo é um MMO: o estado que vale é o do servidor, não o da tela. Por isso a
+fronteira (`src/net/gameServer.ts`) foi escrita **antes** de existir servidor —
+custa um arquivo e economiza a refatoração inteira depois.
+
+Hoje só existe `LocalGameServer`, que guarda tudo no navegador. Ele não é
+protótipo descartável: é o **modo offline**, e continua valendo depois que o
+servidor real existir — para jogar sem rede, para testar, e para o Sandbox, que
+não precisa de servidor nenhum.
+
+Duas decisões que ficam mais baratas agora do que depois:
+
+- **Tudo é assíncrono, inclusive no local.** Uma chamada que hoje devolve na
+  hora e amanhã leva 200 ms quebraria cada tela que a tratasse como síncrona.
+- **`saveState` devolve o estado aceito, não `void`.** Num servidor de verdade
+  o envio é uma *proposta*: o servidor recalcula o dia com o mesmo motor
+  determinístico e pode devolver algo diferente. O cliente já nasce escrito
+  para isso.
+
+| Modo | Precisa de servidor | Sobrevivência |
+|---|---|---|
+| Campanha | não | sim |
+| Mundo Persistente | sim | sim |
+| Sandbox | não | não |
+
+Partida rápida com amigos ficou para depois: é o único modo que precisa de
+sincronização em tempo real, e não do tick de 24 h que todo o resto assume.
+
 ## Porte em andamento
 
 O three.js vai substituir o cliente Flutter. Ordem do porte:
