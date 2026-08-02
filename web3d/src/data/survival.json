@@ -1,0 +1,112 @@
+{
+  "idleBase": {
+    "hunger": 8,
+    "thirst": 10
+  },
+  "travelRoad": {
+    "hunger": 5,
+    "thirst": 8
+  },
+  "sleepOnRoad": {
+    "hunger": 10,
+    "thirst": 12
+  },
+  "combatVictory": {
+    "hunger": 4,
+    "thirst": 6
+  },
+  "combatDefeat": {
+    "hunger": 8,
+    "thirst": 10
+  },
+  "longCombatMultiplier": 1.5,
+  "longCombatRounds": 6,
+  "maxVital": 100,
+  "minVital": 0,
+  "starvationThreshold": 0,
+  "starvationDamage": 25,
+  "consecutiveDaysToDeath": 4,
+  "publicWork": {
+    "publicFarming": {
+      "label": "Cultivo Público",
+      "hunger": 4,
+      "thirst": 5
+    },
+    "dump": {
+      "label": "Lixão",
+      "hunger": 8,
+      "thirst": 10
+    },
+    "oil": {
+      "label": "Petróleo",
+      "hunger": 9,
+      "thirst": 12
+    },
+    "rareEarth": {
+      "label": "Terras Raras",
+      "hunger": 10,
+      "thirst": 12
+    }
+  },
+  "playerFarmWork": {
+    "hydroponics": {
+      "label": "Hidropônicos",
+      "hunger": 5,
+      "thirst": 6
+    },
+    "biomass": {
+      "label": "Biomassa",
+      "hunger": 6,
+      "thirst": 8
+    },
+    "bioreactors": {
+      "label": "Biorreatores",
+      "hunger": 7,
+      "thirst": 8
+    }
+  },
+  "workshopWork": {
+    "textiles": {
+      "label": "Tecidos",
+      "hunger": 4,
+      "thirst": 4
+    },
+    "hardware": {
+      "label": "Hardware",
+      "hunger": 5,
+      "thirst": 5
+    },
+    "laboratory": {
+      "label": "Laboratório",
+      "hunger": 6,
+      "thirst": 6
+    },
+    "gunsmith": {
+      "label": "Armeiro",
+      "hunger": 7,
+      "thirst": 7
+    }
+  },
+  "weather": {
+    "clear": {
+      "label": "Limpo",
+      "hungerMultiplier": 1.0,
+      "thirstMultiplier": 1.0
+    },
+    "desert": {
+      "label": "Deserto",
+      "hungerMultiplier": 1.0,
+      "thirstMultiplier": 1.5
+    },
+    "snow": {
+      "label": "Neve",
+      "hungerMultiplier": 1.3,
+      "thirstMultiplier": 1.0
+    },
+    "rain": {
+      "label": "Chuva",
+      "hungerMultiplier": 1.1,
+      "thirstMultiplier": 1.1
+    }
+  }
+}

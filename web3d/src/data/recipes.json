@@ -1,0 +1,249 @@
+[
+  {
+    "id": "refine_polymer",
+    "output": "polymer",
+    "outputQuantity": 2,
+    "inputs": {
+      "oil": 3
+    },
+    "station": "refinery",
+    "days": 1,
+    "requiredLevel": "farmer",
+    "intelligenceBonusPerPoint": 0.08
+  },
+  {
+    "id": "refine_chip",
+    "output": "chip",
+    "outputQuantity": 1,
+    "inputs": {
+      "rareEarth": 2,
+      "catalyst": 1
+    },
+    "station": "refinery",
+    "days": 2,
+    "requiredLevel": "industrialist",
+    "intelligenceBonusPerPoint": 0.08
+  },
+  {
+    "id": "refine_fabric",
+    "output": "fabric",
+    "outputQuantity": 3,
+    "inputs": {
+      "biomass": 4
+    },
+    "station": "textileWorkshop",
+    "days": 1,
+    "requiredLevel": "farmer",
+    "intelligenceBonusPerPoint": 0.08
+  },
+  {
+    "id": "refine_board",
+    "output": "circuitBoard",
+    "outputQuantity": 1,
+    "inputs": {
+      "scrap": 4,
+      "polymer": 1
+    },
+    "station": "refinery",
+    "days": 1,
+    "requiredLevel": "farmer",
+    "intelligenceBonusPerPoint": 0.08
+  },
+  {
+    "id": "refine_catalyst",
+    "output": "catalyst",
+    "outputQuantity": 2,
+    "inputs": {
+      "oil": 2,
+      "biomass": 2
+    },
+    "station": "laboratory",
+    "days": 1,
+    "requiredLevel": "farmer",
+    "intelligenceBonusPerPoint": 0.08
+  },
+  {
+    "id": "craft_clothing",
+    "output": "clothing",
+    "outputQuantity": 1,
+    "inputs": {
+      "fabric": 3
+    },
+    "station": "textileWorkshop",
+    "days": 1,
+    "requiredLevel": "farmer",
+    "intelligenceBonusPerPoint": 0.08
+  },
+  {
+    "id": "craft_pistol",
+    "output": "pistol",
+    "outputQuantity": 1,
+    "inputs": {
+      "scrap": 3,
+      "circuitBoard": 1
+    },
+    "station": "gunsmith",
+    "days": 2,
+    "requiredLevel": "industrialist",
+    "intelligenceBonusPerPoint": 0.08
+  },
+  {
+    "id": "craft_rifle",
+    "output": "rifle",
+    "outputQuantity": 1,
+    "inputs": {
+      "scrap": 6,
+      "circuitBoard": 2,
+      "polymer": 2
+    },
+    "station": "gunsmith",
+    "days": 3,
+    "requiredLevel": "industrialist",
+    "intelligenceBonusPerPoint": 0.08
+  },
+  {
+    "id": "craft_drone",
+    "output": "drone",
+    "outputQuantity": 1,
+    "inputs": {
+      "chip": 2,
+      "circuitBoard": 3,
+      "polymer": 4
+    },
+    "station": "hardwareWorkshop",
+    "days": 4,
+    "requiredLevel": "elite",
+    "intelligenceBonusPerPoint": 0.08
+  },
+  {
+    "id": "craft_metabolic_implant",
+    "output": "metabolicImplant",
+    "outputQuantity": 1,
+    "inputs": {
+      "chip": 3,
+      "catalyst": 2,
+      "culturedMeat": 4
+    },
+    "station": "laboratory",
+    "days": 5,
+    "requiredLevel": "elite",
+    "intelligenceBonusPerPoint": 0.08
+  },
+  {
+    "id": "craft_hydration_pack",
+    "output": "hydrationPack",
+    "outputQuantity": 1,
+    "inputs": {
+      "fabric": 2,
+      "polymer": 2
+    },
+    "station": "textileWorkshop",
+    "days": 2,
+    "requiredLevel": "farmer",
+    "intelligenceBonusPerPoint": 0.08
+  },
+  {
+    "id": "craft_thermal_jacket",
+    "output": "thermalJacket",
+    "outputQuantity": 1,
+    "inputs": {
+      "fabric": 3,
+      "polymer": 1
+    },
+    "station": "textileWorkshop",
+    "days": 2,
+    "requiredLevel": "farmer",
+    "intelligenceBonusPerPoint": 0.08
+  },
+  {
+    "id": "craft_ration",
+    "output": "rationPack",
+    "outputQuantity": 4,
+    "inputs": {
+      "culturedMeat": 2,
+      "biomass": 2
+    },
+    "station": "kitchen",
+    "days": 1,
+    "requiredLevel": "survivor",
+    "intelligenceBonusPerPoint": 0.08
+  },
+  {
+    "id": "craft_luxury_meal",
+    "output": "luxuryMeal",
+    "outputQuantity": 2,
+    "inputs": {
+      "culturedMeat": 3,
+      "catalyst": 1,
+      "water": 2
+    },
+    "station": "kitchen",
+    "days": 2,
+    "requiredLevel": "farmer",
+    "intelligenceBonusPerPoint": 0.08
+  },
+  {
+    "id": "craft_water",
+    "output": "water",
+    "outputQuantity": 6,
+    "inputs": {
+      "biomass": 1
+    },
+    "station": "refinery",
+    "days": 1,
+    "requiredLevel": "survivor",
+    "intelligenceBonusPerPoint": 0.08
+  },
+  {
+    "id": "craft_street_food",
+    "output": "streetFood",
+    "outputQuantity": 5,
+    "inputs": {
+      "biomass": 3
+    },
+    "station": "kitchen",
+    "days": 1,
+    "requiredLevel": "survivor",
+    "intelligenceBonusPerPoint": 0.08
+  },
+  {
+    "id": "craft_red_rush",
+    "output": "redRush",
+    "outputQuantity": 3,
+    "inputs": {
+      "catalyst": 2,
+      "biomass": 2
+    },
+    "station": "laboratory",
+    "days": 2,
+    "requiredLevel": "industrialist",
+    "intelligenceBonusPerPoint": 0.08
+  },
+  {
+    "id": "craft_synthetic_drug",
+    "output": "syntheticDrug",
+    "outputQuantity": 2,
+    "inputs": {
+      "catalyst": 3,
+      "chip": 1,
+      "culturedMeat": 2
+    },
+    "station": "laboratory",
+    "days": 3,
+    "requiredLevel": "elite",
+    "intelligenceBonusPerPoint": 0.08
+  },
+  {
+    "id": "craft_illegal_weapon",
+    "output": "illegalWeapon",
+    "outputQuantity": 1,
+    "inputs": {
+      "scrap": 8,
+      "circuitBoard": 2
+    },
+    "station": "gunsmith",
+    "days": 3,
+    "requiredLevel": "industrialist",
+    "intelligenceBonusPerPoint": 0.08
+  }
+]
