@@ -291,12 +291,21 @@ describe('Barra de recursos e ponteiro', () => {
   const html = (): string =>
     readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
-  it('dinheiro, dia, prazo e obras têm lugar fixo no HUD', () => {
+  it('dinheiro, dia, vitais e obras têm lugar fixo no HUD', () => {
     // Nenhum dos quatro aparecia em lugar nenhum: o jogador escolhia uma
-    // construção sem saber se tinha crédito e via a obra começar sem saber
-    // quando acabava.
+    // construção sem saber se tinha crédito, via a obra começar sem saber
+    // quando acabava, e passava fome sem sinal.
     const css = html();
-    for (const id of ['rec-creditos', 'rec-dia', 'rec-reset', 'rec-obras']) {
+    for (const id of ['rec-creditos', 'rec-dia', 'rec-vitais', 'rec-obras']) {
+      expect(css).toContain(`id="${id}"`);
+    }
+  });
+
+  it('a meta atual, o trabalho do dia e o diário têm lugar no HUD', () => {
+    // O jogo é economia e sobrevivência antes de ser construção: sem escolher
+    // trabalho não há salário, e sem o diário o reset acontece invisível.
+    const css = html();
+    for (const id of ['quests', 'lista-trabalho', 'diario', 'abrir-trabalho']) {
       expect(css).toContain(`id="${id}"`);
     }
   });

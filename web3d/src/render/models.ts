@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+
+import { modelUrlFor, onOverridesChanged } from '../dev/spriteOverrides';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 /**
@@ -28,6 +30,11 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 const loader = new GLTFLoader();
 const cache = new Map<string, Promise<THREE.Object3D>>();
 
+// Trocar um modelo no modo Dev invalida o que já foi baixado: sem isto, a peça
+// continuaria mostrando o `.glb` antigo até recarregar a página, e o jogador
+// concluiria que a troca não funcionou.
+onOverridesChanged(() => cache.clear());
+
 /**
  * Caminho público do modelo a partir do `spriteId` do catálogo.
  *
@@ -39,7 +46,9 @@ const cache = new Map<string, Promise<THREE.Object3D>>();
  * nenhum no console.
  */
 function urlFor(spriteId: string): string {
-  return `models/${spriteId}.glb`;
+  // O modo Dev pode ter apontado este sprite para um arquivo local; fora dele,
+  // `modelUrlFor` devolve exatamente o caminho acima.
+  return modelUrlFor(spriteId);
 }
 
 /**

@@ -410,6 +410,54 @@
         cursor: pointer;
       }
       .item-constr span { font-size: 10px; opacity: 0.6; }
+      .item-constr em {
+        font-style: normal; font-size: 10px; line-height: 1.4; opacity: 0.42;
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      #ficha-construcao {
+        display: flex; flex-direction: column; gap: 2px;
+        margin: 0 0 8px; padding: 8px 10px;
+        border: 1px solid rgba(140, 240, 200, 0.35);
+        border-radius: 10px;
+        background: rgba(90, 200, 160, 0.08);
+        font-size: 10px; line-height: 1.45;
+      }
+      #ficha-construcao:empty { display: none; }
+      #ficha-construcao em { font-style: normal; opacity: 0.75; margin-bottom: 3px; }
+      #ficha-construcao strong {
+        margin-top: 4px; font-size: 10px; letter-spacing: 0.08em;
+        text-transform: uppercase; color: #9ff0cf;
+      }
+      #ficha-construcao span { opacity: 0.68; }
+
+      /* ------------------------------------------------------ modo Dev */
+      .dev-lista { gap: 10px; }
+      .dev-item {
+        display: flex; flex-direction: column; gap: 3px;
+        padding: 10px 12px;
+        border: 1px solid var(--borda); border-radius: 12px;
+        background: rgba(255, 255, 255, 0.03);
+        font-size: 11px; line-height: 1.45;
+      }
+      .dev-item.trocado { border-color: rgba(255, 210, 130, 0.6); }
+      .dev-item h2 { margin: 0 0 2px; font-size: 13px; letter-spacing: 0.06em; opacity: 1; }
+      .dev-resumo { margin: 0 0 4px; font-size: 11px; opacity: 0.7; }
+      .dev-bloco { display: flex; flex-direction: column; gap: 1px; margin-top: 5px; }
+      .dev-bloco strong {
+        font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+        color: #9ff0cf;
+      }
+      .dev-bloco span { font-size: 10px; opacity: 0.65; }
+      .dev-caminho { font-family: ui-monospace, Menlo, Consolas, monospace; color: #ffd28a; opacity: 0.8 !important; }
+      .dev-item input[type="file"] {
+        margin-top: 8px; min-height: auto; padding: 6px; font-size: 11px;
+      }
+      .dev-aviso { min-height: 14px; font-size: 10px; }
+      .dev-aviso.ok { color: #9ff0cf; }
+      .dev-aviso.ruim { color: #ff9d9d; }
+      .dev-restaurar { margin-top: 6px; min-height: 36px !important; font-size: 11px !important; }
       .item-constr[aria-pressed="true"] {
         background: rgba(90, 200, 160, 0.34);
         border-color: rgba(140, 240, 200, 0.7);
@@ -417,6 +465,89 @@
       @media (min-width: 640px) {
         #catalogo { right: auto; width: 340px; }
       }
+
+      /* ------------------------------------------- quests, trabalho, diário */
+
+      #quests {
+        position: fixed;
+        top: calc(max(8px, env(safe-area-inset-top)) + 52px);
+        right: max(8px, env(safe-area-inset-right));
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        max-width: min(300px, calc(100vw - 24px));
+        padding: 9px 11px;
+        border: 1px solid var(--borda);
+        border-radius: 10px;
+        background: var(--painel);
+        backdrop-filter: blur(10px);
+        color: var(--texto);
+        font: 11px/1.4 ui-monospace, Menlo, Consolas, monospace;
+        pointer-events: none;
+      }
+      #quests:empty { display: none; }
+      #quests strong { font-size: 12px; color: #9ff0cf; letter-spacing: 0.05em; }
+      #quests em { font-style: normal; opacity: 0.5; font-size: 10px; }
+      #quests span { opacity: 0.8; }
+      #quests span.feito { opacity: 0.45; text-decoration: line-through; }
+      #quests .progresso { margin-top: 3px; opacity: 0.4; font-size: 10px; }
+
+      #trabalho {
+        position: fixed;
+        left: max(10px, env(safe-area-inset-left));
+        right: max(10px, env(safe-area-inset-right));
+        bottom: calc(max(10px, env(safe-area-inset-bottom)) + 12px);
+        max-height: 46vh;
+        z-index: 2;
+        padding: 12px;
+        border: 1px solid var(--borda);
+        border-radius: 14px;
+        background: var(--painel);
+        backdrop-filter: blur(10px);
+        color: var(--texto);
+        font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace;
+        overflow-y: auto;
+        display: none;
+      }
+      #trabalho.aberto { display: block; }
+      #trabalho-cabecalho { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+      #trabalho h2 { flex: 1; margin: 0; font-size: 11px; letter-spacing: 0.12em; opacity: 0.7; }
+      #fechar-trabalho {
+        width: 36px; height: 36px; flex: 0 0 auto; padding: 0;
+        border: 1px solid var(--borda); border-radius: 10px;
+        background: rgba(0, 0, 0, 0.3); color: var(--texto);
+        font: 14px/1 ui-monospace, Menlo, Consolas, monospace; cursor: pointer;
+      }
+      #status-trabalho { min-height: 16px; margin: 0 0 8px; font-size: 11px; color: #ffd28a; }
+      #lista-trabalho { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 6px; }
+      .item-trabalho {
+        display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+        min-height: var(--toque); padding: 8px;
+        border: 1px solid var(--borda); border-radius: 10px;
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--texto); font: inherit; text-align: left; cursor: pointer;
+      }
+      .item-trabalho span { font-size: 10px; opacity: 0.6; }
+      .item-trabalho[aria-pressed="true"] {
+        background: rgba(255, 210, 130, 0.28);
+        border-color: rgba(255, 210, 130, 0.7);
+      }
+
+      #abrir-trabalho {
+        width: 100%; min-height: var(--toque); margin-bottom: 6px;
+        border: 1px solid var(--borda); border-radius: 12px;
+        background: rgba(255, 210, 130, 0.2); color: var(--texto);
+        font: 13px/1 ui-monospace, Menlo, Consolas, monospace;
+        letter-spacing: 0.08em; cursor: pointer;
+      }
+
+      /* O diário do dia que acabou de fechar. Some quando não há o que dizer. */
+      #diario {
+        display: flex; flex-direction: column; gap: 2px;
+        margin: 8px 0 0; max-height: 22vh; overflow-y: auto;
+        font-size: 10px; line-height: 1.5; opacity: 0.72;
+      }
+      #diario:empty { display: none; }
 
       #ajuda { margin: 10px 0 0; font-size: 11px; line-height: 1.6; opacity: 0.62; }
       #ajuda kbd {
@@ -512,7 +643,7 @@
       #rec-creditos { flex: 1.6 1 0; color: #ffe3a1; }
       /* Prazo vencendo. A cor só entra quando há motivo — um HUD sempre
          vermelho é um HUD que ninguém lê. */
-      #rec-reset.urgente .valor { color: #ffb0b0; }
+      #rec-vitais.urgente .valor { color: #ffb0b0; }
 
       /* -------------------------------------------------- inspetor (hover) */
 
@@ -582,7 +713,7 @@
         <img src="ui/info/hourglass.png" alt="" width="20" height="20" />
         <span class="valor">—</span>
       </div>
-      <div class="recurso" id="rec-reset" title="Tempo até o próximo dia">
+      <div class="recurso" id="rec-vitais" title="Fome / Sede">
         <img src="ui/info/stopwatch.png" alt="" width="20" height="20" />
         <span class="valor">—</span>
       </div>
@@ -605,6 +736,19 @@
       <span id="aviso-texto"></span>
     </div>
 
+    <!-- A meta atual da campanha. Uma só: dezessete num painel de celular
+         viram parede de texto que ninguém lê. -->
+    <div id="quests"></div>
+
+    <aside id="trabalho">
+      <div id="trabalho-cabecalho">
+        <h2>O QUE FAZER HOJE</h2>
+        <button id="fechar-trabalho" type="button" aria-label="Fechar">✕</button>
+      </div>
+      <p id="status-trabalho"></p>
+      <div id="lista-trabalho"></div>
+    </aside>
+
     <aside id="catalogo">
       <!-- O catálogo tem o próprio fechar. Ele é `position: fixed` no rodapé
            com z-index acima do painel, então enquanto estava aberto ele cobria
@@ -615,6 +759,9 @@
         <button id="fechar-catalogo" type="button" aria-label="Fechar catálogo">✕</button>
       </div>
       <p id="status-obra"></p>
+      <!-- A ficha da construção escolhida: o que faz, o que custa, o que exige
+           e como evolui. Fica aqui porque é aqui que a decisão acontece. -->
+      <div id="ficha-construcao"></div>
       <div id="lista-construcoes"></div>
     </aside>
 
@@ -627,6 +774,8 @@
 
       <div id="corpo">
         <button id="abrir-catalogo" type="button">CONSTRUIR</button>
+        <button id="abrir-trabalho" type="button">TRABALHAR</button>
+        <div id="diario"></div>
         <!-- O dia vira sozinho a cada 24 h. Este botão adianta a virada, que é
              mecânica de sobrevivência conhecida — dormir — e a única forma de
              o jogador ver uma obra de três dias terminar sem esperar três

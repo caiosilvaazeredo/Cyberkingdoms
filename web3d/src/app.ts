@@ -1,5 +1,6 @@
 import { LocalGameServer } from './net/localServer';
 import { gameModeInfo, type GameMode } from './net/gameServer';
+import { Campaign, type CampaignJson } from './campaign/campaign';
 import { settings } from './net/settings';
 import { bootWorld } from './main';
 import { createMainMenu } from './ui/mainMenu';
@@ -7,6 +8,7 @@ import { createModeSelect } from './ui/modeSelect';
 import { createNewCampaign } from './ui/newCampaign';
 import { createServerBrowser } from './ui/serverBrowser';
 import { createSettingsScreen } from './ui/settingsScreen';
+import { createDevScreen } from './ui/devScreen';
 import { ScreenRouter } from './ui/screens';
 
 /**
@@ -42,11 +44,42 @@ const PENDENTE = 'ck.entrar';
 
 let montadoCom: string | null = null;
 
+/**
+ * Salva a campanha no servidor.
+ *
+ * Com espaçamento: o reset diário pode disparar várias vezes seguidas quando a
+ * aba volta de dias fechada, e gravar um JSON de campanha a cada virada
+ * travaria o quadro. Meio segundo agrupa a rajada sem arriscar perder o
+ * progresso — a última gravação sempre acontece.
+ */
+function persistidor(slotId: string): (campaign: Campaign) => void {
+  let agendado: ReturnType<typeof setTimeout> | null = null;
+  let pendente: Campaign | null = null;
+
+  const gravar = (): void => {
+    agendado = null;
+    const alvo = pendente;
+    pendente = null;
+    if (!alvo) return;
+    void server.saveState(slotId, alvo.toJson()).catch(() => {
+      // Armazenamento cheio ou aba privada. Perder o save é ruim, mas derrubar
+      // o laço de render por causa disso é pior: o jogador perderia a sessão
+      // inteira em vez de um dia.
+    });
+  };
+
+  return (campaign) => {
+    pendente = campaign;
+    if (agendado === null) agendado = setTimeout(gravar, 500);
+  };
+}
+
 /** Entra no mundo, montando a cena na primeira vez. */
 async function entrar(
   slotId: string,
   seedLabel: string,
   _mode: GameMode,
+  campanha: Campaign,
 ): Promise<void> {
   if (montadoCom !== null && montadoCom !== seedLabel) {
     // Outro mundo, e a cena atual não sabe se desmontar. Guarda o destino e
@@ -65,9 +98,36 @@ async function entrar(
   hud.hidden = false;
   host.hidden = true;
   if (montadoCom === null) {
-    bootWorld(seedLabel);
+    bootWorld(campanha, { onPersist: persistidor(slotId) });
     montadoCom = seedLabel;
   }
+}
+
+/**
+ * Recupera a campanha de um save, ou cria uma nova.
+ *
+ * Save corrompido ou de outra versão não vira tela de erro: o mundo é função
+ * pura da seed, então dá para recomeçar aquela seed do dia 1. Perder o
+ * progresso é ruim; ficar preso numa tela da qual não se sai é pior.
+ */
+async function carregarCampanha(slot: {
+  id: string;
+  seedLabel: string;
+  characterName: string;
+}): Promise<Campaign> {
+  const bruto = await server.loadState(slot.id);
+  if (bruto) {
+    try {
+      return Campaign.fromJson(bruto as CampaignJson);
+    } catch {
+      // Cai para a criação abaixo.
+    }
+  }
+  return Campaign.create({
+    id: slot.id,
+    seedLabel: slot.seedLabel,
+    characterName: slot.characterName,
+  });
 }
 
 function sair(): void {
@@ -83,8 +143,12 @@ window.addEventListener('ck:sair', sair);
 const novaCampanha = createNewCampaign({
   server,
   router,
-  async onStart(slotId, seedLabel, mode) {
-    await entrar(slotId, seedLabel, mode);
+  async onStart(slotId, seedLabel, mode, characterName) {
+    const campanha = Campaign.create({ id: slotId, seedLabel, characterName });
+    // Grava antes de entrar: se a aba fechar durante o carregamento da cena, o
+    // jogador reencontra a campanha em vez de um slot vazio no menu.
+    await server.saveState(slotId, campanha.toJson());
+    await entrar(slotId, seedLabel, mode, campanha);
   },
 });
 router.register(novaCampanha);
@@ -95,7 +159,8 @@ router.register(
     router,
     async onContinue(slot) {
       await server.resumeSession(slot.id);
-      await entrar(slot.id, slot.seedLabel, slot.mode);
+      const campanha = await carregarCampanha(slot);
+      await entrar(slot.id, slot.seedLabel, slot.mode, campanha);
     },
     onNewCampaign() {
       // Limpa o que a tela de modos possa ter deixado: quem entra por aqui
@@ -135,6 +200,7 @@ router.register(
 );
 
 router.register(createSettingsScreen({ store: settings(), router }));
+router.register(createDevScreen({ router }));
 
 // ------------------------------------------------------------------ abertura
 
@@ -159,7 +225,14 @@ async function abrir(): Promise<void> {
   if (pendente) {
     try {
       const sessao = await server.resumeSession(pendente);
-      await entrar(sessao.slotId, sessao.seedLabel, sessao.mode);
+      const saves = await server.listSaves();
+      const slot = saves.find((s) => s.id === sessao.slotId);
+      const campanha = await carregarCampanha({
+        id: sessao.slotId,
+        seedLabel: sessao.seedLabel,
+        characterName: slot?.characterName ?? 'Anônimo',
+      });
+      await entrar(sessao.slotId, sessao.seedLabel, sessao.mode, campanha);
     } catch {
       // Fica no menu. O jogador vê a lista de campanhas e escolhe de novo.
     }

@@ -135,6 +135,24 @@ export function createSettingsScreen(deps: SettingsDeps): Screen {
     (v) => deps.store.update({ showStats: v }),
   );
 
+  // ----------------------------------------------------------------- dev
+  const dev = interruptor(
+    'Modo Dev',
+    'Libera todas as construções, sem exigência de nível nem de progressão.',
+    false,
+    (v) => {
+      deps.store.update({ devMode: v });
+      atalhoDev.disabled = !v;
+    },
+  );
+
+  const atalhoDev = el('button', {
+    className: 'secundario',
+    text: 'CATÁLOGO E MODELOS 3D',
+    attrs: { type: 'button' },
+  });
+  atalhoDev.addEventListener('click', () => void deps.router.push('dev'));
+
   // -------------------------------------------------------------- rodapé
   const restaurar = el('button', {
     className: 'secundario',
@@ -182,6 +200,14 @@ export function createSettingsScreen(deps: SettingsDeps): Screen {
       vento.root,
       estatisticas.root,
 
+      el('h2', { text: 'Desenvolvimento' }),
+      dev.root,
+      atalhoDev,
+      el('p', {
+        className: 'nota',
+        text: 'O catálogo mostra o que cada construção faz, quanto custa e como evolui — e deixa trocar o modelo 3D de cada uma para testar arte.',
+      }),
+
       restaurar,
       voltar,
     ],
@@ -194,6 +220,10 @@ export function createSettingsScreen(deps: SettingsDeps): Screen {
     inverter.set(s.invertDrag);
     vento.set(s.wind);
     estatisticas.set(s.showStats);
+    dev.set(s.devMode);
+    // O catálogo de modelos só abre com o modo ligado: ele existe para montar
+    // conteúdo, e oferecê-lo desligado convidaria a uma tela sem efeito.
+    atalhoDev.disabled = !s.devMode;
   }
 
   return {

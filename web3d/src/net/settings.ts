@@ -38,6 +38,14 @@ export interface GameSettings {
   readonly wind: boolean;
   /** Mostra bioma, lâminas e classe do aparelho no painel. */
   readonly showStats: boolean;
+  /**
+   * Modo Dev: todas as construções liberadas, sem exigência de nível.
+   *
+   * Fica nas configurações e não escondido atrás de um atalho porque o objetivo
+   * é montar e testar conteúdo, não trapacear em silêncio — e o HUD anuncia
+   * quando está ligado.
+   */
+  readonly devMode: boolean;
 }
 
 export const defaultSettings: GameSettings = {
@@ -46,6 +54,7 @@ export const defaultSettings: GameSettings = {
   cameraSpeed: 1,
   wind: true,
   showStats: true,
+  devMode: false,
 };
 
 export const SPEED_RANGE = { min: 0.5, max: 2 } as const;
@@ -95,6 +104,7 @@ export function sanitizeSettings(raw: unknown): GameSettings {
     invertDrag: bool(obj.invertDrag, defaultSettings.invertDrag),
     wind: bool(obj.wind, defaultSettings.wind),
     showStats: bool(obj.showStats, defaultSettings.showStats),
+    devMode: bool(obj.devMode, defaultSettings.devMode),
   };
 }
 

@@ -29,7 +29,12 @@ import { el, type Screen, type ScreenRouter } from './screens';
 export interface NewCampaignDeps {
   readonly server: GameServer;
   readonly router: ScreenRouter;
-  readonly onStart: (slotId: string, seedLabel: string, mode: GameMode) => Promise<void>;
+  readonly onStart: (
+    slotId: string,
+    seedLabel: string,
+    mode: GameMode,
+    characterName: string,
+  ) => Promise<void>;
 }
 
 export interface NewCampaignScreen extends Screen {
@@ -172,7 +177,7 @@ export function createNewCampaign(deps: NewCampaignDeps): NewCampaignScreen {
           characterName: personagem,
           serverId: servidor?.id ?? null,
         });
-        await deps.onStart(sessao.slotId, semente, escolhido);
+        await deps.onStart(sessao.slotId, semente, escolhido, personagem);
       } catch (e) {
         erro.textContent = `Não foi possível criar: ${(e as Error).message}`;
       } finally {

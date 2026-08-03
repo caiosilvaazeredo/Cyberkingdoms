@@ -21,22 +21,20 @@ import {
   type VillageBounds,
 } from './render/villageBounds';
 import { biomeDef } from './world/biome';
-import { plotAreaFor, plotOrigin } from './world/plotArea';
-import { WorldGenerator } from './world/worldGen';
+import { plotAreaFor } from './world/plotArea';
+import type { PlacedBuilding } from './building/plot';
+import { DayClock, formatDays } from './campaign/dayClock';
+import type { Campaign } from './campaign/campaign';
+import { runDailyTick } from './campaign/dailyTick';
+import { QuestLog, objectiveLabel, objectiveProgress } from './campaign/quest';
+import { resolveUpkeep, type DailyActivity } from './survival/dailyActivity';
+import { allWork, workById } from './survival/survival';
 import {
-  Plot,
-  plotSizeForLevel,
-  runPlotTick,
-  type PlacedBuilding,
-} from './building/plot';
-import {
-  DayClock,
-  formatDays,
-  formatRemaining,
-} from './campaign/dayClock';
-import { buildingsAvailableAt, type CitizenLevel } from './building/buildingType';
-import { Inventory } from './economy/inventory';
-import { allItems } from './economy/item';
+  allBuildings,
+  buildingsAvailableAt,
+  type CitizenLevel,
+} from './building/buildingType';
+import { describeBuilding, shortFacts } from './building/describe';
 import { settings } from './net/settings';
 
 /**
@@ -56,15 +54,38 @@ import { settings } from './net/settings';
 
 const FOG_COLOR = 0x8fa6b8;
 
+/**
+ * Quantos resets automáticos cabem num quadro.
+ *
+ * Uma campanha parada por meses acumularia centenas de viradas, e rodá-las de
+ * uma vez travaria a aba justamente na volta do jogador. Espalhadas por quadros,
+ * ela alcança o presente em alguns segundos com a tela respondendo.
+ */
+const MAX_TICKS_POR_QUADRO = 3;
+
 /** Vento padrão do campo. Desligá-lo zera a força, não a direção. */
 const VENTO_DIRECAO = new THREE.Vector2(1, 0.35);
 const VENTO_FORCA = 0.22;
 
 export interface WorldHandle {
   readonly canvas: HTMLCanvasElement;
+  readonly campaign: Campaign;
 }
 
-export function bootWorld(seedLabel: string): WorldHandle {
+export interface BootOptions {
+  /** Chamado sempre que o estado muda o bastante para valer um save. */
+  readonly onPersist?: (campaign: Campaign) => void;
+}
+
+/**
+ * Monta a cena para uma campanha já criada.
+ *
+ * Antes recebia só o rótulo da seed e inventava um personagem com crédito e
+ * inventário de teste. Agora o mundo, o terreno, o dinheiro, a fome e as quests
+ * são os da campanha de verdade — e o botão de encerrar o dia roda o reset
+ * inteiro (`runDailyTick`), não só a produção do terreno.
+ */
+export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldHandle {
   const canvas = document.querySelector<HTMLCanvasElement>('#viewport')!;
 
   const renderer = new THREE.WebGLRenderer({
@@ -87,25 +108,29 @@ export function bootWorld(seedLabel: string): WorldHandle {
   sun.position.set(60, 90, 40);
   scene.add(sun);
 
-  const world = WorldGenerator.fromLabel(seedLabel);
+  const world = campaign.world.generator;
+  const character = campaign.character;
+  const plot = campaign.plot;
+  const inventario = character.inventory;
 
-  // Terreno do jogador. Enquanto a campanha não estiver portada, ele nasce
-  // vazio com recursos de teste — o suficiente para a colocação funcionar de
-  // verdade, cobrando custo e recusando encaixe inválido.
-  // `farmer` e não `elite`: o lote de elite tem 16×16 tiles, ou 64 m de lado, e
-  // num celular em retrato a tela inteira cabia dentro da cerca — não dava para
-  // ver onde o terreno começava. 10×10 enquadra, e ainda abre 27 das 41
-  // construções. O nível de verdade passa a vir da campanha quando ela for
-  // portada.
-  const nivel: CitizenLevel = 'farmer';
-  const [pw, ph] = plotSizeForLevel(nivel);
-  const plot = new Plot('p1', 'cap_0', { x: 0, y: 0 }, pw, ph);
+  /**
+   * Onde o lote cai no mundo 3D.
+   *
+   * O terreno é indexado em **tiles de jogo**, e o renderizador em **metros**.
+   * Uma célula de construção vale `TILE` metros, então o lote ocupa
+   * `width * TILE` metros de mundo a partir da origem que a campanha reservou —
+   * dentro da capital, deslocado do centro para não cobrir mercado e governo.
+   */
+  const larguraMundo = plot.width * TILE;
+  const profundidadeMundo = plot.height * TILE;
+  const lote = {
+    x: plot.origin.x + larguraMundo / 2,
+    z: plot.origin.y + profundidadeMundo / 2,
+  };
 
-  // O lote sai do ponto de rede da origem — ver `world/plotArea.ts` — e impõe
-  // o próprio chão, para que nenhum trecho de Água Morta caia dentro do
-  // tabuleiro virando mancha pelada num cenário sem relevo.
-  const lote = plotOrigin(world);
-  const plotArea = plotAreaFor(world, lote.x, lote.z, pw * TILE, ph * TILE);
+  // O lote impõe o próprio chão, para que nenhum trecho de Água Morta caia
+  // dentro do tabuleiro virando mancha pelada num cenário sem relevo.
+  const plotArea = plotAreaFor(world, lote.x, lote.z, larguraMundo, profundidadeMundo);
 
   const density = new DensityField(world, plotArea);
   let terrain: Terrain | null = null;
@@ -113,21 +138,41 @@ export function bootWorld(seedLabel: string): WorldHandle {
   const center = new THREE.Vector2(lote.x, lote.z);
   const seededAt = new THREE.Vector2(lote.x, lote.z);
 
-  const inventario = new Inventory();
-  for (const item of allItems) inventario.add(item.id, 300);
-  let creditos = 250_000;
   let plotView: PlotView | null = null;
   let selecionada: string | null = null;
 
-  // Limite da vila. Por enquanto o centro é o lote e o nome sai do layout do
-  // mundo; quando a campanha estiver portada, isto passa a vir do terreno do
-  // jogador e do assentamento vizinho de verdade.
+  /**
+   * O que o jogador escolheu fazer hoje.
+   *
+   * `null` é dia ocioso, e ocioso **também** custa: a base de Fome e Sede é
+   * cobrada por existir. Guardar a escolha até o reset — em vez de aplicar na
+   * hora — é o que permite trocar de ideia durante o dia, que é como o jogo
+   * pensa o tempo: o dia é uma decisão, o reset é a consequência.
+   */
+  let atividadeEscolhida: DailyActivity | null = null;
+  const atividadeDoDia = (): DailyActivity => atividadeEscolhida ?? {};
+
+  /**
+   * O nível que vale para encaixar uma construção.
+   *
+   * No modo Dev, `elite` — senão o catálogo liberaria a refinaria e o encaixe
+   * a recusaria em seguida, que é a pior combinação: o jogo oferece e nega.
+   */
+  const nivelParaConstruir = (): CitizenLevel =>
+    prefs.current.devMode ? 'elite' : character.level;
+
+  // Limite da vila: o centro é o lote, e o vizinho é a cidade mais próxima que
+  // não é a do jogador — é para ela que o aviso de borda aponta.
+  const cidade = campaign.world.layout.byId(plot.settlementId);
+  const vizinha = campaign.world.layout.settlements.find(
+    (s) => s.id !== plot.settlementId,
+  );
   const bounds: VillageBounds = {
     centerX: lote.x,
     centerZ: lote.z,
-    radius: 46,
-    settlementName: 'seu vilarejo',
-    neighbourName: 'Krom Central',
+    radius: Math.max(46, Math.max(larguraMundo, profundidadeMundo) * 0.85),
+    settlementName: plot.name,
+    neighbourName: vizinha?.name ?? cidade?.name ?? 'a cidade vizinha',
   };
   let enquadrado = false;
   /** Lado do trecho realmente semeado. Muda com o zoom. */
@@ -290,6 +335,8 @@ export function bootWorld(seedLabel: string): WorldHandle {
    */
   function aplicarPreferencias(): void {
     const s = prefs.current;
+    // O catálogo muda de tamanho com o modo Dev, então precisa ser refeito.
+    montarCatalogo();
     governor.setLocked(s.quality === 'auto' ? null : s.quality);
     grass?.setWind(VENTO_DIRECAO, s.wind ? VENTO_FORCA : 0);
     report();
@@ -299,29 +346,30 @@ export function bootWorld(seedLabel: string): WorldHandle {
 
   // ------------------------------------------------------- barra de recursos
   //
-  // Dinheiro e prazo decidem toda jogada, e nenhum dos dois aparecia em lugar
-  // nenhum: o jogador escolhia uma construção sem saber se tinha crédito, e via
-  // uma obra começar sem saber quando ela acabava.
-  const calendario = DayClock.start();
-  let diaVisto = calendario.day();
-
+  // Dinheiro, prazo e vitais decidem toda jogada, e nenhum deles aparecia em
+  // lugar nenhum: o jogador escolhia uma construção sem saber se tinha crédito,
+  // via uma obra começar sem saber quando acabava, e passava fome sem sinal.
   const valorDe = (id: string): HTMLElement | null =>
     document.querySelector<HTMLElement>(`${id} .valor`);
   const elCreditos = valorDe('#rec-creditos');
   const elDia = valorDe('#rec-dia');
-  const elReset = valorDe('#rec-reset');
-  const boxReset = document.querySelector<HTMLElement>('#rec-reset');
+  const elVitais = valorDe('#rec-vitais');
+  const boxVitais = document.querySelector<HTMLElement>('#rec-vitais');
   const elObras = valorDe('#rec-obras');
+  const questsEl = document.querySelector<HTMLElement>('#quests');
+  const diarioEl = document.querySelector<HTMLElement>('#diario');
 
   function atualizarRecursos(): void {
-    if (elCreditos) elCreditos.textContent = creditos.toLocaleString('pt-BR');
-    if (elDia) elDia.textContent = `dia ${calendario.day()}`;
+    if (elCreditos) elCreditos.textContent = character.credits.toLocaleString('pt-BR');
+    if (elDia) elDia.textContent = `dia ${campaign.day}`;
 
-    const falta = calendario.remaining();
-    if (elReset) elReset.textContent = formatRemaining(falta);
-    // Última hora do dia acende o contador. A cor entra só quando há motivo —
-    // um HUD sempre vermelho é um HUD que ninguém lê.
-    boxReset?.classList.toggle('urgente', falta < 60 * 60 * 1000);
+    if (elVitais) {
+      elVitais.textContent = `${character.hunger}/${character.thirst}`;
+    }
+    // A cor entra só quando há motivo — um HUD sempre vermelho é um HUD que
+    // ninguém lê. O limiar é o mesmo em que a tabela do GDD começa a tirar HP.
+    const apertado = Math.min(character.hunger, character.thirst) <= 25;
+    boxVitais?.classList.toggle('urgente', apertado);
 
     const obras = plot.buildings.filter((b) => !b.isReady);
     if (elObras) {
@@ -332,32 +380,72 @@ export function bootWorld(seedLabel: string): WorldHandle {
         elObras.textContent = `${obras.length} · ${formatDays(prazo)}`;
       }
     }
+
+    atualizarQuests();
   }
 
-  /** Roda um dia: obras andam, manutenção é cobrada, produção entra. */
+  /**
+   * A quest atual e o progresso dos objetivos dela.
+   *
+   * Uma só, e não a lista inteira: dezessete metas num painel de celular viram
+   * parede de texto que ninguém lê. A lista completa cabe numa tela própria; o
+   * HUD mostra o que fazer agora.
+   */
+  function atualizarQuests(): void {
+    if (!questsEl) return;
+    const log = new QuestLog(campaign);
+    const atual = log.current;
+
+    if (!atual) {
+      questsEl.innerHTML =
+        '<strong>Campanha concluída</strong><span>Todas as metas fecharam.</span>';
+      return;
+    }
+
+    const linhas = atual.objectives
+      .map((o) => {
+        const { current, target } = objectiveProgress(o, campaign);
+        const feito = current >= target;
+        return `<span class="${feito ? 'feito' : ''}">${feito ? '✓' : '·'} ${objectiveLabel(o)} (${current}/${target})</span>`;
+      })
+      .join('');
+
+    questsEl.innerHTML =
+      `<strong>${atual.title}</strong>` +
+      `<em>${atual.briefing}</em>` +
+      linhas +
+      `<span class="progresso">${log.completed.length}/${log.completed.length + log.active.length + log.locked.length} concluídas</span>`;
+  }
+
+  function atualizarDiario(eventos: readonly string[]): void {
+    if (!diarioEl) return;
+    diarioEl.innerHTML = eventos.length
+      ? eventos.map((e) => `<span>${e}</span>`).join('')
+      : '<span>Dia sem novidade.</span>';
+  }
+
+  /**
+   * Encerra o dia: roda o reset inteiro da campanha.
+   *
+   * Antes isto rodava só `runPlotTick` — obras e manutenção. Agora passa pelo
+   * mesmo `runDailyTick` que o servidor vai rodar: fome, sede, combate de
+   * estrada, salário, eleição, promoção e quests. Ter dois caminhos para o
+   * mesmo reset seria abrir a porta para a divergência que o jogador explora.
+   */
   function virarODia(): void {
-    const resultado = runPlotTick(plot, {
-      inventory: inventario,
-      availableCredits: creditos,
-    });
-    creditos -= resultado.upkeepPaid;
+    const relatorio = runDailyTick(campaign, atividadeDoDia());
+    // A escolha **não** zera: ela é ordem permanente até o jogador trocar.
+    // Zerando, ele teria de reabrir o painel de trabalho todo reset só para
+    // repetir o mesmo emprego — e emprego que exige reconfirmação diária não é
+    // emprego, é tarefa.
     plotView?.sync(plot);
     atualizarRecursos();
+    atualizarDiario(relatorio.events);
+    options.onPersist?.(campaign);
 
     if (statusEl) {
-      const partes: string[] = [`Dia ${calendario.day()}.`];
-      if (resultado.completed.length > 0) {
-        partes.push(
-          `${resultado.completed.map((b) => b.def.name).join(', ')} ficou pronta.`,
-        );
-      }
-      if (resultado.upkeepPaid > 0) {
-        partes.push(`Manutenção: ${resultado.upkeepPaid.toLocaleString('pt-BR')} cr.`);
-      }
-      if (resultado.idled.length > 0) {
-        partes.push(`${resultado.idled.length} parada(s) por falta de caixa.`);
-      }
-      statusEl.textContent = partes.join(' ');
+      statusEl.textContent =
+        relatorio.events[relatorio.events.length - 1] ?? `Dia ${relatorio.day} fechado.`;
     }
   }
 
@@ -411,8 +499,8 @@ export function bootWorld(seedLabel: string): WorldHandle {
       return;
     }
     const check = plot.canPlace(selecionada, celula.x, celula.y, {
-      level: nivel,
-      credits: creditos,
+      level: nivelParaConstruir(),
+      credits: character.credits,
       inventory: inventario,
     });
     plotView.showGhost(selecionada, celula.x, celula.y, check.valid);
@@ -430,8 +518,8 @@ export function bootWorld(seedLabel: string): WorldHandle {
 
     const def = selecionada;
     const r = plot.build(def, celula.x, celula.y, {
-      level: nivel,
-      credits: creditos,
+      level: nivelParaConstruir(),
+      credits: character.credits,
       inventory: inventario,
     });
     if (!r.ok) {
@@ -440,12 +528,12 @@ export function bootWorld(seedLabel: string): WorldHandle {
     }
     // Os créditos são do personagem, não do terreno — por isso o débito
     // acontece aqui e não dentro de `build`.
-    creditos -= r.building.def.creditCost;
+    character.credits -= r.building.def.creditCost;
     plotView.sync(plot);
     if (statusEl) {
       statusEl.textContent =
         `${r.building.def.name} em obra · ${r.building.daysRemaining} dia(s) · ` +
-        `${creditos.toLocaleString('pt-BR')} cr`;
+        `${character.credits.toLocaleString('pt-BR')} cr`;
     }
     return true;
   }
@@ -503,8 +591,8 @@ export function bootWorld(seedLabel: string): WorldHandle {
     let valida = true;
     if (selecionada) {
       valida = plot.canPlace(selecionada, celula.x, celula.y, {
-        level: nivel,
-        credits: creditos,
+        level: nivelParaConstruir(),
+        credits: character.credits,
         inventory: inventario,
       }).valid;
       // O fantasma segue o mouse no PC sem exigir arrasto: com o botão do
@@ -609,13 +697,24 @@ export function bootWorld(seedLabel: string): WorldHandle {
   function montarCatalogo(): void {
     if (!listaEl) return;
     listaEl.textContent = '';
-    for (const def of buildingsAvailableAt(nivel)) {
+
+    // No modo Dev o catálogo é o jogo inteiro: a ideia é montar e testar
+    // conteúdo, e esperar a progressão para ver uma refinaria transformaria
+    // teste de arte numa sessão de horas.
+    const disponiveis = prefs.current.devMode
+      ? allBuildings
+      : buildingsAvailableAt(character.level);
+
+    for (const def of disponiveis) {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'item-constr';
+      // A descrição entra na lista: o catálogo dizia quanto custa e não dizia
+      // para quê, e com 41 construções isso é escolher pelo preço.
       b.innerHTML =
         `<strong>${def.name}</strong>` +
-        `<span>${def.width}x${def.height} · ${def.creditCost} cr · ${def.buildDays}d</span>`;
+        `<span>${shortFacts(def.id)}</span>` +
+        `<em>${def.description}</em>`;
       b.addEventListener('click', () => {
         selecionada = selecionada === def.id ? null : def.id;
         for (const outro of Array.from(listaEl.querySelectorAll('button'))) {
@@ -634,11 +733,37 @@ export function bootWorld(seedLabel: string): WorldHandle {
             ? 'Arraste para posicionar, toque para confirmar.'
             : '';
         }
+        mostrarFicha(selecionada);
       });
       listaEl.appendChild(b);
     }
   }
   montarCatalogo();
+
+  /**
+   * A ficha completa da construção escolhida.
+   *
+   * Efeito, custo, exigência e progressão nível a nível. Fica no catálogo e não
+   * numa tela à parte: a decisão acontece aqui, e informação que exige sair da
+   * tela para consultar não é consultada.
+   */
+  const fichaEl = document.querySelector<HTMLElement>('#ficha-construcao');
+  function mostrarFicha(type: string | null): void {
+    if (!fichaEl) return;
+    if (!type) {
+      fichaEl.textContent = '';
+      return;
+    }
+    const f = describeBuilding(type);
+    const bloco = (titulo: string, itens: readonly string[]): string =>
+      `<strong>${titulo}</strong>${itens.map((t) => `<span>${t}</span>`).join('')}`;
+    fichaEl.innerHTML =
+      `<em>${f.summary}</em>` +
+      bloco('O que faz', f.effects) +
+      bloco('O que custa', f.costs) +
+      bloco('Exige', f.requirements) +
+      bloco('Progressão', f.progression);
+  }
 
   document.querySelector('#abrir-catalogo')?.addEventListener('click', () => {
     catalogo?.classList.toggle('aberto');
@@ -646,6 +771,106 @@ export function bootWorld(seedLabel: string): WorldHandle {
 
   document.querySelector('#fechar-catalogo')?.addEventListener('click', () => {
     catalogo?.classList.remove('aberto');
+  });
+
+  // ------------------------------------------------------- trabalho do dia
+  //
+  // O jogador é um trabalhador antes de ser um construtor: é o trabalho que
+  // paga o primeiro barraco. A escolha fica guardada até o reset — o dia é uma
+  // decisão, o reset é a consequência — e cada opção mostra o que custa de
+  // Fome e Sede, porque no GDD alimentação é decisão econômica e decisão exige
+  // informação.
+  const trabalhoEl = document.querySelector<HTMLElement>('#lista-trabalho');
+  const trabalhoStatus = document.querySelector<HTMLElement>('#status-trabalho');
+
+  function montarTrabalho(): void {
+    if (!trabalhoEl) return;
+    trabalhoEl.textContent = '';
+
+    const ocioso = document.createElement('button');
+    ocioso.type = 'button';
+    ocioso.className = 'item-trabalho';
+    ocioso.dataset.trabalho = '';
+    ocioso.innerHTML =
+      '<strong>Descansar</strong><span>Sem produção. Só a base de Fome e Sede.</span>';
+    trabalhoEl.appendChild(ocioso);
+
+    for (const opcao of allWork) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'item-trabalho';
+      b.dataset.trabalho = opcao.id;
+      b.innerHTML =
+        `<strong>${opcao.label}</strong>` +
+        `<span>${grupoLabel(opcao.kind)} · -${opcao.upkeep.hunger} fome · -${opcao.upkeep.thirst} sede</span>`;
+      trabalhoEl.appendChild(b);
+    }
+
+    trabalhoEl.addEventListener('click', (evento) => {
+      const alvo = (evento.target as HTMLElement).closest<HTMLElement>(
+        '.item-trabalho',
+      );
+      if (!alvo) return;
+      escolherTrabalho(alvo.dataset.trabalho || null);
+    });
+
+    pintarTrabalho();
+  }
+
+  function grupoLabel(kind: string): string {
+    if (kind === 'public') return 'Serviço público (paga salário)';
+    if (kind === 'farm') return 'Fazenda';
+    return 'Oficina';
+  }
+
+  function escolherTrabalho(id: string | null): void {
+    if (!id) {
+      atividadeEscolhida = null;
+    } else {
+      const opcao = allWork.find((w) => w.id === id);
+      if (!opcao) return;
+      // O grupo decide em qual campo a escolha entra, e só um vale por dia: o
+      // GDD dá ao jogador uma jornada, não três.
+      atividadeEscolhida =
+        opcao.kind === 'public'
+          ? { publicWork: opcao.id as never }
+          : opcao.kind === 'farm'
+            ? { farmWork: opcao.id as never }
+            : { workshopWork: opcao.id as never };
+    }
+    pintarTrabalho();
+  }
+
+  function pintarTrabalho(): void {
+    if (!trabalhoEl) return;
+    const atual =
+      atividadeEscolhida?.publicWork ??
+      atividadeEscolhida?.farmWork ??
+      atividadeEscolhida?.workshopWork ??
+      '';
+    for (const b of Array.from(
+      trabalhoEl.querySelectorAll<HTMLElement>('.item-trabalho'),
+    )) {
+      b.setAttribute('aria-pressed', String((b.dataset.trabalho || '') === atual));
+    }
+    if (trabalhoStatus) {
+      const conta = resolveUpkeep(atividadeDoDia(), {
+        hungerModifier: inventario.upkeepModifiers.hunger,
+        thirstModifier: inventario.upkeepModifiers.thirst,
+      });
+      trabalhoStatus.textContent =
+        `Hoje: ${atual ? workById(atual).label : 'descanso'} · ` +
+        `custa ${conta.total.hunger} fome e ${conta.total.thirst} sede.`;
+    }
+  }
+  montarTrabalho();
+
+  document.querySelector('#abrir-trabalho')?.addEventListener('click', () => {
+    document.querySelector('#trabalho')?.classList.toggle('aberto');
+    pintarTrabalho();
+  });
+  document.querySelector('#fechar-trabalho')?.addEventListener('click', () => {
+    document.querySelector('#trabalho')?.classList.remove('aberto');
   });
 
   // ------------------------------------------------------------ teclado (PC)
@@ -725,8 +950,6 @@ export function bootWorld(seedLabel: string): WorldHandle {
   });
 
   document.querySelector('#encerrar-dia')?.addEventListener('click', () => {
-    calendario.endDay();
-    diaVisto = calendario.day();
     virarODia();
   });
 
@@ -746,6 +969,12 @@ export function bootWorld(seedLabel: string): WorldHandle {
   window.addEventListener('orientationchange', onResize);
 
   // ------------------------------------------------------------------ laço
+  //
+  // O dia vira sozinho a cada 24 h de relógio de parede, ancorado na criação da
+  // campanha. Derivar em vez de contar é o que faz a aba fechada na quinta e
+  // reaberta no sábado valer dois dias — ver `campaign/dayClock.ts`.
+  const calendario = DayClock.start(campaign.createdAt ?? Date.now());
+
   const clock = new THREE.Clock();
   let visible = !document.hidden;
   let ultimoHud = 0;
@@ -768,14 +997,15 @@ export function bootWorld(seedLabel: string): WorldHandle {
     moverPorTeclado(delta);
 
     // O relógio de parede pode ter passado mais de um dia — a aba ficou
-    // fechada, o aparelho dormiu. `consumeElapsed` devolve **quantas** viradas,
-    // e não se virou: aplicar uma só faria o jogador perder dias de produção
-    // que o calendário já contou.
-    const viradas = calendario.consumeElapsed(diaVisto);
-    if (viradas > 0) {
-      diaVisto += viradas;
-      for (let i = 0; i < viradas; i++) virarODia();
-    }
+    // fechada, o aparelho dormiu. A comparação é contra `campaign.day`, que é o
+    // que o save guarda: quem encerrou o dia à mão já está adiantado e não leva
+    // virada extra, e quem ficou dois dias fora leva as duas. Nada disso exige
+    // um contador paralelo.
+    const alvo = calendario.day();
+    // Teto por quadro: uma campanha parada por meses rodaria centenas de
+    // resets num quadro só e travaria a aba. Alcança em alguns segundos.
+    let restantes = MAX_TICKS_POR_QUADRO;
+    while (campaign.day < alvo && restantes-- > 0) virarODia();
     // Um quadro por segundo já basta para um cronômetro em segundos, e evita
     // reescrever o DOM sessenta vezes por segundo para mudar nada.
     if (clock.getElapsedTime() - ultimoHud > 1) {
@@ -796,5 +1026,5 @@ export function bootWorld(seedLabel: string): WorldHandle {
   // Sinal para a captura automatizada saber que a cena está pronta.
   (window as unknown as { __pronto?: boolean }).__pronto = true;
 
-  return { canvas };
+  return { canvas, campaign };
 }
