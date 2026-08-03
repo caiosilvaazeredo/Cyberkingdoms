@@ -361,6 +361,42 @@ export function generateLayout(generator: WorldGenerator): WorldLayout {
   );
 }
 
+/**
+ * Devolve o layout com os caminhos de estrada preenchidos.
+ *
+ * O save guarda as pontas, o prazo e o perigo — não os duzentos mil tiles do
+ * traçado, que são função pura da seed. Isto os reconstrói na volta, para o
+ * mapa desenhar e para `isRoadTile` responder.
+ *
+ * Sem caminho a estrada continua existindo como rota: viajar não depende de
+ * pisar tile a tile. Reconstruir é para o **desenho**, e por isso a falha aqui
+ * nunca pode derrubar a campanha.
+ */
+export function ensureRoadPaths(
+  layout: WorldLayout,
+  generator: WorldGenerator,
+): WorldLayout {
+  if (layout.roads.every((r) => r.path.length > 0)) return layout;
+
+  const roads = layout.roads.map((r) => {
+    if (r.path.length > 0) return r;
+    const a = layout.byId(r.fromId);
+    const b = layout.byId(r.toId);
+    // Ponta que não existe mais (cidade removida no editor): a estrada fica
+    // sem traçado em vez de o mundo deixar de carregar.
+    if (!a || !b) return r;
+    return new Road(
+      r.fromId,
+      r.toId,
+      tracePath(generator, a.center, b.center),
+      r.travelDays,
+      r.danger,
+    );
+  });
+
+  return new WorldLayout(layout.seed, layout.settlements, roads);
+}
+
 // ============================================================ tiles
 
 /** Mesma escala do lado Dart (`_detailScale`). Um valor diferente aqui daria

@@ -83,7 +83,19 @@ export interface UpkeepBreakdown {
  */
 export function resolveUpkeep(
   activity: DailyActivity,
-  modifiers: { hungerModifier?: number; thirstModifier?: number } = {},
+  modifiers: {
+    hungerModifier?: number;
+    thirstModifier?: number;
+    /**
+     * Linhas somadas ao subtotal **antes** do clima.
+     *
+     * Existe para o que não é atividade nem item — hoje, o curso. Entrar aqui e
+     * não como campo de `DailyActivity` mantém a fórmula do GDD intacta: a
+     * ordem `Base + Trabalho + Viagem + Combate + Clima + Modificadores`
+     * continua valendo, e o extra apenas ocupa o mesmo degrau do trabalho.
+     */
+    extra?: readonly UpkeepLine[];
+  } = {},
 ): UpkeepBreakdown {
   const hungerModifier = modifiers.hungerModifier ?? 0;
   const thirstModifier = modifiers.thirstModifier ?? 0;
@@ -143,6 +155,11 @@ export function resolveUpkeep(
     const custo: Upkeep = { hunger: def.hungerCost, thirst: def.thirstCost };
     lines.push({ label: def.name, upkeep: custo });
     subtotal = addUpkeep(subtotal, custo);
+  }
+
+  for (const linha of modifiers.extra ?? []) {
+    lines.push(linha);
+    subtotal = addUpkeep(subtotal, linha.upkeep);
   }
 
   // Clima multiplica o que se acumulou até aqui.

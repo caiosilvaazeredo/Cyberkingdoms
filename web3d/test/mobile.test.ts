@@ -345,3 +345,20 @@ describe('Barra de recursos e ponteiro', () => {
     }
   });
 });
+
+describe('Mapa, mundos e carreira no HUD', () => {
+  const html = (): string =>
+    readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+
+  it('o mapa e a qualificação têm porta de entrada', () => {
+    const css = html();
+    expect(css).toContain('id="abrir-mapa"');
+    expect(css).toContain('id="lista-cursos"');
+  });
+
+  it('a ficha da construção aparece no catálogo do jogo', () => {
+    // Sem ela o catálogo diz quanto custa e não diz para quê, e com 41 peças
+    // isso é escolher pelo preço.
+    expect(html()).toContain('id="ficha-construcao"');
+  });
+});

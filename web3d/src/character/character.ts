@@ -1,3 +1,4 @@
+import { allCertificates, type Certificate } from '../career/profession';
 import { maxHpFor } from '../combat/combat';
 import { Inventory } from '../economy/inventory';
 import { itemDef } from '../economy/item';
@@ -46,6 +47,9 @@ export interface CharacterOptions {
   readonly travellingTo?: string | null;
   readonly travelDaysRemaining?: number;
   readonly statusOffset?: number;
+  readonly certificates?: Iterable<Certificate>;
+  readonly studyingCertificate?: Certificate | null;
+  readonly studyDaysRemaining?: number;
 }
 
 /** O que aconteceu com o personagem no fechamento do dia. */
@@ -85,6 +89,19 @@ export class Character {
   /** Status ganho ou perdido em jogo: combate, política, luxo. */
   statusOffset: number;
 
+  /**
+   * Certificados conquistados.
+   *
+   * São do **personagem**, não da conta: morrer permanentemente leva tudo
+   * junto. É o que dá peso à sobrevivência depois que o dinheiro já não é
+   * problema — um elite sem comida perde a carreira, não só o caixa.
+   */
+  readonly certificates: Set<Certificate>;
+
+  /** Curso em andamento, se houver. */
+  studyingCertificate: Certificate | null;
+  studyDaysRemaining: number;
+
   constructor(options: CharacterOptions) {
     this.id = options.id;
     this.name = options.name;
@@ -104,6 +121,9 @@ export class Character {
     this.travellingTo = options.travellingTo ?? null;
     this.travelDaysRemaining = options.travelDaysRemaining ?? 0;
     this.statusOffset = options.statusOffset ?? 0;
+    this.certificates = new Set(options.certificates ?? []);
+    this.studyingCertificate = options.studyingCertificate ?? null;
+    this.studyDaysRemaining = options.studyDaysRemaining ?? 0;
     this.hp = options.hp ?? maxHpFor(options.attributes);
   }
 
@@ -111,8 +131,23 @@ export class Character {
     return this.travelDaysRemaining > 0;
   }
 
+  get isStudying(): boolean {
+    return this.studyDaysRemaining > 0 && this.studyingCertificate !== null;
+  }
+
+  /**
+   * Estudar não bloqueia agir.
+   *
+   * Viajar bloqueia porque o personagem está fisicamente na estrada. O curso é
+   * noturno: ele consome o dia de **trabalho**, não o dia inteiro — quem estuda
+   * ainda constrói, negocia e cuida do terreno.
+   */
   get canAct(): boolean {
     return !this.dead && !this.isTravelling;
+  }
+
+  get certificateList(): readonly Certificate[] {
+    return [...this.certificates];
   }
 
   get maxHp(): number {
@@ -234,6 +269,9 @@ export class Character {
       travellingTo: this.travellingTo,
       travelDaysRemaining: this.travelDaysRemaining,
       statusOffset: this.statusOffset,
+      certificates: [...this.certificates],
+      studyingCertificate: this.studyingCertificate,
+      studyDaysRemaining: this.studyDaysRemaining,
     };
   }
 
@@ -268,6 +306,18 @@ export class Character {
       travellingTo: (json.travellingTo as string | null) ?? null,
       travelDaysRemaining: inteiro(json.travelDaysRemaining, 0),
       statusOffset: inteiro(json.statusOffset, 0),
+      // Certificado desconhecido é descartado em vez de derrubar o save: um
+      // curso removido numa versão futura não pode matar a campanha.
+      certificates: (Array.isArray(json.certificates) ? json.certificates : [])
+        .filter((c): c is Certificate =>
+          allCertificates.some((d) => d.id === c),
+        ),
+      studyingCertificate: allCertificates.some(
+        (d) => d.id === json.studyingCertificate,
+      )
+        ? (json.studyingCertificate as Certificate)
+        : null,
+      studyDaysRemaining: inteiro(json.studyDaysRemaining, 0),
     });
   }
 }

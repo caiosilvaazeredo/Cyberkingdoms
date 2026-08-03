@@ -127,7 +127,7 @@
         border-color: rgba(140, 240, 200, 0.7);
       }
 
-      #sair, #encerrar-dia {
+      #sair, #encerrar-dia, #abrir-mapa {
         width: 100%;
         min-height: var(--toque);
         margin-top: 4px;
@@ -139,6 +139,46 @@
         cursor: pointer;
       }
       #encerrar-dia { background: rgba(255, 210, 130, 0.16); }
+      #abrir-mapa { background: rgba(140, 190, 255, 0.16); }
+
+      /* ------------------------------------------------------------ mapa */
+      .mapa-alvo { margin: 6px 0; }
+      .mapa {
+        width: 100%; height: auto; display: block;
+        border: 1px solid var(--borda); border-radius: 12px;
+        background: radial-gradient(circle at 50% 50%, #14201d 0%, #0b1220 70%);
+      }
+      .mapa-cidade { cursor: pointer; }
+      .mapa-cidade:focus { outline: none; }
+      .mapa-cidade:focus circle { stroke: #9ff0cf; stroke-width: 4; }
+      .mapa-nome {
+        fill: #d6e4dd; font-size: 17px; opacity: 0.55;
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+      }
+      .mapa-nome.capital { font-size: 22px; opacity: 0.85; }
+      .mapa-legenda { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
+      .mapa-chip {
+        display: inline-flex; align-items: center; gap: 5px;
+        padding: 3px 8px; border-radius: 999px;
+        background: rgba(255, 255, 255, 0.05);
+        font-size: 10px; opacity: 0.75;
+      }
+      .mapa-chip i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+      .mapa-ficha {
+        display: flex; flex-direction: column; gap: 2px;
+        padding: 9px 11px; margin-top: 6px;
+        border: 1px solid rgba(140, 240, 200, 0.35); border-radius: 10px;
+        background: rgba(90, 200, 160, 0.08); font-size: 11px; line-height: 1.45;
+      }
+      .mapa-ficha strong { color: #9ff0cf; font-size: 12px; }
+      .mapa-ficha span { opacity: 0.7; }
+      .mapa-vagas { color: #ffd28a; opacity: 0.85 !important; }
+
+      /* ------------------------------------------------- editor de mundo */
+      .editor { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+      .campo-linha { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+      .campo-linha span { flex: 0 0 84px; font-size: 10px; opacity: 0.6; }
+      .campo-linha input { flex: 1; min-height: 38px; font-size: 13px; }
 
       /* ---------------------------------------------------------- telas */
 
@@ -527,7 +567,33 @@
         background: rgba(255, 255, 255, 0.04);
         color: var(--texto); font: inherit; text-align: left; cursor: pointer;
       }
-      .item-trabalho span { font-size: 10px; opacity: 0.6; }
+      .item-trabalho span, .item-curso span { font-size: 10px; opacity: 0.6; }
+      .item-trabalho em, .item-curso em {
+        font-style: normal; font-size: 10px; line-height: 1.4; opacity: 0.42;
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .item-trabalho.bloqueado { opacity: 0.4; cursor: not-allowed; }
+      .item-trabalho.bloqueado em { color: #ffb0b0; opacity: 0.75; }
+
+      #trabalho h3 {
+        margin: 12px 0 6px; font-size: 11px; letter-spacing: 0.12em; opacity: 0.7;
+      }
+      #lista-cursos { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 6px; }
+      .item-curso {
+        display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+        min-height: var(--toque); padding: 8px;
+        border: 1px solid var(--borda); border-radius: 10px;
+        background: rgba(140, 190, 255, 0.08);
+        color: var(--texto); font: inherit; text-align: left; cursor: pointer;
+      }
+      .item-curso:disabled { cursor: not-allowed; opacity: 0.45; }
+      .item-curso.concluido {
+        background: rgba(90, 200, 160, 0.2);
+        border-color: rgba(140, 240, 200, 0.6);
+        opacity: 0.8;
+      }
+      .curso-andamento { margin: 0; font-size: 11px; color: #9ff0cf; }
       .item-trabalho[aria-pressed="true"] {
         background: rgba(255, 210, 130, 0.28);
         border-color: rgba(255, 210, 130, 0.7);
@@ -747,6 +813,10 @@
       </div>
       <p id="status-trabalho"></p>
       <div id="lista-trabalho"></div>
+      <!-- Os cursos ficam junto das vagas: a decisão é a mesma — abrir mão de
+           dias de salário agora para ganhar mais depois. -->
+      <h3>QUALIFICAÇÃO</h3>
+      <div id="lista-cursos"></div>
     </aside>
 
     <aside id="catalogo">
@@ -780,6 +850,7 @@
              mecânica de sobrevivência conhecida — dormir — e a única forma de
              o jogador ver uma obra de três dias terminar sem esperar três
              dias de verdade. -->
+        <button id="abrir-mapa" type="button">MAPA DO MUNDO</button>
         <button id="encerrar-dia" type="button">ENCERRAR O DIA</button>
         <button id="sair" type="button">SAIR PARA O MENU</button>
 

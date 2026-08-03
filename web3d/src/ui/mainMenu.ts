@@ -50,6 +50,12 @@ export function createMainMenu(deps: MainMenuDeps): Screen {
     attrs: { type: 'button' },
   });
 
+  const mundos = el('button', {
+    className: 'secundario',
+    text: 'MUNDOS',
+    attrs: { type: 'button' },
+  });
+
   const config = el('button', {
     className: 'secundario',
     text: 'CONFIGURAÇÕES',
@@ -72,7 +78,7 @@ export function createMainMenu(deps: MainMenuDeps): Screen {
       }),
       el('div', {
         className: 'acoes',
-        children: [continuar, novo, modos, config],
+        children: [continuar, novo, modos, mundos, config],
       }),
       saveList,
       el('p', {
@@ -129,6 +135,7 @@ export function createMainMenu(deps: MainMenuDeps): Screen {
   });
   novo.addEventListener('click', () => deps.onNewCampaign());
   modos.addEventListener('click', () => void deps.router.push('modos'));
+  mundos.addEventListener('click', () => void deps.router.push('mundos'));
   config.addEventListener('click', () => void deps.router.push('config'));
 
   return {

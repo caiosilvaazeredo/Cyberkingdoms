@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import fixture from './rules-fixture.json';
 
 import { DeterministicRandom, hashLabel } from '../src/core/rng';
-import { generateLayout } from '../src/world/layout';
+import { WorldLayout, generateLayout } from '../src/world/layout';
 import { World } from '../src/world/world';
 import { WorldGenerator } from '../src/world/worldGen';
 import { AttributeSet, type Attribute } from '../src/character/attributes';
@@ -401,6 +401,26 @@ describe('Campanha inteira, dez resets', () => {
 
   const caso = (ref as unknown as { campaign: CampaignCase }).campaign;
 
+  /**
+   * Normaliza a linha do salário.
+   *
+   * As profissões são uma **extensão do cliente TypeScript**: o Dart não as
+   * tem. Elas mudam o texto da linha de salário — "Catador: +45 créditos de
+   * salário" no lugar de "Salário público: +45 créditos" — e mudam o **valor**
+   * para quem exerce profissão qualificada, porque o fator da profissão
+   * multiplica o piso do governador.
+   *
+   * A referência só exercita o Lixão, cujo fator é 1, então o número continua
+   * batendo e é isso que o teste confere. Trocar a atividade da referência para
+   * uma profissão qualificada faria os valores divergirem — corretamente, já
+   * que o Dart não sabe da regra. O resto do reset segue conferido palavra por
+   * palavra contra o Dart.
+   */
+  const normalizarSalario = (evento: string): string =>
+    /\+\d+ créditos de salário\.$/.test(evento)
+      ? `Salário público: +${evento.match(/\+(\d+)/)![1]} créditos.`
+      : evento;
+
   const criar = (): Campaign =>
     Campaign.create({
       id: 'ref',
@@ -440,7 +460,7 @@ describe('Campanha inteira, dez resets', () => {
 
       expect({
         day: report.day,
-        events: report.events,
+        events: report.events.map(normalizarSalario),
         upkeepTotal: report.upkeep.total,
         produced: report.produced,
         completedQuests: report.completedQuests.map((q) => q.id),
@@ -469,5 +489,43 @@ describe('Campanha inteira, dez resets', () => {
     const b = runDailyTick(recarregada, {});
     expect(b.events).toEqual(a.events);
     expect(recarregada.character.credits).toBe(campaign.character.credits);
+  });
+});
+
+describe('Tamanho do save', () => {
+  it('o layout não guarda o traçado das estradas', () => {
+    // Guardá-lo custava 4 MB por mundo — duzentos mil tiles — e estourava a
+    // cota do navegador no primeiro mundo salvo. O caminho é função pura da
+    // seed, e volta na leitura.
+    const layout = generateLayout(WorldGenerator.fromLabel('verde'));
+    const bytes = JSON.stringify(layout.toJson()).length;
+    expect(bytes).toBeLessThan(64 * 1024);
+  });
+
+  it('as estradas voltam com traçado depois de recarregar', () => {
+    // Sem reconstruir, o mapa desenharia cidades soltas e `isRoadTile` mentiria.
+    const original = generateLayout(WorldGenerator.fromLabel('verde'));
+    const seed = hashLabel('verde');
+    const world = World.restore(seed, WorldLayout.fromJson(original.toJson()));
+
+    expect(world.layout.roads).toHaveLength(original.roads.length);
+    for (let i = 0; i < original.roads.length; i++) {
+      expect(world.layout.roads[i]!.path.length).toBe(
+        original.roads[i]!.path.length,
+      );
+    }
+  });
+
+  it('uma campanha inteira cabe com folga no armazenamento', () => {
+    // O navegador dá ~5 MB no total, e ali moram várias campanhas mais os
+    // mundos montados à mão.
+    const c = Campaign.create({
+      id: 'tamanho',
+      seedLabel: 'verde',
+      characterName: 'Medida',
+      now: 0,
+    });
+    const bytes = JSON.stringify(c.toJson()).length;
+    expect(bytes).toBeLessThan(512 * 1024);
   });
 });

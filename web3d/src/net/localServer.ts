@@ -8,6 +8,7 @@ import {
   type SaveSlot,
   type ServerInfo,
   type SessionHandle,
+  type WorldBlueprint,
 } from './gameServer';
 
 /**
@@ -25,6 +26,7 @@ import {
 
 const STORAGE_PREFIX = 'ck.save.';
 const INDEX_KEY = 'ck.saves';
+const WORLDS_KEY = 'ck.worlds';
 
 /** Armazenamento que aceita ser substituído nos testes. */
 export interface KeyValueStore {
@@ -101,6 +103,38 @@ export class LocalGameServer implements GameServer {
         online: true,
       };
     });
+  }
+
+  async listWorlds(): Promise<readonly WorldBlueprint[]> {
+    await tick();
+    return this.readWorlds().sort((a, b) => b.createdAt - a.createdAt);
+  }
+
+  async saveWorld(blueprint: WorldBlueprint): Promise<WorldBlueprint> {
+    await tick();
+    const outros = this.readWorlds().filter((w) => w.id !== blueprint.id);
+    this.writeWorlds([...outros, blueprint]);
+    return blueprint;
+  }
+
+  async deleteWorld(id: string): Promise<void> {
+    await tick();
+    this.writeWorlds(this.readWorlds().filter((w) => w.id !== id));
+  }
+
+  private readWorlds(): WorldBlueprint[] {
+    const raw = this.store.getItem(WORLDS_KEY);
+    if (!raw) return [];
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      return Array.isArray(parsed) ? (parsed as WorldBlueprint[]) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private writeWorlds(worlds: WorldBlueprint[]): void {
+    this.store.setItem(WORLDS_KEY, JSON.stringify(worlds));
   }
 
   async listSaves(): Promise<readonly SaveSlot[]> {

@@ -9,6 +9,8 @@ import { createNewCampaign } from './ui/newCampaign';
 import { createServerBrowser } from './ui/serverBrowser';
 import { createSettingsScreen } from './ui/settingsScreen';
 import { createDevScreen } from './ui/devScreen';
+import { createMapScreen } from './ui/mapScreen';
+import { createWorldEditor } from './ui/worldEditor';
 import { ScreenRouter } from './ui/screens';
 
 /**
@@ -43,6 +45,8 @@ const router = new ScreenRouter(host);
 const PENDENTE = 'ck.entrar';
 
 let montadoCom: string | null = null;
+/** A campanha aberta, para as telas que a leem sem poder montá-la. */
+let campanhaAtual: Campaign | null = null;
 
 /**
  * Salva a campanha no servidor.
@@ -97,6 +101,7 @@ async function entrar(
 
   hud.hidden = false;
   host.hidden = true;
+  campanhaAtual = campanha;
   if (montadoCom === null) {
     bootWorld(campanha, { onPersist: persistidor(slotId) });
     montadoCom = seedLabel;
@@ -201,6 +206,30 @@ router.register(
 
 router.register(createSettingsScreen({ store: settings(), router }));
 router.register(createDevScreen({ router }));
+router.register(
+  createMapScreen({
+    router,
+    campaign: () => campanhaAtual,
+    onClose() {
+      // Voltou do mapa: se há mundo montado, o lugar de volta é o jogo.
+      if (campanhaAtual && montadoCom !== null) {
+        hud.hidden = false;
+        host.hidden = true;
+        return;
+      }
+      void router.reset('menu');
+    },
+  }),
+);
+router.register(createWorldEditor({ server, router }));
+
+// O mapa é aberto pelo HUD, que vive fora do roteador — o mundo 3D continua
+// montado atrás dele, e voltar não recarrega nada.
+window.addEventListener('ck:mapa', () => {
+  hud.hidden = true;
+  host.hidden = false;
+  void router.reset('mapa');
+});
 
 // ------------------------------------------------------------------ abertura
 

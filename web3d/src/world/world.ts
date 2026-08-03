@@ -1,5 +1,5 @@
 import { ChunkCoord, CHUNK_SIZE, TileCoord } from './coords';
-import { WorldLayout, generateLayout, tileAt } from './layout';
+import { WorldLayout, ensureRoadPaths, generateLayout, tileAt } from './layout';
 import type { Settlement } from './settlement';
 import { hasResource, type WorldTile } from './tile';
 import { WorldGenerator } from './worldGen';
@@ -79,7 +79,11 @@ export class World {
    * salvar o que já se sabe calcular, e o arquivo cresceria sem limite.
    */
   static restore(seed: number, layout: WorldLayout): World {
-    return new World(new WorldGenerator(seed), layout);
+    const generator = new WorldGenerator(seed);
+    // O save não guarda o traçado das estradas — ele é função pura da seed, e
+    // guardá-lo custava 4 MB por mundo. Reconstruir aqui é o que faz o mapa
+    // continuar desenhando as rotas depois de recarregar.
+    return new World(generator, ensureRoadPaths(layout, generator));
   }
 
   get seed(): number {

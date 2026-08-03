@@ -111,9 +111,19 @@ export class Campaign {
     seedLabel: string;
     characterName: string;
     now?: number;
+    /**
+     * Planta montada à mão, do editor de mundos ou de um servidor.
+     *
+     * Quando vem, substitui o layout sorteado — o terreno continua saindo da
+     * seed, então o mapa é o mesmo para todo mundo que usar a mesma planta. É
+     * o mesmo caminho que um mundo de servidor vai percorrer.
+     */
+    layout?: WorldLayout;
   }): Campaign {
     const seed = hashLabel(options.seedLabel);
-    const world = World.fromSeed(seed);
+    const world = options.layout
+      ? World.restore(seed, options.layout)
+      : World.fromSeed(seed);
     const rng = new DeterministicRandom(seed).fork('campaign');
 
     // O jogador começa numa capital sorteada.

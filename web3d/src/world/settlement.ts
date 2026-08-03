@@ -154,7 +154,19 @@ export interface RoadJson {
   toId: string;
   travelDays: number;
   danger: number;
-  path: { x: number; y: number }[];
+  /**
+   * Tiles atravessados. **Ausente no save**, e de propósito.
+   *
+   * O caminho é função pura das duas pontas e do terreno, e o terreno vem da
+   * seed: `tracePath` reproduz o mesmo traçado sempre. Guardá-lo custava 4 MB
+   * por mundo — duzentos mil tiles — contra 4,7 KB sem ele, e estourava a cota
+   * do navegador no primeiro mundo salvo.
+   *
+   * O que **não** dá para derivar fica: `travelDays` sai do comprimento e
+   * `danger` sai do sorteio, e os dois precisam sobreviver a uma mudança na
+   * fórmula de traçado.
+   */
+  path?: { x: number; y: number }[];
 }
 
 /**
@@ -189,7 +201,6 @@ export class Road {
       toId: this.toId,
       travelDays: this.travelDays,
       danger: this.danger,
-      path: this.path.map((t) => t.toJson()),
     };
   }
 

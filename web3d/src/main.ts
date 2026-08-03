@@ -28,7 +28,18 @@ import type { Campaign } from './campaign/campaign';
 import { runDailyTick } from './campaign/dailyTick';
 import { QuestLog, objectiveLabel, objectiveProgress } from './campaign/quest';
 import { resolveUpkeep, type DailyActivity } from './survival/dailyActivity';
-import { allWork, workById } from './survival/survival';
+import { workById } from './survival/survival';
+import {
+  STUDY_UPKEEP,
+  allCertificates,
+  allProfessions,
+  canEnrol,
+  canPractise,
+  certificateDef,
+  dailyWage,
+  professionForWork,
+  type Certificate,
+} from './career/profession';
 import {
   allBuildings,
   buildingsAvailableAt,
@@ -795,14 +806,31 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
       '<strong>Descansar</strong><span>Sem produção. Só a base de Fome e Sede.</span>';
     trabalhoEl.appendChild(ocioso);
 
-    for (const opcao of allWork) {
+    const governo = campaign.governmentOf(
+      campaign.currentSettlementId ?? plot.settlementId,
+    );
+
+    for (const profissao of allProfessions) {
+      const opcao = workById(profissao.work);
+      const bloqueio = prefs.current.devMode
+        ? { ok: true as const }
+        : canPractise(profissao, {
+            certificates: character.certificates,
+            level: character.level,
+          });
+
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'item-trabalho';
-      b.dataset.trabalho = opcao.id;
+      b.className = bloqueio.ok ? 'item-trabalho' : 'item-trabalho bloqueado';
+      b.dataset.trabalho = profissao.work;
+      b.disabled = !bloqueio.ok;
+      // O motivo do bloqueio aparece na própria vaga: uma opção cinza sem
+      // explicação vira mistério, e o jogador não descobre que existe um curso.
       b.innerHTML =
-        `<strong>${opcao.label}</strong>` +
-        `<span>${grupoLabel(opcao.kind)} · -${opcao.upkeep.hunger} fome · -${opcao.upkeep.thirst} sede</span>`;
+        `<strong>${profissao.label}</strong>` +
+        `<span>${grupoLabel(opcao.kind)} · ${dailyWage(profissao, governo.publicWage)} cr/dia · ` +
+        `-${opcao.upkeep.hunger} fome · -${opcao.upkeep.thirst} sede</span>` +
+        `<em>${bloqueio.ok ? profissao.description : bloqueio.reason}</em>`;
       trabalhoEl.appendChild(b);
     }
 
@@ -810,11 +838,86 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
       const alvo = (evento.target as HTMLElement).closest<HTMLElement>(
         '.item-trabalho',
       );
-      if (!alvo) return;
+      if (!alvo || alvo.hasAttribute('disabled')) return;
       escolherTrabalho(alvo.dataset.trabalho || null);
     });
 
+    montarCursos();
     pintarTrabalho();
+  }
+
+  /**
+   * A lista de cursos.
+   *
+   * Fica junto do trabalho de propósito: a decisão é a mesma — abrir mão de
+   * dias de salário agora para ganhar mais depois. Numa tela separada, o
+   * jogador olharia as vagas bloqueadas e concluiria que o jogo é assim.
+   */
+  const cursosEl = document.querySelector<HTMLElement>('#lista-cursos');
+  function montarCursos(): void {
+    if (!cursosEl) return;
+    cursosEl.textContent = '';
+
+    if (character.isStudying && character.studyingCertificate) {
+      const curso = certificateDef(character.studyingCertificate);
+      cursosEl.innerHTML =
+        `<p class="curso-andamento">Cursando ${curso.label} — faltam ` +
+        `${character.studyDaysRemaining} dia(s). O dia de trabalho vai para o estudo.</p>`;
+      return;
+    }
+
+    for (const curso of allCertificates) {
+      const tem = character.certificates.has(curso.id);
+      const check = canEnrol(curso, {
+        certificates: character.certificates,
+        credits: character.credits,
+        attributes: character.attributes,
+        studying: character.isStudying,
+      });
+
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = tem ? 'item-curso concluido' : 'item-curso';
+      b.disabled = tem || !check.ok;
+      b.innerHTML =
+        `<strong>${curso.label}${tem ? ' ✓' : ''}</strong>` +
+        `<span>${
+          tem
+            ? 'Concluído.'
+            : check.ok
+              ? `${check.tuition.toLocaleString('pt-BR')} cr · ${check.days} dia(s) de curso`
+              : check.reason
+        }</span>` +
+        `<em>${curso.description}</em>`;
+      if (!tem && check.ok) {
+        b.addEventListener('click', () => matricular(curso.id));
+      }
+      cursosEl.appendChild(b);
+    }
+  }
+
+  function matricular(id: Certificate): void {
+    const curso = certificateDef(id);
+    const check = canEnrol(curso, {
+      certificates: character.certificates,
+      credits: character.credits,
+      attributes: character.attributes,
+      studying: character.isStudying,
+    });
+    if (!check.ok) return;
+
+    // A matrícula é cobrada na hora e não é devolvida: desistir do curso custa
+    // o dinheiro, que é o que impede matricular e cancelar para testar.
+    character.credits -= check.tuition;
+    character.studyingCertificate = id;
+    character.studyDaysRemaining = check.days;
+    // Estudar ocupa o dia de trabalho — a escolha de emprego sai de cena.
+    atividadeEscolhida = null;
+
+    atualizarRecursos();
+    montarCursos();
+    pintarTrabalho();
+    options.onPersist?.(campaign);
   }
 
   function grupoLabel(kind: string): string {
@@ -827,8 +930,7 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
     if (!id) {
       atividadeEscolhida = null;
     } else {
-      const opcao = allWork.find((w) => w.id === id);
-      if (!opcao) return;
+      const opcao = workById(id);
       // O grupo decide em qual campo a escolha entra, e só um vale por dia: o
       // GDD dá ao jogador uma jornada, não três.
       atividadeEscolhida =
@@ -857,10 +959,16 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
       const conta = resolveUpkeep(atividadeDoDia(), {
         hungerModifier: inventario.upkeepModifiers.hunger,
         thirstModifier: inventario.upkeepModifiers.thirst,
+        extra: character.isStudying
+          ? [{ label: 'Curso', upkeep: STUDY_UPKEEP }]
+          : [],
       });
+      const profissao = atual ? professionForWork(atual) : null;
+      const oQue = character.isStudying
+        ? 'curso'
+        : (profissao?.label ?? (atual ? workById(atual).label : 'descanso'));
       trabalhoStatus.textContent =
-        `Hoje: ${atual ? workById(atual).label : 'descanso'} · ` +
-        `custa ${conta.total.hunger} fome e ${conta.total.thirst} sede.`;
+        `Hoje: ${oQue} · custa ${conta.total.hunger} fome e ${conta.total.thirst} sede.`;
     }
   }
   montarTrabalho();
@@ -951,6 +1059,10 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
 
   document.querySelector('#encerrar-dia')?.addEventListener('click', () => {
     virarODia();
+  });
+
+  document.querySelector('#abrir-mapa')?.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('ck:mapa'));
   });
 
   document.querySelector('#sair')?.addEventListener('click', () => {

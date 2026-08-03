@@ -13,6 +13,12 @@ import { itemDef } from '../economy/item';
 import { TERM_LENGTH_IN_DAYS } from '../politics/government';
 import { workById } from '../survival/survival';
 import {
+  STUDY_UPKEEP,
+  certificateDef,
+  dailyWage,
+  professionForWork,
+} from '../career/profession';
+import {
   resolveUpkeep,
   type CombatOutcome,
   type DailyActivity,
@@ -54,6 +60,7 @@ export function runDailyTick(
 ): TickReport {
   const events: string[] = [];
   const character = campaign.character;
+  let estudando = false;
 
   if (character.dead) {
     return {
@@ -102,6 +109,33 @@ export function runDailyTick(
     }
   }
 
+  // --- 1b. Curso em andamento ----------------------------------------------
+  //
+  // O curso consome o **dia de trabalho**, não o dia inteiro: quem estuda ainda
+  // constrói e negocia. Por isso ele zera o trabalho da atividade e cobra o
+  // próprio custo, em vez de bloquear o personagem como a viagem faz.
+  if (character.isStudying) {
+    character.studyDaysRemaining--;
+    atividade = {
+      ...atividade,
+      publicWork: null,
+      farmWork: null,
+      workshopWork: null,
+    };
+    estudando = true;
+
+    if (character.studyDaysRemaining <= 0 && character.studyingCertificate) {
+      const certificado = certificateDef(character.studyingCertificate);
+      character.certificates.add(certificado.id);
+      character.studyingCertificate = null;
+      events.push(`CERTIFICADO: ${certificado.label}.`);
+    } else {
+      events.push(
+        `Estudando — faltam ${character.studyDaysRemaining} dia(s) de curso.`,
+      );
+    }
+  }
+
   // --- 2. Combate -----------------------------------------------------------
   const combates: CombatOutcome[] = [...(atividade.combats ?? [])];
   let roadCombat: CombatReport | null = null;
@@ -139,6 +173,11 @@ export function runDailyTick(
   const breakdown = resolveUpkeep(atividade, {
     hungerModifier: gear.hunger + (emCasa ? doTerreno.hunger : 0),
     thirstModifier: gear.thirst + (emCasa ? doTerreno.thirst : 0),
+    // Estudar custa menos que trabalhar e mais que descansar. Custar zero
+    // faria o curso ser sempre melhor que folgar, e a decisão sumiria.
+    extra: estudando
+      ? [{ label: 'Curso', upkeep: STUDY_UPKEEP }]
+      : [],
   });
   const outcome = character.applyUpkeep(breakdown.total);
 
@@ -303,10 +342,22 @@ function payWages(
   const settlementId = campaign.currentSettlementId;
   if (!settlementId) return;
 
-  const pago = campaign.governmentOf(settlementId).payWages(1);
+  const government = campaign.governmentOf(settlementId);
+  const profissao = professionForWork(activity.publicWork);
+
+  // O piso é o que o governador definiu; a profissão multiplica. É o que amarra
+  // carreira e política: quem estudou tem mais a ganhar com um salário público
+  // alto, e passa a ser eleitorado que o candidato precisa convencer.
+  const devido = profissao ? dailyWage(profissao, government.publicWage) : government.publicWage;
+  const anterior = government.publicWage;
+  government.publicWage = devido;
+  const pago = government.payWages(1);
+  government.publicWage = anterior;
+
   if (pago > 0) {
     campaign.character.credits += pago;
-    events.push(`Salário público: +${pago} créditos.`);
+    const nome = profissao ? profissao.label : 'Serviço público';
+    events.push(`${nome}: +${pago} créditos de salário.`);
   } else {
     events.push('O governo não tinha caixa para pagar o salário.');
   }

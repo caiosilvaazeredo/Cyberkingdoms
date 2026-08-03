@@ -87,6 +87,29 @@ export interface ServerInfo {
   readonly online: boolean;
 }
 
+/**
+ * Um mundo montado à mão, pronto para virar mundo de servidor.
+ *
+ * É exatamente o que um servidor precisa publicar: um nome, uma seed e o
+ * layout — as cidades, as vocações e as estradas. O terreno não entra porque é
+ * função pura da seed, então dois clientes com a mesma planta veem o mesmo
+ * mapa sem trocar um byte de tile.
+ *
+ * Hoje o `LocalGameServer` guarda no navegador. Quando o servidor existir, esta
+ * mesma estrutura é o corpo do `GET /worlds` — a tela do editor e a de seleção
+ * de mundo não mudam.
+ */
+export interface WorldBlueprint {
+  readonly id: string;
+  readonly name: string;
+  readonly seedLabel: string;
+  /** `WorldLayoutJson`, mantido opaco aqui para a fronteira não depender do domínio. */
+  readonly layout: unknown;
+  readonly createdAt: number;
+  /** Quantas cidades a planta tem. Evita desserializar só para listar. */
+  readonly settlementCount: number;
+}
+
 export interface SaveSlot {
   readonly id: string;
   readonly mode: GameMode;
@@ -132,6 +155,14 @@ export interface GameServer {
 
   /** Servidores disponíveis para um modo. Vazio nos modos offline. */
   listServers(mode: GameMode): Promise<readonly ServerInfo[]>;
+
+  /** Mundos montados à mão, mais recente primeiro. */
+  listWorlds(): Promise<readonly WorldBlueprint[]>;
+
+  /** Grava ou substitui um mundo. Devolve o que ficou gravado. */
+  saveWorld(blueprint: WorldBlueprint): Promise<WorldBlueprint>;
+
+  deleteWorld(id: string): Promise<void>;
 
   /** Saves do jogador, mais recente primeiro. */
   listSaves(): Promise<readonly SaveSlot[]>;
