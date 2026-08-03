@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import fixture from './rules-fixture.json';
 
-import { DeterministicRandom } from '../src/core/rng';
+import { DeterministicRandom, hashLabel } from '../src/core/rng';
+import { generateLayout } from '../src/world/layout';
+import { World } from '../src/world/world';
+import { WorldGenerator } from '../src/world/worldGen';
 import { AttributeSet, type Attribute } from '../src/character/attributes';
 import { Character } from '../src/character/character';
 import {
@@ -18,6 +21,8 @@ import {
   type DailyActivity,
 } from '../src/survival/dailyActivity';
 import { TileCoord } from '../src/world/coords';
+import { Campaign } from '../src/campaign/campaign';
+import { runDailyTick } from '../src/campaign/dailyTick';
 
 /**
  * O contrato entre as regras em Dart e as regras em TypeScript.
@@ -273,5 +278,196 @@ describe('Dias seguidos de um personagem', () => {
         died: resultado.died,
       }).toEqual(esperado);
     }
+  });
+});
+
+describe('Layout do mundo', () => {
+  interface LayoutCase {
+    seedLabel: string;
+    settlements: {
+      id: string;
+      name: string;
+      kind: string;
+      center: { x: number; y: number };
+      vocation: string;
+      radius: number;
+      population: number;
+      capitalId: string | null;
+    }[];
+    roads: {
+      fromId: string;
+      toId: string;
+      travelDays: number;
+      danger: number;
+      lengthInTiles: number;
+      first: { x: number; y: number };
+      last: { x: number; y: number };
+    }[];
+  }
+
+  const casos = (ref as unknown as { layout: LayoutCase[] }).layout;
+
+  for (const caso of casos) {
+    it(`reproduz o layout de "${caso.seedLabel}" cidade por cidade`, () => {
+      // A ordem das chamadas ao RNG é o mapa: trocar um sorteio de lugar
+      // reescreve o mundo de toda campanha já criada. Comparar só a contagem
+      // de cidades deixaria isso passar.
+      const layout = generateLayout(
+        WorldGenerator.fromLabel(caso.seedLabel),
+      );
+      expect(layout.settlements.map((s) => s.toJson())).toEqual(caso.settlements);
+    });
+
+    it(`reproduz as estradas de "${caso.seedLabel}"`, () => {
+      const layout = generateLayout(
+        WorldGenerator.fromLabel(caso.seedLabel),
+      );
+      expect(
+        layout.roads.map((r) => ({
+          fromId: r.fromId,
+          toId: r.toId,
+          travelDays: r.travelDays,
+          danger: r.danger,
+          lengthInTiles: r.lengthInTiles,
+          first: r.path[0]!.toJson(),
+          last: r.path[r.path.length - 1]!.toJson(),
+        })),
+      ).toEqual(caso.roads);
+    });
+  }
+});
+
+describe('Resolução de tile', () => {
+  interface TileCase {
+    x: number;
+    y: number;
+    biome: string;
+    elevation: number;
+    feature: string;
+    settlementId: string | null;
+    resource: string | null;
+    resourceRichness: number;
+  }
+
+  it('reproduz bioma, relevo, feature e recurso, no urbano e no selvagem', () => {
+    // Os dois caminhos de resolução são diferentes — cidade tem grade de
+    // quarteirão, selvagem tem ruído de densidade —, então a amostra cobre os
+    // dois de propósito.
+    const world = World.fromSeed(hashLabel('contrato-dart-ts'));
+    for (const caso of (ref as unknown as { tiles: TileCase[] }).tiles) {
+      const tile = world.tileAt(caso.x, caso.y);
+      expect({
+        x: caso.x,
+        y: caso.y,
+        biome: tile.biome as string,
+        elevation: tile.elevation,
+        feature: tile.feature as string,
+        settlementId: tile.settlementId,
+        resource: tile.resource,
+        resourceRichness: tile.resourceRichness,
+      }).toEqual(caso);
+    }
+  });
+});
+
+describe('Campanha inteira, dez resets', () => {
+  interface CampaignCase {
+    initial: {
+      startSettlementId: string;
+      attributes: Record<string, number>;
+      credits: number;
+      plotId: string;
+      plotOrigin: { x: number; y: number };
+      plotName: string;
+      governmentCount: number;
+      marketCount: number;
+      visited: string[];
+    };
+    days: {
+      day: number;
+      events: string[];
+      upkeepTotal: { hunger: number; thirst: number };
+      produced: Record<string, number>;
+      completedQuests: string[];
+      credits: number;
+      hunger: number;
+      thirst: number;
+      hp: number;
+      level: string;
+      statusOffset: number;
+      inventory: Record<string, number>;
+    }[];
+  }
+
+  const caso = (ref as unknown as { campaign: CampaignCase }).campaign;
+
+  const criar = (): Campaign =>
+    Campaign.create({
+      id: 'ref',
+      seedLabel: 'contrato-dart-ts',
+      characterName: 'Referência',
+      now: 0,
+    });
+
+  it('nasce igual: capital, atributos, terreno, governos e mercados', () => {
+    const campaign = criar();
+    expect({
+      startSettlementId: campaign.character.homeSettlementId,
+      attributes: campaign.character.attributes.toJson(),
+      credits: campaign.character.credits,
+      plotId: campaign.plot.id,
+      plotOrigin: { ...campaign.plot.origin },
+      plotName: campaign.plot.name,
+      governmentCount: campaign.governments.size,
+      marketCount: campaign.world.layout.settlements
+        .map((s) => campaign.marketsAt(s.id).length)
+        .reduce((a, b) => a + b, 0),
+      visited: [...campaign.visitedSettlements].sort(),
+    }).toEqual(caso.initial);
+  });
+
+  it('roda dez resets com os mesmos eventos e o mesmo estado', () => {
+    // O teste mais valioso do arquivo: amarra mundo, personagem, terreno,
+    // mercados, governos, quests e sobrevivência de uma vez. A **ordem** das
+    // etapas do reset é o que um total isolado não pega — mover o pagamento de
+    // salário, ou avaliar quest antes da promoção, muda o resultado sem mudar
+    // nenhuma fórmula.
+    const campaign = criar();
+
+    caso.days.forEach((esperado, i) => {
+      const activity: DailyActivity = i % 2 === 0 ? { publicWork: 'dump' } : {};
+      const report = runDailyTick(campaign, activity);
+
+      expect({
+        day: report.day,
+        events: report.events,
+        upkeepTotal: report.upkeep.total,
+        produced: report.produced,
+        completedQuests: report.completedQuests.map((q) => q.id),
+        credits: campaign.character.credits,
+        hunger: campaign.character.hunger,
+        thirst: campaign.character.thirst,
+        hp: campaign.character.hp,
+        level: campaign.character.level as string,
+        statusOffset: campaign.character.statusOffset,
+        inventory: Object.fromEntries(campaign.character.inventory.stacks),
+      }).toEqual(esperado);
+    });
+  });
+
+  it('sobrevive à ida e volta pelo JSON no meio da campanha', () => {
+    // Um save que não recarrega igual é pior que um save que falha: o jogador
+    // só descobre depois de perder o progresso.
+    const campaign = criar();
+    for (let i = 0; i < 4; i++) runDailyTick(campaign, { publicWork: 'dump' });
+
+    const recarregada = Campaign.fromJson(campaign.toJson());
+    expect(recarregada.toJson()).toEqual(campaign.toJson());
+
+    // E continua rodando igual a partir dali.
+    const a = runDailyTick(campaign, {});
+    const b = runDailyTick(recarregada, {});
+    expect(b.events).toEqual(a.events);
+    expect(recarregada.character.credits).toBe(campaign.character.credits);
   });
 });

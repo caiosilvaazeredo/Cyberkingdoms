@@ -11,6 +11,10 @@ import 'package:cyberkingdoms/domain/economy/recipe.dart';
 import 'package:cyberkingdoms/domain/survival/daily_activity.dart';
 import 'package:cyberkingdoms/domain/survival/survival_tables.dart';
 import 'package:cyberkingdoms/domain/world/coords.dart';
+import 'package:cyberkingdoms/domain/campaign/campaign.dart';
+import 'package:cyberkingdoms/domain/campaign/daily_tick.dart';
+import 'package:cyberkingdoms/domain/world/world.dart';
+import 'package:cyberkingdoms/domain/world/world_gen.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Exporta a saída das **regras** para `web3d/test/rules-fixture.json`.
@@ -35,6 +39,9 @@ void main() {
       'upkeep': _upkeep(),
       'recipeYields': _recipeYields(),
       'characterDays': _characterDays(),
+      'layout': _layout(),
+      'tiles': _tiles(),
+      'campaign': _campaign(),
     };
 
     final file = File('web3d/test/rules-fixture.json');
@@ -348,4 +355,129 @@ List<Map<String, Object>> _characterDays() {
     });
   }
   return dias;
+}
+
+
+/// O layout é sorteado numa sequência longa de chamadas ao RNG, e a **ordem**
+/// delas é o mapa. Trocar um sorteio de lugar reescreve o mundo de toda
+/// campanha já criada, então a referência compara cidade por cidade — nome,
+/// centro, vocação, raio e população — e estrada por estrada.
+List<Map<String, Object?>> _layout() {
+  final out = <Map<String, Object?>>[];
+  for (final label in ['contrato-dart-ts', 'verde', 'krom']) {
+    final seed = DeterministicRandom.hashLabel(label);
+    final layout = WorldGenerator(seed: seed).generateLayout();
+    out.add({
+      'seedLabel': label,
+      'settlements': layout.settlements.map((s) => s.toJson()).toList(),
+      'roads': layout.roads
+          .map((r) => {
+                'fromId': r.fromId,
+                'toId': r.toId,
+                'travelDays': r.travelDays,
+                'danger': r.danger,
+                'lengthInTiles': r.lengthInTiles,
+                'first': r.path.first.toJson(),
+                'last': r.path.last.toJson(),
+              })
+          .toList(),
+    });
+  }
+  return out;
+}
+
+/// Tiles resolvidos: bioma, relevo, feature, recurso. Amostra urbana e
+/// selvagem, porque os dois caminhos de resolução são diferentes.
+List<Map<String, Object?>> _tiles() {
+  const label = 'contrato-dart-ts';
+  final seed = DeterministicRandom.hashLabel(label);
+  final world = World.fromSeed(seed);
+  final capital = world.layout.capitals.first;
+
+  final pontos = <TileCoord>[
+    // Selvagem, espalhado.
+    for (var i = 0; i < 40; i++)
+      TileCoord((i * 137) % 1201 - 600, (i * 89) % 1199 - 600),
+    // Urbano: centro, viela, quarteirão e periferia da primeira capital.
+    capital.center,
+    capital.center.translate(4, 0),
+    capital.center.translate(2, 3),
+    capital.center.translate(0, 20),
+  ];
+
+  return pontos.map((t) {
+    final tile = world.tileAt(t.x, t.y);
+    return {
+      'x': t.x,
+      'y': t.y,
+      'biome': tile.biome.name,
+      'elevation': tile.elevation,
+      'feature': tile.feature.name,
+      'settlementId': tile.settlementId,
+      'resource': tile.resource?.name,
+      'resourceRichness': tile.resourceRichness,
+    };
+  }).toList();
+}
+
+
+/// Uma campanha inteira rodando dez resets.
+///
+/// É o teste mais valioso do arquivo: ele amarra tudo — mundo, personagem,
+/// terreno, mercados, governos, quests e sobrevivência — e a **ordem** das
+/// etapas do reset é justamente o que um total isolado não pega. Trocar o
+/// pagamento de salário de lugar, ou avaliar quest antes da promoção, muda o
+/// resultado sem mudar nenhuma fórmula.
+Map<String, Object?> _campaign() {
+  final campaign = Campaign.create(
+    id: 'ref',
+    seedLabel: 'contrato-dart-ts',
+    characterName: 'Referência',
+  );
+
+  final inicial = {
+    'startSettlementId': campaign.character.homeSettlementId,
+    'attributes': campaign.character.attributes.toJson(),
+    'credits': campaign.character.credits,
+    'plotId': campaign.plot.id,
+    'plotOrigin': {'x': campaign.plot.origin.x, 'y': campaign.plot.origin.y},
+    'plotName': campaign.plot.name,
+    'governmentCount': campaign.governments.length,
+    'marketCount': campaign.world.layout.settlements
+        .map((s) => campaign.marketsAt(s.id).length)
+        .fold<int>(0, (a, b) => a + b),
+    'visited': campaign.visitedSettlements.toList()..sort(),
+  };
+
+  const tick = DailyTick();
+  final dias = <Map<String, Object?>>[];
+  for (var i = 0; i < 10; i++) {
+    // Alterna trabalho público e ocioso: exercita salário, produção e a conta
+    // de sobrevivência com e sem trabalho.
+    final activity = i.isEven
+        ? const DailyActivity(publicWork: PublicWork.dump)
+        : const DailyActivity();
+    final report = tick.run(campaign, activity);
+    dias.add({
+      'day': report.day,
+      'events': report.events,
+      'upkeepTotal': _upkeepJson(report.upkeep.total),
+      'produced': {
+        for (final e in report.produced.entries) e.key.name: e.value,
+      },
+      'completedQuests': report.completedQuests.map((q) => q.id).toList(),
+      'credits': campaign.character.credits,
+      'hunger': campaign.character.hunger,
+      'thirst': campaign.character.thirst,
+      'hp': campaign.character.hp,
+      'level': campaign.character.level.name,
+      'statusOffset': campaign.character.statusOffset,
+      'inventory': {
+        for (final e in campaign.character.inventory.stacks.entries)
+          e.key.name: e.value,
+      },
+    });
+  }
+
+  return {'initial': inicial, 'days': dias};
 }

@@ -1,5 +1,9 @@
 import type { Inventory } from '../economy/inventory';
 import {
+  VillageIdentity,
+  type VillageIdentityJson,
+} from './villageIdentity';
+import {
   buildingDef,
   citizenRank,
   flatMultiplierFor,
@@ -277,6 +281,7 @@ export interface PlotJson {
   width: number;
   height: number;
   buildings: PlacedBuildingJson[];
+  identity?: VillageIdentityJson;
 }
 
 /** Tamanho do terreno por nível de cidadão. */
@@ -296,6 +301,14 @@ export function plotSizeForLevel(level: CitizenLevel): [number, number] {
 export class Plot {
   private readonly list: PlacedBuilding[] = [];
   private nextId = 1;
+
+  /**
+   * Identidade do vilarejo: nome, lema, brasão e cores.
+   *
+   * Mutável de propósito — o jogador renomeia o terreno em jogo, e o nome entra
+   * na conta de Status. É a única parte cosmética que tem efeito de regra.
+   */
+  identity: VillageIdentity = new VillageIdentity();
 
   constructor(
     readonly id: string,
@@ -535,6 +548,69 @@ export class Plot {
     };
   }
 
+  get name(): string {
+    return this.identity.name;
+  }
+
+  get totalJobSlots(): number {
+    return this.totals.jobSlots;
+  }
+
+  get employedWorkers(): number {
+    return this.operational.reduce((soma, b) => soma + b.workers, 0);
+  }
+
+  get populationCapacity(): number {
+    return this.totals.populationCapacity;
+  }
+
+  /** 200 de base mais o que as construções somam. */
+  get storageCapacity(): number {
+    return 200 + this.totals.storageBonus;
+  }
+
+  get defense(): number {
+    return this.totals.defenseBonus;
+  }
+
+  /** Status do terreno: o das construções mais o da identidade escolhida. */
+  get statusBonus(): number {
+    return this.identity.statusBonus + this.totals.statusBonus;
+  }
+
+  get dailyUpkeep(): number {
+    return this.totals.dailyUpkeep;
+  }
+
+  /** Estações de fabricação destravadas pelo que está construído. */
+  get unlockedStations(): ReadonlySet<string> {
+    const set = new Set<string>();
+    for (const b of this.operational) {
+      if (b.def.unlocksStation) set.add(b.def.unlocksStation);
+    }
+    return set;
+  }
+
+  /**
+   * Modificadores de consumo concedidos pelas construções.
+   *
+   * Travados em -60%: sem o teto, empilhar construção zeraria a sobrevivência,
+   * que é o sistema central do GDD. É o mesmo teto que o inventário aplica ao
+   * equipamento, e pelo mesmo motivo.
+   */
+  get upkeepModifiers(): { hunger: number; thirst: number } {
+    const t = this.totals;
+    return {
+      hunger: Math.min(0, Math.max(-0.6, t.hungerUpkeepModifier)),
+      thirst: Math.min(0, Math.max(-0.6, t.thirstUpkeepModifier)),
+    };
+  }
+
+  /** Construções ilegais presentes. Dá base para confisco pelo governo. */
+  get illegalBuildings(): readonly PlacedBuilding[] {
+    return this.list.filter((b) => !b.def.legal);
+  }
+
   toJson(): PlotJson {
     return {
       id: this.id,
@@ -543,6 +619,7 @@ export class Plot {
       width: this.width,
       height: this.height,
       buildings: this.list.map((b) => b.toJson()),
+      identity: this.identity.toJson(),
     };
   }
 
@@ -550,7 +627,7 @@ export class Plot {
     const buildings = (json.buildings ?? [])
       .map(PlacedBuilding.fromJson)
       .filter((b): b is PlacedBuilding => b !== null);
-    return new Plot(
+    const plot = new Plot(
       json.id,
       json.settlementId,
       json.origin,
@@ -558,6 +635,10 @@ export class Plot {
       json.height,
       buildings,
     );
+    // Saves anteriores à identidade não têm a chave; o padrão entra no lugar
+    // em vez de o save ser recusado.
+    plot.identity = VillageIdentity.fromJson(json.identity ?? null);
+    return plot;
   }
 }
 

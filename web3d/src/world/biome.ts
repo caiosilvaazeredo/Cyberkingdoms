@@ -48,6 +48,8 @@ export interface BiomeDef {
   /** Altura média da lâmina, em metros. */
   readonly grassHeight: number;
   readonly walkable: boolean;
+  /** Recursos de Camada 1 extraíveis aqui. */
+  readonly resources: readonly string[];
 }
 
 const defs: Record<Biome, BiomeDef> = {
@@ -62,6 +64,7 @@ const defs: Record<Biome, BiomeDef> = {
     grassDensity: 0.35,
     grassHeight: 0.28,
     walkable: true,
+    resources: [],
   },
   [Biome.sprawl]: {
     id: Biome.sprawl,
@@ -74,6 +77,7 @@ const defs: Record<Biome, BiomeDef> = {
     grassDensity: 0.45,
     grassHeight: 0.34,
     walkable: true,
+    resources: ['scrap'],
   },
   [Biome.scrapyard]: {
     id: Biome.scrapyard,
@@ -86,6 +90,7 @@ const defs: Record<Biome, BiomeDef> = {
     grassDensity: 0.4,
     grassHeight: 0.3,
     walkable: true,
+    resources: ['scrap', 'rareEarth'],
   },
   [Biome.oilFields]: {
     id: Biome.oilFields,
@@ -98,6 +103,7 @@ const defs: Record<Biome, BiomeDef> = {
     grassDensity: 0.3,
     grassHeight: 0.26,
     walkable: true,
+    resources: ['oil'],
   },
   [Biome.rareEarthMine]: {
     id: Biome.rareEarthMine,
@@ -110,6 +116,7 @@ const defs: Record<Biome, BiomeDef> = {
     grassDensity: 0.22,
     grassHeight: 0.22,
     walkable: true,
+    resources: ['rareEarth'],
   },
   [Biome.bioFarm]: {
     id: Biome.bioFarm,
@@ -122,6 +129,7 @@ const defs: Record<Biome, BiomeDef> = {
     grassDensity: 0.92,
     grassHeight: 0.52,
     walkable: true,
+    resources: ['biomass', 'culturedMeat'],
   },
   [Biome.reclaimedForest]: {
     id: Biome.reclaimedForest,
@@ -134,6 +142,7 @@ const defs: Record<Biome, BiomeDef> = {
     grassDensity: 1.0,
     grassHeight: 0.62,
     walkable: true,
+    resources: ['biomass'],
   },
   [Biome.toxicMarsh]: {
     id: Biome.toxicMarsh,
@@ -146,6 +155,7 @@ const defs: Record<Biome, BiomeDef> = {
     grassDensity: 0.75,
     grassHeight: 0.7,
     walkable: true,
+    resources: ['biomass', 'oil'],
   },
   [Biome.wasteland]: {
     id: Biome.wasteland,
@@ -158,6 +168,7 @@ const defs: Record<Biome, BiomeDef> = {
     grassDensity: 0.18,
     grassHeight: 0.24,
     walkable: true,
+    resources: ['scrap'],
   },
   [Biome.ruins]: {
     id: Biome.ruins,
@@ -170,6 +181,7 @@ const defs: Record<Biome, BiomeDef> = {
     grassDensity: 0.5,
     grassHeight: 0.4,
     walkable: true,
+    resources: ['scrap', 'rareEarth'],
   },
   [Biome.deadWater]: {
     id: Biome.deadWater,
@@ -184,6 +196,7 @@ const defs: Record<Biome, BiomeDef> = {
     grassDensity: 0,
     grassHeight: 0,
     walkable: false,
+    resources: [],
   },
 };
 
@@ -192,3 +205,15 @@ export function biomeDef(biome: Biome): BiomeDef {
 }
 
 export const allBiomes: readonly BiomeDef[] = Object.values(defs);
+
+/**
+ * Biomas onde faz sentido plantar uma cidade.
+ *
+ * O charco e as ruínas ficam de fora mesmo sendo atravessáveis: uma capital
+ * nascida em cima de água tóxica ou de escombros contradiz o próprio mapa, e é
+ * o tipo de detalhe que denuncia geração automática.
+ */
+export function supportsSettlement(biome: Biome): boolean {
+  const def = biomeDef(biome);
+  return def.walkable && biome !== Biome.toxicMarsh && biome !== Biome.ruins;
+}

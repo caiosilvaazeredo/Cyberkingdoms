@@ -37,7 +37,16 @@ export class WorldGenerator {
   private readonly moistureNoise: GradientNoise;
   private readonly industryNoise: GradientNoise;
   private readonly contaminationNoise: GradientNoise;
-  private readonly detailNoise: GradientNoise;
+  /**
+   * Ruído de detalhe.
+   *
+   * Público porque a resolução de tile (`world/layout.ts`) precisa do **mesmo**
+   * campo para decidir densidade de vegetação e bolsões de recurso. Um segundo
+   * `GradientNoise` com a mesma semente daria o mesmo resultado, mas duplicaria
+   * a construção da tabela de gradientes por gerador — e abriria a porta para
+   * os dois divergirem numa mudança futura.
+   */
+  readonly detail: GradientNoise;
 
   constructor(seed: number) {
     this.seed = seed >>> 0;
@@ -45,7 +54,7 @@ export class WorldGenerator {
     this.moistureNoise = new GradientNoise(mix(this.seed, 0x37));
     this.industryNoise = new GradientNoise(mix(this.seed, 0x3d));
     this.contaminationNoise = new GradientNoise(mix(this.seed, 0x43));
-    this.detailNoise = new GradientNoise(mix(this.seed, 0x49));
+    this.detail = new GradientNoise(mix(this.seed, 0x49));
   }
 
   static fromLabel(label: string): WorldGenerator {
@@ -65,8 +74,8 @@ export class WorldGenerator {
 
     // Domain warping: perturbar as coordenadas antes de amostrar quebra o
     // aspecto de grade do ruído e produz costas de terreno mais naturais.
-    const warpX = this.detailNoise.sample(fx * 0.5, fy * 0.5) * 1.8;
-    const warpY = this.detailNoise.sample(fx * 0.5 + 41.7, fy * 0.5 + 19.3) * 1.8;
+    const warpX = this.detail.sample(fx * 0.5, fy * 0.5) * 1.8;
+    const warpY = this.detail.sample(fx * 0.5 + 41.7, fy * 0.5 + 19.3) * 1.8;
 
     const continental =
       this.elevationNoise.fbmUniform(fx + warpX, fy + warpY, {
@@ -86,7 +95,12 @@ export class WorldGenerator {
   /** Altura em degraus inteiros, de -4 a 4. */
   elevationAt(x: number, y: number): number {
     const raw = this.rawElevation(x, y);
-    return Math.min(4, Math.max(-4, Math.round(raw * 4)));
+    const degrau = Math.min(4, Math.max(-4, Math.round(raw * 4)));
+    // `Math.round` de um negativo pequeno devolve `-0`, e `-0` não é `0` para
+    // `Object.is` nem para uma comparação profunda. O Dart devolve `0` no mesmo
+    // caso, e a divergência aparecia como um tile "diferente" num contrato onde
+    // tudo o mais batia. Somar zero normaliza o sinal sem mexer no valor.
+    return degrau + 0;
   }
 
   /**

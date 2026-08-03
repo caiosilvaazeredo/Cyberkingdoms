@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:cyberkingdoms/domain/campaign/quest.dart';
 import 'package:cyberkingdoms/domain/building/building_module.dart';
 import 'package:cyberkingdoms/domain/building/building_type.dart';
 import 'package:cyberkingdoms/domain/building/village_identity.dart';
@@ -196,7 +197,26 @@ void main() {
     _write('emblems', emblems);
     _write('items', items);
     _write('recipes', recipes);
+    final quests = QuestBook.all
+        .map((q) => {
+              'id': q.id,
+              'stage': q.stage.name,
+              'title': q.title,
+              'briefing': q.briefing,
+              'requires': q.requires,
+              'objectives': q.objectives.map(_objectiveJson).toList(),
+              'reward': {
+                'credits': q.reward.credits,
+                'statusBonus': q.reward.statusBonus,
+                'items': {
+                  for (final e in q.reward.items.entries) e.key.name: e.value,
+                },
+              },
+            })
+        .toList();
+
     _write('survival', survival);
+    _write('quests', quests);
 
     // Guardas mínimas. Um exportador que grava lista vazia "passa" sem elas, e
     // o lado TypeScript herdaria um catálogo vazio sem ninguém notar.
@@ -206,8 +226,52 @@ void main() {
     expect(buildings, hasLength(BuildingId.values.length));
     expect(modules, hasLength(BuildingModule.values.length));
     expect(emblems, isNotEmpty);
+    expect(quests, hasLength(QuestBook.all.length));
+    expect(quests, isNotEmpty);
+    // Todo objetivo tem de ter sido reconhecido pelo exportador: um `kind`
+    // desconhecido viraria uma quest impossível do lado TypeScript, e o
+    // jogador ficaria com uma meta que nunca fecha.
+    for (final q in quests) {
+      for (final o in q['objectives'] as List) {
+        expect((o as Map)['kind'], isNot('unknown'), reason: 'quest ${q['id']}');
+      }
+    }
   });
 }
+
+/// Serializa um objetivo com uma etiqueta de tipo.
+///
+/// Os objetivos são classes seladas no Dart; do outro lado eles viram um
+/// interpretador sobre `kind`. A etiqueta é o contrato entre os dois, e o
+/// `unknown` no fim existe para **falhar visivelmente**: um objetivo novo que
+/// ninguém lembrou de mapear aqui vira uma quest que nunca fecha, e o teste
+/// acima recusa exportar nesse estado.
+Map<String, Object?> _objectiveJson(QuestObjective o) => switch (o) {
+      HaveCredits() => {'kind': 'haveCredits', 'amount': o.amount},
+      HaveItem() => {
+          'kind': 'haveItem',
+          'item': o.item.name,
+          'quantity': o.quantity,
+        },
+      HaveBuilding() => {
+          'kind': 'haveBuilding',
+          'type': o.type.name,
+          'count': o.count,
+        },
+      HaveBuildingCategory() => {
+          'kind': 'haveBuildingCategory',
+          'category': o.category.name,
+          'count': o.count,
+        },
+      EmployWorkers() => {'kind': 'employWorkers', 'count': o.count},
+      SurviveUntilDay() => {'kind': 'surviveUntilDay', 'day': o.day},
+      VisitSettlements() => {'kind': 'visitSettlements', 'count': o.count},
+      ReachLevel() => {'kind': 'reachLevel', 'level': o.level.name},
+      ReachStatus() => {'kind': 'reachStatus', 'value': o.value},
+      BecomeGovernor() => {'kind': 'becomeGovernor'},
+      ReachPlotDefense() => {'kind': 'reachPlotDefense', 'value': o.value},
+      _ => {'kind': 'unknown'},
+    };
 
 void _write(String name, Object data) {
   final file = File('web3d/src/data/$name.json');

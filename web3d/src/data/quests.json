@@ -1,0 +1,391 @@
+[
+  {
+    "id": "q0_agua",
+    "stage": "survivor",
+    "title": "Primeiro Gole",
+    "briefing": "Você acordou num cortiço sem nome e sem contrato. A CLT faliu há décadas; ninguém vem te salvar. A conta que mata mais rápido é a sede — resolva ela antes de qualquer outra coisa.",
+    "requires": [],
+    "objectives": [
+      {
+        "kind": "haveItem",
+        "item": "water",
+        "quantity": 5
+      }
+    ],
+    "reward": {
+      "credits": 150,
+      "statusBonus": 0,
+      "items": {}
+    }
+  },
+  {
+    "id": "q0_comida",
+    "stage": "survivor",
+    "title": "Barriga Cheia",
+    "briefing": "Comida de rua é barata e não dá bônus nenhum — mas mantém você de pé até conseguir algo melhor. Estoque o suficiente para não depender do dia seguinte.",
+    "requires": [
+      "q0_agua"
+    ],
+    "objectives": [
+      {
+        "kind": "haveItem",
+        "item": "streetFood",
+        "quantity": 5
+      }
+    ],
+    "reward": {
+      "credits": 150,
+      "statusBonus": 0,
+      "items": {}
+    }
+  },
+  {
+    "id": "q0_trabalho",
+    "stage": "survivor",
+    "title": "Mão de Obra",
+    "briefing": "O lixão da capital sempre precisa de gente. É o trabalho mais pesado que existe e paga o mínimo, mas é assim que todo mundo começa: juntando sucata do que a cidade jogou fora.",
+    "requires": [
+      "q0_agua"
+    ],
+    "objectives": [
+      {
+        "kind": "haveItem",
+        "item": "scrap",
+        "quantity": 20
+      }
+    ],
+    "reward": {
+      "credits": 300,
+      "statusBonus": 0,
+      "items": {}
+    }
+  },
+  {
+    "id": "q0_abrigo",
+    "stage": "survivor",
+    "title": "Um Teto",
+    "briefing": "Você conseguiu um lote dentro da metrópole. Não é muito — mas é seu, e é o único lugar do mundo onde você pode construir. Levante um barraco e pare de dormir na rua.",
+    "requires": [
+      "q0_trabalho"
+    ],
+    "objectives": [
+      {
+        "kind": "haveBuilding",
+        "type": "shack",
+        "count": 1
+      }
+    ],
+    "reward": {
+      "credits": 400,
+      "statusBonus": 0,
+      "items": {
+        "water": 5
+      }
+    }
+  },
+  {
+    "id": "q0_sobreviver",
+    "stage": "survivor",
+    "title": "Uma Semana Inteira",
+    "briefing": "Sete resets sem morrer de fome ou de sede. Parece pouco. Metade dos que chegam nesta cidade não consegue.",
+    "requires": [
+      "q0_abrigo"
+    ],
+    "objectives": [
+      {
+        "kind": "surviveUntilDay",
+        "day": 8
+      }
+    ],
+    "reward": {
+      "credits": 500,
+      "statusBonus": 1,
+      "items": {}
+    }
+  },
+  {
+    "id": "q1_capital",
+    "stage": "farmer",
+    "title": "Capital Inicial",
+    "briefing": "Trabalhar para os outros nunca vai te tirar do cortiço. Junte o suficiente para comprar a sua primeira estrutura produtiva.",
+    "requires": [
+      "q0_sobreviver"
+    ],
+    "objectives": [
+      {
+        "kind": "haveCredits",
+        "amount": 1500
+      },
+      {
+        "kind": "reachLevel",
+        "level": "farmer"
+      }
+    ],
+    "reward": {
+      "credits": 600,
+      "statusBonus": 0,
+      "items": {}
+    }
+  },
+  {
+    "id": "q1_fazenda",
+    "stage": "farmer",
+    "title": "A Primeira Fazenda",
+    "briefing": "Ninguém abastece o mercado além dos próprios jogadores. Toda comida que existe no servidor saiu de uma estufa como a que você vai levantar agora.",
+    "requires": [
+      "q1_capital"
+    ],
+    "objectives": [
+      {
+        "kind": "haveBuildingCategory",
+        "category": "extraction",
+        "count": 1
+      },
+      {
+        "kind": "haveItem",
+        "item": "biomass",
+        "quantity": 20
+      }
+    ],
+    "reward": {
+      "credits": 800,
+      "statusBonus": 0,
+      "items": {
+        "polymer": 6
+      }
+    }
+  },
+  {
+    "id": "q1_estrada",
+    "stage": "farmer",
+    "title": "Fora dos Muros",
+    "briefing": "Cada capital produz o que a outra não tem. A diferença de preço entre elas é o lucro — e a estrada entre elas é onde os assaltantes esperam. Não existe teletransporte: quem quer comprar barato viaja.",
+    "requires": [
+      "q1_capital"
+    ],
+    "objectives": [
+      {
+        "kind": "visitSettlements",
+        "count": 3
+      }
+    ],
+    "reward": {
+      "credits": 900,
+      "statusBonus": 1,
+      "items": {}
+    }
+  },
+  {
+    "id": "q1_refino",
+    "stage": "farmer",
+    "title": "Camada Dois",
+    "briefing": "Matéria-prima bruta vale pouco. O dinheiro está em transformar: petróleo vira polímero, biomassa vira tecido, sucata vira placa. Monte a sua primeira oficina.",
+    "requires": [
+      "q1_fazenda"
+    ],
+    "objectives": [
+      {
+        "kind": "haveBuildingCategory",
+        "category": "refining",
+        "count": 1
+      },
+      {
+        "kind": "haveItem",
+        "item": "polymer",
+        "quantity": 10
+      }
+    ],
+    "reward": {
+      "credits": 1200,
+      "statusBonus": 0,
+      "items": {}
+    }
+  },
+  {
+    "id": "q2_industria",
+    "stage": "industrialist",
+    "title": "Dono do Negócio",
+    "briefing": "Deixar de trabalhar e passar a empregar. É a virada que separa o operário do industrial nesta cidade.",
+    "requires": [
+      "q1_refino"
+    ],
+    "objectives": [
+      {
+        "kind": "reachLevel",
+        "level": "industrialist"
+      },
+      {
+        "kind": "employWorkers",
+        "count": 6
+      }
+    ],
+    "reward": {
+      "credits": 2500,
+      "statusBonus": 2,
+      "items": {}
+    }
+  },
+  {
+    "id": "q2_chip",
+    "stage": "industrialist",
+    "title": "O Gargalo",
+    "briefing": "Terras raras são o único recurso que ninguém consegue substituir. Sem elas não há chip; sem chip não há drone, implante nem nada que valha a pena. Quem controla a mina, controla o servidor.",
+    "requires": [
+      "q2_industria"
+    ],
+    "objectives": [
+      {
+        "kind": "haveItem",
+        "item": "chip",
+        "quantity": 5
+      }
+    ],
+    "reward": {
+      "credits": 3000,
+      "statusBonus": 0,
+      "items": {
+        "rareEarth": 10
+      }
+    }
+  },
+  {
+    "id": "q2_expansao",
+    "stage": "industrialist",
+    "title": "Escala",
+    "briefing": "Uma oficina não é uma indústria. Evolua o que você já tem — nível II produz 60% mais, e abre espaço para um segundo módulo.",
+    "requires": [
+      "q2_industria"
+    ],
+    "objectives": [
+      {
+        "kind": "haveBuildingCategory",
+        "category": "manufacturing",
+        "count": 1
+      },
+      {
+        "kind": "haveCredits",
+        "amount": 20000
+      }
+    ],
+    "reward": {
+      "credits": 4000,
+      "statusBonus": 0,
+      "items": {}
+    }
+  },
+  {
+    "id": "q2_defesa",
+    "stage": "industrialist",
+    "title": "Cerca Alta",
+    "briefing": "Terreno rico e indefeso é convite. Muro, torre e portão custam menos que perder um armazém cheio.",
+    "requires": [
+      "q2_industria"
+    ],
+    "objectives": [
+      {
+        "kind": "reachPlotDefense",
+        "value": 60
+      }
+    ],
+    "reward": {
+      "credits": 2000,
+      "statusBonus": 0,
+      "items": {
+        "pistol": 1
+      }
+    }
+  },
+  {
+    "id": "q3_elite",
+    "stage": "elite",
+    "title": "Nome na Cidade",
+    "briefing": "Dinheiro sozinho não elege ninguém. Status é reputação — vem do que você construiu, de como o seu vilarejo aparenta, e de quem depende de você para comer.",
+    "requires": [
+      "q2_expansao"
+    ],
+    "objectives": [
+      {
+        "kind": "reachLevel",
+        "level": "elite"
+      },
+      {
+        "kind": "reachStatus",
+        "value": 12
+      }
+    ],
+    "reward": {
+      "credits": 8000,
+      "statusBonus": 3,
+      "items": {}
+    }
+  },
+  {
+    "id": "q3_governo",
+    "stage": "elite",
+    "title": "O Palácio",
+    "briefing": "Qualquer cidadão pode se candidatar, independente do nível. Mas ganhar exige plataforma: imposto baixo agrada o comércio, salário alto agrada o operário, e os dois juntos quebram o tesouro.",
+    "requires": [
+      "q3_elite"
+    ],
+    "objectives": [
+      {
+        "kind": "becomeGovernor"
+      }
+    ],
+    "reward": {
+      "credits": 15000,
+      "statusBonus": 5,
+      "items": {}
+    }
+  },
+  {
+    "id": "q3_implante",
+    "stage": "elite",
+    "title": "Carne Obsoleta",
+    "briefing": "Não existe treinamento de atributos neste mundo. A única evolução real do corpo vem da clínica: um implante metabólico corta 30% de tudo que você consome, para sempre.",
+    "requires": [
+      "q3_elite"
+    ],
+    "objectives": [
+      {
+        "kind": "haveItem",
+        "item": "metabolicImplant",
+        "quantity": 1
+      }
+    ],
+    "reward": {
+      "credits": 10000,
+      "statusBonus": 3,
+      "items": {}
+    }
+  },
+  {
+    "id": "q3_imperio",
+    "stage": "elite",
+    "title": "Império",
+    "briefing": "O endgame do CyberKingdoms não é um chefe final. É um monopólio: produção própria, milícia própria, e caixa suficiente para sustentar os dois enquanto os outros dependem de você.",
+    "requires": [
+      "q3_governo"
+    ],
+    "objectives": [
+      {
+        "kind": "haveCredits",
+        "amount": 150000
+      },
+      {
+        "kind": "haveBuilding",
+        "type": "militiaHall",
+        "count": 1
+      },
+      {
+        "kind": "employWorkers",
+        "count": 30
+      }
+    ],
+    "reward": {
+      "credits": 50000,
+      "statusBonus": 10,
+      "items": {}
+    }
+  }
+]

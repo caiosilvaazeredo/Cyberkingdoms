@@ -1110,5 +1110,2444 @@
       "dehydrated": true,
       "died": true
     }
-  ]
+  ],
+  "layout": [
+    {
+      "seedLabel": "contrato-dart-ts",
+      "settlements": [
+        {
+          "id": "cap_0",
+          "name": "Distrito Solaris",
+          "kind": "capital",
+          "center": {
+            "x": 646,
+            "y": 87
+          },
+          "vocation": "techHub",
+          "radius": 31,
+          "population": 390305,
+          "capitalId": null
+        },
+        {
+          "id": "cap_1",
+          "name": "Alto Tanaka-9",
+          "kind": "capital",
+          "center": {
+            "x": 124,
+            "y": 449
+          },
+          "vocation": "agroBio",
+          "radius": 26,
+          "population": 482892,
+          "capitalId": null
+        },
+        {
+          "id": "cap_2",
+          "name": "Setor Ipê Velha",
+          "kind": "capital",
+          "center": {
+            "x": -564,
+            "y": 252
+          },
+          "vocation": "petrochemical",
+          "radius": 33,
+          "population": 385517,
+          "capitalId": null
+        },
+        {
+          "id": "cap_3",
+          "name": "Vale Pantanal-Alfa",
+          "kind": "capital",
+          "center": {
+            "x": -482,
+            "y": -442
+          },
+          "vocation": "freePort",
+          "radius": 29,
+          "population": 390219,
+          "capitalId": null
+        },
+        {
+          "id": "cap_4",
+          "name": "Zona Tanaka Prime",
+          "kind": "capital",
+          "center": {
+            "x": 153,
+            "y": -463
+          },
+          "vocation": "foundry",
+          "radius": 28,
+          "population": 567786,
+          "capitalId": null
+        },
+        {
+          "id": "sat_0",
+          "name": "Neo Ventra",
+          "kind": "satellite",
+          "center": {
+            "x": 833,
+            "y": 114
+          },
+          "vocation": "techHub",
+          "radius": 14,
+          "population": 31934,
+          "capitalId": "cap_0"
+        },
+        {
+          "id": "sat_1",
+          "name": "Zona Tanaka",
+          "kind": "satellite",
+          "center": {
+            "x": 527,
+            "y": 12
+          },
+          "vocation": "techHub",
+          "radius": 10,
+          "population": 24241,
+          "capitalId": "cap_0"
+        },
+        {
+          "id": "sat_2",
+          "name": "Ipê Baixa",
+          "kind": "satellite",
+          "center": {
+            "x": 709,
+            "y": -140
+          },
+          "vocation": "techHub",
+          "radius": 15,
+          "population": 23996,
+          "capitalId": "cap_0"
+        },
+        {
+          "id": "sat_3",
+          "name": "Vale Serpente",
+          "kind": "satellite",
+          "center": {
+            "x": -103,
+            "y": 480
+          },
+          "vocation": "agroBio",
+          "radius": 14,
+          "population": 29553,
+          "capitalId": "cap_1"
+        },
+        {
+          "id": "sat_4",
+          "name": "Vale Serpente",
+          "kind": "satellite",
+          "center": {
+            "x": 227,
+            "y": 647
+          },
+          "vocation": "agroBio",
+          "radius": 12,
+          "population": 41304,
+          "capitalId": "cap_1"
+        },
+        {
+          "id": "sat_5",
+          "name": "Novo Corvo",
+          "kind": "satellite",
+          "center": {
+            "x": 33,
+            "y": 628
+          },
+          "vocation": "agroBio",
+          "radius": 12,
+          "population": 16961,
+          "capitalId": "cap_1"
+        },
+        {
+          "id": "sat_6",
+          "name": "Vidro Baixa",
+          "kind": "satellite",
+          "center": {
+            "x": -779,
+            "y": 283
+          },
+          "vocation": "petrochemical",
+          "radius": 14,
+          "population": 34845,
+          "capitalId": "cap_2"
+        },
+        {
+          "id": "sat_7",
+          "name": "Novo Corvo",
+          "kind": "satellite",
+          "center": {
+            "x": -326,
+            "y": 158
+          },
+          "vocation": "petrochemical",
+          "radius": 12,
+          "population": 24879,
+          "capitalId": "cap_2"
+        },
+        {
+          "id": "sat_8",
+          "name": "Setor Kaji",
+          "kind": "satellite",
+          "center": {
+            "x": -368,
+            "y": 329
+          },
+          "vocation": "agroBio",
+          "radius": 10,
+          "population": 42886,
+          "capitalId": "cap_2"
+        },
+        {
+          "id": "sat_9",
+          "name": "Ferrolho-Alfa",
+          "kind": "satellite",
+          "center": {
+            "x": -481,
+            "y": -617
+          },
+          "vocation": "freePort",
+          "radius": 13,
+          "population": 27745,
+          "capitalId": "cap_3"
+        },
+        {
+          "id": "sat_10",
+          "name": "Cidade Ventra",
+          "kind": "satellite",
+          "center": {
+            "x": -423,
+            "y": -612
+          },
+          "vocation": "freePort",
+          "radius": 10,
+          "population": 33998,
+          "capitalId": "cap_3"
+        },
+        {
+          "id": "sat_11",
+          "name": "Alto Sabiá",
+          "kind": "satellite",
+          "center": {
+            "x": -602,
+            "y": -412
+          },
+          "vocation": "techHub",
+          "radius": 10,
+          "population": 23986,
+          "capitalId": "cap_3"
+        },
+        {
+          "id": "sat_12",
+          "name": "Serpente",
+          "kind": "satellite",
+          "center": {
+            "x": 25,
+            "y": -511
+          },
+          "vocation": "foundry",
+          "radius": 10,
+          "population": 8575,
+          "capitalId": "cap_4"
+        },
+        {
+          "id": "sat_13",
+          "name": "Sabiá Prime",
+          "kind": "satellite",
+          "center": {
+            "x": 24,
+            "y": -287
+          },
+          "vocation": "foundry",
+          "radius": 14,
+          "population": 41872,
+          "capitalId": "cap_4"
+        },
+        {
+          "id": "sat_14",
+          "name": "Neo Nagai",
+          "kind": "satellite",
+          "center": {
+            "x": 257,
+            "y": -530
+          },
+          "vocation": "foundry",
+          "radius": 16,
+          "population": 42873,
+          "capitalId": "cap_4"
+        }
+      ],
+      "roads": [
+        {
+          "fromId": "cap_3",
+          "toId": "cap_4",
+          "travelDays": 222,
+          "danger": 0.35726712802425026,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": -482,
+            "y": -442
+          },
+          "last": {
+            "x": 19517,
+            "y": -2953
+          }
+        },
+        {
+          "fromId": "cap_4",
+          "toId": "cap_0",
+          "travelDays": 222,
+          "danger": 0.40380340089322997,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": 153,
+            "y": -463
+          },
+          "last": {
+            "x": 18223,
+            "y": 20855
+          }
+        },
+        {
+          "fromId": "cap_0",
+          "toId": "cap_1",
+          "travelDays": 222,
+          "danger": 0.3577528831316158,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": 646,
+            "y": 87
+          },
+          "last": {
+            "x": -19353,
+            "y": 15561
+          }
+        },
+        {
+          "fromId": "cap_1",
+          "toId": "cap_2",
+          "travelDays": 222,
+          "danger": 0.34590584422694515,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": 124,
+            "y": 449
+          },
+          "last": {
+            "x": -19875,
+            "y": -7166
+          }
+        },
+        {
+          "fromId": "cap_2",
+          "toId": "cap_3",
+          "travelDays": 222,
+          "danger": 0.34355680220760404,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": -564,
+            "y": 252
+          },
+          "last": {
+            "x": 3399,
+            "y": -19940
+          }
+        },
+        {
+          "fromId": "cap_3",
+          "toId": "cap_0",
+          "travelDays": 222,
+          "danger": 0.6269695018534549,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": -482,
+            "y": -442
+          },
+          "last": {
+            "x": 19517,
+            "y": 11013
+          }
+        },
+        {
+          "fromId": "sat_0",
+          "toId": "cap_0",
+          "travelDays": 222,
+          "danger": 0.2743784013623372,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": 833,
+            "y": 114
+          },
+          "last": {
+            "x": -19166,
+            "y": -4298
+          }
+        },
+        {
+          "fromId": "sat_1",
+          "toId": "cap_0",
+          "travelDays": 222,
+          "danger": 0.1492724647698924,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": 527,
+            "y": 12
+          },
+          "last": {
+            "x": 20526,
+            "y": 14389
+          }
+        },
+        {
+          "fromId": "sat_2",
+          "toId": "cap_0",
+          "travelDays": 3,
+          "danger": 0.13592129114083945,
+          "lengthInTiles": 228,
+          "first": {
+            "x": 709,
+            "y": -140
+          },
+          "last": {
+            "x": 646,
+            "y": 87
+          }
+        },
+        {
+          "fromId": "sat_3",
+          "toId": "cap_1",
+          "travelDays": 222,
+          "danger": 0.2166900812718086,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": -103,
+            "y": 480
+          },
+          "last": {
+            "x": 19896,
+            "y": -4450
+          }
+        },
+        {
+          "fromId": "sat_4",
+          "toId": "cap_1",
+          "travelDays": 222,
+          "danger": 0.23770896582398565,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": 227,
+            "y": 647
+          },
+          "last": {
+            "x": -11055,
+            "y": -20317
+          }
+        },
+        {
+          "fromId": "sat_5",
+          "toId": "cap_1",
+          "travelDays": 222,
+          "danger": 0.14309412143891675,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": 33,
+            "y": 628
+          },
+          "last": {
+            "x": 11012,
+            "y": -20206
+          }
+        },
+        {
+          "fromId": "sat_6",
+          "toId": "cap_2",
+          "travelDays": 222,
+          "danger": 0.2561967189493589,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": -779,
+            "y": 283
+          },
+          "last": {
+            "x": 19220,
+            "y": -4678
+          }
+        },
+        {
+          "fromId": "sat_7",
+          "toId": "cap_2",
+          "travelDays": 222,
+          "danger": 0.15178832080680876,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": -326,
+            "y": 158
+          },
+          "last": {
+            "x": -20325,
+            "y": 9919
+          }
+        },
+        {
+          "fromId": "sat_8",
+          "toId": "cap_2",
+          "travelDays": 222,
+          "danger": 0.2265812945738435,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": -368,
+            "y": 329
+          },
+          "last": {
+            "x": -20367,
+            "y": -9171
+          }
+        },
+        {
+          "fromId": "sat_9",
+          "toId": "cap_3",
+          "travelDays": 2,
+          "danger": 0.2629253233619966,
+          "lengthInTiles": 176,
+          "first": {
+            "x": -481,
+            "y": -617
+          },
+          "last": {
+            "x": -482,
+            "y": -442
+          }
+        },
+        {
+          "fromId": "sat_10",
+          "toId": "cap_3",
+          "travelDays": 222,
+          "danger": 0.16075546846957878,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": -423,
+            "y": -612
+          },
+          "last": {
+            "x": -8527,
+            "y": 19980
+          }
+        },
+        {
+          "fromId": "sat_11",
+          "toId": "cap_3",
+          "travelDays": 1,
+          "danger": 0.18410814713686705,
+          "lengthInTiles": 121,
+          "first": {
+            "x": -602,
+            "y": -412
+          },
+          "last": {
+            "x": -482,
+            "y": -442
+          }
+        },
+        {
+          "fromId": "sat_12",
+          "toId": "cap_4",
+          "travelDays": 1,
+          "danger": 0.21545396712142975,
+          "lengthInTiles": 129,
+          "first": {
+            "x": 25,
+            "y": -511
+          },
+          "last": {
+            "x": 153,
+            "y": -463
+          }
+        },
+        {
+          "fromId": "sat_13",
+          "toId": "cap_4",
+          "travelDays": 2,
+          "danger": 0.2161244169762358,
+          "lengthInTiles": 177,
+          "first": {
+            "x": 24,
+            "y": -287
+          },
+          "last": {
+            "x": 153,
+            "y": -463
+          }
+        },
+        {
+          "fromId": "sat_14",
+          "toId": "cap_4",
+          "travelDays": 222,
+          "danger": 0.27680060541722923,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": 257,
+            "y": -530
+          },
+          "last": {
+            "x": -19742,
+            "y": 14444
+          }
+        }
+      ]
+    },
+    {
+      "seedLabel": "verde",
+      "settlements": [
+        {
+          "id": "cap_0",
+          "name": "Porto Ventra",
+          "kind": "capital",
+          "center": {
+            "x": 626,
+            "y": -40
+          },
+          "vocation": "foundry",
+          "radius": 28,
+          "population": 279259,
+          "capitalId": null
+        },
+        {
+          "id": "cap_1",
+          "name": "Alto Corvo",
+          "kind": "capital",
+          "center": {
+            "x": 260,
+            "y": 591
+          },
+          "vocation": "freePort",
+          "radius": 29,
+          "population": 191161,
+          "capitalId": null
+        },
+        {
+          "id": "cap_2",
+          "name": "Neo Ventra-Alfa",
+          "kind": "capital",
+          "center": {
+            "x": -463,
+            "y": 371
+          },
+          "vocation": "techHub",
+          "radius": 31,
+          "population": 402712,
+          "capitalId": null
+        },
+        {
+          "id": "cap_3",
+          "name": "Setor Aurora Norte",
+          "kind": "capital",
+          "center": {
+            "x": -410,
+            "y": -440
+          },
+          "vocation": "agroBio",
+          "radius": 29,
+          "population": 579890,
+          "capitalId": null
+        },
+        {
+          "id": "cap_4",
+          "name": "Porto Corvo Norte",
+          "kind": "capital",
+          "center": {
+            "x": 293,
+            "y": -407
+          },
+          "vocation": "petrochemical",
+          "radius": 33,
+          "population": 500739,
+          "capitalId": null
+        },
+        {
+          "id": "sat_0",
+          "name": "Ipê Baixa",
+          "kind": "satellite",
+          "center": {
+            "x": 673,
+            "y": -244
+          },
+          "vocation": "petrochemical",
+          "radius": 15,
+          "population": 9903,
+          "capitalId": "cap_0"
+        },
+        {
+          "id": "sat_1",
+          "name": "Zona Cinza",
+          "kind": "satellite",
+          "center": {
+            "x": 823,
+            "y": 110
+          },
+          "vocation": "petrochemical",
+          "radius": 15,
+          "population": 10706,
+          "capitalId": "cap_0"
+        },
+        {
+          "id": "sat_2",
+          "name": "Kaji-9",
+          "kind": "satellite",
+          "center": {
+            "x": 740,
+            "y": -80
+          },
+          "vocation": "foundry",
+          "radius": 12,
+          "population": 29424,
+          "capitalId": "cap_0"
+        },
+        {
+          "id": "sat_3",
+          "name": "Porto Aurora",
+          "kind": "satellite",
+          "center": {
+            "x": 395,
+            "y": 525
+          },
+          "vocation": "freePort",
+          "radius": 15,
+          "population": 35966,
+          "capitalId": "cap_1"
+        },
+        {
+          "id": "sat_4",
+          "name": "Sabiá",
+          "kind": "satellite",
+          "center": {
+            "x": 166,
+            "y": 680
+          },
+          "vocation": "foundry",
+          "radius": 12,
+          "population": 35483,
+          "capitalId": "cap_1"
+        },
+        {
+          "id": "sat_5",
+          "name": "Setor Kaji",
+          "kind": "satellite",
+          "center": {
+            "x": 72,
+            "y": 423
+          },
+          "vocation": "freePort",
+          "radius": 11,
+          "population": 11138,
+          "capitalId": "cap_1"
+        },
+        {
+          "id": "sat_6",
+          "name": "Cidade Orixá",
+          "kind": "satellite",
+          "center": {
+            "x": -333,
+            "y": 479
+          },
+          "vocation": "foundry",
+          "radius": 15,
+          "population": 13548,
+          "capitalId": "cap_2"
+        },
+        {
+          "id": "sat_7",
+          "name": "Nagai Prime",
+          "kind": "satellite",
+          "center": {
+            "x": -435,
+            "y": 256
+          },
+          "vocation": "techHub",
+          "radius": 14,
+          "population": 21864,
+          "capitalId": "cap_2"
+        },
+        {
+          "id": "sat_8",
+          "name": "Neo Aurora",
+          "kind": "satellite",
+          "center": {
+            "x": -357,
+            "y": 278
+          },
+          "vocation": "techHub",
+          "radius": 11,
+          "population": 38153,
+          "capitalId": "cap_2"
+        },
+        {
+          "id": "sat_9",
+          "name": "Porto Corvo",
+          "kind": "satellite",
+          "center": {
+            "x": -610,
+            "y": -463
+          },
+          "vocation": "agroBio",
+          "radius": 16,
+          "population": 44921,
+          "capitalId": "cap_3"
+        },
+        {
+          "id": "sat_10",
+          "name": "Mirim",
+          "kind": "satellite",
+          "center": {
+            "x": -335,
+            "y": -567
+          },
+          "vocation": "freePort",
+          "radius": 16,
+          "population": 39453,
+          "capitalId": "cap_3"
+        },
+        {
+          "id": "sat_11",
+          "name": "Setor Pantanal",
+          "kind": "satellite",
+          "center": {
+            "x": -473,
+            "y": -659
+          },
+          "vocation": "agroBio",
+          "radius": 16,
+          "population": 30069,
+          "capitalId": "cap_3"
+        },
+        {
+          "id": "sat_12",
+          "name": "Neo Kaji",
+          "kind": "satellite",
+          "center": {
+            "x": 174,
+            "y": -342
+          },
+          "vocation": "petrochemical",
+          "radius": 12,
+          "population": 31104,
+          "capitalId": "cap_4"
+        },
+        {
+          "id": "sat_13",
+          "name": "Nagai",
+          "kind": "satellite",
+          "center": {
+            "x": 413,
+            "y": -445
+          },
+          "vocation": "petrochemical",
+          "radius": 14,
+          "population": 35276,
+          "capitalId": "cap_4"
+        },
+        {
+          "id": "sat_14",
+          "name": "Zona Serpente",
+          "kind": "satellite",
+          "center": {
+            "x": 285,
+            "y": -296
+          },
+          "vocation": "petrochemical",
+          "radius": 16,
+          "population": 20231,
+          "capitalId": "cap_4"
+        }
+      ],
+      "roads": [
+        {
+          "fromId": "cap_3",
+          "toId": "cap_4",
+          "travelDays": 222,
+          "danger": 0.4393922027084045,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": -410,
+            "y": -440
+          },
+          "last": {
+            "x": 19589,
+            "y": 1912
+          }
+        },
+        {
+          "fromId": "cap_4",
+          "toId": "cap_0",
+          "travelDays": 4,
+          "danger": 0.33420889052795244,
+          "lengthInTiles": 368,
+          "first": {
+            "x": 293,
+            "y": -407
+          },
+          "last": {
+            "x": 626,
+            "y": -40
+          }
+        },
+        {
+          "fromId": "cap_0",
+          "toId": "cap_1",
+          "travelDays": 222,
+          "danger": 0.3008841351256706,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": 626,
+            "y": -40
+          },
+          "last": {
+            "x": -11527,
+            "y": 20727
+          }
+        },
+        {
+          "fromId": "cap_1",
+          "toId": "cap_2",
+          "travelDays": 222,
+          "danger": 0.4281682602362707,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": 260,
+            "y": 591
+          },
+          "last": {
+            "x": -19739,
+            "y": -7429
+          }
+        },
+        {
+          "fromId": "cap_2",
+          "toId": "cap_3",
+          "travelDays": 222,
+          "danger": 0.42864621022017674,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": -463,
+            "y": 371
+          },
+          "last": {
+            "x": 2376,
+            "y": -19718
+          }
+        },
+        {
+          "fromId": "cap_3",
+          "toId": "cap_0",
+          "travelDays": 222,
+          "danger": 0.5433314640307799,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": -410,
+            "y": -440
+          },
+          "last": {
+            "x": 19589,
+            "y": 8844
+          }
+        },
+        {
+          "fromId": "sat_0",
+          "toId": "cap_0",
+          "travelDays": 222,
+          "danger": 0.23059225854929538,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": 673,
+            "y": -244
+          },
+          "last": {
+            "x": -5200,
+            "y": 20125
+          }
+        },
+        {
+          "fromId": "sat_1",
+          "toId": "cap_0",
+          "travelDays": 2,
+          "danger": 0.21146250766003505,
+          "lengthInTiles": 198,
+          "first": {
+            "x": 823,
+            "y": 110
+          },
+          "last": {
+            "x": 626,
+            "y": -40
+          }
+        },
+        {
+          "fromId": "sat_2",
+          "toId": "cap_0",
+          "travelDays": 1,
+          "danger": 0.17552582354517654,
+          "lengthInTiles": 115,
+          "first": {
+            "x": 740,
+            "y": -80
+          },
+          "last": {
+            "x": 626,
+            "y": -40
+          }
+        },
+        {
+          "fromId": "sat_3",
+          "toId": "cap_1",
+          "travelDays": 2,
+          "danger": 0.2502427229145542,
+          "lengthInTiles": 136,
+          "first": {
+            "x": 395,
+            "y": 525
+          },
+          "last": {
+            "x": 260,
+            "y": 591
+          }
+        },
+        {
+          "fromId": "sat_4",
+          "toId": "cap_1",
+          "travelDays": 1,
+          "danger": 0.2046838775696233,
+          "lengthInTiles": 95,
+          "first": {
+            "x": 166,
+            "y": 680
+          },
+          "last": {
+            "x": 260,
+            "y": 591
+          }
+        },
+        {
+          "fromId": "sat_5",
+          "toId": "cap_1",
+          "travelDays": 222,
+          "danger": 0.23341461714124306,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": 72,
+            "y": 423
+          },
+          "last": {
+            "x": 20071,
+            "y": 20242
+          }
+        },
+        {
+          "fromId": "sat_6",
+          "toId": "cap_2",
+          "travelDays": 1,
+          "danger": 0.24645635329186916,
+          "lengthInTiles": 131,
+          "first": {
+            "x": -333,
+            "y": 479
+          },
+          "last": {
+            "x": -463,
+            "y": 371
+          }
+        },
+        {
+          "fromId": "sat_7",
+          "toId": "cap_2",
+          "travelDays": 222,
+          "danger": 0.19610051738098264,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": -435,
+            "y": 256
+          },
+          "last": {
+            "x": -6719,
+            "y": 20664
+          }
+        },
+        {
+          "fromId": "sat_8",
+          "toId": "cap_2",
+          "travelDays": 1,
+          "danger": 0.21790188018465415,
+          "lengthInTiles": 107,
+          "first": {
+            "x": -357,
+            "y": 278
+          },
+          "last": {
+            "x": -463,
+            "y": 371
+          }
+        },
+        {
+          "fromId": "sat_9",
+          "toId": "cap_3",
+          "travelDays": 222,
+          "danger": 0.21347485411213712,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": -610,
+            "y": -463
+          },
+          "last": {
+            "x": 19389,
+            "y": 3671
+          }
+        },
+        {
+          "fromId": "sat_10",
+          "toId": "cap_3",
+          "travelDays": 1,
+          "danger": 0.19126440257066862,
+          "lengthInTiles": 128,
+          "first": {
+            "x": -335,
+            "y": -567
+          },
+          "last": {
+            "x": -410,
+            "y": -440
+          }
+        },
+        {
+          "fromId": "sat_11",
+          "toId": "cap_3",
+          "travelDays": 2,
+          "danger": 0.15992025247076525,
+          "lengthInTiles": 220,
+          "first": {
+            "x": -473,
+            "y": -659
+          },
+          "last": {
+            "x": -410,
+            "y": -440
+          }
+        },
+        {
+          "fromId": "sat_12",
+          "toId": "cap_4",
+          "travelDays": 1,
+          "danger": 0.250094008219894,
+          "lengthInTiles": 120,
+          "first": {
+            "x": 174,
+            "y": -342
+          },
+          "last": {
+            "x": 293,
+            "y": -407
+          }
+        },
+        {
+          "fromId": "sat_13",
+          "toId": "cap_4",
+          "travelDays": 222,
+          "danger": 0.16896950324997306,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": 413,
+            "y": -445
+          },
+          "last": {
+            "x": -19586,
+            "y": 7858
+          }
+        },
+        {
+          "fromId": "sat_14",
+          "toId": "cap_4",
+          "travelDays": 1,
+          "danger": 0.23089708196464925,
+          "lengthInTiles": 112,
+          "first": {
+            "x": 285,
+            "y": -296
+          },
+          "last": {
+            "x": 293,
+            "y": -407
+          }
+        }
+      ]
+    },
+    {
+      "seedLabel": "krom",
+      "settlements": [
+        {
+          "id": "cap_0",
+          "name": "Cidade Cinza Velha",
+          "kind": "capital",
+          "center": {
+            "x": 437,
+            "y": 60
+          },
+          "vocation": "petrochemical",
+          "radius": 30,
+          "population": 237610,
+          "capitalId": null
+        },
+        {
+          "id": "cap_1",
+          "name": "Vale Aurora Baixa",
+          "kind": "capital",
+          "center": {
+            "x": 175,
+            "y": 427
+          },
+          "vocation": "agroBio",
+          "radius": 27,
+          "population": 299184,
+          "capitalId": null
+        },
+        {
+          "id": "cap_2",
+          "name": "Neo Kobalt Sul",
+          "kind": "capital",
+          "center": {
+            "x": -441,
+            "y": 353
+          },
+          "vocation": "freePort",
+          "radius": 32,
+          "population": 621497,
+          "capitalId": null
+        },
+        {
+          "id": "cap_3",
+          "name": "Novo Kobalt",
+          "kind": "capital",
+          "center": {
+            "x": -396,
+            "y": -312
+          },
+          "vocation": "foundry",
+          "radius": 30,
+          "population": 339872,
+          "capitalId": null
+        },
+        {
+          "id": "cap_4",
+          "name": "Novo Serpente Velha",
+          "kind": "capital",
+          "center": {
+            "x": 39,
+            "y": -582
+          },
+          "vocation": "techHub",
+          "radius": 28,
+          "population": 493998,
+          "capitalId": null
+        },
+        {
+          "id": "sat_0",
+          "name": "Zona Ventra",
+          "kind": "satellite",
+          "center": {
+            "x": 391,
+            "y": -100
+          },
+          "vocation": "petrochemical",
+          "radius": 15,
+          "population": 43431,
+          "capitalId": "cap_0"
+        },
+        {
+          "id": "sat_1",
+          "name": "Setor Pantanal",
+          "kind": "satellite",
+          "center": {
+            "x": 417,
+            "y": -98
+          },
+          "vocation": "freePort",
+          "radius": 15,
+          "population": 28757,
+          "capitalId": "cap_0"
+        },
+        {
+          "id": "sat_2",
+          "name": "Tanaka Sul",
+          "kind": "satellite",
+          "center": {
+            "x": 419,
+            "y": 316
+          },
+          "vocation": "petrochemical",
+          "radius": 10,
+          "population": 29184,
+          "capitalId": "cap_0"
+        },
+        {
+          "id": "sat_3",
+          "name": "Porto Cinza",
+          "kind": "satellite",
+          "center": {
+            "x": -6,
+            "y": 374
+          },
+          "vocation": "techHub",
+          "radius": 16,
+          "population": 40300,
+          "capitalId": "cap_1"
+        },
+        {
+          "id": "sat_4",
+          "name": "Kaji",
+          "kind": "satellite",
+          "center": {
+            "x": 354,
+            "y": 399
+          },
+          "vocation": "techHub",
+          "radius": 15,
+          "population": 22878,
+          "capitalId": "cap_1"
+        },
+        {
+          "id": "sat_5",
+          "name": "Vale Corvo",
+          "kind": "satellite",
+          "center": {
+            "x": 253,
+            "y": 237
+          },
+          "vocation": "agroBio",
+          "radius": 15,
+          "population": 14357,
+          "capitalId": "cap_1"
+        },
+        {
+          "id": "sat_6",
+          "name": "Neo Vidro",
+          "kind": "satellite",
+          "center": {
+            "x": -432,
+            "y": 164
+          },
+          "vocation": "freePort",
+          "radius": 11,
+          "population": 17981,
+          "capitalId": "cap_2"
+        },
+        {
+          "id": "sat_7",
+          "name": "Setor Tanaka",
+          "kind": "satellite",
+          "center": {
+            "x": -590,
+            "y": 223
+          },
+          "vocation": "freePort",
+          "radius": 14,
+          "population": 39088,
+          "capitalId": "cap_2"
+        },
+        {
+          "id": "sat_8",
+          "name": "Mirim Sul",
+          "kind": "satellite",
+          "center": {
+            "x": -649,
+            "y": 449
+          },
+          "vocation": "freePort",
+          "radius": 11,
+          "population": 12953,
+          "capitalId": "cap_2"
+        },
+        {
+          "id": "sat_9",
+          "name": "Solaris",
+          "kind": "satellite",
+          "center": {
+            "x": -276,
+            "y": -351
+          },
+          "vocation": "foundry",
+          "radius": 12,
+          "population": 17399,
+          "capitalId": "cap_3"
+        },
+        {
+          "id": "sat_10",
+          "name": "Alto Cinza",
+          "kind": "satellite",
+          "center": {
+            "x": -529,
+            "y": -393
+          },
+          "vocation": "foundry",
+          "radius": 10,
+          "population": 18158,
+          "capitalId": "cap_3"
+        },
+        {
+          "id": "sat_11",
+          "name": "Ferrolho Prime",
+          "kind": "satellite",
+          "center": {
+            "x": -609,
+            "y": -380
+          },
+          "vocation": "foundry",
+          "radius": 12,
+          "population": 14017,
+          "capitalId": "cap_3"
+        },
+        {
+          "id": "sat_12",
+          "name": "Nagai",
+          "kind": "satellite",
+          "center": {
+            "x": -140,
+            "y": -455
+          },
+          "vocation": "agroBio",
+          "radius": 16,
+          "population": 16855,
+          "capitalId": "cap_4"
+        },
+        {
+          "id": "sat_13",
+          "name": "Zona Cinza",
+          "kind": "satellite",
+          "center": {
+            "x": -106,
+            "y": -456
+          },
+          "vocation": "techHub",
+          "radius": 15,
+          "population": 41483,
+          "capitalId": "cap_4"
+        },
+        {
+          "id": "sat_14",
+          "name": "Solaris Baixa",
+          "kind": "satellite",
+          "center": {
+            "x": 179,
+            "y": -783
+          },
+          "vocation": "foundry",
+          "radius": 16,
+          "population": 44687,
+          "capitalId": "cap_4"
+        }
+      ],
+      "roads": [
+        {
+          "fromId": "cap_3",
+          "toId": "cap_4",
+          "travelDays": 222,
+          "danger": 0.37007243254920463,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": -396,
+            "y": -312
+          },
+          "last": {
+            "x": 19603,
+            "y": -14309
+          }
+        },
+        {
+          "fromId": "cap_4",
+          "toId": "cap_0",
+          "travelDays": 7,
+          "danger": 0.4222803892102093,
+          "lengthInTiles": 603,
+          "first": {
+            "x": 39,
+            "y": -582
+          },
+          "last": {
+            "x": 437,
+            "y": 60
+          }
+        },
+        {
+          "fromId": "cap_0",
+          "toId": "cap_1",
+          "travelDays": 222,
+          "danger": 0.4188471554545686,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": 437,
+            "y": 60
+          },
+          "last": {
+            "x": -14291,
+            "y": 21222
+          }
+        },
+        {
+          "fromId": "cap_1",
+          "toId": "cap_2",
+          "travelDays": 222,
+          "danger": 0.40770517769269643,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": 175,
+            "y": 427
+          },
+          "last": {
+            "x": -19824,
+            "y": -3964
+          }
+        },
+        {
+          "fromId": "cap_2",
+          "toId": "cap_3",
+          "travelDays": 222,
+          "danger": 0.42740291861118745,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": -441,
+            "y": 353
+          },
+          "last": {
+            "x": 2756,
+            "y": -19753
+          }
+        },
+        {
+          "fromId": "cap_3",
+          "toId": "cap_0",
+          "travelDays": 222,
+          "danger": 0.5116295254440048,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": -396,
+            "y": -312
+          },
+          "last": {
+            "x": 19603,
+            "y": 10612
+          }
+        },
+        {
+          "fromId": "sat_0",
+          "toId": "cap_0",
+          "travelDays": 2,
+          "danger": 0.26710987141821535,
+          "lengthInTiles": 161,
+          "first": {
+            "x": 391,
+            "y": -100
+          },
+          "last": {
+            "x": 437,
+            "y": 60
+          }
+        },
+        {
+          "fromId": "sat_1",
+          "toId": "cap_0",
+          "travelDays": 2,
+          "danger": 0.24032039535930383,
+          "lengthInTiles": 159,
+          "first": {
+            "x": 417,
+            "y": -98
+          },
+          "last": {
+            "x": 437,
+            "y": 60
+          }
+        },
+        {
+          "fromId": "sat_2",
+          "toId": "cap_0",
+          "travelDays": 222,
+          "danger": 0.17445682631339876,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": 419,
+            "y": 316
+          },
+          "last": {
+            "x": 3639,
+            "y": -19804
+          }
+        },
+        {
+          "fromId": "sat_3",
+          "toId": "cap_1",
+          "travelDays": 222,
+          "danger": 0.15694599891547112,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": -6,
+            "y": 374
+          },
+          "last": {
+            "x": 19993,
+            "y": 7964
+          }
+        },
+        {
+          "fromId": "sat_4",
+          "toId": "cap_1",
+          "travelDays": 2,
+          "danger": 0.26661978220334276,
+          "lengthInTiles": 180,
+          "first": {
+            "x": 354,
+            "y": 399
+          },
+          "last": {
+            "x": 175,
+            "y": 427
+          }
+        },
+        {
+          "fromId": "sat_5",
+          "toId": "cap_1",
+          "travelDays": 222,
+          "danger": 0.21163938726065679,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": 253,
+            "y": 237
+          },
+          "last": {
+            "x": -8761,
+            "y": 20791
+          }
+        },
+        {
+          "fromId": "sat_6",
+          "toId": "cap_2",
+          "travelDays": 2,
+          "danger": 0.13637322216061876,
+          "lengthInTiles": 190,
+          "first": {
+            "x": -432,
+            "y": 164
+          },
+          "last": {
+            "x": -441,
+            "y": 353
+          }
+        },
+        {
+          "fromId": "sat_7",
+          "toId": "cap_2",
+          "travelDays": 222,
+          "danger": 0.14571333406027406,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": -590,
+            "y": 223
+          },
+          "last": {
+            "x": 19409,
+            "y": 19263
+          }
+        },
+        {
+          "fromId": "sat_8",
+          "toId": "cap_2",
+          "travelDays": 222,
+          "danger": 0.17415860773297026,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": -649,
+            "y": 449
+          },
+          "last": {
+            "x": 19350,
+            "y": -10377
+          }
+        },
+        {
+          "fromId": "sat_9",
+          "toId": "cap_3",
+          "travelDays": 1,
+          "danger": 0.1864566993736662,
+          "lengthInTiles": 121,
+          "first": {
+            "x": -276,
+            "y": -351
+          },
+          "last": {
+            "x": -396,
+            "y": -312
+          }
+        },
+        {
+          "fromId": "sat_10",
+          "toId": "cap_3",
+          "travelDays": 222,
+          "danger": 0.18376833898480982,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": -529,
+            "y": -393
+          },
+          "last": {
+            "x": 19470,
+            "y": 13332
+          }
+        },
+        {
+          "fromId": "sat_11",
+          "toId": "cap_3",
+          "travelDays": 222,
+          "danger": 0.2694286926952191,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": -609,
+            "y": -380
+          },
+          "last": {
+            "x": 19390,
+            "y": 7751
+          }
+        },
+        {
+          "fromId": "sat_12",
+          "toId": "cap_4",
+          "travelDays": 222,
+          "danger": 0.16107963742222636,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": -140,
+            "y": -455
+          },
+          "last": {
+            "x": 19859,
+            "y": -16470
+          }
+        },
+        {
+          "fromId": "sat_13",
+          "toId": "cap_4",
+          "travelDays": 222,
+          "danger": 0.23396879857871683,
+          "lengthInTiles": 20000,
+          "first": {
+            "x": -106,
+            "y": -456
+          },
+          "last": {
+            "x": 19893,
+            "y": -19394
+          }
+        },
+        {
+          "fromId": "sat_14",
+          "toId": "cap_4",
+          "travelDays": 2,
+          "danger": 0.13814420975511893,
+          "lengthInTiles": 200,
+          "first": {
+            "x": 179,
+            "y": -783
+          },
+          "last": {
+            "x": 39,
+            "y": -582
+          }
+        }
+      ]
+    }
+  ],
+  "tiles": [
+    {
+      "x": -600,
+      "y": -600,
+      "biome": "bioFarm",
+      "elevation": 4,
+      "feature": "none",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": -463,
+      "y": -511,
+      "biome": "sprawl",
+      "elevation": -1,
+      "feature": "none",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": -326,
+      "y": -422,
+      "biome": "bioFarm",
+      "elevation": 0,
+      "feature": "tree",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": -189,
+      "y": -333,
+      "biome": "sprawl",
+      "elevation": 0,
+      "feature": "none",
+      "settlementId": null,
+      "resource": "scrap",
+      "resourceRichness": 0.06565853785979975
+    },
+    {
+      "x": -52,
+      "y": -244,
+      "biome": "wasteland",
+      "elevation": -1,
+      "feature": "rock",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": 85,
+      "y": -155,
+      "biome": "toxicMarsh",
+      "elevation": -2,
+      "feature": "grassTuft",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": 222,
+      "y": -66,
+      "biome": "rareEarthMine",
+      "elevation": 1,
+      "feature": "none",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": 359,
+      "y": 23,
+      "biome": "sprawl",
+      "elevation": -2,
+      "feature": "grassTuft",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": 496,
+      "y": 112,
+      "biome": "wasteland",
+      "elevation": -3,
+      "feature": "none",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": -568,
+      "y": 201,
+      "biome": "bioFarm",
+      "elevation": 2,
+      "feature": "crops",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": -431,
+      "y": 290,
+      "biome": "rareEarthMine",
+      "elevation": 3,
+      "feature": "rock",
+      "settlementId": null,
+      "resource": "rareEarth",
+      "resourceRichness": 0.06496414794753771
+    },
+    {
+      "x": -294,
+      "y": 379,
+      "biome": "deadWater",
+      "elevation": -3,
+      "feature": "none",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": -157,
+      "y": 468,
+      "biome": "deadWater",
+      "elevation": -3,
+      "feature": "none",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": -20,
+      "y": 557,
+      "biome": "toxicMarsh",
+      "elevation": -1,
+      "feature": "rubble",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": 117,
+      "y": -553,
+      "biome": "sprawl",
+      "elevation": 0,
+      "feature": "crate",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": 254,
+      "y": -464,
+      "biome": "sprawl",
+      "elevation": -3,
+      "feature": "building",
+      "settlementId": null,
+      "resource": "scrap",
+      "resourceRichness": 0.3663350093302051
+    },
+    {
+      "x": 391,
+      "y": -375,
+      "biome": "sprawl",
+      "elevation": 0,
+      "feature": "none",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": 528,
+      "y": -286,
+      "biome": "wasteland",
+      "elevation": 3,
+      "feature": "none",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": -536,
+      "y": -197,
+      "biome": "bioFarm",
+      "elevation": 2,
+      "feature": "none",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": -399,
+      "y": -108,
+      "biome": "reclaimedForest",
+      "elevation": 0,
+      "feature": "boulder",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": -262,
+      "y": -19,
+      "biome": "reclaimedForest",
+      "elevation": 2,
+      "feature": "bush",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": -125,
+      "y": 70,
+      "biome": "oilFields",
+      "elevation": 1,
+      "feature": "grassTuft",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": 12,
+      "y": 159,
+      "biome": "sprawl",
+      "elevation": 1,
+      "feature": "grassTuft",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": 149,
+      "y": 248,
+      "biome": "oilFields",
+      "elevation": 2,
+      "feature": "none",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": 286,
+      "y": 337,
+      "biome": "sprawl",
+      "elevation": 0,
+      "feature": "none",
+      "settlementId": null,
+      "resource": "scrap",
+      "resourceRichness": 0.24980480275267258
+    },
+    {
+      "x": 423,
+      "y": 426,
+      "biome": "sprawl",
+      "elevation": -3,
+      "feature": "none",
+      "settlementId": null,
+      "resource": "scrap",
+      "resourceRichness": 0.10246776109880779
+    },
+    {
+      "x": 560,
+      "y": 515,
+      "biome": "bioFarm",
+      "elevation": 0,
+      "feature": "grassTuft",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": -504,
+      "y": -595,
+      "biome": "oilFields",
+      "elevation": 0,
+      "feature": "deadTree",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": -367,
+      "y": -506,
+      "biome": "reclaimedForest",
+      "elevation": 0,
+      "feature": "none",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": -230,
+      "y": -417,
+      "biome": "reclaimedForest",
+      "elevation": 1,
+      "feature": "bush",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": -93,
+      "y": -328,
+      "biome": "sprawl",
+      "elevation": -2,
+      "feature": "camp",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": 44,
+      "y": -239,
+      "biome": "rareEarthMine",
+      "elevation": 2,
+      "feature": "boulder",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": 181,
+      "y": -150,
+      "biome": "oilFields",
+      "elevation": 0,
+      "feature": "none",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": 318,
+      "y": -61,
+      "biome": "bioFarm",
+      "elevation": 4,
+      "feature": "none",
+      "settlementId": null,
+      "resource": "culturedMeat",
+      "resourceRichness": 0.012679300676938206
+    },
+    {
+      "x": 455,
+      "y": 28,
+      "biome": "scrapyard",
+      "elevation": -1,
+      "feature": "wreck",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": 592,
+      "y": 117,
+      "biome": "toxicMarsh",
+      "elevation": -2,
+      "feature": "mushroom",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": -472,
+      "y": 206,
+      "biome": "bioFarm",
+      "elevation": 0,
+      "feature": "grassTuft",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": -335,
+      "y": 295,
+      "biome": "oilFields",
+      "elevation": -3,
+      "feature": "none",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": -198,
+      "y": 384,
+      "biome": "bioFarm",
+      "elevation": 1,
+      "feature": "crops",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": -61,
+      "y": 473,
+      "biome": "deadWater",
+      "elevation": -3,
+      "feature": "none",
+      "settlementId": null,
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": 646,
+      "y": 87,
+      "biome": "neonCore",
+      "elevation": 1,
+      "feature": "none",
+      "settlementId": "cap_0",
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": 650,
+      "y": 87,
+      "biome": "neonCore",
+      "elevation": 1,
+      "feature": "crate",
+      "settlementId": "cap_0",
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": 648,
+      "y": 90,
+      "biome": "neonCore",
+      "elevation": 1,
+      "feature": "building",
+      "settlementId": "cap_0",
+      "resource": null,
+      "resourceRichness": 0.0
+    },
+    {
+      "x": 646,
+      "y": 107,
+      "biome": "neonCore",
+      "elevation": 2,
+      "feature": "none",
+      "settlementId": "cap_0",
+      "resource": null,
+      "resourceRichness": 0.0
+    }
+  ],
+  "campaign": {
+    "initial": {
+      "startSettlementId": "cap_4",
+      "attributes": {
+        "strength": 5,
+        "perception": 5,
+        "luck": 10,
+        "intelligence": 6,
+        "endurance": 8,
+        "status": 6
+      },
+      "credits": 250,
+      "plotId": "plot_cap_4",
+      "plotOrigin": {
+        "x": 158,
+        "y": -458
+      },
+      "plotName": "Terreno em Zona Tanaka Prime",
+      "governmentCount": 20,
+      "marketCount": 32,
+      "visited": [
+        "cap_4"
+      ]
+    },
+    "days": [
+      {
+        "day": 1,
+        "events": [
+          "Serviço público (Lixão): +3 Sucata.",
+          "Salário público: +45 créditos."
+        ],
+        "upkeepTotal": {
+          "hunger": 16,
+          "thirst": 20
+        },
+        "produced": {
+          "scrap": 3
+        },
+        "completedQuests": [],
+        "credits": 295,
+        "hunger": 84,
+        "thirst": 80,
+        "hp": 100,
+        "level": "survivor",
+        "statusOffset": 0,
+        "inventory": {
+          "scrap": 3
+        }
+      },
+      {
+        "day": 2,
+        "events": [],
+        "upkeepTotal": {
+          "hunger": 8,
+          "thirst": 10
+        },
+        "produced": {},
+        "completedQuests": [],
+        "credits": 295,
+        "hunger": 76,
+        "thirst": 70,
+        "hp": 100,
+        "level": "survivor",
+        "statusOffset": 0,
+        "inventory": {
+          "scrap": 3
+        }
+      },
+      {
+        "day": 3,
+        "events": [
+          "Serviço público (Lixão): +3 Sucata.",
+          "Salário público: +45 créditos."
+        ],
+        "upkeepTotal": {
+          "hunger": 16,
+          "thirst": 20
+        },
+        "produced": {
+          "scrap": 3
+        },
+        "completedQuests": [],
+        "credits": 340,
+        "hunger": 60,
+        "thirst": 50,
+        "hp": 100,
+        "level": "survivor",
+        "statusOffset": 0,
+        "inventory": {
+          "scrap": 6
+        }
+      },
+      {
+        "day": 4,
+        "events": [],
+        "upkeepTotal": {
+          "hunger": 8,
+          "thirst": 10
+        },
+        "produced": {},
+        "completedQuests": [],
+        "credits": 340,
+        "hunger": 52,
+        "thirst": 40,
+        "hp": 100,
+        "level": "survivor",
+        "statusOffset": 0,
+        "inventory": {
+          "scrap": 6
+        }
+      },
+      {
+        "day": 5,
+        "events": [
+          "Serviço público (Lixão): +3 Sucata.",
+          "Salário público: +45 créditos."
+        ],
+        "upkeepTotal": {
+          "hunger": 16,
+          "thirst": 20
+        },
+        "produced": {
+          "scrap": 3
+        },
+        "completedQuests": [],
+        "credits": 385,
+        "hunger": 36,
+        "thirst": 20,
+        "hp": 100,
+        "level": "survivor",
+        "statusOffset": 0,
+        "inventory": {
+          "scrap": 9
+        }
+      },
+      {
+        "day": 6,
+        "events": [],
+        "upkeepTotal": {
+          "hunger": 8,
+          "thirst": 10
+        },
+        "produced": {},
+        "completedQuests": [],
+        "credits": 385,
+        "hunger": 28,
+        "thirst": 10,
+        "hp": 100,
+        "level": "survivor",
+        "statusOffset": 0,
+        "inventory": {
+          "scrap": 9
+        }
+      },
+      {
+        "day": 7,
+        "events": [
+          "Serviço público (Lixão): +3 Sucata.",
+          "Você passou o dia com sede. -25 HP.",
+          "Salário público: +45 créditos."
+        ],
+        "upkeepTotal": {
+          "hunger": 16,
+          "thirst": 20
+        },
+        "produced": {
+          "scrap": 3
+        },
+        "completedQuests": [],
+        "credits": 430,
+        "hunger": 12,
+        "thirst": 0,
+        "hp": 75,
+        "level": "survivor",
+        "statusOffset": 0,
+        "inventory": {
+          "scrap": 12
+        }
+      },
+      {
+        "day": 8,
+        "events": [
+          "Você passou o dia com sede. -25 HP."
+        ],
+        "upkeepTotal": {
+          "hunger": 8,
+          "thirst": 10
+        },
+        "produced": {},
+        "completedQuests": [],
+        "credits": 430,
+        "hunger": 4,
+        "thirst": 0,
+        "hp": 50,
+        "level": "survivor",
+        "statusOffset": 0,
+        "inventory": {
+          "scrap": 12
+        }
+      },
+      {
+        "day": 9,
+        "events": [
+          "Serviço público (Lixão): +3 Sucata.",
+          "Você passou o dia com fome. -25 HP.",
+          "Você passou o dia com sede. -25 HP.",
+          "MORTE PERMANENTE: abandono por fome e sede."
+        ],
+        "upkeepTotal": {
+          "hunger": 16,
+          "thirst": 20
+        },
+        "produced": {
+          "scrap": 3
+        },
+        "completedQuests": [],
+        "credits": 430,
+        "hunger": 0,
+        "thirst": 0,
+        "hp": 0,
+        "level": "survivor",
+        "statusOffset": 0,
+        "inventory": {
+          "scrap": 15
+        }
+      },
+      {
+        "day": 10,
+        "events": [
+          "O personagem está morto. A campanha acabou."
+        ],
+        "upkeepTotal": {
+          "hunger": 0,
+          "thirst": 0
+        },
+        "produced": {},
+        "completedQuests": [],
+        "credits": 430,
+        "hunger": 0,
+        "thirst": 0,
+        "hp": 0,
+        "level": "survivor",
+        "statusOffset": 0,
+        "inventory": {
+          "scrap": 15
+        }
+      }
+    ]
+  }
 }
