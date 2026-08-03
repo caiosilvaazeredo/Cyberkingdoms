@@ -106,11 +106,15 @@ export function workById(id: string): WorkOption {
 }
 
 export function weatherMultipliers(weather: Weather): {
+  label: string;
   hunger: number;
   thirst: number;
 } {
   const w = SurvivalTables.weather[weather]!;
-  return { hunger: w.hungerMultiplier, thirst: w.thirstMultiplier };
+  // O rótulo sai junto porque quem calcula o clima é quem escreve a linha da
+  // conta do dia; buscá-lo de novo na tabela seria uma segunda consulta pela
+  // mesma chave, com uma segunda chance de errar a chave.
+  return { label: w.label, hunger: w.hungerMultiplier, thirst: w.thirstMultiplier };
 }
 
 /**

@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
+import { DeterministicRandom } from '../src/core/rng';
 import { Inventory } from '../src/economy/inventory';
+import {
+  Market,
+  marketAccepts,
+  seedMarket,
+  type MarketKind,
+} from '../src/economy/market';
 import { allItems, itemDef, itemsOfTier } from '../src/economy/item';
 import {
   SurvivalTables,
@@ -150,5 +157,109 @@ describe('Tabelas de sobrevivência', () => {
   it('zero de vital é inanição', () => {
     expect(isStarving(0)).toBe(true);
     expect(isStarving(1)).toBe(false);
+  });
+});
+
+describe('Mercado', () => {
+  const livro = (kind: MarketKind = 'central'): Market => {
+    const m = new Market('cap_0', kind);
+    m.postOrder({ sellerId: 'a', sellerName: 'A', item: 'scrap', quantity: 10, unitPrice: 5, day: 1 });
+    m.postOrder({ sellerId: 'b', sellerName: 'B', item: 'scrap', quantity: 10, unitPrice: 3, day: 1 });
+    m.postOrder({ sellerId: 'c', sellerName: 'C', item: 'scrap', quantity: 10, unitPrice: 9, day: 1 });
+    return m;
+  };
+
+  it('a cotação é a oferta mais barata, não a primeira publicada', () => {
+    expect(livro().bestPrice('scrap')).toBe(3);
+    expect(livro().supplyOf('scrap')).toBe(30);
+  });
+
+  it('a compra varre da mais barata para a mais cara', () => {
+    // 10 a 3 + 5 a 5 = 55, e não 15 a 5.
+    const m = livro();
+    const r = m.buy({ item: 'scrap', quantity: 15, availableCredits: 9999, taxRate: 0 });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.totalPaid).toBe(55);
+    expect(m.supplyOf('scrap')).toBe(15);
+  });
+
+  it('caixa curto não deixa o livro pela metade', () => {
+    // O defeito clássico: debitar oferta a oferta e desistir no meio. O
+    // comprador não leva nada e o vendedor perde o estoque.
+    const m = livro();
+    const r = m.buy({ item: 'scrap', quantity: 25, availableCredits: 40, taxRate: 0 });
+    expect(r.ok).toBe(false);
+    expect(m.supplyOf('scrap')).toBe(30);
+  });
+
+  it('oferta insuficiente recusa antes de tocar no livro', () => {
+    const m = livro();
+    const r = m.buy({ item: 'scrap', quantity: 99, availableCredits: 999999, taxRate: 0 });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toContain('30');
+    expect(m.supplyOf('scrap')).toBe(30);
+  });
+
+  it('só o Central recolhe imposto', () => {
+    const central = livro('central');
+    const clandestino = livro('clandestine');
+    const a = central.buy({ item: 'scrap', quantity: 10, availableCredits: 999, taxRate: 0.2 });
+    const b = clandestino.buy({ item: 'scrap', quantity: 10, availableCredits: 999, taxRate: 0.2 });
+    expect(a.ok && a.tax).toBe(6);
+    expect(b.ok && b.tax).toBe(0);
+  });
+
+  it('o Central recusa contrabando; o clandestino aceita tudo', () => {
+    const ilegal = allItems.find((i) => !i.legal)!;
+    expect(marketAccepts('central', ilegal.id)).toBe(false);
+    expect(marketAccepts('clandestine', ilegal.id)).toBe(true);
+    expect(marketAccepts('clandestine', 'scrap')).toBe(true);
+
+    const m = new Market('cap_0', 'central');
+    expect(
+      m.postOrder({ sellerId: 'a', sellerName: 'A', item: ilegal.id, quantity: 1, unitPrice: 1, day: 1 }),
+    ).toBeNull();
+  });
+
+  it('quantidade e preço não podem ser zero ou negativos', () => {
+    const m = new Market('cap_0', 'central');
+    expect(m.postOrder({ sellerId: 'a', sellerName: 'A', item: 'scrap', quantity: 0, unitPrice: 5, day: 1 })).toBeNull();
+    expect(m.postOrder({ sellerId: 'a', sellerName: 'A', item: 'scrap', quantity: 5, unitPrice: 0, day: 1 })).toBeNull();
+    expect(m.orders).toHaveLength(0);
+  });
+
+  it('ofertas velhas expiram para o livro não crescer sem fim', () => {
+    const m = livro();
+    m.expireOrders(20, 14);
+    expect(m.orders).toHaveLength(0);
+    // Dentro do prazo, ninguém sai.
+    const outro = livro();
+    outro.expireOrders(14, 14);
+    expect(outro.orders).toHaveLength(3);
+  });
+
+  it('cidade produtora tem estoque farto e barato; consumidora, o contrário', () => {
+    // É essa assimetria que cria a rota comercial. Sem ela, viajar não paga.
+    const produtora = new Market('p', 'central');
+    seedMarket(produtora, {
+      isCapital: true,
+      vocation: { produces: ['scrap'], demands: [] },
+    }, new DeterministicRandom(11));
+
+    const consumidora = new Market('c', 'central');
+    seedMarket(consumidora, {
+      isCapital: true,
+      vocation: { produces: [], demands: ['scrap'] },
+    }, new DeterministicRandom(11));
+
+    expect(produtora.supplyOf('scrap')).toBeGreaterThan(consumidora.supplyOf('scrap'));
+    expect(produtora.bestPrice('scrap')!).toBeLessThan(consumidora.bestPrice('scrap')!);
+  });
+
+  it('sobrevive à ida e volta pelo JSON', () => {
+    const m = livro();
+    const outro = Market.fromJson(m.toJson());
+    expect(outro.supplyOf('scrap')).toBe(30);
+    expect(outro.bestPrice('scrap')).toBe(3);
   });
 });

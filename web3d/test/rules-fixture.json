@@ -1,0 +1,1114 @@
+{
+  "attributeRolls": [
+    {
+      "seed": 1,
+      "values": {
+        "strength": 8,
+        "perception": 6,
+        "luck": 8,
+        "intelligence": 7,
+        "endurance": 9,
+        "status": 8
+      },
+      "total": 46,
+      "maxHp": 105
+    },
+    {
+      "seed": 7,
+      "values": {
+        "strength": 5,
+        "perception": 7,
+        "luck": 6,
+        "intelligence": 9,
+        "endurance": 9,
+        "status": 9
+      },
+      "total": 45,
+      "maxHp": 105
+    },
+    {
+      "seed": 42,
+      "values": {
+        "strength": 4,
+        "perception": 7,
+        "luck": 8,
+        "intelligence": 5,
+        "endurance": 3,
+        "status": 6
+      },
+      "total": 33,
+      "maxHp": 75
+    },
+    {
+      "seed": 1337,
+      "values": {
+        "strength": 4,
+        "perception": 7,
+        "luck": 5,
+        "intelligence": 6,
+        "endurance": 5,
+        "status": 6
+      },
+      "total": 33,
+      "maxHp": 85
+    },
+    {
+      "seed": 90210,
+      "values": {
+        "strength": 7,
+        "perception": 9,
+        "luck": 10,
+        "intelligence": 6,
+        "endurance": 8,
+        "status": 7
+      },
+      "total": 47,
+      "maxHp": 100
+    }
+  ],
+  "combat": [
+    {
+      "name": "equilibrado",
+      "seed": 991,
+      "winnerId": "a",
+      "loserId": "b",
+      "rounds": 17,
+      "statusLost": 3,
+      "log": [
+        {
+          "round": 1,
+          "attackerName": "a",
+          "defenderName": "b",
+          "damage": 12,
+          "critical": false,
+          "defenderHpAfter": 83
+        },
+        {
+          "round": 2,
+          "attackerName": "b",
+          "defenderName": "a",
+          "damage": 9,
+          "critical": false,
+          "defenderHpAfter": 86
+        },
+        {
+          "round": 3,
+          "attackerName": "a",
+          "defenderName": "b",
+          "damage": 8,
+          "critical": false,
+          "defenderHpAfter": 75
+        },
+        {
+          "round": 4,
+          "attackerName": "b",
+          "defenderName": "a",
+          "damage": 7,
+          "critical": false,
+          "defenderHpAfter": 79
+        },
+        {
+          "round": 5,
+          "attackerName": "a",
+          "defenderName": "b",
+          "damage": 10,
+          "critical": false,
+          "defenderHpAfter": 65
+        },
+        {
+          "round": 6,
+          "attackerName": "b",
+          "defenderName": "a",
+          "damage": 8,
+          "critical": false,
+          "defenderHpAfter": 71
+        },
+        {
+          "round": 7,
+          "attackerName": "a",
+          "defenderName": "b",
+          "damage": 9,
+          "critical": false,
+          "defenderHpAfter": 56
+        },
+        {
+          "round": 8,
+          "attackerName": "b",
+          "defenderName": "a",
+          "damage": 21,
+          "critical": true,
+          "defenderHpAfter": 50
+        },
+        {
+          "round": 9,
+          "attackerName": "a",
+          "defenderName": "b",
+          "damage": 8,
+          "critical": false,
+          "defenderHpAfter": 48
+        },
+        {
+          "round": 10,
+          "attackerName": "b",
+          "defenderName": "a",
+          "damage": 10,
+          "critical": false,
+          "defenderHpAfter": 40
+        },
+        {
+          "round": 11,
+          "attackerName": "a",
+          "defenderName": "b",
+          "damage": 21,
+          "critical": true,
+          "defenderHpAfter": 27
+        },
+        {
+          "round": 12,
+          "attackerName": "b",
+          "defenderName": "a",
+          "damage": 7,
+          "critical": false,
+          "defenderHpAfter": 33
+        },
+        {
+          "round": 13,
+          "attackerName": "a",
+          "defenderName": "b",
+          "damage": 10,
+          "critical": false,
+          "defenderHpAfter": 17
+        },
+        {
+          "round": 14,
+          "attackerName": "b",
+          "defenderName": "a",
+          "damage": 10,
+          "critical": false,
+          "defenderHpAfter": 23
+        },
+        {
+          "round": 15,
+          "attackerName": "a",
+          "defenderName": "b",
+          "damage": 11,
+          "critical": false,
+          "defenderHpAfter": 6
+        },
+        {
+          "round": 16,
+          "attackerName": "b",
+          "defenderName": "a",
+          "damage": 9,
+          "critical": false,
+          "defenderHpAfter": 14
+        },
+        {
+          "round": 17,
+          "attackerName": "a",
+          "defenderName": "b",
+          "damage": 11,
+          "critical": false,
+          "defenderHpAfter": 0
+        }
+      ]
+    },
+    {
+      "name": "tanque",
+      "seed": 2024,
+      "winnerId": "b",
+      "loserId": "a",
+      "rounds": 5,
+      "statusLost": 2,
+      "log": [
+        {
+          "round": 1,
+          "attackerName": "b",
+          "defenderName": "a",
+          "damage": 59,
+          "critical": false,
+          "defenderHpAfter": 61
+        },
+        {
+          "round": 2,
+          "attackerName": "a",
+          "defenderName": "b",
+          "damage": 1,
+          "critical": false,
+          "defenderHpAfter": 79
+        },
+        {
+          "round": 3,
+          "attackerName": "b",
+          "defenderName": "a",
+          "damage": 58,
+          "critical": false,
+          "defenderHpAfter": 3
+        },
+        {
+          "round": 4,
+          "attackerName": "a",
+          "defenderName": "b",
+          "damage": 1,
+          "critical": false,
+          "defenderHpAfter": 78
+        },
+        {
+          "round": 5,
+          "attackerName": "b",
+          "defenderName": "a",
+          "damage": 59,
+          "critical": false,
+          "defenderHpAfter": 0
+        }
+      ]
+    },
+    {
+      "name": "drones",
+      "seed": 55,
+      "winnerId": "b",
+      "loserId": "a",
+      "rounds": 6,
+      "statusLost": 1,
+      "log": [
+        {
+          "round": 1,
+          "attackerName": "a",
+          "defenderName": "b",
+          "damage": 9,
+          "critical": false,
+          "defenderHpAfter": 81
+        },
+        {
+          "round": 2,
+          "attackerName": "b",
+          "defenderName": "a",
+          "damage": 35,
+          "critical": false,
+          "defenderHpAfter": 55
+        },
+        {
+          "round": 3,
+          "attackerName": "a",
+          "defenderName": "b",
+          "damage": 15,
+          "critical": true,
+          "defenderHpAfter": 66
+        },
+        {
+          "round": 4,
+          "attackerName": "b",
+          "defenderName": "a",
+          "damage": 30,
+          "critical": false,
+          "defenderHpAfter": 25
+        },
+        {
+          "round": 5,
+          "attackerName": "a",
+          "defenderName": "b",
+          "damage": 7,
+          "critical": false,
+          "defenderHpAfter": 59
+        },
+        {
+          "round": 6,
+          "attackerName": "b",
+          "defenderName": "a",
+          "damage": 31,
+          "critical": false,
+          "defenderHpAfter": 0
+        }
+      ]
+    }
+  ],
+  "loot": [
+    {
+      "seed": 3,
+      "loot": {
+        "scrap": 10,
+        "water": 25
+      }
+    },
+    {
+      "seed": 77,
+      "loot": {
+        "scrap": 10,
+        "polymer": 4
+      }
+    },
+    {
+      "seed": 5150,
+      "loot": {
+        "scrap": 10,
+        "chip": 2
+      }
+    }
+  ],
+  "upkeep": [
+    {
+      "name": "ocioso · mods 0.0/0.0",
+      "hungerModifier": 0.0,
+      "thirstModifier": 0.0,
+      "total": {
+        "hunger": 8,
+        "thirst": 10
+      },
+      "lines": [
+        {
+          "label": "Base (existir)",
+          "upkeep": {
+            "hunger": 8,
+            "thirst": 10
+          }
+        }
+      ]
+    },
+    {
+      "name": "ocioso · mods -0.3/-0.15",
+      "hungerModifier": -0.3,
+      "thirstModifier": -0.15,
+      "total": {
+        "hunger": 6,
+        "thirst": 9
+      },
+      "lines": [
+        {
+          "label": "Base (existir)",
+          "upkeep": {
+            "hunger": 8,
+            "thirst": 10
+          }
+        },
+        {
+          "label": "Equipamentos",
+          "upkeep": {
+            "hunger": -2,
+            "thirst": -1
+          }
+        }
+      ]
+    },
+    {
+      "name": "ferro-velho no deserto · mods 0.0/0.0",
+      "hungerModifier": 0.0,
+      "thirstModifier": 0.0,
+      "total": {
+        "hunger": 16,
+        "thirst": 30
+      },
+      "lines": [
+        {
+          "label": "Base (existir)",
+          "upkeep": {
+            "hunger": 8,
+            "thirst": 10
+          }
+        },
+        {
+          "label": "Trabalho: Lixão",
+          "upkeep": {
+            "hunger": 8,
+            "thirst": 10
+          }
+        },
+        {
+          "label": "Clima: Deserto",
+          "upkeep": {
+            "hunger": 0,
+            "thirst": 10
+          }
+        }
+      ]
+    },
+    {
+      "name": "ferro-velho no deserto · mods -0.3/-0.15",
+      "hungerModifier": -0.3,
+      "thirstModifier": -0.15,
+      "total": {
+        "hunger": 11,
+        "thirst": 26
+      },
+      "lines": [
+        {
+          "label": "Base (existir)",
+          "upkeep": {
+            "hunger": 8,
+            "thirst": 10
+          }
+        },
+        {
+          "label": "Trabalho: Lixão",
+          "upkeep": {
+            "hunger": 8,
+            "thirst": 10
+          }
+        },
+        {
+          "label": "Clima: Deserto",
+          "upkeep": {
+            "hunger": 0,
+            "thirst": 10
+          }
+        },
+        {
+          "label": "Equipamentos",
+          "upkeep": {
+            "hunger": -5,
+            "thirst": -4
+          }
+        }
+      ]
+    },
+    {
+      "name": "viagem longa com combate · mods 0.0/0.0",
+      "hungerModifier": 0.0,
+      "thirstModifier": 0.0,
+      "total": {
+        "hunger": 45,
+        "thirst": 61
+      },
+      "lines": [
+        {
+          "label": "Base (existir)",
+          "upkeep": {
+            "hunger": 8,
+            "thirst": 10
+          }
+        },
+        {
+          "label": "Viagem (3x)",
+          "upkeep": {
+            "hunger": 15,
+            "thirst": 24
+          }
+        },
+        {
+          "label": "Dormir na estrada",
+          "upkeep": {
+            "hunger": 10,
+            "thirst": 12
+          }
+        },
+        {
+          "label": "Combate: derrota (longo)",
+          "upkeep": {
+            "hunger": 12,
+            "thirst": 15
+          }
+        }
+      ]
+    },
+    {
+      "name": "viagem longa com combate · mods -0.3/-0.15",
+      "hungerModifier": -0.3,
+      "thirstModifier": -0.15,
+      "total": {
+        "hunger": 31,
+        "thirst": 52
+      },
+      "lines": [
+        {
+          "label": "Base (existir)",
+          "upkeep": {
+            "hunger": 8,
+            "thirst": 10
+          }
+        },
+        {
+          "label": "Viagem (3x)",
+          "upkeep": {
+            "hunger": 15,
+            "thirst": 24
+          }
+        },
+        {
+          "label": "Dormir na estrada",
+          "upkeep": {
+            "hunger": 10,
+            "thirst": 12
+          }
+        },
+        {
+          "label": "Combate: derrota (longo)",
+          "upkeep": {
+            "hunger": 12,
+            "thirst": 15
+          }
+        },
+        {
+          "label": "Equipamentos",
+          "upkeep": {
+            "hunger": -14,
+            "thirst": -9
+          }
+        }
+      ]
+    },
+    {
+      "name": "oficina com consumo na neve · mods 0.0/0.0",
+      "hungerModifier": 0.0,
+      "thirstModifier": 0.0,
+      "total": {
+        "hunger": 18,
+        "thirst": 31
+      },
+      "lines": [
+        {
+          "label": "Base (existir)",
+          "upkeep": {
+            "hunger": 8,
+            "thirst": 10
+          }
+        },
+        {
+          "label": "Oficina: Laboratório",
+          "upkeep": {
+            "hunger": 6,
+            "thirst": 6
+          }
+        },
+        {
+          "label": "Red Rush",
+          "upkeep": {
+            "hunger": 0,
+            "thirst": 15
+          }
+        },
+        {
+          "label": "Clima: Neve",
+          "upkeep": {
+            "hunger": 4,
+            "thirst": 0
+          }
+        }
+      ]
+    },
+    {
+      "name": "oficina com consumo na neve · mods -0.3/-0.15",
+      "hungerModifier": -0.3,
+      "thirstModifier": -0.15,
+      "total": {
+        "hunger": 13,
+        "thirst": 26
+      },
+      "lines": [
+        {
+          "label": "Base (existir)",
+          "upkeep": {
+            "hunger": 8,
+            "thirst": 10
+          }
+        },
+        {
+          "label": "Oficina: Laboratório",
+          "upkeep": {
+            "hunger": 6,
+            "thirst": 6
+          }
+        },
+        {
+          "label": "Red Rush",
+          "upkeep": {
+            "hunger": 0,
+            "thirst": 15
+          }
+        },
+        {
+          "label": "Clima: Neve",
+          "upkeep": {
+            "hunger": 4,
+            "thirst": 0
+          }
+        },
+        {
+          "label": "Equipamentos",
+          "upkeep": {
+            "hunger": -5,
+            "thirst": -5
+          }
+        }
+      ]
+    }
+  ],
+  "recipeYields": [
+    {
+      "recipe": "refine_polymer",
+      "intelligence": 3,
+      "yield": 2
+    },
+    {
+      "recipe": "refine_chip",
+      "intelligence": 3,
+      "yield": 1
+    },
+    {
+      "recipe": "refine_fabric",
+      "intelligence": 3,
+      "yield": 2
+    },
+    {
+      "recipe": "refine_board",
+      "intelligence": 3,
+      "yield": 1
+    },
+    {
+      "recipe": "refine_catalyst",
+      "intelligence": 3,
+      "yield": 2
+    },
+    {
+      "recipe": "craft_clothing",
+      "intelligence": 3,
+      "yield": 1
+    },
+    {
+      "recipe": "craft_pistol",
+      "intelligence": 3,
+      "yield": 1
+    },
+    {
+      "recipe": "craft_rifle",
+      "intelligence": 3,
+      "yield": 1
+    },
+    {
+      "recipe": "craft_drone",
+      "intelligence": 3,
+      "yield": 1
+    },
+    {
+      "recipe": "craft_metabolic_implant",
+      "intelligence": 3,
+      "yield": 1
+    },
+    {
+      "recipe": "craft_hydration_pack",
+      "intelligence": 3,
+      "yield": 1
+    },
+    {
+      "recipe": "craft_thermal_jacket",
+      "intelligence": 3,
+      "yield": 1
+    },
+    {
+      "recipe": "craft_ration",
+      "intelligence": 3,
+      "yield": 3
+    },
+    {
+      "recipe": "craft_luxury_meal",
+      "intelligence": 3,
+      "yield": 2
+    },
+    {
+      "recipe": "craft_water",
+      "intelligence": 3,
+      "yield": 5
+    },
+    {
+      "recipe": "craft_street_food",
+      "intelligence": 3,
+      "yield": 4
+    },
+    {
+      "recipe": "craft_red_rush",
+      "intelligence": 3,
+      "yield": 2
+    },
+    {
+      "recipe": "craft_synthetic_drug",
+      "intelligence": 3,
+      "yield": 2
+    },
+    {
+      "recipe": "craft_illegal_weapon",
+      "intelligence": 3,
+      "yield": 1
+    },
+    {
+      "recipe": "refine_polymer",
+      "intelligence": 6,
+      "yield": 2
+    },
+    {
+      "recipe": "refine_chip",
+      "intelligence": 6,
+      "yield": 1
+    },
+    {
+      "recipe": "refine_fabric",
+      "intelligence": 6,
+      "yield": 3
+    },
+    {
+      "recipe": "refine_board",
+      "intelligence": 6,
+      "yield": 1
+    },
+    {
+      "recipe": "refine_catalyst",
+      "intelligence": 6,
+      "yield": 2
+    },
+    {
+      "recipe": "craft_clothing",
+      "intelligence": 6,
+      "yield": 1
+    },
+    {
+      "recipe": "craft_pistol",
+      "intelligence": 6,
+      "yield": 1
+    },
+    {
+      "recipe": "craft_rifle",
+      "intelligence": 6,
+      "yield": 1
+    },
+    {
+      "recipe": "craft_drone",
+      "intelligence": 6,
+      "yield": 1
+    },
+    {
+      "recipe": "craft_metabolic_implant",
+      "intelligence": 6,
+      "yield": 1
+    },
+    {
+      "recipe": "craft_hydration_pack",
+      "intelligence": 6,
+      "yield": 1
+    },
+    {
+      "recipe": "craft_thermal_jacket",
+      "intelligence": 6,
+      "yield": 1
+    },
+    {
+      "recipe": "craft_ration",
+      "intelligence": 6,
+      "yield": 4
+    },
+    {
+      "recipe": "craft_luxury_meal",
+      "intelligence": 6,
+      "yield": 2
+    },
+    {
+      "recipe": "craft_water",
+      "intelligence": 6,
+      "yield": 6
+    },
+    {
+      "recipe": "craft_street_food",
+      "intelligence": 6,
+      "yield": 5
+    },
+    {
+      "recipe": "craft_red_rush",
+      "intelligence": 6,
+      "yield": 3
+    },
+    {
+      "recipe": "craft_synthetic_drug",
+      "intelligence": 6,
+      "yield": 2
+    },
+    {
+      "recipe": "craft_illegal_weapon",
+      "intelligence": 6,
+      "yield": 1
+    },
+    {
+      "recipe": "refine_polymer",
+      "intelligence": 9,
+      "yield": 2
+    },
+    {
+      "recipe": "refine_chip",
+      "intelligence": 9,
+      "yield": 1
+    },
+    {
+      "recipe": "refine_fabric",
+      "intelligence": 9,
+      "yield": 4
+    },
+    {
+      "recipe": "refine_board",
+      "intelligence": 9,
+      "yield": 1
+    },
+    {
+      "recipe": "refine_catalyst",
+      "intelligence": 9,
+      "yield": 2
+    },
+    {
+      "recipe": "craft_clothing",
+      "intelligence": 9,
+      "yield": 1
+    },
+    {
+      "recipe": "craft_pistol",
+      "intelligence": 9,
+      "yield": 1
+    },
+    {
+      "recipe": "craft_rifle",
+      "intelligence": 9,
+      "yield": 1
+    },
+    {
+      "recipe": "craft_drone",
+      "intelligence": 9,
+      "yield": 1
+    },
+    {
+      "recipe": "craft_metabolic_implant",
+      "intelligence": 9,
+      "yield": 1
+    },
+    {
+      "recipe": "craft_hydration_pack",
+      "intelligence": 9,
+      "yield": 1
+    },
+    {
+      "recipe": "craft_thermal_jacket",
+      "intelligence": 9,
+      "yield": 1
+    },
+    {
+      "recipe": "craft_ration",
+      "intelligence": 9,
+      "yield": 5
+    },
+    {
+      "recipe": "craft_luxury_meal",
+      "intelligence": 9,
+      "yield": 2
+    },
+    {
+      "recipe": "craft_water",
+      "intelligence": 9,
+      "yield": 7
+    },
+    {
+      "recipe": "craft_street_food",
+      "intelligence": 9,
+      "yield": 6
+    },
+    {
+      "recipe": "craft_red_rush",
+      "intelligence": 9,
+      "yield": 4
+    },
+    {
+      "recipe": "craft_synthetic_drug",
+      "intelligence": 9,
+      "yield": 2
+    },
+    {
+      "recipe": "craft_illegal_weapon",
+      "intelligence": 9,
+      "yield": 1
+    },
+    {
+      "recipe": "refine_polymer",
+      "intelligence": 12,
+      "yield": 3
+    },
+    {
+      "recipe": "refine_chip",
+      "intelligence": 12,
+      "yield": 1
+    },
+    {
+      "recipe": "refine_fabric",
+      "intelligence": 12,
+      "yield": 4
+    },
+    {
+      "recipe": "refine_board",
+      "intelligence": 12,
+      "yield": 1
+    },
+    {
+      "recipe": "refine_catalyst",
+      "intelligence": 12,
+      "yield": 3
+    },
+    {
+      "recipe": "craft_clothing",
+      "intelligence": 12,
+      "yield": 1
+    },
+    {
+      "recipe": "craft_pistol",
+      "intelligence": 12,
+      "yield": 1
+    },
+    {
+      "recipe": "craft_rifle",
+      "intelligence": 12,
+      "yield": 1
+    },
+    {
+      "recipe": "craft_drone",
+      "intelligence": 12,
+      "yield": 1
+    },
+    {
+      "recipe": "craft_metabolic_implant",
+      "intelligence": 12,
+      "yield": 1
+    },
+    {
+      "recipe": "craft_hydration_pack",
+      "intelligence": 12,
+      "yield": 1
+    },
+    {
+      "recipe": "craft_thermal_jacket",
+      "intelligence": 12,
+      "yield": 1
+    },
+    {
+      "recipe": "craft_ration",
+      "intelligence": 12,
+      "yield": 6
+    },
+    {
+      "recipe": "craft_luxury_meal",
+      "intelligence": 12,
+      "yield": 3
+    },
+    {
+      "recipe": "craft_water",
+      "intelligence": 12,
+      "yield": 9
+    },
+    {
+      "recipe": "craft_street_food",
+      "intelligence": 12,
+      "yield": 7
+    },
+    {
+      "recipe": "craft_red_rush",
+      "intelligence": 12,
+      "yield": 4
+    },
+    {
+      "recipe": "craft_synthetic_drug",
+      "intelligence": 12,
+      "yield": 3
+    },
+    {
+      "recipe": "craft_illegal_weapon",
+      "intelligence": 12,
+      "yield": 1
+    }
+  ],
+  "characterDays": [
+    {
+      "day": 1,
+      "hunger": 84,
+      "thirst": 70,
+      "hp": 100,
+      "starvingStreak": 0,
+      "dead": false,
+      "hpLost": 0,
+      "starving": false,
+      "dehydrated": false,
+      "died": false
+    },
+    {
+      "day": 2,
+      "hunger": 68,
+      "thirst": 40,
+      "hp": 100,
+      "starvingStreak": 0,
+      "dead": false,
+      "hpLost": 0,
+      "starving": false,
+      "dehydrated": false,
+      "died": false
+    },
+    {
+      "day": 3,
+      "hunger": 52,
+      "thirst": 10,
+      "hp": 100,
+      "starvingStreak": 0,
+      "dead": false,
+      "hpLost": 0,
+      "starving": false,
+      "dehydrated": false,
+      "died": false
+    },
+    {
+      "day": 4,
+      "hunger": 36,
+      "thirst": 0,
+      "hp": 75,
+      "starvingStreak": 0,
+      "dead": false,
+      "hpLost": 25,
+      "starving": false,
+      "dehydrated": true,
+      "died": false
+    },
+    {
+      "day": 5,
+      "hunger": 20,
+      "thirst": 0,
+      "hp": 50,
+      "starvingStreak": 0,
+      "dead": false,
+      "hpLost": 25,
+      "starving": false,
+      "dehydrated": true,
+      "died": false
+    },
+    {
+      "day": 6,
+      "hunger": 4,
+      "thirst": 0,
+      "hp": 25,
+      "starvingStreak": 0,
+      "dead": false,
+      "hpLost": 25,
+      "starving": false,
+      "dehydrated": true,
+      "died": false
+    },
+    {
+      "day": 7,
+      "hunger": 0,
+      "thirst": 0,
+      "hp": 0,
+      "starvingStreak": 1,
+      "dead": true,
+      "hpLost": 50,
+      "starving": true,
+      "dehydrated": true,
+      "died": true
+    },
+    {
+      "day": 8,
+      "hunger": 0,
+      "thirst": 0,
+      "hp": 0,
+      "starvingStreak": 2,
+      "dead": true,
+      "hpLost": 50,
+      "starving": true,
+      "dehydrated": true,
+      "died": true
+    }
+  ]
+}
