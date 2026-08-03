@@ -677,6 +677,12 @@
       }
       #mochila-recado { min-height: 16px; margin: 6px 0; font-size: 11px; color: #9ff0cf; }
       #mochila-recado:empty { display: none; }
+      /* O chip de vitais virou botão; sem isto ele herdaria a aparência de
+         botão do navegador e destoaria dos vizinhos. */
+      button.recurso {
+        font: inherit; color: inherit; cursor: pointer;
+        appearance: none; -webkit-appearance: none;
+      }
       #abrir-mochila {
         width: 100%; min-height: var(--toque); margin-bottom: 6px;
         border: 1px solid var(--borda); border-radius: 12px;
@@ -938,10 +944,14 @@
         <img src="ui/info/hourglass.png" alt="" width="20" height="20" />
         <span class="valor">—</span>
       </div>
-      <div class="recurso" id="rec-vitais" title="Fome / Sede">
+      <!-- O indicador de vitais também abre a mochila: é aqui que o jogador
+           percebe a fome, e mandá-lo procurar o botão no painel no pior momento
+           é atrito puro. -->
+      <button class="recurso" id="rec-vitais" type="button"
+              title="Fome / Sede — toque para abrir a mochila">
         <img src="ui/info/stopwatch.png" alt="" width="20" height="20" />
         <span class="valor">—</span>
-      </div>
+      </button>
       <div class="recurso" id="rec-obras" title="Construções em obra">
         <img src="ui/info/duration.png" alt="" width="20" height="20" />
         <span class="valor">—</span>
@@ -956,8 +966,10 @@
       <span id="inspetor-prazo"></span>
     </div>
 
+    <!-- A caixa nasce vazia: o texto que ficava aqui era o "Acesso bloqueado"
+         do muro da vila, que deixou de existir quando o mapa virou andável. -->
     <div id="aviso" role="status" aria-live="polite">
-      <strong id="aviso-titulo">Acesso bloqueado</strong>
+      <strong id="aviso-titulo"></strong>
       <span id="aviso-texto"></span>
     </div>
 

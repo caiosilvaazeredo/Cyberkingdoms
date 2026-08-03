@@ -12,7 +12,8 @@ import {
 import { runDailyTick } from '../src/campaign/dailyTick';
 import { TileCoord } from '../src/world/coords';
 import { findRoute, nearestSettlement } from '../src/world/travel';
-import { enquadrar, passoDaEscala } from '../src/ui/mapScreen';
+import { corDoBioma, enquadrar, passoDaEscala } from '../src/ui/mapScreen';
+import { Biome } from '../src/world/biome';
 
 /**
  * Ir de uma cidade a outra.
@@ -287,6 +288,35 @@ describe('Enquadramento do mapa', () => {
     const folgaCima = -5 - q.minY;
     const folgaBaixo = q.minY + q.lado - 5;
     expect(Math.abs(folgaCima - folgaBaixo)).toBeLessThan(1);
+  });
+
+  it('a paleta do mapa separa água, mata e descampado', () => {
+    // Pintar com a cor do solo puro deixava mata fechada e terra devastada com
+    // o mesmo marrom-arroxeado: um mapa em que nada se distingue não informa
+    // nada. A mistura é proporcional à densidade de grama.
+    const canal = (cor: string, i: number): number =>
+      parseInt(cor.slice(1 + i * 2, 3 + i * 2), 16);
+
+    const agua = corDoBioma(Biome.deadWater);
+    const mata = corDoBioma(Biome.reclaimedForest);
+    const deserto = corDoBioma(Biome.wasteland);
+
+    // Água puxa para o azul; mata, para o verde.
+    expect(canal(agua, 2)).toBeGreaterThan(canal(agua, 0));
+    expect(canal(mata, 1)).toBeGreaterThan(canal(mata, 0));
+    expect(canal(mata, 1)).toBeGreaterThan(canal(mata, 2));
+    // E as três precisam ser visivelmente diferentes entre si.
+    for (const [a, b] of [
+      [agua, mata],
+      [mata, deserto],
+      [agua, deserto],
+    ]) {
+      const distancia = [0, 1, 2].reduce(
+        (soma, i) => soma + Math.abs(canal(a, i) - canal(b, i)),
+        0,
+      );
+      expect(distancia, `${a} vs ${b}`).toBeGreaterThan(40);
+    }
   });
 
   it('a régua usa número redondo', () => {

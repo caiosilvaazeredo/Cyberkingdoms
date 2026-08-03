@@ -110,28 +110,49 @@ export class CityCamera {
   }
 
   /**
+   * Move o alvo nos eixos **da tela**, em metros.
+   *
+   * `right` é para a direita de quem olha; `forward` é para longe da câmera —
+   * os dois giram junto com o `yaw`, que é o que o jogador espera: depois de
+   * girar a cena, "para a frente" continua sendo para cima na tela.
+   *
+   * A câmera fica em `target + horizontal·(sin yaw, cos yaw)` e olha para o
+   * alvo, então a direção "para longe" no mundo é `(−sin yaw, −cos yaw)` e a
+   * direita é `(cos yaw, −sin yaw)`. Ter os dois num lugar só é o que impede o
+   * teclado e o arrasto de discordarem de novo — era exatamente esse o defeito:
+   * o eixo horizontal arrastava o chão sob o dedo e o vertical fazia o
+   * contrário, e o mesmo sinal trocado invertia o W e o S.
+   */
+  move(right: number, forward: number): void {
+    const cos = Math.cos(this.yaw);
+    const sin = Math.sin(this.yaw);
+    this.target.x += right * cos - forward * sin;
+    this.target.z += -right * sin - forward * cos;
+  }
+
+  /**
    * Arrasta o terreno sob o dedo.
    *
    * A conversão de pixels para metros usa a altura do plano visível na
    * distância atual, e não um fator fixo: com fator fixo, arrastar de perto
    * atravessa o mapa e arrastar de longe não sai do lugar.
+   *
+   * O chão segue o dedo nos **dois** eixos: puxar para baixo traz o terreno
+   * para baixo, que é o mesmo gesto de arrastar um mapa em cima da mesa. Para
+   * isso o alvo anda no sentido contrário ao do dedo — daí o `-` no `right` — e
+   * puxar para baixo empurra o alvo para longe.
    */
   pan(dxPixels: number, dyPixels: number, viewportHeight: number): void {
     const worldPerPixel =
       (2 * this.distance * Math.tan((this.camera.fov * Math.PI) / 360)) /
       Math.max(1, viewportHeight);
 
-    const dx = dxPixels * worldPerPixel;
-    const dy = dyPixels * worldPerPixel;
-
     // Compensa a inclinação: quase de topo, um pixel vertical vale um metro;
     // rasante, vale muito mais. Sem isso o arrasto "cola" perto do horizonte.
-    const forward = dy / Math.max(0.25, Math.sin(this.pitch));
+    const forward =
+      (dyPixels * worldPerPixel) / Math.max(0.25, Math.sin(this.pitch));
 
-    const cos = Math.cos(this.yaw);
-    const sin = Math.sin(this.yaw);
-    this.target.x -= dx * cos - forward * sin;
-    this.target.z += dx * sin + forward * cos;
+    this.move(-dxPixels * worldPerPixel, forward);
   }
 
   zoomBy(scale: number): void {

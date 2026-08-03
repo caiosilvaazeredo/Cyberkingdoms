@@ -622,6 +622,34 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
       statusEl.textContent =
         relatorio.events[relatorio.events.length - 1] ?? `Dia ${relatorio.day} fechado.`;
     }
+
+    avisarSeFaltaComida();
+  }
+
+  /**
+   * Avisa quando os vitais apertam, e diz onde se resolve.
+   *
+   * A mochila existe, mas quem nunca a abriu não descobre sozinho que dá para
+   * comer — o jogo só mostrava dois números caindo. O aviso aparece no dia em
+   * que o consumo começa a doer, e diz coisas diferentes conforme haja ou não o
+   * que comer: sem mantimento o conselho é comprar, não abrir uma mochila
+   * vazia.
+   */
+  function avisarSeFaltaComida(): void {
+    const pior = Math.min(character.hunger, character.thirst);
+    if (pior > 40 || character.dead) return;
+
+    const temComida = [...inventario.stacks].some(
+      ([id, q]) => q > 0 && isConsumable(itemDef(id)),
+    );
+    anunciar(
+      pior <= 25 ? 'Você está passando mal' : 'Fome e sede apertando',
+      `Fome ${character.hunger} · Sede ${character.thirst}. ` +
+        (temComida
+          ? 'Abra a MOCHILA e use comida ou água.'
+          : 'Você não carrega nada para consumir — compre no mercado da cidade.'),
+      6,
+    );
   }
 
   // ---------------------------------------------------------------- entrada
@@ -1347,18 +1375,20 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
     // para vencer os 90 metros que valem um trecho de estrada.
     const passo =
       Math.min(view.distance * 2.2, VELOCIDADE_MAX) * delta * prefs.current.cameraSpeed;
-    let dx = 0;
-    let dz = 0;
-    if (teclas.has('frente')) dz -= passo;
-    if (teclas.has('tras')) dz += passo;
-    if (teclas.has('esquerda')) dx -= passo;
-    if (teclas.has('direita')) dx += passo;
+    let direita = 0;
+    let frente = 0;
+    // `frente` é para longe da câmera — para cima na tela. O W somava no
+    // sentido oposto, e o resultado era andar de ré: a tecla dizia "frente" e o
+    // personagem recuava.
+    if (teclas.has('frente')) frente += passo;
+    if (teclas.has('tras')) frente -= passo;
+    if (teclas.has('esquerda')) direita -= passo;
+    if (teclas.has('direita')) direita += passo;
 
-    if (dx !== 0 || dz !== 0) {
-      const cos = Math.cos(view.yaw);
-      const sin = Math.sin(view.yaw);
-      view.target.x += dx * cos - dz * sin;
-      view.target.z += -dx * sin - dz * cos;
+    if (direita !== 0 || frente !== 0) {
+      // A mesma conta do arrasto, num lugar só: teclado e dedo discordarem
+      // sobre onde é "para a frente" foi o defeito que isto encerra.
+      view.move(direita, frente);
 
       center.set(view.target.x, view.target.z);
       if (podeAndar()) seguirCamera();

@@ -142,6 +142,72 @@ describe('Câmera de construtor de cidade', () => {
     expect(view.target.distanceTo(antes)).toBeGreaterThan(0);
   });
 
+  /**
+   * Onde o ponto do chão aparece na tela, em unidades de tela.
+   *
+   * `x` cresce para a direita e `y` para baixo, como no DOM — é a única forma
+   * de comparar o gesto com o resultado sem depender de qual eixo do mundo é
+   * qual. A câmera olha o alvo de `target + horizontal·(sin yaw, cos yaw)`,
+   * então "para longe" no mundo é `(−sin yaw, −cos yaw)` e sobe na tela.
+   */
+  function naTela(view: CityCamera, x: number, z: number) {
+    const dx = x - view.target.x;
+    const dz = z - view.target.z;
+    const cos = Math.cos(view.yaw);
+    const sin = Math.sin(view.yaw);
+    return {
+      x: dx * cos - dz * sin,
+      // Para longe da câmera é para cima: o sinal negativo põe o resultado no
+      // mesmo sentido do eixo Y da tela.
+      y: dx * sin + dz * cos,
+    };
+  }
+
+  it('o chão segue o dedo nos dois eixos', () => {
+    // O defeito que este teste prende: o eixo horizontal arrastava o chão sob o
+    // dedo e o vertical fazia o contrário. Puxar para baixo empurrava o mundo
+    // para cima, e o jogo parecia ter o controle invertido — porque tinha, em
+    // metade dos eixos.
+    for (const yaw of [0, 0.7, 1.9, -2.4]) {
+      const view = make();
+      view.yaw = yaw;
+      view.apply();
+
+      // Um ponto fixo do chão, à frente do alvo.
+      const alvoX = view.target.x + 12;
+      const alvoZ = view.target.z - 7;
+      const antes = naTela(view, alvoX, alvoZ);
+
+      // Dedo para a direita e para baixo.
+      view.pan(60, 40, 800);
+      const depois = naTela(view, alvoX, alvoZ);
+
+      expect(depois.x - antes.x, `yaw ${yaw}: eixo X`).toBeGreaterThan(0);
+      expect(depois.y - antes.y, `yaw ${yaw}: eixo Y`).toBeGreaterThan(0);
+    }
+  });
+
+  it('para a frente é para cima na tela, em qualquer giro', () => {
+    // O mesmo sinal trocado fazia o W andar de ré. Girar a cena não pode mudar
+    // o que a tecla significa: "frente" é sempre para longe de quem olha.
+    for (const yaw of [0, 0.7, 1.9, -2.4]) {
+      const view = make();
+      view.yaw = yaw;
+      view.apply();
+
+      const alvoX = view.target.x;
+      const alvoZ = view.target.z;
+      view.move(0, 10);
+      // O ponto que ficou para trás desce na tela: o alvo avançou.
+      expect(naTela(view, alvoX, alvoZ).y, `yaw ${yaw}`).toBeGreaterThan(0);
+
+      const lado = make();
+      lado.yaw = yaw;
+      lado.move(10, 0);
+      expect(naTela(lado, alvoX, alvoZ).x, `yaw ${yaw}: direita`).toBeLessThan(0);
+    }
+  });
+
   it('o arrasto rende mais longe do que perto', () => {
     // Com fator fixo, arrastar de perto atravessa o mapa e arrastar de longe
     // não sai do lugar.

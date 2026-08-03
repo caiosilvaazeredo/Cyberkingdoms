@@ -1,7 +1,7 @@
 import type { Campaign } from '../campaign/campaign';
 import { daysOfSupplies, planJourney, startJourney } from '../campaign/journey';
 import { itemDef } from '../economy/item';
-import { biomeDef } from '../world/biome';
+import { Biome, biomeDef } from '../world/biome';
 import { vocationDef, type Settlement } from '../world/settlement';
 import { el, type Screen, type ScreenRouter } from './screens';
 
@@ -84,6 +84,26 @@ const CORES: Record<string, string> = {
 };
 
 const hex = (n: number): string => `#${n.toString(16).padStart(6, '0')}`;
+
+/**
+ * Cor de um bioma **no mapa**.
+ *
+ * Não é a cor do solo: `soil` é o que fica embaixo da grama no mundo 3D, e
+ * sozinho pinta o mapa inteiro de um marrom-arroxeado em que mata fechada e
+ * terra devastada ficam iguais. Misturar a ponta da lâmina na proporção da
+ * densidade devolve a leitura que se espera de um mapa — verde onde há mato,
+ * ocre no descampado, azul escuro na água morta, que tem densidade zero.
+ */
+export function corDoBioma(biome: Biome): string {
+  const def = biomeDef(biome);
+  const t = Math.min(1, def.grassDensity * 0.8);
+  const mistura = (deslocamento: number): number => {
+    const a = (def.soil >> deslocamento) & 0xff;
+    const b = (def.grassTip >> deslocamento) & 0xff;
+    return Math.round(a + (b - a) * t) & 0xff;
+  };
+  return hex((mistura(16) << 16) | (mistura(8) << 8) | mistura(0));
+}
 
 /** O quadro do mapa, em tiles. Quadrado, para o fundo não distorcer. */
 interface Quadro {
@@ -171,7 +191,7 @@ export function createMapScreen(deps: MapScreenDeps): Screen {
           // `biomeAt` e não `tileAt`: o tile inteiro carrega feature, recurso e
           // elevação, e nada disso aparece no mapa — pagar por eles seria gerar
           // chunk atrás de chunk para jogar fora.
-          ctx.fillStyle = hex(biomeDef(campaign.world.generator.biomeAt(x, y)).soil);
+          ctx.fillStyle = corDoBioma(campaign.world.generator.biomeAt(x, y));
           ctx.fillRect(i, j, 1, 1);
         }
       }
@@ -254,6 +274,31 @@ export function createMapScreen(deps: MapScreenDeps): Screen {
     const rotulos = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     rotulos.setAttribute('class', 'mapa-rotulos');
 
+    /**
+     * Escolhe a altura do nome, desviando de quem já foi escrito.
+     *
+     * Duas capitais próximas escreviam uma por cima da outra e nenhuma das duas
+     * ficava legível. Tentar acima, abaixo e mais acima resolve os casos reais
+     * com uma conta de nada; se nem assim couber, o nome vai onde deu — melhor
+     * um nome apertado do que um buraco no mapa.
+     */
+    const ocupados: { x: number; y: number }[] = [];
+    const posicaoDoNome = (cx: number, cy: number, capital: boolean): number => {
+      const base = capital ? 22 : 15;
+      for (const dy of [-base, base + 14, -base - 22, base + 36]) {
+        const y = cy + dy;
+        const colide = ocupados.some(
+          (o) => Math.abs(o.x - cx) < 150 && Math.abs(o.y - y) < 22,
+        );
+        if (!colide) {
+          ocupados.push({ x: cx, y });
+          return y;
+        }
+      }
+      ocupados.push({ x: cx, y: cy - base });
+      return cy - base;
+    };
+
     const aqui = campaign.currentSettlementId;
     for (const s of layout.settlements) {
       const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -313,7 +358,7 @@ export function createMapScreen(deps: MapScreenDeps): Screen {
         // mantém o nome inteiro dentro do quadro sem mover a cidade.
         const ancora = cx < VIEW * 0.18 ? 'start' : cx > VIEW * 0.82 ? 'end' : 'middle';
         rotulo.setAttribute('x', String(cx));
-        rotulo.setAttribute('y', String(cy - (s.isCapital ? 22 : 15)));
+        rotulo.setAttribute('y', String(posicaoDoNome(cx, cy, s.isCapital)));
         rotulo.setAttribute('text-anchor', ancora);
         rotulo.setAttribute('class', s.isCapital ? 'mapa-nome capital' : 'mapa-nome');
         rotulo.textContent = s.name;
