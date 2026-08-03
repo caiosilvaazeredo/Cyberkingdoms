@@ -32,6 +32,15 @@ import { outsideRatio, type VillageBounds } from './villageBounds';
  * celular.
  */
 
+/**
+ * Densidade de névoa, igual à da cena em `main.ts`.
+ *
+ * Exportada para o dois não divergirem: a grama tem névoa própria porque o
+ * shader dela não passa pelo pipeline padrão do three.js, e uma constante
+ * duplicada aqui seria a segunda verdade sobre a mesma distância.
+ */
+export const FOG_DENSITY = 0.004;
+
 /** Segmentos ao longo da lâmina. Cinco já dá curva lisa; sete não aparece. */
 const BLADE_SEGMENTS = 5;
 
@@ -333,7 +342,11 @@ export function createGrassField(
       uBaseColor: { value: new THREE.Color(centerBiome.grassBase) },
       uTipColor: { value: new THREE.Color(centerBiome.grassTip) },
       uFogColor: { value: new THREE.Color(0x8fa6b8) },
-      uFogDensity: { value: 0.0085 },
+      // A mesma densidade da cena. A grama tem a própria névoa porque o
+      // shader dela não passa pelo pipeline padrão do three.js — e os dois
+      // números precisam bater, senão a lâmina some numa distância e o chão
+      // sob ela some noutra.
+      uFogDensity: { value: FOG_DENSITY },
     },
   });
 

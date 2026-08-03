@@ -1,26 +1,19 @@
 import * as THREE from 'three';
 
 import { DensityField } from './render/density';
-import { createGrassField, type GrassField } from './render/grass';
-import {
-  QualityGovernor,
-  grassOptionsFor,
-  guessTier,
-  maxBladesForPatch,
-  patchSizeForView,
-} from './render/quality';
+import { FOG_DENSITY } from './render/grass';
+import { QualityGovernor, guessTier } from './render/quality';
 import { CityCamera } from './render/cityCamera';
-import { createTerrain, type Terrain } from './render/terrain';
+import {
+  CHUNK_METERS,
+  createStreamingWorld,
+  type StreamingWorld,
+} from './render/streaming';
 import { TILE, createPlotView, type PlotView } from './render/plotView';
 import { GestureRecognizer } from './render/touch';
-import {
-  blockedHint,
-  blockedMessage,
-  clampToBounds,
-  isBlocked,
-  type VillageBounds,
-} from './render/villageBounds';
+import type { VillageBounds } from './render/villageBounds';
 import { biomeDef } from './world/biome';
+import { TileCoord } from './world/coords';
 import { plotAreaFor } from './world/plotArea';
 import type { PlacedBuilding } from './building/plot';
 import { DayClock, formatDays } from './campaign/dayClock';
@@ -74,6 +67,9 @@ const FOG_COLOR = 0x8fa6b8;
  */
 const MAX_TICKS_POR_QUADRO = 3;
 
+/** Teto de velocidade a pé, em metros por segundo. */
+const VELOCIDADE_MAX = 14;
+
 /** Vento padrão do campo. Desligá-lo zera a força, não a direção. */
 const VENTO_DIRECAO = new THREE.Vector2(1, 0.35);
 const VENTO_FORCA = 0.22;
@@ -110,7 +106,15 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
   renderer.setClearColor(FOG_COLOR);
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(FOG_COLOR, 0.0085);
+  // Neblina bem mais leve do que num mundo fechado.
+  //
+  // 0,0085 escondia metade da cor a cem metros, o que era aceitável quando o
+  // jogo cabia num lote de 40 m — ali a neblina só disfarçava a borda do
+  // trecho. Num mundo que se atravessa a pé ela virava um véu cinza sobre tudo,
+  // e o bioma para onde o jogador estava andando chegava lavado antes de ele
+  // chegar. Agora são 15% a cem metros: ainda dá profundidade, e ainda esconde
+  // a borda do terreno carregado, sem apagar a paisagem.
+  scene.fog = new THREE.FogExp2(FOG_COLOR, FOG_DENSITY);
 
   const camera = new THREE.PerspectiveCamera(58, 1, 0.1, 900);
 
@@ -144,10 +148,18 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
   const plotArea = plotAreaFor(world, lote.x, lote.z, larguraMundo, profundidadeMundo);
 
   const density = new DensityField(world, plotArea);
-  let terrain: Terrain | null = null;
-  let grass: GrassField | null = null;
+  let mundo: StreamingWorld | null = null;
   const center = new THREE.Vector2(lote.x, lote.z);
-  const seededAt = new THREE.Vector2(lote.x, lote.z);
+
+  /**
+   * Metros andados no dia, para o reset cobrar a viagem.
+   *
+   * Andar até outra cidade não pode ser de graça só porque o jogador fez a pé
+   * em vez de pelo menu. A conversão usa a mesma régua da malha viária —
+   * ~90 tiles por dia de viagem — então caminhar o equivalente a uma estrada
+   * custa o mesmo que percorrê-la.
+   */
+  let metrosAndados = 0;
 
   let plotView: PlotView | null = null;
   let selecionada: string | null = null;
@@ -178,34 +190,32 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
   const vizinha = campaign.world.layout.settlements.find(
     (s) => s.id !== plot.settlementId,
   );
-  const bounds: VillageBounds = {
-    centerX: lote.x,
-    centerZ: lote.z,
-    radius: Math.max(46, Math.max(larguraMundo, profundidadeMundo) * 0.85),
-    settlementName: plot.name,
-    neighbourName: vizinha?.name ?? cidade?.name ?? 'a cidade vizinha',
-  };
+  /**
+   * O limite da vila deixou de ser parede.
+   *
+   * Ele existia para conter a câmera no lote e avisar "Acesso a Krom Central".
+   * Agora o jogador **anda** até Krom Central, então o limite vira o que
+   * sempre deveria ter sido: o contorno do que é dele. O terreno e a grama
+   * recebem `null` no lugar dele — cinza no mundo inteiro seria dizer que o
+   * mapa todo é dos outros.
+   */
+  void cidade;
+  void vizinha;
+  const bounds: VillageBounds | null = null;
   let enquadrado = false;
-  /** Lado do trecho realmente semeado. Muda com o zoom. */
-  let seededPatch = 0;
+
+  /** Onde o mundo foi carregado pela última vez. */
+  const carregadoEm = new THREE.Vector2(lote.x, lote.z);
 
   /**
-   * Se o trecho semeado ainda serve para onde a câmera está.
+   * Se vale pedir mais pedaços.
    *
-   * Duas causas independentes: o alvo andou o bastante para o trecho ficar
-   * descentrado, ou o zoom mudou o bastante para o trecho ficar curto (ou
-   * folgado demais). A margem de 25% no zoom evita ressemear a cada pinçada —
-   * refazer o campo é caro, e um zoom nervoso viraria engasgo.
+   * Meio pedaço de folga: chamar a cada quadro faria a varredura do conjunto
+   * carregado virar custo fixo do laço, e o resultado só muda quando a câmera
+   * anda de verdade.
    */
-  function precisaResemear(): boolean {
-    if (seededPatch <= 0) return true;
-    if (center.distanceTo(seededAt) > seededPatch * 0.3) return true;
-    const desejado = patchSizeForView(
-      governor.budget,
-      view.distance,
-      camera.fov,
-    );
-    return Math.abs(desejado - seededPatch) / seededPatch > 0.25;
+  function precisaCarregar(): boolean {
+    return center.distanceTo(carregadoEm) > CHUNK_METERS * 0.5;
   }
 
   // As preferências valem desde o primeiro quadro, inclusive a de qualidade —
@@ -270,56 +280,38 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
       enquadrado = true;
     }
 
-    // O trecho acompanha o zoom: ver `patchSizeForView`.
-    const patch = patchSizeForView(budget, view.distance, camera.fov);
-    seededPatch = patch;
-
-    if (terrain) {
-      scene.remove(terrain.mesh, terrain.water);
-      terrain.dispose();
+    // O mundo é carregado em pedaços, conforme a câmera anda — ver
+    // `render/streaming.ts`. Trocar de orçamento descarta tudo e refaz, porque
+    // o número de lâminas por pedaço muda junto.
+    if (!mundo) {
+      mundo = createStreamingWorld({
+        world,
+        density,
+        budget,
+        bounds,
+        plotArea,
+        viewDistance: view.distance,
+        windDirection: VENTO_DIRECAO,
+        windStrength: prefs.current.wind ? VENTO_FORCA : 0,
+      });
+      scene.add(mundo.group);
+    } else {
+      mundo.clear();
     }
-    if (grass) {
-      scene.remove(grass.mesh);
-      grass.dispose();
+    // Uma leva de pedaços já na montagem, para o jogador não cair num vazio
+    // que se preenche na frente dele.
+    for (let i = 0; i < 25; i++) {
+      if (!mundo.update(center.x, center.y, { budget, viewDistance: view.distance })) {
+        break;
+      }
     }
-
-    terrain = createTerrain(
-      world,
-      center.x,
-      center.y,
-      // Terreno bem maior que o trecho com grama: numa visão de cima quase
-      // vertical, a borda da malha entraria em quadro no zoom máximo e
-      // apareceria como um precipício no vazio.
-      patch * 3.2,
-      budget.terrainSegments,
-      density.biomes,
-      bounds,
-      plotArea,
-    );
-    grass = createGrassField(
-      world,
-      density,
-      center.x,
-      center.y,
-      {
-        ...grassOptionsFor(budget),
-        patchSize: patch,
-        maxBlades: maxBladesForPatch(budget, patch),
-      },
-      bounds,
-    );
-    scene.add(terrain.mesh, terrain.water, grass.mesh);
-    // O campo acabou de ser refeito com os uniformes padrão; a preferência de
-    // vento tem de ser reimposta, senão desligar o vento duraria só até o
-    // próximo ressemeio.
-    grass.setWind(VENTO_DIRECAO, prefs.current.wind ? VENTO_FORCA : 0);
 
     if (!plotView) {
       plotView = createPlotView(plot, lote.x, lote.z);
       scene.add(plotView.group);
       plotView.sync(plot);
     }
-    seededAt.copy(center);
+    carregadoEm.copy(center);
     view.focusOn(center.x, center.y);
 
     report();
@@ -332,8 +324,8 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
     if (!el) return;
     el.hidden = !prefs.current.showStats;
     el.textContent =
-      `${biome.label} · ${(grass?.bladeCount ?? 0).toLocaleString('pt-BR')} lâminas` +
-      ` · ${governor.tier}${governor.isLocked ? ' (fixo)' : ''}`;
+      `${biome.label} · ${(mundo?.bladeCount ?? 0).toLocaleString('pt-BR')} lâminas` +
+      ` · ${mundo?.loadedCount ?? 0} pedaços · ${governor.tier}${governor.isLocked ? ' (fixo)' : ''}`;
   }
 
   /**
@@ -349,7 +341,7 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
     // O catálogo muda de tamanho com o modo Dev, então precisa ser refeito.
     montarCatalogo();
     governor.setLocked(s.quality === 'auto' ? null : s.quality);
-    grass?.setWind(VENTO_DIRECAO, s.wind ? VENTO_FORCA : 0);
+    mundo?.setWind(VENTO_DIRECAO, s.wind ? VENTO_FORCA : 0);
     report();
   }
 
@@ -443,8 +435,24 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
    * estrada, salário, eleição, promoção e quests. Ter dois caminhos para o
    * mesmo reset seria abrir a porta para a divergência que o jogador explora.
    */
+  /**
+   * Converte o que foi andado em trechos de viagem.
+   *
+   * A malha viária usa ~90 tiles por dia de viagem; a caminhada usa a mesma
+   * régua, então atravessar a pé o equivalente a uma estrada custa o mesmo que
+   * percorrê-la. Sem isso, andar seria o jeito grátis de viajar e o sistema de
+   * estradas viraria enfeite.
+   */
+  function trechosAndados(): number {
+    return Math.floor(metrosAndados / 90);
+  }
+
   function virarODia(): void {
-    const relatorio = runDailyTick(campaign, atividadeDoDia());
+    const relatorio = runDailyTick(campaign, {
+      ...atividadeDoDia(),
+      roadsTravelled: trechosAndados(),
+    });
+    metrosAndados = 0;
     // A escolha **não** zera: ela é ordem permanente até o jogador trocar.
     // Zerando, ele teria de reabrir o painel de trabalho todo reset só para
     // repetir o mesmo emprego — e emprego que exige reconfirmação diária não é
@@ -466,13 +474,65 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
   const avisoTexto = document.querySelector<HTMLElement>('#aviso-texto');
   let avisoVisivel = false;
 
-  function mostrarLimite(visivel: boolean): void {
-    if (visivel === avisoVisivel) return;
-    avisoVisivel = visivel;
-    aviso?.classList.toggle('visivel', visivel);
-    if (visivel) {
-      if (avisoTitulo) avisoTitulo.textContent = blockedMessage(bounds);
-      if (avisoTexto) avisoTexto.textContent = blockedHint(bounds);
+  /**
+   * Onde o jogador está, para anunciar entrada e saída de cidade.
+   *
+   * O aviso trocou de papel junto com o limite: antes ele dizia "você não pode
+   * passar daqui", agora diz "você chegou". A mesma caixa, o oposto da
+   * mensagem — e é a diferença entre um mapa cercado e um mapa que se percorre.
+   */
+  let cidadeAtual: string | null = campaign.currentSettlementId;
+  let avisoAte = 0;
+
+  function anunciar(titulo: string, texto: string, segundos = 4): void {
+    if (avisoTitulo) avisoTitulo.textContent = titulo;
+    if (avisoTexto) avisoTexto.textContent = texto;
+    aviso?.classList.add('visivel');
+    avisoVisivel = true;
+    avisoAte = performance.now() + segundos * 1000;
+  }
+
+  function esconderAviso(): void {
+    if (!avisoVisivel) return;
+    avisoVisivel = false;
+    aviso?.classList.remove('visivel');
+  }
+
+  /**
+   * Segue a câmera com o personagem.
+   *
+   * A posição do personagem é o que decide em que cidade ele está, que mercado
+   * ele vê e que governo paga o salário dele. Deixá-la parada enquanto a câmera
+   * atravessa o mapa faria o jogador andar até outra capital e continuar
+   * trabalhando na primeira.
+   */
+  function seguirCamera(): void {
+    const antes = character.position;
+    const x = Math.round(view.target.x);
+    const z = Math.round(view.target.z);
+    if (antes.x === x && antes.y === z) return;
+
+    metrosAndados += Math.hypot(x - antes.x, z - antes.y);
+    character.position = new TileCoord(x, z);
+
+    const agora = campaign.currentSettlementId;
+    if (agora === cidadeAtual) return;
+
+    cidadeAtual = agora;
+    if (agora) {
+      const s = campaign.world.layout.byId(agora);
+      const nova = !campaign.visitedSettlements.has(agora);
+      campaign.visitedSettlements.add(agora);
+      if (s) {
+        anunciar(
+          `${nova ? 'Descoberta: ' : ''}${s.name}`,
+          `${s.vocationDef.label} · ${s.population.toLocaleString('pt-BR')} habitantes · ` +
+            `${s.publicJobSlots} vagas públicas`,
+        );
+      }
+      if (nova) options.onPersist?.(campaign);
+    } else {
+      anunciar('Fora da cidade', 'Estrada aberta. Aqui não há mercado nem governo.', 3);
     }
   }
 
@@ -655,17 +715,12 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
           const ganho = sentido * prefs.current.cameraSpeed;
           view.pan(state.dx * ganho, state.dy * ganho, window.innerHeight);
 
-          // Freio na borda em vez de trava seca: a câmera desliza ao longo do
-          // limite. Parede dura parece defeito; freio parece regra.
-          const preso = clampToBounds(bounds, view.target.x, view.target.z);
-          const bateu =
-            preso.x !== view.target.x || preso.z !== view.target.z;
-          view.target.x = preso.x;
-          view.target.z = preso.z;
-
+          // Sem freio: o mapa é para atravessar. O que segura o jogador não é
+          // mais uma parede invisível, é o custo de Fome e Sede que a distância
+          // andada cobra no reset.
           view.apply();
           center.set(view.target.x, view.target.z);
-          mostrarLimite(bateu || isBlocked(bounds, center.x, center.y));
+          seguirCamera();
           break;
         }
 
@@ -682,10 +737,6 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
     },
     onEnd() {
       document.body.classList.remove('arrastando');
-      mostrarLimite(false);
-      if (precisaResemear()) {
-        rebuild();
-      }
     },
   });
   void gestures;
@@ -1015,9 +1066,17 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
   function moverPorTeclado(delta: number): void {
     if (teclas.size === 0) return;
 
-    // Velocidade proporcional ao afastamento: de longe cada passo cobre mais
-    // chão, senão atravessar a vila afastado leva o dobro do tempo.
-    const passo = view.distance * 2.2 * delta * prefs.current.cameraSpeed;
+    // Velocidade proporcional ao afastamento, **com teto**.
+    //
+    // A regra proporcional foi feita para atravessar um lote: de longe cada
+    // passo cobre mais chão. Sem teto, no zoom máximo ela dava 200 metros por
+    // segundo — o jogador cruzava dois biomas por segundo, o carregador de
+    // pedaços não tinha como acompanhar, e a distância andada deixava de
+    // significar qualquer coisa para o custo de viagem. Quatorze metros por
+    // segundo é corrida, não teletransporte: dá pouco mais de seis segundos
+    // para vencer os 90 metros que valem um trecho de estrada.
+    const passo =
+      Math.min(view.distance * 2.2, VELOCIDADE_MAX) * delta * prefs.current.cameraSpeed;
     let dx = 0;
     let dz = 0;
     if (teclas.has('frente')) dz -= passo;
@@ -1031,12 +1090,8 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
       view.target.x += dx * cos - dz * sin;
       view.target.z += -dx * sin - dz * cos;
 
-      const preso = clampToBounds(bounds, view.target.x, view.target.z);
-      const bateu = preso.x !== view.target.x || preso.z !== view.target.z;
-      view.target.x = preso.x;
-      view.target.z = preso.z;
       center.set(view.target.x, view.target.z);
-      mostrarLimite(bateu);
+      seguirCamera();
     }
 
     if (teclas.has('giraEsq')) view.rotateBy(1.6 * delta);
@@ -1045,10 +1100,6 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
     if (teclas.has('afasta')) view.zoomBy(1 / (1 + 1.4 * delta));
 
     view.apply();
-
-    if (precisaResemear()) {
-      rebuild();
-    }
   }
 
   // O painel recolhe: numa tela de 360px ele ocuparia metade do mundo.
@@ -1090,6 +1141,10 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
   const clock = new THREE.Clock();
   let visible = !document.hidden;
   let ultimoHud = 0;
+  /** `true` enquanto ainda falta pedaço para montar perto da câmera. */
+  let carregando = true;
+  let ultimoSave = 0;
+  const salvoEm = new THREE.Vector2(character.position.x, character.position.y);
 
   document.addEventListener('visibilitychange', () => {
     visible = !document.hidden;
@@ -1108,6 +1163,29 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
     governor.sample(delta);
     moverPorTeclado(delta);
 
+    // O mundo se completa em quadros, um pedaço por vez. Montar quatro de uma
+    // vez ao cruzar uma diagonal derruba o quadro de forma visível; um por vez
+    // é o que faz o carregamento parecer progressivo em vez de travado.
+    if (mundo && (precisaCarregar() || carregando)) {
+      // Até três por quadro. Um só era pouco quando o jogador anda depressa: o
+      // descarte na retaguarda ganhava da carga na dianteira e o mundo
+      // encolhia em volta dele. Três é o que cabe num quadro de 16 ms sem que
+      // a queda apareça.
+      carregando = false;
+      for (let i = 0; i < 3; i++) {
+        const montou = mundo.update(center.x, center.y, {
+          budget: governor.budget,
+          viewDistance: view.distance,
+        });
+        if (!montou) break;
+        carregando = true;
+      }
+      if (!carregando) carregadoEm.copy(center);
+    }
+
+    // O aviso de chegada some sozinho: é notícia, não estado.
+    if (avisoVisivel && performance.now() > avisoAte) esconderAviso();
+
     // O relógio de parede pode ter passado mais de um dia — a aba ficou
     // fechada, o aparelho dormiu. A comparação é contra `campaign.day`, que é o
     // que o save guarda: quem encerrou o dia à mão já está adiantado e não leva
@@ -1123,10 +1201,30 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
     if (clock.getElapsedTime() - ultimoHud > 1) {
       ultimoHud = clock.getElapsedTime();
       atualizarRecursos();
+      // O diagnóstico acompanha a caminhada: bioma e pedaços carregados mudam
+      // enquanto o jogador anda, e um número congelado dizia que nada estava
+      // acontecendo quando muita coisa estava.
+      report();
+
+      // Autossalvamento da posição.
+      //
+      // Andar não é evento — não há um instante óbvio em que "chegou". Sem um
+      // salvamento periódico, o jogador atravessava meio mapa, fechava a aba e
+      // reaparecia na cidade natal. Dez segundos é raro o bastante para não
+      // pesar e frequente o bastante para a perda ser um trecho curto de
+      // caminhada, nunca uma viagem inteira.
+      if (
+        clock.getElapsedTime() - ultimoSave > 10 &&
+        (character.position.x !== salvoEm.x || character.position.y !== salvoEm.y)
+      ) {
+        ultimoSave = clock.getElapsedTime();
+        salvoEm.set(character.position.x, character.position.y);
+        options.onPersist?.(campaign);
+      }
     }
 
     plotView?.update(clock.getElapsedTime());
-    grass?.update(clock.getElapsedTime());
+    mundo?.animate(clock.getElapsedTime());
     renderer.render(scene, camera);
   }
 
