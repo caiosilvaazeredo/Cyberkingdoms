@@ -306,48 +306,72 @@ class WorldGenerator {
     return roads.values.toList(growable: false);
   }
 
-  /// Traça o caminho de uma estrada com Bresenham + desvio suave, evitando
-  /// água quando possível. Não é A* — estradas devem parecer construídas, não
-  /// otimizadas ao milímetro.
+  /// Traça o caminho de uma estrada, desviando de água quando dá. Não é A* —
+  /// estradas devem parecer construídas, não otimizadas ao milímetro.
+  ///
+  /// ## Por que o passo é recalculado a cada tile
+  ///
+  /// A versão anterior era um Bresenham clássico com um desvio grudado por
+  /// cima: quando o próximo tile era água, ela empurrava a posição para o lado
+  /// **sem** corrigir o termo de erro. A partir daí o erro descrevia uma reta
+  /// que não passava mais pela posição real, e a linha nunca reencontrava o
+  /// destino — ela vagava até bater no teto de 20 mil passos.
+  ///
+  /// Isso não era um detalhe de traçado. `travelDays` sai do comprimento do
+  /// caminho, então toda estrada que cruzava um lago virava uma viagem de 222
+  /// dias — mais do que um personagem sobrevive sem comer. Metade do mapa era
+  /// inalcançável por um defeito de geometria.
+  ///
+  /// Recalcular o passo a partir da posição atual elimina o estado que podia
+  /// dessincronizar: cada passo aceito reduz a distância restante em pelo menos
+  /// um, então o caminho **sempre** termina, com ou sem desvio.
   List<TileCoord> _tracePath(TileCoord from, TileCoord to) {
     final path = <TileCoord>[];
     var x = from.x;
     var y = from.y;
-    final dx = (to.x - x).abs();
-    final dy = (to.y - y).abs();
-    final sx = x < to.x ? 1 : -1;
-    final sy = y < to.y ? 1 : -1;
-    var err = dx - dy;
 
-    // Teto de segurança: impede laço infinito se a geometria degenerar.
-    var guard = 0;
-    const maxSteps = 20000;
+    // Teto: o caminho é monotônico, então a soma das distâncias é o pior caso.
+    // Continua existindo como rede de segurança, mas não é mais alcançável.
+    final maxSteps = (to.x - x).abs() + (to.y - y).abs() + 4;
 
-    while (guard++ < maxSteps) {
+    for (var guard = 0; guard <= maxSteps; guard++) {
       path.add(TileCoord(x, y));
       if (x == to.x && y == to.y) break;
 
-      final e2 = 2 * err;
-      var movedX = false;
-      if (e2 > -dy) {
-        err -= dy;
-        x += sx;
-        movedX = true;
-      }
-      if (e2 < dx) {
-        err += dx;
-        y += sy;
+      final dxr = to.x - x;
+      final dyr = to.y - y;
+      final stepX = dxr.sign;
+      final stepY = dyr.sign;
+
+      // Enquanto um eixo domina o outro em mais que o dobro, anda reto nele; no
+      // meio-termo, anda na diagonal. É o que dá o canto chanfrado de estrada
+      // de verdade em vez do degrau de escada.
+      final candidatos = <List<int>>[];
+      if (dxr.abs() > dyr.abs() * 2) {
+        candidatos.add([stepX, 0]);
+        candidatos.add([stepX, stepY]);
+        candidatos.add([0, stepY]);
+      } else if (dyr.abs() > dxr.abs() * 2) {
+        candidatos.add([0, stepY]);
+        candidatos.add([stepX, stepY]);
+        candidatos.add([stepX, 0]);
+      } else {
+        candidatos.add([stepX, stepY]);
+        candidatos.add([stepX, 0]);
+        candidatos.add([0, stepY]);
       }
 
-      // Desvio de água: se o próximo tile é intransponível, tenta o eixo
-      // alternativo antes de aceitar a travessia.
-      if (!biomeAt(x, y).isWalkable) {
-        if (movedX) {
-          y += sy;
-        } else {
-          x += sx;
+      var escolhido = candidatos.first;
+      for (final c in candidatos) {
+        if (c[0] == 0 && c[1] == 0) continue;
+        if (biomeAt(x + c[0], y + c[1]).isWalkable) {
+          escolhido = c;
+          break;
         }
       }
+
+      x += escolhido[0];
+      y += escolhido[1];
     }
     return path;
   }

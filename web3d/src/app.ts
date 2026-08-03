@@ -215,9 +215,18 @@ router.register(
       if (campanhaAtual && montadoCom !== null) {
         hud.hidden = false;
         host.hidden = true;
+        // O laço 3D pausa enquanto o mapa está aberto; sem este aviso ele
+        // ficaria pausado para sempre e o jogo voltaria congelado.
+        window.dispatchEvent(new CustomEvent('ck:jogo'));
         return;
       }
       void router.reset('menu');
+    },
+    // O mapa não conhece a cena 3D — quem a montou foi `bootWorld`, e é ele
+    // que precisa fechar o painel da cidade, avisar e salvar. O evento é o
+    // mesmo caminho que o HUD já usa para abrir o mapa, na direção contrária.
+    onTravelStarted() {
+      window.dispatchEvent(new CustomEvent('ck:viagem'));
     },
   }),
 );

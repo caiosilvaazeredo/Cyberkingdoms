@@ -142,20 +142,67 @@
       #abrir-mapa { background: rgba(140, 190, 255, 0.16); }
 
       /* ------------------------------------------------------------ mapa */
-      .mapa-alvo { margin: 6px 0; }
+      /* O fundo de biomas e a camada vetorial ocupam a mesma caixa quadrada:
+         o canvas por baixo pintado pelo terreno da seed, o SVG por cima com o
+         que é interativo. Empilhar em vez de desenhar tudo num só é o que dá
+         toque, foco de teclado e leitor de tela nas cidades sem reimplementar
+         acerto de clique. */
+      .mapa-alvo {
+        position: relative; margin: 6px 0;
+        aspect-ratio: 1 / 1;
+        border: 1px solid var(--borda); border-radius: 12px; overflow: hidden;
+        background: #0b1220;
+      }
+      .mapa-fundo {
+        position: absolute; inset: 0; width: 100%; height: 100%;
+        /* Sem alisamento: a amostra é o bioma daquele ponto, e interpolar
+           inventaria bioma que não existe entre dois vizinhos. */
+        image-rendering: pixelated;
+        opacity: 0.85;
+      }
       .mapa {
-        width: 100%; height: auto; display: block;
-        border: 1px solid var(--borda); border-radius: 12px;
-        background: radial-gradient(circle at 50% 50%, #14201d 0%, #0b1220 70%);
+        position: absolute; inset: 0;
+        width: 100%; height: 100%; display: block;
       }
       .mapa-cidade { cursor: pointer; }
       .mapa-cidade:focus { outline: none; }
       .mapa-cidade:focus circle { stroke: #9ff0cf; stroke-width: 4; }
       .mapa-nome {
-        fill: #d6e4dd; font-size: 17px; opacity: 0.55;
+        fill: #f2fbf7; font-size: 17px;
         font-family: ui-monospace, Menlo, Consolas, monospace;
+        /* Contorno escuro: o nome cai sobre terreno de qualquer cor, e sem ele
+           some em cima da bio-fazenda clara. */
+        paint-order: stroke; stroke: #06100d; stroke-width: 4px; stroke-linejoin: round;
       }
-      .mapa-nome.capital { font-size: 22px; opacity: 0.85; }
+      .mapa-nome.capital { font-size: 23px; }
+      .mapa-escala {
+        fill: #f2fbf7; font-size: 16px;
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+        paint-order: stroke; stroke: #06100d; stroke-width: 4px; stroke-linejoin: round;
+      }
+      /* Os nomes não recebem toque: eles cobrem os pontos vizinhos, e um
+         rótulo que rouba o toque de outra cidade é pior que rótulo nenhum. */
+      .mapa-rotulos { pointer-events: none; }
+      .mapa-eu { pointer-events: none; }
+      .mapa-eu line { paint-order: stroke; stroke-linecap: round; }
+      .mapa-transito {
+        margin: 4px 0; padding: 8px 10px;
+        border: 1px solid rgba(255, 190, 120, 0.45); border-radius: 10px;
+        background: rgba(80, 55, 25, 0.4);
+        color: #ffd28a; font-size: 11px; line-height: 1.45;
+      }
+      .mapa-transito:empty { display: none; }
+      .mapa-rota { color: #9ff0cf; opacity: 0.95 !important; margin-top: 4px; }
+      .mapa-mantimento { opacity: 0.8 !important; }
+      .mapa-mantimento.curto { color: #ff9d9d; opacity: 1 !important; }
+      .mapa-viajar {
+        min-height: var(--toque); margin-top: 8px;
+        border: 1px solid rgba(140, 240, 200, 0.6); border-radius: 10px;
+        background: rgba(90, 200, 160, 0.25); color: var(--texto);
+        font: 12px/1 ui-monospace, Menlo, Consolas, monospace;
+        letter-spacing: 0.06em; cursor: pointer;
+      }
+      .mapa-viajar:disabled { opacity: 0.4; cursor: not-allowed; }
       .mapa-legenda { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
       .mapa-chip {
         display: inline-flex; align-items: center; gap: 5px;
@@ -599,6 +646,45 @@
         border-color: rgba(255, 210, 130, 0.7);
       }
 
+      /* A mochila reaproveita a caixa e as linhas do painel da cidade: mesma
+         posição, mesmo fechar, mesmas linhas com botão à direita. Aprender uma
+         interface e reencontrá-la vale mais que um visual próprio. */
+      #mochila {
+        position: fixed;
+        left: max(10px, env(safe-area-inset-left));
+        right: max(10px, env(safe-area-inset-right));
+        bottom: calc(max(10px, env(safe-area-inset-bottom)) + 12px);
+        max-height: 52vh;
+        z-index: 3;
+        padding: 12px;
+        border: 1px solid rgba(255, 210, 130, 0.35);
+        border-radius: 14px;
+        background: var(--painel);
+        backdrop-filter: blur(10px);
+        color: var(--texto);
+        font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace;
+        overflow-y: auto;
+        display: none;
+      }
+      #mochila.aberto { display: block; }
+      #mochila-cabecalho { display: flex; align-items: center; gap: 8px; }
+      #mochila h2 { flex: 1; margin: 0; font-size: 12px; letter-spacing: 0.12em; color: #ffd28a; }
+      #fechar-mochila {
+        width: 36px; height: 36px; flex: 0 0 auto; padding: 0;
+        border: 1px solid var(--borda); border-radius: 10px;
+        background: rgba(0, 0, 0, 0.3); color: var(--texto);
+        font: 14px/1 ui-monospace, Menlo, Consolas, monospace; cursor: pointer;
+      }
+      #mochila-recado { min-height: 16px; margin: 6px 0; font-size: 11px; color: #9ff0cf; }
+      #mochila-recado:empty { display: none; }
+      #abrir-mochila {
+        width: 100%; min-height: var(--toque); margin-bottom: 6px;
+        border: 1px solid var(--borda); border-radius: 12px;
+        background: rgba(255, 255, 255, 0.06); color: var(--texto);
+        font: 13px/1 ui-monospace, Menlo, Consolas, monospace;
+        letter-spacing: 0.08em; cursor: pointer;
+      }
+
       #abrir-trabalho, #abrir-cidade {
         width: 100%; min-height: var(--toque); margin-bottom: 6px;
         border: 1px solid var(--borda); border-radius: 12px;
@@ -892,6 +978,19 @@
       <div id="lista-cursos"></div>
     </aside>
 
+    <!-- A mochila. Existe porque comer e beber não tinham porta de entrada
+         nenhuma na interface: o domínio sabia consumir item desde sempre, mas
+         nada chamava, então Fome e Sede só desciam. Numa viagem de dez dias
+         isso não é dificuldade, é morte marcada. -->
+    <aside id="mochila">
+      <div id="mochila-cabecalho">
+        <h2>MOCHILA</h2>
+        <button id="fechar-mochila" type="button" aria-label="Fechar">✕</button>
+      </div>
+      <p id="mochila-recado"></p>
+      <div id="mochila-lista"></div>
+    </aside>
+
     <!-- O painel da cidade. Abre ao chegar numa delas e é a razão de a viagem
          existir: comprar onde é barato, vender onde falta, assumir uma vaga. -->
     <aside id="cidade">
@@ -935,6 +1034,7 @@
       <div id="corpo">
         <button id="abrir-catalogo" type="button">CONSTRUIR</button>
         <button id="abrir-trabalho" type="button">TRABALHAR</button>
+        <button id="abrir-mochila" type="button">MOCHILA</button>
         <!-- Fica desabilitado em campo aberto: mercado e governo são da cidade,
              e um botão que abre um painel vazio na estrada ensina errado. -->
         <button id="abrir-cidade" type="button" disabled>ENTRAR NA CIDADE</button>

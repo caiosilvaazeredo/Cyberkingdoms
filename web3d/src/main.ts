@@ -20,6 +20,7 @@ import { DayClock, formatDays } from './campaign/dayClock';
 import type { Campaign } from './campaign/campaign';
 import { runDailyTick } from './campaign/dailyTick';
 import { QuestLog, objectiveLabel, objectiveProgress } from './campaign/quest';
+import { isConsumable, itemDef } from './economy/item';
 import { resolveUpkeep, type DailyActivity } from './survival/dailyActivity';
 import { workById } from './survival/survival';
 import {
@@ -395,7 +396,131 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
     }
 
     atualizarQuests();
+    pintarMochila();
   }
+
+  // ------------------------------------------------------------------ mochila
+  //
+  // Comer e beber não tinham porta de entrada nenhuma. `Character.consume` já
+  // existia — resolve Fome e Sede, aplica o custo do estimulante, tira o item
+  // do inventário — mas nada na interface chamava, então os vitais só desciam e
+  // toda campanha terminava em morte por abandono. Com viagem de vários dias
+  // isso deixou de ser um buraco de conforto e virou impedimento: a estrada não
+  // tem mercado, e quem sai sem comida não chega.
+  const mochilaEl = document.querySelector<HTMLElement>('#mochila');
+  const mochilaLista = document.querySelector<HTMLElement>('#mochila-lista');
+  const mochilaRecado = document.querySelector<HTMLElement>('#mochila-recado');
+
+  /**
+   * Estado desenhado da lista.
+   *
+   * `atualizarRecursos` roda a cada segundo, e redesenhar a lista toda vez não
+   * era só desperdício: trocava os botões debaixo do dedo do jogador, e um toque
+   * que cai no instante da troca não acerta nada. Só redesenha quando o que
+   * está na mochila mudou de verdade.
+   */
+  let assinaturaMochila: string | null = null;
+
+  function pintarMochila(): void {
+    // Fechada, não há o que redesenhar: reconstruir uma lista invisível é
+    // trabalho jogado fora.
+    if (!mochilaLista || !mochilaEl?.classList.contains('aberto')) {
+      assinaturaMochila = null;
+      return;
+    }
+
+    // Os vitais entram na assinatura porque decidem quais itens ficam
+    // desabilitados: de barriga cheia, gastar a última refeição não devolve
+    // nada, e numa estrada de dez dias essa refeição era a diferença.
+    const assinatura =
+      [...inventario.stacks].map(([id, q]) => `${id}:${q}`).join('|') +
+      `#${character.hunger}/${character.thirst}`;
+    if (assinatura === assinaturaMochila) return;
+    assinaturaMochila = assinatura;
+
+    mochilaLista.textContent = '';
+
+    const itens = [...inventario.stacks]
+      .filter(([, q]) => q > 0)
+      .map(([id, q]) => ({ def: itemDef(id), q }))
+      // Consumível primeiro, e dentro dele o que restaura mais: numa emergência
+      // o jogador abre a mochila para resolver Fome ou Sede, não para admirar
+      // o estoque de sucata.
+      .sort((a, b) => {
+        const ca = isConsumable(a.def) ? 0 : 1;
+        const cb = isConsumable(b.def) ? 0 : 1;
+        if (ca !== cb) return ca - cb;
+        return (
+          b.def.restoresHunger + b.def.restoresThirst -
+          (a.def.restoresHunger + a.def.restoresThirst)
+        );
+      });
+
+    if (itens.length === 0) {
+      const vazio = document.createElement('p');
+      vazio.className = 'cidade-vazio';
+      vazio.textContent =
+        'Mochila vazia. Comida e água se compram no mercado da cidade — e é o ' +
+        'que sustenta os dias de estrada.';
+      mochilaLista.appendChild(vazio);
+      return;
+    }
+
+    for (const { def, q } of itens) {
+      const linha = document.createElement('div');
+      linha.className = 'cidade-linha';
+
+      const info = document.createElement('span');
+      info.className = 'cidade-info';
+      const efeito = isConsumable(def)
+        ? `+${def.restoresHunger} fome · +${def.restoresThirst} sede`
+        : def.description;
+      info.innerHTML = `<strong>${def.name} ×${q}</strong><em>${efeito}</em>`;
+      linha.appendChild(info);
+
+      if (isConsumable(def)) {
+        const semEfeito =
+          (def.restoresHunger === 0 || character.hunger >= 100) &&
+          (def.restoresThirst === 0 || character.thirst >= 100);
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = semEfeito ? 'CHEIO' : 'USAR';
+        b.disabled = semEfeito;
+        b.title = semEfeito ? 'Não repõe nada agora — guarde para a estrada.' : '';
+        if (!semEfeito) b.addEventListener('click', () => usar(def.id));
+        linha.appendChild(b);
+      }
+      mochilaLista.appendChild(linha);
+    }
+  }
+
+  function usar(id: string): void {
+    const antesFome = character.hunger;
+    const antesSede = character.thirst;
+    if (!character.consume(id)) return;
+    if (mochilaRecado) {
+      mochilaRecado.textContent =
+        `${itemDef(id).name}: fome ${antesFome}→${character.hunger}, ` +
+        `sede ${antesSede}→${character.thirst}.`;
+    }
+    atualizarRecursos();
+    options.onPersist?.(campaign);
+  }
+
+  document.querySelector('#abrir-mochila')?.addEventListener('click', () => {
+    mochilaEl?.classList.toggle('aberto');
+    if (mochilaRecado) mochilaRecado.textContent = '';
+    pintarMochila();
+  });
+  document.querySelector('#fechar-mochila')?.addEventListener('click', () => {
+    mochilaEl?.classList.remove('aberto');
+  });
+  // O chip de vitais é o lugar onde o jogador **percebe** que está com fome.
+  // Abrir a mochila daí economiza a viagem até o painel no pior momento.
+  boxVitais?.addEventListener('click', () => {
+    mochilaEl?.classList.add('aberto');
+    pintarMochila();
+  });
 
   /**
    * A quest atual e o progresso dos objetivos dela.
@@ -458,11 +583,29 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
   }
 
   function virarODia(): void {
+    const antesDoTick = character.position;
     const relatorio = runDailyTick(campaign, {
       ...atividadeDoDia(),
       roadsTravelled: trechosAndados(),
     });
     metrosAndados = 0;
+
+    // O reset é quem conclui a viagem: no último dia ele muda o personagem de
+    // lugar. Comparar a posição é mais robusto do que checar `travellingTo`,
+    // porque pega qualquer outro caminho que venha a mover o personagem sem
+    // passar pela câmera.
+    if (character.position.x !== antesDoTick.x || character.position.y !== antesDoTick.y) {
+      irPara(character.position);
+      const chegou = cidadeAtual ? campaign.world.layout.byId(cidadeAtual) : null;
+      if (chegou) {
+        anunciar(
+          `Chegou: ${chegou.name}`,
+          `${chegou.vocationDef.label} · ${chegou.population.toLocaleString('pt-BR')} habitantes. ` +
+            'Toque em ENTRAR para o mercado.',
+          5,
+        );
+      }
+    }
     // A escolha **não** zera: ela é ordem permanente até o jogador trocar.
     // Zerando, ele teria de reabrir o painel de trabalho todo reset só para
     // repetir o mesmo emprego — e emprego que exige reconfirmação diária não é
@@ -548,6 +691,61 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
     } else {
       anunciar('Fora da cidade', 'Estrada aberta. Aqui não há mercado nem governo.', 3);
     }
+  }
+
+  /**
+   * Se o personagem pode se deslocar agora.
+   *
+   * Em trânsito, não: a viagem é medida em dias de reset, e deixar o jogador
+   * caminhar durante ela permitiria chegar ao destino a pé **e** de carona, sem
+   * pagar nenhum dos dois preços.
+   */
+  function podeAndar(): boolean {
+    return !character.isTravelling;
+  }
+
+  let ultimoAvisoTransito = 0;
+  function avisarTransito(): void {
+    // Uma vez a cada três segundos: o aviso dispara a cada quadro em que a
+    // tecla está pressionada, e reescrevê-lo sessenta vezes por segundo faz a
+    // caixa piscar em vez de informar.
+    const agora = performance.now();
+    if (agora - ultimoAvisoTransito < 3000) return;
+    ultimoAvisoTransito = agora;
+    const destino = character.travellingTo
+      ? campaign.world.layout.byId(character.travellingTo)
+      : null;
+    anunciar(
+      'Em trânsito',
+      `A caminho de ${destino?.name ?? 'outra cidade'} — faltam ` +
+        `${character.travelDaysRemaining} dia(s). Encerre o dia para avançar.`,
+      3,
+    );
+  }
+
+  /**
+   * Leva a cena até onde o personagem está.
+   *
+   * Chamado quando alguém **que não é a câmera** move o personagem: a chegada de
+   * uma viagem acontece dentro do reset, e sem isto o jogador desembarcaria do
+   * outro lado do mapa com a câmera parada na cidade de onde saiu — vendo o
+   * mercado da cidade nova sobre o terreno da antiga.
+   */
+  function irPara(destino: TileCoord): void {
+    view.target.x = destino.x;
+    view.target.z = destino.y;
+    view.apply();
+    center.set(destino.x, destino.y);
+    salvoEm.set(destino.x, destino.y);
+
+    // O mundo carregado é o da origem, a centenas de metros: descartar é mais
+    // barato do que deixar o carregador escoar pedaço por pedaço, e evita o
+    // quadro em que o jogador vê o terreno de duas cidades ao mesmo tempo.
+    mundo?.clear();
+    carregando = true;
+    cidadeAtual = campaign.currentSettlementId;
+    if (cidadeAtual) campaign.visitedSettlements.add(cidadeAtual);
+    sincronizarBotaoCidade();
   }
 
   const raycaster = new THREE.Raycaster();
@@ -733,8 +931,14 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
           // mais uma parede invisível, é o custo de Fome e Sede que a distância
           // andada cobra no reset.
           view.apply();
-          center.set(view.target.x, view.target.z);
-          seguirCamera();
+          // A câmera anda mesmo em trânsito — olhar em volta na estrada não é
+          // deslocamento. O que `seguirCamera` faz é mover o **personagem**, e
+          // isso o trânsito bloqueia: quem está a três dias de viagem não pode
+          // aparecer noutra cidade arrastando o dedo.
+          if (podeAndar()) {
+            center.set(view.target.x, view.target.z);
+            seguirCamera();
+          }
           break;
         }
 
@@ -1077,10 +1281,20 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
 
   /** Liga o botão só quando há cidade sob os pés, e fecha o painel ao sair. */
   function sincronizarBotaoCidade(): void {
-    const s = cidadeAtual ? campaign.world.layout.byId(cidadeAtual) : null;
+    // Em trânsito o personagem continua parado na cidade de saída até o reset
+    // concluir a viagem. Sem esta trava ele negociaria no mercado de lá durante
+    // os três dias em que, para o jogo, já está na estrada.
+    const s =
+      cidadeAtual && !character.isTravelling
+        ? campaign.world.layout.byId(cidadeAtual)
+        : null;
     if (botaoCidade) {
       botaoCidade.disabled = s === null;
-      botaoCidade.textContent = s ? `ENTRAR EM ${s.name.toUpperCase()}` : 'ENTRAR NA CIDADE';
+      botaoCidade.textContent = character.isTravelling
+        ? 'EM TRÂNSITO'
+        : s
+          ? `ENTRAR EM ${s.name.toUpperCase()}`
+          : 'ENTRAR NA CIDADE';
     }
     // Sair da cidade fecha o painel: o mercado é local, e continuar comprando
     // dele a dois quilômetros de distância apagaria a razão de viajar.
@@ -1147,7 +1361,8 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
       view.target.z += -dx * sin - dz * cos;
 
       center.set(view.target.x, view.target.z);
-      seguirCamera();
+      if (podeAndar()) seguirCamera();
+      else avisarTransito();
     }
 
     if (teclas.has('giraEsq')) view.rotateBy(1.6 * delta);
@@ -1170,6 +1385,25 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
 
   document.querySelector('#abrir-mapa')?.addEventListener('click', () => {
     window.dispatchEvent(new CustomEvent('ck:mapa'));
+  });
+
+  // A viagem começa no mapa, que é onde a decisão acontece. O jogo só precisa
+  // saber que ela começou: fecha o painel da cidade que ficou para trás, avisa,
+  // e salva — sair para a estrada é estado que não pode se perder num F5.
+  window.addEventListener('ck:viagem', () => {
+    cidadePainel?.close();
+    sincronizarBotaoCidade();
+    atualizarRecursos();
+    const destino = character.travellingTo
+      ? campaign.world.layout.byId(character.travellingTo)
+      : null;
+    anunciar(
+      'Na estrada',
+      `A caminho de ${destino?.name ?? 'outra cidade'} — ` +
+        `${character.travelDaysRemaining} dia(s). Encerre o dia para avançar.`,
+      5,
+    );
+    options.onPersist?.(campaign);
   });
 
   document.querySelector('#sair')?.addEventListener('click', () => {
@@ -1209,11 +1443,28 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
     if (visible) clock.getDelta();
   });
 
+  /**
+   * `false` enquanto uma tela cobre o jogo — o mapa, por enquanto.
+   *
+   * A cena fica montada atrás dela de propósito, para voltar não recarregar
+   * nada. Mas continuar desenhando sessenta quadros por segundo de um mundo que
+   * ninguém está vendo é exatamente a bateria queimada por nada que o resto do
+   * laço evita.
+   */
+  let noJogo = true;
+  window.addEventListener('ck:mapa', () => {
+    noJogo = false;
+  });
+  window.addEventListener('ck:jogo', () => {
+    noJogo = true;
+    clock.getDelta();
+  });
+
   function frame(): void {
     requestAnimationFrame(frame);
     // Render em segundo plano é bateria queimada por nada — o motivo número um
     // de um jogo web esquentar o celular no bolso.
-    if (!visible) return;
+    if (!visible || !noJogo) return;
 
     const delta = clock.getDelta();
     governor.sample(delta);

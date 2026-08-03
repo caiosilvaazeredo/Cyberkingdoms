@@ -175,10 +175,27 @@ function findHospitableTile(
 }
 
 /**
- * Traça uma estrada com Bresenham e desvio suave, evitando água quando dá.
+ * Traça uma estrada, desviando de água quando dá.
  *
  * Não é A*, e é de propósito: estradas devem parecer construídas, não
  * otimizadas ao milímetro. Um caminho perfeito denuncia o algoritmo.
+ *
+ * ## Por que o passo é recalculado a cada tile
+ *
+ * A versão anterior era um Bresenham clássico com um desvio grudado por cima:
+ * quando o próximo tile era água, ela empurrava a posição para o lado **sem**
+ * corrigir o termo de erro. A partir dali o erro descrevia uma reta que não
+ * passava mais pela posição real, e a linha nunca reencontrava o destino — ela
+ * vagava até bater no teto de 20 mil passos.
+ *
+ * Isso não era um detalhe de traçado. `travelDays` sai do comprimento do
+ * caminho, então toda estrada que cruzava um lago virava uma viagem de 222
+ * dias — mais do que um personagem sobrevive sem comer. Metade do mapa era
+ * inalcançável por um defeito de geometria.
+ *
+ * Recalcular o passo a partir da posição atual elimina o estado que podia
+ * dessincronizar: cada passo aceito reduz a distância restante em pelo menos
+ * um, então o caminho **sempre** termina, com ou sem desvio.
  */
 function tracePath(
   generator: WorldGenerator,
@@ -188,36 +205,53 @@ function tracePath(
   const path: TileCoord[] = [];
   let x = from.x;
   let y = from.y;
-  const dx = Math.abs(to.x - x);
-  const dy = Math.abs(to.y - y);
-  const sx = x < to.x ? 1 : -1;
-  const sy = y < to.y ? 1 : -1;
-  let err = dx - dy;
 
-  // Teto de segurança: impede laço infinito se a geometria degenerar.
-  let guard = 0;
-  const maxSteps = 20000;
+  // Teto: o caminho é monotônico, então a soma das distâncias é o pior caso.
+  // Continua existindo como rede de segurança, mas não é mais alcançável.
+  const maxSteps = Math.abs(to.x - x) + Math.abs(to.y - y) + 4;
 
-  while (guard++ < maxSteps) {
+  for (let guard = 0; guard <= maxSteps; guard++) {
     path.push(new TileCoord(x, y));
     if (x === to.x && y === to.y) break;
 
-    const e2 = 2 * err;
-    let movedX = false;
-    if (e2 > -dy) {
-      err -= dy;
-      x += sx;
-      movedX = true;
-    }
-    if (e2 < dx) {
-      err += dx;
-      y += sy;
+    const dxr = to.x - x;
+    const dyr = to.y - y;
+    const stepX = Math.sign(dxr);
+    const stepY = Math.sign(dyr);
+
+    // Enquanto um eixo domina o outro em mais que o dobro, anda reto nele; no
+    // meio-termo, anda na diagonal. É o que dá o canto chanfrado de estrada de
+    // verdade em vez do degrau de escada.
+    const candidatos: [number, number][] =
+      Math.abs(dxr) > Math.abs(dyr) * 2
+        ? [
+            [stepX, 0],
+            [stepX, stepY],
+            [0, stepY],
+          ]
+        : Math.abs(dyr) > Math.abs(dxr) * 2
+          ? [
+              [0, stepY],
+              [stepX, stepY],
+              [stepX, 0],
+            ]
+          : [
+              [stepX, stepY],
+              [stepX, 0],
+              [0, stepY],
+            ];
+
+    let escolhido = candidatos[0]!;
+    for (const c of candidatos) {
+      if (c[0] === 0 && c[1] === 0) continue;
+      if (biomeDef(generator.biomeAt(x + c[0], y + c[1])).walkable) {
+        escolhido = c;
+        break;
+      }
     }
 
-    if (!biomeDef(generator.biomeAt(x, y)).walkable) {
-      if (movedX) y += sy;
-      else x += sx;
-    }
+    x += escolhido[0];
+    y += escolhido[1];
   }
   return path;
 }

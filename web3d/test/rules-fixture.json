@@ -1380,121 +1380,121 @@
         {
           "fromId": "cap_3",
           "toId": "cap_4",
-          "travelDays": 222,
+          "travelDays": 7,
           "danger": 0.35726712802425026,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 639,
           "first": {
             "x": -482,
             "y": -442
           },
           "last": {
-            "x": 19517,
-            "y": -2953
+            "x": 153,
+            "y": -463
           }
         },
         {
           "fromId": "cap_4",
           "toId": "cap_0",
-          "travelDays": 222,
+          "travelDays": 6,
           "danger": 0.40380340089322997,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 552,
           "first": {
             "x": 153,
             "y": -463
           },
           "last": {
-            "x": 18223,
-            "y": 20855
+            "x": 646,
+            "y": 87
           }
         },
         {
           "fromId": "cap_0",
           "toId": "cap_1",
-          "travelDays": 222,
+          "travelDays": 6,
           "danger": 0.3577528831316158,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 525,
           "first": {
             "x": 646,
             "y": 87
           },
           "last": {
-            "x": -19353,
-            "y": 15561
+            "x": 124,
+            "y": 449
           }
         },
         {
           "fromId": "cap_1",
           "toId": "cap_2",
-          "travelDays": 222,
+          "travelDays": 8,
           "danger": 0.34590584422694515,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 700,
           "first": {
             "x": 124,
             "y": 449
           },
           "last": {
-            "x": -19875,
-            "y": -7166
+            "x": -564,
+            "y": 252
           }
         },
         {
           "fromId": "cap_2",
           "toId": "cap_3",
-          "travelDays": 222,
+          "travelDays": 8,
           "danger": 0.34355680220760404,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 748,
           "first": {
             "x": -564,
             "y": 252
           },
           "last": {
-            "x": 3399,
-            "y": -19940
+            "x": -482,
+            "y": -442
           }
         },
         {
           "fromId": "cap_3",
           "toId": "cap_0",
-          "travelDays": 222,
+          "travelDays": 13,
           "danger": 0.6269695018534549,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 1130,
           "first": {
             "x": -482,
             "y": -442
           },
           "last": {
-            "x": 19517,
-            "y": 11013
+            "x": 646,
+            "y": 87
           }
         },
         {
           "fromId": "sat_0",
           "toId": "cap_0",
-          "travelDays": 222,
+          "travelDays": 2,
           "danger": 0.2743784013623372,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 190,
           "first": {
             "x": 833,
             "y": 114
           },
           "last": {
-            "x": -19166,
-            "y": -4298
+            "x": 646,
+            "y": 87
           }
         },
         {
           "fromId": "sat_1",
           "toId": "cap_0",
-          "travelDays": 222,
+          "travelDays": 1,
           "danger": 0.1492724647698924,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 120,
           "first": {
             "x": 527,
             "y": 12
           },
           "last": {
-            "x": 20526,
-            "y": 14389
+            "x": 646,
+            "y": 87
           }
         },
         {
@@ -1515,91 +1515,91 @@
         {
           "fromId": "sat_3",
           "toId": "cap_1",
-          "travelDays": 222,
+          "travelDays": 3,
           "danger": 0.2166900812718086,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 228,
           "first": {
             "x": -103,
             "y": 480
           },
           "last": {
-            "x": 19896,
-            "y": -4450
+            "x": 124,
+            "y": 449
           }
         },
         {
           "fromId": "sat_4",
           "toId": "cap_1",
-          "travelDays": 222,
+          "travelDays": 2,
           "danger": 0.23770896582398565,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 206,
           "first": {
             "x": 227,
             "y": 647
           },
           "last": {
-            "x": -11055,
-            "y": -20317
+            "x": 124,
+            "y": 449
           }
         },
         {
           "fromId": "sat_5",
           "toId": "cap_1",
-          "travelDays": 222,
+          "travelDays": 2,
           "danger": 0.14309412143891675,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 181,
           "first": {
             "x": 33,
             "y": 628
           },
           "last": {
-            "x": 11012,
-            "y": -20206
+            "x": 124,
+            "y": 449
           }
         },
         {
           "fromId": "sat_6",
           "toId": "cap_2",
-          "travelDays": 222,
+          "travelDays": 2,
           "danger": 0.2561967189493589,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 218,
           "first": {
             "x": -779,
             "y": 283
           },
           "last": {
-            "x": 19220,
-            "y": -4678
+            "x": -564,
+            "y": 252
           }
         },
         {
           "fromId": "sat_7",
           "toId": "cap_2",
-          "travelDays": 222,
+          "travelDays": 3,
           "danger": 0.15178832080680876,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 240,
           "first": {
             "x": -326,
             "y": 158
           },
           "last": {
-            "x": -20325,
-            "y": 9919
+            "x": -564,
+            "y": 252
           }
         },
         {
           "fromId": "sat_8",
           "toId": "cap_2",
-          "travelDays": 222,
+          "travelDays": 2,
           "danger": 0.2265812945738435,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 198,
           "first": {
             "x": -368,
             "y": 329
           },
           "last": {
-            "x": -20367,
-            "y": -9171
+            "x": -564,
+            "y": 252
           }
         },
         {
@@ -1620,16 +1620,16 @@
         {
           "fromId": "sat_10",
           "toId": "cap_3",
-          "travelDays": 222,
+          "travelDays": 2,
           "danger": 0.16075546846957878,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 173,
           "first": {
             "x": -423,
             "y": -612
           },
           "last": {
-            "x": -8527,
-            "y": 19980
+            "x": -482,
+            "y": -442
           }
         },
         {
@@ -1680,16 +1680,16 @@
         {
           "fromId": "sat_14",
           "toId": "cap_4",
-          "travelDays": 222,
+          "travelDays": 1,
           "danger": 0.27680060541722923,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 105,
           "first": {
             "x": 257,
             "y": -530
           },
           "last": {
-            "x": -19742,
-            "y": 14444
+            "x": 153,
+            "y": -463
           }
         }
       ]
@@ -1962,16 +1962,16 @@
         {
           "fromId": "cap_3",
           "toId": "cap_4",
-          "travelDays": 222,
+          "travelDays": 8,
           "danger": 0.4393922027084045,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 706,
           "first": {
             "x": -410,
             "y": -440
           },
           "last": {
-            "x": 19589,
-            "y": 1912
+            "x": 293,
+            "y": -407
           }
         },
         {
@@ -1992,76 +1992,76 @@
         {
           "fromId": "cap_0",
           "toId": "cap_1",
-          "travelDays": 222,
+          "travelDays": 7,
           "danger": 0.3008841351256706,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 663,
           "first": {
             "x": 626,
             "y": -40
           },
           "last": {
-            "x": -11527,
-            "y": 20727
+            "x": 260,
+            "y": 591
           }
         },
         {
           "fromId": "cap_1",
           "toId": "cap_2",
-          "travelDays": 222,
+          "travelDays": 8,
           "danger": 0.4281682602362707,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 732,
           "first": {
             "x": 260,
             "y": 591
           },
           "last": {
-            "x": -19739,
-            "y": -7429
+            "x": -463,
+            "y": 371
           }
         },
         {
           "fromId": "cap_2",
           "toId": "cap_3",
-          "travelDays": 222,
+          "travelDays": 9,
           "danger": 0.42864621022017674,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 818,
           "first": {
             "x": -463,
             "y": 371
           },
           "last": {
-            "x": 2376,
-            "y": -19718
+            "x": -410,
+            "y": -440
           }
         },
         {
           "fromId": "cap_3",
           "toId": "cap_0",
-          "travelDays": 222,
+          "travelDays": 12,
           "danger": 0.5433314640307799,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 1045,
           "first": {
             "x": -410,
             "y": -440
           },
           "last": {
-            "x": 19589,
-            "y": 8844
+            "x": 626,
+            "y": -40
           }
         },
         {
           "fromId": "sat_0",
           "toId": "cap_0",
-          "travelDays": 222,
+          "travelDays": 2,
           "danger": 0.23059225854929538,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 209,
           "first": {
             "x": 673,
             "y": -244
           },
           "last": {
-            "x": -5200,
-            "y": 20125
+            "x": 626,
+            "y": -40
           }
         },
         {
@@ -2127,16 +2127,16 @@
         {
           "fromId": "sat_5",
           "toId": "cap_1",
-          "travelDays": 222,
+          "travelDays": 2,
           "danger": 0.23341461714124306,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 190,
           "first": {
             "x": 72,
             "y": 423
           },
           "last": {
-            "x": 20071,
-            "y": 20242
+            "x": 260,
+            "y": 591
           }
         },
         {
@@ -2157,16 +2157,16 @@
         {
           "fromId": "sat_7",
           "toId": "cap_2",
-          "travelDays": 222,
+          "travelDays": 1,
           "danger": 0.19610051738098264,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 116,
           "first": {
             "x": -435,
             "y": 256
           },
           "last": {
-            "x": -6719,
-            "y": 20664
+            "x": -463,
+            "y": 371
           }
         },
         {
@@ -2187,16 +2187,16 @@
         {
           "fromId": "sat_9",
           "toId": "cap_3",
-          "travelDays": 222,
+          "travelDays": 2,
           "danger": 0.21347485411213712,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 202,
           "first": {
             "x": -610,
             "y": -463
           },
           "last": {
-            "x": 19389,
-            "y": 3671
+            "x": -410,
+            "y": -440
           }
         },
         {
@@ -2247,16 +2247,16 @@
         {
           "fromId": "sat_13",
           "toId": "cap_4",
-          "travelDays": 222,
+          "travelDays": 1,
           "danger": 0.16896950324997306,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 132,
           "first": {
             "x": 413,
             "y": -445
           },
           "last": {
-            "x": -19586,
-            "y": 7858
+            "x": 293,
+            "y": -407
           }
         },
         {
@@ -2544,16 +2544,16 @@
         {
           "fromId": "cap_3",
           "toId": "cap_4",
-          "travelDays": 222,
+          "travelDays": 5,
           "danger": 0.37007243254920463,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 439,
           "first": {
             "x": -396,
             "y": -312
           },
           "last": {
-            "x": 19603,
-            "y": -14309
+            "x": 39,
+            "y": -582
           }
         },
         {
@@ -2561,7 +2561,7 @@
           "toId": "cap_0",
           "travelDays": 7,
           "danger": 0.4222803892102093,
-          "lengthInTiles": 603,
+          "lengthInTiles": 657,
           "first": {
             "x": 39,
             "y": -582
@@ -2574,61 +2574,61 @@
         {
           "fromId": "cap_0",
           "toId": "cap_1",
-          "travelDays": 222,
+          "travelDays": 4,
           "danger": 0.4188471554545686,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 372,
           "first": {
             "x": 437,
             "y": 60
           },
           "last": {
-            "x": -14291,
-            "y": 21222
+            "x": 175,
+            "y": 427
           }
         },
         {
           "fromId": "cap_1",
           "toId": "cap_2",
-          "travelDays": 222,
+          "travelDays": 7,
           "danger": 0.40770517769269643,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 617,
           "first": {
             "x": 175,
             "y": 427
           },
           "last": {
-            "x": -19824,
-            "y": -3964
+            "x": -441,
+            "y": 353
           }
         },
         {
           "fromId": "cap_2",
           "toId": "cap_3",
-          "travelDays": 222,
+          "travelDays": 8,
           "danger": 0.42740291861118745,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 689,
           "first": {
             "x": -441,
             "y": 353
           },
           "last": {
-            "x": 2756,
-            "y": -19753
+            "x": -396,
+            "y": -312
           }
         },
         {
           "fromId": "cap_3",
           "toId": "cap_0",
-          "travelDays": 222,
+          "travelDays": 9,
           "danger": 0.5116295254440048,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 834,
           "first": {
             "x": -396,
             "y": -312
           },
           "last": {
-            "x": 19603,
-            "y": 10612
+            "x": 437,
+            "y": 60
           }
         },
         {
@@ -2636,7 +2636,7 @@
           "toId": "cap_0",
           "travelDays": 2,
           "danger": 0.26710987141821535,
-          "lengthInTiles": 161,
+          "lengthInTiles": 162,
           "first": {
             "x": 391,
             "y": -100
@@ -2664,31 +2664,31 @@
         {
           "fromId": "sat_2",
           "toId": "cap_0",
-          "travelDays": 222,
+          "travelDays": 3,
           "danger": 0.17445682631339876,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 259,
           "first": {
             "x": 419,
             "y": 316
           },
           "last": {
-            "x": 3639,
-            "y": -19804
+            "x": 437,
+            "y": 60
           }
         },
         {
           "fromId": "sat_3",
           "toId": "cap_1",
-          "travelDays": 222,
+          "travelDays": 2,
           "danger": 0.15694599891547112,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 182,
           "first": {
             "x": -6,
             "y": 374
           },
           "last": {
-            "x": 19993,
-            "y": 7964
+            "x": 175,
+            "y": 427
           }
         },
         {
@@ -2709,16 +2709,16 @@
         {
           "fromId": "sat_5",
           "toId": "cap_1",
-          "travelDays": 222,
+          "travelDays": 2,
           "danger": 0.21163938726065679,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 191,
           "first": {
             "x": 253,
             "y": 237
           },
           "last": {
-            "x": -8761,
-            "y": 20791
+            "x": 175,
+            "y": 427
           }
         },
         {
@@ -2739,31 +2739,31 @@
         {
           "fromId": "sat_7",
           "toId": "cap_2",
-          "travelDays": 222,
+          "travelDays": 2,
           "danger": 0.14571333406027406,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 150,
           "first": {
             "x": -590,
             "y": 223
           },
           "last": {
-            "x": 19409,
-            "y": 19263
+            "x": -441,
+            "y": 353
           }
         },
         {
           "fromId": "sat_8",
           "toId": "cap_2",
-          "travelDays": 222,
+          "travelDays": 2,
           "danger": 0.17415860773297026,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 210,
           "first": {
             "x": -649,
             "y": 449
           },
           "last": {
-            "x": 19350,
-            "y": -10377
+            "x": -441,
+            "y": 353
           }
         },
         {
@@ -2771,7 +2771,7 @@
           "toId": "cap_3",
           "travelDays": 1,
           "danger": 0.1864566993736662,
-          "lengthInTiles": 121,
+          "lengthInTiles": 122,
           "first": {
             "x": -276,
             "y": -351
@@ -2784,61 +2784,61 @@
         {
           "fromId": "sat_10",
           "toId": "cap_3",
-          "travelDays": 222,
+          "travelDays": 1,
           "danger": 0.18376833898480982,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 134,
           "first": {
             "x": -529,
             "y": -393
           },
           "last": {
-            "x": 19470,
-            "y": 13332
+            "x": -396,
+            "y": -312
           }
         },
         {
           "fromId": "sat_11",
           "toId": "cap_3",
-          "travelDays": 222,
+          "travelDays": 2,
           "danger": 0.2694286926952191,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 214,
           "first": {
             "x": -609,
             "y": -380
           },
           "last": {
-            "x": 19390,
-            "y": 7751
+            "x": -396,
+            "y": -312
           }
         },
         {
           "fromId": "sat_12",
           "toId": "cap_4",
-          "travelDays": 222,
+          "travelDays": 2,
           "danger": 0.16107963742222636,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 183,
           "first": {
             "x": -140,
             "y": -455
           },
           "last": {
-            "x": 19859,
-            "y": -16470
+            "x": 39,
+            "y": -582
           }
         },
         {
           "fromId": "sat_13",
           "toId": "cap_4",
-          "travelDays": 222,
+          "travelDays": 2,
           "danger": 0.23396879857871683,
-          "lengthInTiles": 20000,
+          "lengthInTiles": 147,
           "first": {
             "x": -106,
             "y": -456
           },
           "last": {
-            "x": 19893,
-            "y": -19394
+            "x": 39,
+            "y": -582
           }
         },
         {
@@ -2846,7 +2846,7 @@
           "toId": "cap_4",
           "travelDays": 2,
           "danger": 0.13814420975511893,
-          "lengthInTiles": 200,
+          "lengthInTiles": 202,
           "first": {
             "x": 179,
             "y": -783
