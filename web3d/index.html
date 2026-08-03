@@ -599,13 +599,86 @@
         border-color: rgba(255, 210, 130, 0.7);
       }
 
-      #abrir-trabalho {
+      #abrir-trabalho, #abrir-cidade {
         width: 100%; min-height: var(--toque); margin-bottom: 6px;
         border: 1px solid var(--borda); border-radius: 12px;
         background: rgba(255, 210, 130, 0.2); color: var(--texto);
         font: 13px/1 ui-monospace, Menlo, Consolas, monospace;
         letter-spacing: 0.08em; cursor: pointer;
       }
+      #abrir-cidade { background: rgba(140, 240, 200, 0.18); }
+      #abrir-cidade:disabled { opacity: 0.35; cursor: not-allowed; }
+
+      /* O painel da cidade divide o rodapé com o de trabalho e o catálogo:
+         mesma caixa, mesma altura máxima, mesmo jeito de fechar. Um layout
+         próprio faria o jogador reaprender a interface a cada painel. */
+      #cidade {
+        position: fixed;
+        left: max(10px, env(safe-area-inset-left));
+        right: max(10px, env(safe-area-inset-right));
+        bottom: calc(max(10px, env(safe-area-inset-bottom)) + 12px);
+        max-height: 56vh;
+        z-index: 3;
+        padding: 12px;
+        border: 1px solid rgba(140, 240, 200, 0.35);
+        border-radius: 14px;
+        background: var(--painel);
+        backdrop-filter: blur(10px);
+        color: var(--texto);
+        font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace;
+        overflow-y: auto;
+        display: none;
+      }
+      #cidade.aberto { display: block; }
+      #cidade-cabecalho { display: flex; align-items: center; gap: 8px; }
+      #cidade h2 { flex: 1; margin: 0; font-size: 12px; letter-spacing: 0.12em; color: #9ff0cf; }
+      #fechar-cidade {
+        width: 36px; height: 36px; flex: 0 0 auto; padding: 0;
+        border: 1px solid var(--borda); border-radius: 10px;
+        background: rgba(0, 0, 0, 0.3); color: var(--texto);
+        font: 14px/1 ui-monospace, Menlo, Consolas, monospace; cursor: pointer;
+      }
+      #cidade-resumo { margin: 2px 0 8px; font-size: 11px; opacity: 0.6; }
+      #cidade-abas { display: flex; gap: 6px; margin-bottom: 8px; }
+      #cidade-abas button {
+        flex: 1; min-height: var(--toque);
+        border: 1px solid var(--borda); border-radius: 10px;
+        background: rgba(255, 255, 255, 0.04); color: var(--texto);
+        font: 11px/1 ui-monospace, Menlo, Consolas, monospace;
+        letter-spacing: 0.08em; cursor: pointer;
+      }
+      #cidade-abas button[aria-pressed="true"] {
+        background: rgba(140, 240, 200, 0.22);
+        border-color: rgba(140, 240, 200, 0.6);
+      }
+      #cidade-recado { min-height: 16px; margin: 0 0 8px; font-size: 11px; color: #ffd28a; }
+      #cidade-recado:empty { display: none; }
+      #cidade h3 { margin: 12px 0 6px; font-size: 11px; letter-spacing: 0.12em; opacity: 0.7; }
+      .cidade-linha {
+        display: flex; align-items: center; gap: 8px;
+        padding: 6px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      }
+      .cidade-info { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+      .cidade-info strong { font-size: 12px; }
+      .cidade-info em {
+        font-style: normal; font-size: 10px; opacity: 0.5;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      }
+      .cidade-preco {
+        flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end;
+        font-size: 12px; opacity: 0.8;
+      }
+      .cidade-preco em { font-style: normal; font-size: 9px; opacity: 0.45; }
+      .cidade-preco.pechincha { color: #9ff0cf; opacity: 1; }
+      .cidade-linha button {
+        flex: 0 0 auto; min-width: 48px; min-height: var(--toque);
+        border: 1px solid var(--borda); border-radius: 10px;
+        background: rgba(255, 255, 255, 0.06); color: var(--texto);
+        font: 11px/1 ui-monospace, Menlo, Consolas, monospace; cursor: pointer;
+      }
+      .cidade-linha button:disabled { opacity: 0.3; cursor: not-allowed; }
+      .cidade-ficha { display: flex; flex-direction: column; gap: 4px; font-size: 11px; }
+      .cidade-vazio { margin: 8px 0 0; font-size: 10px; line-height: 1.5; opacity: 0.5; }
 
       /* O diário do dia que acabou de fechar. Some quando não há o que dizer. */
       #diario {
@@ -819,6 +892,23 @@
       <div id="lista-cursos"></div>
     </aside>
 
+    <!-- O painel da cidade. Abre ao chegar numa delas e é a razão de a viagem
+         existir: comprar onde é barato, vender onde falta, assumir uma vaga. -->
+    <aside id="cidade">
+      <div id="cidade-cabecalho">
+        <h2 id="cidade-titulo">CIDADE</h2>
+        <button id="fechar-cidade" type="button" aria-label="Fechar">✕</button>
+      </div>
+      <p id="cidade-resumo"></p>
+      <div id="cidade-abas" role="group" aria-label="Seções da cidade">
+        <button type="button" data-aba="mercado" aria-pressed="true">MERCADO</button>
+        <button type="button" data-aba="governo" aria-pressed="false">GOVERNO</button>
+        <button type="button" data-aba="trabalho" aria-pressed="false">VAGAS</button>
+      </div>
+      <p id="cidade-recado"></p>
+      <div id="cidade-conteudo"></div>
+    </aside>
+
     <aside id="catalogo">
       <!-- O catálogo tem o próprio fechar. Ele é `position: fixed` no rodapé
            com z-index acima do painel, então enquanto estava aberto ele cobria
@@ -845,6 +935,9 @@
       <div id="corpo">
         <button id="abrir-catalogo" type="button">CONSTRUIR</button>
         <button id="abrir-trabalho" type="button">TRABALHAR</button>
+        <!-- Fica desabilitado em campo aberto: mercado e governo são da cidade,
+             e um botão que abre um painel vazio na estrada ensina errado. -->
+        <button id="abrir-cidade" type="button" disabled>ENTRAR NA CIDADE</button>
         <div id="diario"></div>
         <!-- O dia vira sozinho a cada 24 h. Este botão adianta a virada, que é
              mecânica de sobrevivência conhecida — dormir — e a única forma de

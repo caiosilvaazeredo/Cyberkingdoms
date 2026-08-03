@@ -39,6 +39,7 @@ import {
   type CitizenLevel,
 } from './building/buildingType';
 import { describeBuilding, shortFacts } from './building/describe';
+import { createCityPanel, type CityPanel } from './ui/cityPanel';
 import { settings } from './net/settings';
 
 /**
@@ -174,6 +175,15 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
    */
   let atividadeEscolhida: DailyActivity | null = null;
   const atividadeDoDia = (): DailyActivity => atividadeEscolhida ?? {};
+
+  /**
+   * O painel da cidade atual.
+   *
+   * Declarado aqui e montado lá embaixo porque quem o abre — a chegada numa
+   * cidade, em `seguirCamera` — é definido antes das dependências que ele
+   * precisa (o painel de trabalho e o de recursos).
+   */
+  let cidadePainel: CityPanel | null = null;
 
   /**
    * O nível que vale para encaixar uma construção.
@@ -460,6 +470,9 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
     plotView?.sync(plot);
     atualizarRecursos();
     atualizarDiario(relatorio.events);
+    // O reset move tesouro, salário e livro de ofertas. Com o painel aberto,
+    // o jogador estaria olhando os preços de ontem.
+    cidadePainel?.refresh();
     options.onPersist?.(campaign);
 
     if (statusEl) {
@@ -519,6 +532,7 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
     if (agora === cidadeAtual) return;
 
     cidadeAtual = agora;
+    sincronizarBotaoCidade();
     if (agora) {
       const s = campaign.world.layout.byId(agora);
       const nova = !campaign.visitedSettlements.has(agora);
@@ -527,7 +541,7 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
         anunciar(
           `${nova ? 'Descoberta: ' : ''}${s.name}`,
           `${s.vocationDef.label} · ${s.population.toLocaleString('pt-BR')} habitantes · ` +
-            `${s.publicJobSlots} vagas públicas`,
+            `${s.publicJobSlots} vagas públicas. Toque em ENTRAR para o mercado.`,
         );
       }
       if (nova) options.onPersist?.(campaign);
@@ -1031,6 +1045,48 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
   document.querySelector('#fechar-trabalho')?.addEventListener('click', () => {
     document.querySelector('#trabalho')?.classList.remove('aberto');
   });
+
+  // ------------------------------------------------------------- a cidade
+  //
+  // O painel é criado uma vez e trocado de cidade, em vez de um por cidade: o
+  // conteúdo é sempre montado do estado atual da campanha, e vinte painéis
+  // guardando preços velhos seriam vinte lugares para dessincronizar.
+  cidadePainel = createCityPanel({
+    campaign: () => campaign,
+    onChange: () => {
+      atualizarRecursos();
+      options.onPersist?.(campaign);
+    },
+    // Assumir a vaga na cidade é a **mesma** escolha do painel de trabalho, e
+    // não uma segunda: duas fontes de verdade para o dia de trabalho é como se
+    // ganha salário de dois empregos ao mesmo tempo.
+    onTakeJob: (work) => {
+      escolherTrabalho(work);
+      atualizarRecursos();
+      options.onPersist?.(campaign);
+    },
+    currentWork: () => atividadeEscolhida?.publicWork ?? null,
+  });
+
+  const botaoCidade = document.querySelector<HTMLButtonElement>('#abrir-cidade');
+  botaoCidade?.addEventListener('click', () => {
+    if (!cidadeAtual) return;
+    if (cidadePainel?.isOpen) cidadePainel.close();
+    else cidadePainel?.open(cidadeAtual);
+  });
+
+  /** Liga o botão só quando há cidade sob os pés, e fecha o painel ao sair. */
+  function sincronizarBotaoCidade(): void {
+    const s = cidadeAtual ? campaign.world.layout.byId(cidadeAtual) : null;
+    if (botaoCidade) {
+      botaoCidade.disabled = s === null;
+      botaoCidade.textContent = s ? `ENTRAR EM ${s.name.toUpperCase()}` : 'ENTRAR NA CIDADE';
+    }
+    // Sair da cidade fecha o painel: o mercado é local, e continuar comprando
+    // dele a dois quilômetros de distância apagaria a razão de viajar.
+    if (!s && cidadePainel?.isOpen) cidadePainel.close();
+  }
+  sincronizarBotaoCidade();
 
   // ------------------------------------------------------------ teclado (PC)
   //
