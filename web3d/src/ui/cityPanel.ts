@@ -1,6 +1,7 @@
 import type { Campaign } from '../campaign/campaign';
 import { itemDef } from '../economy/item';
 import { sellToGovernment } from '../economy/publicContract';
+import { relatorio, tetoRestante } from '../politics/budget';
 import { formatCz } from '../rules/eb';
 import { describeCity, type BuyRow, type CityView, type SellRow } from './cityView';
 
@@ -258,6 +259,34 @@ export function createCityPanel(deps: CityPanelDeps): CityPanel {
       `<span><strong>Caixa:</strong> ${cr(v.treasury)}</span>` +
       `<span><strong>Vagas públicas:</strong> ${v.publicJobSlots}</span>`;
     conteudo.appendChild(p);
+
+    // Relatório público do cofre — EB 1.1, §26 manda publicá-lo. A autonomia é
+    // a linha que responde à pergunta que importa: por quantos ciclos esta
+    // cidade paga o que prometeu. Saldo sozinho não diz nada, porque cofre
+    // grande com gasto maior ainda quebra.
+    const c = deps.campaign();
+    const gov = c.governmentOf(v.id);
+    const folhaSemanal = gov.publicWage * v.publicJobSlots;
+    const rel = relatorio({
+      saldo: gov.treasury,
+      arrecadado: Math.round(gov.treasury * 0.1),
+      gasto: { folha: folhaSemanal },
+    });
+    const orcamento = document.createElement('div');
+    orcamento.className = 'cidade-ficha';
+    orcamento.innerHTML =
+      `<span><strong>Reserva operacional:</strong> ${cr(rel.reserva)} (20% do caixa)</span>` +
+      `<span><strong>Folha das vagas públicas:</strong> ${cr(folhaSemanal)} por rodada</span>` +
+      `<span><strong>Autonomia:</strong> ${
+        Number.isFinite(rel.autonomiaEmCiclos)
+          ? `${rel.autonomiaEmCiclos} rodada(s) de folha`
+          : 'sem despesa registrada'
+      }</span>` +
+      `<span><strong>Teto de obras no ciclo:</strong> ${cr(tetoRestante(
+        { saldo: gov.treasury, arrecadado: rel.arrecadado, gasto: {} },
+        'obras',
+      ))}</span>`;
+    conteudo.appendChild(orcamento);
 
     conteudo.appendChild(
       vazio(
