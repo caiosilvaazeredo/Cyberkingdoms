@@ -2,6 +2,7 @@ import { allCertificates, type Certificate } from '../career/profession';
 import { maxHpFor } from '../combat/combat';
 import { Inventory } from '../economy/inventory';
 import { itemDef } from '../economy/item';
+import { VITAIS, WALLET } from '../rules/eb';
 import { SurvivalTables, type Upkeep } from '../survival/survival';
 import { TileCoord } from '../world/coords';
 import {
@@ -109,10 +110,14 @@ export class Character {
     this.position = options.position;
     this.homeSettlementId = options.homeSettlementId;
     this.level = options.level ?? 'survivor';
-    this.credits = options.credits ?? 250;
+    this.credits = options.credits ?? WALLET.inicial;
     this.hunger = options.hunger ?? SurvivalTables.maxVital;
     this.thirst = options.thirst ?? SurvivalTables.maxVital;
-    this.energy = options.energy ?? 10;
+    // Energia começa cheia: a Rev 4.1 põe todo status em 0..100 e um cidadão
+    // recém-registrado não está exausto. O 10 anterior era um contador de
+    // "pontos de energia" de outro modelo, e com o custo de 8 por ação de 2 h
+    // ele deixava o jogador sem fôlego na primeira jornada.
+    this.energy = options.energy ?? VITAIS.max;
     this.rerollsUsed = options.rerollsUsed ?? 0;
     this.starvingStreak = options.starvingStreak ?? 0;
     this.dead = options.dead ?? false;
@@ -291,11 +296,11 @@ export class Character {
       position: TileCoord.fromJson(json.position as { x?: unknown; y?: unknown }),
       homeSettlementId: String(json.homeSettlementId ?? ''),
       level: (json.level as CitizenLevel) ?? 'survivor',
-      credits: inteiro(json.credits, 250),
+      credits: inteiro(json.credits, WALLET.inicial),
       hp: inteiro(json.hp, maxHpFor(attributes)),
       hunger: inteiro(json.hunger, SurvivalTables.maxVital),
       thirst: inteiro(json.thirst, SurvivalTables.maxVital),
-      energy: inteiro(json.energy, 10),
+      energy: inteiro(json.energy, VITAIS.max),
       rerollsUsed: inteiro(json.rerollsUsed, 0),
       starvingStreak: inteiro(json.starvingStreak, 0),
       dead: json.dead === true,

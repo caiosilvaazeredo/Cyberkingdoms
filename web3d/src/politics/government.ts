@@ -46,10 +46,19 @@ export const allOffices: readonly PoliticalOfficeDef[] = [
   },
 ];
 
-export const MAX_TAX_RATE = 0.4;
+/**
+ * Teto de imposto de mercado — EB 1.1, §14 e §25.
+ *
+ * Eram 40%, herdados da Rev 3.0. O EB fixa a taxa base em 1% e o teto inicial
+ * de governança em 5%, com o argumento de que acima disso o Mercado Central
+ * deixa de competir com o clandestino e o governador mata a própria
+ * arrecadação sem perceber.
+ */
+export const MAX_TAX_RATE = 0.05;
 export const MIN_TAX_RATE = 0;
 /** Intervalo entre eleições, em dias. */
-export const TERM_LENGTH_IN_DAYS = 30;
+/** Mandato de Governador: 60 dias. A Rev 4.1 revoga os 30 dias anteriores. */
+export const TERM_LENGTH_IN_DAYS = 60;
 
 export interface GovernmentJson {
   settlementId: string;
@@ -87,8 +96,8 @@ export class Government {
   ) {
     this.governorId = options.governorId ?? null;
     this.governorName = options.governorName ?? null;
-    this.taxRate = options.taxRate ?? 0.08;
-    this.publicWage = options.publicWage ?? 40;
+    this.taxRate = options.taxRate ?? 0.01;
+    this.publicWage = options.publicWage ?? 20;
     this.treasury = options.treasury ?? 0;
     this.securityBudget = options.securityBudget ?? 0;
     this.interim = options.interim ?? false;

@@ -21,6 +21,9 @@ import type { Campaign } from './campaign/campaign';
 import { runDailyTick } from './campaign/dailyTick';
 import { QuestLog, objectiveLabel, objectiveProgress } from './campaign/quest';
 import { isConsumable, itemDef } from './economy/item';
+import { MAX_FILA, formatarDuracao } from './campaign/actionQueue';
+import { acoesDisponiveis, enfileiravel, liquidar } from './campaign/actions';
+import { formatCz } from './rules/eb';
 import { resolveUpkeep, type DailyActivity } from './survival/dailyActivity';
 import { workById } from './survival/survival';
 import {
@@ -368,18 +371,25 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
   const elCreditos = valorDe('#rec-creditos');
   const elDia = valorDe('#rec-dia');
   const elVitais = valorDe('#rec-vitais');
+  const elEnergia = valorDe('#rec-energia');
   const boxVitais = document.querySelector<HTMLElement>('#rec-vitais');
   const elObras = valorDe('#rec-obras');
   const questsEl = document.querySelector<HTMLElement>('#quests');
   const diarioEl = document.querySelector<HTMLElement>('#diario');
 
   function atualizarRecursos(): void {
-    if (elCreditos) elCreditos.textContent = character.credits.toLocaleString('pt-BR');
+    // Cz, e não "créditos": o EB 1.1 nomeia a moeda e exige que ela apareça
+    // inteira em toda tela.
+    if (elCreditos) elCreditos.textContent = formatCz(character.credits);
     if (elDia) elDia.textContent = `dia ${campaign.day}`;
 
     if (elVitais) {
       elVitais.textContent = `${character.hunger}/${character.thirst}`;
     }
+    // Energia é vital de primeira classe na Rev 4.1: é ela que esgota primeiro
+    // em quem trabalha sem dormir, e sem mostrá-la o jogador só descobre o
+    // limite quando a ação é recusada.
+    if (elEnergia) elEnergia.textContent = String(character.energy);
     // A cor entra só quando há motivo — um HUD sempre vermelho é um HUD que
     // ninguém lê. O limiar é o mesmo em que a tabela do GDD começa a tirar HP.
     const apertado = Math.min(character.hunger, character.thirst) <= 25;
@@ -506,6 +516,183 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
     atualizarRecursos();
     options.onPersist?.(campaign);
   }
+
+  // ---------------------------------------------------------------- ocupação
+  //
+  // O relógio do jogo depois da Rev 4.1. O "encerrar o dia" era um botão que
+  // adiantava o mundo inteiro de uma vez, e isso só fazia sentido quando o dia
+  // era a unidade de decisão. Com tempo real 1:1, a unidade é a **ocupação**:
+  // uma jornada custa duas horas de relógio, o sono custa oito, e a fila roda
+  // sozinha — inclusive com a aba fechada, porque o estado é função do relógio
+  // e não de um contador que alguém precisa cutucar.
+  const ocupacaoEl = document.querySelector<HTMLElement>('#ocupacao');
+  const ocupacaoAtual = document.querySelector<HTMLElement>('#ocupacao-atual');
+  const ocupacaoFila = document.querySelector<HTMLElement>('#ocupacao-fila');
+  const ocupacaoOpcoes = document.querySelector<HTMLElement>('#ocupacao-opcoes');
+
+  /**
+   * O que já está desenhado nas listas.
+   *
+   * A ocupação atual muda **a cada segundo** — é um cronômetro. A fila e as
+   * opções mudam raramente. Redesenhar tudo junto trocava os botões debaixo do
+   * dedo do jogador uma vez por segundo, e um toque que cai no instante da
+   * troca não acerta nada. A assinatura separa as duas velocidades.
+   */
+  let assinaturaOcupacao: string | null = null;
+
+  function pintarOcupacao(): void {
+    if (!ocupacaoEl?.classList.contains('aberto')) {
+      assinaturaOcupacao = null;
+      return;
+    }
+    const agora = Date.now();
+    const estado = campaign.queue.progress(agora);
+
+    const assinatura = [
+      campaign.queue.items.map((i) => i.id).join(','),
+      campaign.currentSettlementId ?? '',
+      campaign.character.studyingCertificate ?? '',
+      campaign.character.credits,
+    ].join('|');
+    const mudou = assinatura !== assinaturaOcupacao;
+    assinaturaOcupacao = assinatura;
+
+    if (ocupacaoAtual) {
+      ocupacaoAtual.textContent = '';
+      if (!estado.current) {
+        const p = document.createElement('p');
+        p.className = 'ocup-vazio';
+        p.textContent = 'Ocioso. Escolha uma ocupação — ela ocupa o cidadão até terminar.';
+        ocupacaoAtual.appendChild(p);
+      } else {
+        const linha = document.createElement('div');
+        linha.className = 'cidade-linha';
+        const info = document.createElement('span');
+        info.className = 'cidade-info';
+        info.innerHTML =
+          `<strong>${estado.current.label}</strong>` +
+          `<em>faltam ${formatarDuracao(estado.remainingMs)}</em>`;
+        linha.appendChild(info);
+        ocupacaoAtual.appendChild(linha);
+
+        const barra = document.createElement('div');
+        barra.className = 'ocup-barra';
+        const cheio = document.createElement('i');
+        cheio.style.width = `${Math.round(estado.progress * 100)}%`;
+        barra.appendChild(cheio);
+        ocupacaoAtual.appendChild(barra);
+      }
+    }
+
+    if (ocupacaoFila && mudou) {
+      ocupacaoFila.textContent = '';
+      if (estado.pending.length === 0) {
+        const p = document.createElement('p');
+        p.className = 'ocup-vazio';
+        p.textContent = `Nada enfileirado. Cabem ${MAX_FILA} ocupações futuras.`;
+        ocupacaoFila.appendChild(p);
+      }
+      for (const item of estado.pending) {
+        const linha = document.createElement('div');
+        linha.className = 'cidade-linha';
+        const info = document.createElement('span');
+        info.className = 'cidade-info';
+        info.innerHTML =
+          `<strong>${item.label}</strong><em>${formatarDuracao(item.durationMs)}</em>`;
+        linha.appendChild(info);
+
+        // Só o que ainda não começou sai da fila. O topo em execução não volta
+        // atrás: cancelar depois de ver o resultado seria escolher o resultado.
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = 'TIRAR';
+        b.addEventListener('click', () => {
+          campaign.queue.cancel(item.id);
+          pintarOcupacao();
+          options.onPersist?.(campaign);
+        });
+        linha.appendChild(b);
+        ocupacaoFila.appendChild(linha);
+      }
+    }
+
+    if (ocupacaoOpcoes && mudou) {
+      ocupacaoOpcoes.textContent = '';
+      for (const opcao of acoesDisponiveis(campaign)) {
+        const linha = document.createElement('div');
+        linha.className = 'cidade-linha';
+
+        // Custo, duração e risco **antes** de aceitar — a confirmação que o
+        // GDD exige. O número que aparece aqui é o mesmo que a fila cobra na
+        // liquidação: os dois leem a mesma definição.
+        const risco = opcao.risco
+          ? ` · <span class="ocup-risco">risco ${Math.round(opcao.risco.min * 100)}–${Math.round(opcao.risco.max * 100)}%</span>`
+          : '';
+        const info = document.createElement('span');
+        info.className = 'cidade-info';
+        info.innerHTML =
+          `<strong>${opcao.label}</strong>` +
+          `<em>${opcao.descricao}</em>` +
+          `<span class="ocup-custo">${opcao.horas} h · −${opcao.custo.fome} fome ` +
+          `−${opcao.custo.sede} sede −${opcao.custo.energia} energia${risco}</span>`;
+        linha.appendChild(info);
+
+        if (opcao.paga > 0) {
+          const preco = document.createElement('span');
+          preco.className = 'cidade-preco pechincha';
+          preco.innerHTML = `<strong>${formatCz(opcao.paga)}</strong><em>líquido</em>`;
+          linha.appendChild(preco);
+        }
+
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = campaign.queue.isFull ? 'CHEIA' : 'FAZER';
+        b.disabled = campaign.queue.isFull;
+        if (!b.disabled) {
+          b.addEventListener('click', () => {
+            campaign.queue.enqueue(enfileiravel(opcao), Date.now());
+            pintarOcupacao();
+            options.onPersist?.(campaign);
+          });
+        }
+        linha.appendChild(b);
+        ocupacaoOpcoes.appendChild(linha);
+      }
+    }
+  }
+
+  /**
+   * Liquida o que a fila concluiu desde a última passada.
+   *
+   * Chamada do laço de um em um segundo e também na abertura do mundo: voltar
+   * depois de uma noite fechada liquida a noite inteira de uma vez, que é
+   * exatamente o que "o tempo não para offline" quer dizer.
+   */
+  function avancarFila(): void {
+    const feitas = campaign.queue.advanceTo(Date.now());
+    if (feitas.length === 0) return;
+
+    const linhas: string[] = [];
+    for (const feita of feitas) linhas.push(...liquidar(campaign, feita).linhas);
+
+    atualizarRecursos();
+    atualizarDiario(linhas);
+    pintarOcupacao();
+    plotView?.sync(plot);
+    if (linhas.length > 0) {
+      anunciar(feitas[feitas.length - 1]!.action.label, linhas[linhas.length - 1]!, 5);
+    }
+    options.onPersist?.(campaign);
+  }
+
+  document.querySelector('#abrir-ocupacao')?.addEventListener('click', () => {
+    ocupacaoEl?.classList.toggle('aberto');
+    pintarOcupacao();
+  });
+  document.querySelector('#fechar-ocupacao')?.addEventListener('click', () => {
+    ocupacaoEl?.classList.remove('aberto');
+  });
+  avancarFila();
 
   document.querySelector('#abrir-mochila')?.addEventListener('click', () => {
     mochilaEl?.classList.toggle('aberto');
@@ -1537,6 +1724,12 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
     // reescrever o DOM sessenta vezes por segundo para mudar nada.
     if (clock.getElapsedTime() - ultimoHud > 1) {
       ultimoHud = clock.getElapsedTime();
+      // A fila anda com o relógio, não com o quadro: um segundo de laço é só o
+      // ritmo em que se confere. Quem decide o que terminou é o instante de
+      // término guardado na ação, e por isso a conta fecha igual depois de uma
+      // aba fechada por oito horas.
+      avancarFila();
+      pintarOcupacao();
       atualizarRecursos();
       // O diagnóstico acompanha a caminhada: bioma e pedaços carregados mudam
       // enquanto o jogador anda, e um número congelado dizia que nada estava

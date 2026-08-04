@@ -147,11 +147,28 @@
          que é interativo. Empilhar em vez de desenhar tudo num só é o que dá
          toque, foco de teclado e leitor de tela nas cidades sem reimplementar
          acerto de clique. */
+      /* O mapa ocupa o que a tela tem. Ele era uma caixinha com vinte cidades
+         em 380 px: um satélite virava cinco pixels e nenhum nome cabia. Numa
+         tela alta ele cresce até 66% da altura; numa larga, até a largura da
+         folha — e o resto se resolve aproximando. */
       .mapa-alvo {
-        position: relative; margin: 6px 0;
+        /* Quadrado, porque o quadro do mundo é quadrado: uma caixa mais alta
+           que larga esticaria o fundo de biomas e o mapa mentiria sobre
+           distância. Numa tela larga ele cresce até 66% da altura; num celular
+           ele toma a largura inteira, e o resto se resolve aproximando. */
+        position: relative; margin: 6px auto;
+        width: min(100%, 66vh);
         aspect-ratio: 1 / 1;
         border: 1px solid var(--borda); border-radius: 12px; overflow: hidden;
         background: #0b1220;
+        touch-action: none;
+        cursor: grab;
+      }
+      .mapa-alvo:active { cursor: grabbing; }
+      .mapa-camada {
+        position: absolute; inset: 0;
+        transform-origin: 0 0;
+        will-change: transform;
       }
       .mapa-fundo {
         position: absolute; inset: 0; width: 100%; height: 100%;
@@ -683,6 +700,56 @@
         font: inherit; color: inherit; cursor: pointer;
         appearance: none; -webkit-appearance: none;
       }
+      /* Mesma caixa dos outros painéis de rodapé: aprender a interface uma vez
+         e reencontrá-la vale mais que um visual próprio para cada um. */
+      #ocupacao {
+        position: fixed;
+        left: max(10px, env(safe-area-inset-left));
+        right: max(10px, env(safe-area-inset-right));
+        bottom: calc(max(10px, env(safe-area-inset-bottom)) + 12px);
+        max-height: 58vh;
+        z-index: 3;
+        padding: 12px;
+        border: 1px solid rgba(140, 190, 255, 0.4);
+        border-radius: 14px;
+        background: var(--painel);
+        backdrop-filter: blur(10px);
+        color: var(--texto);
+        font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace;
+        overflow-y: auto;
+        display: none;
+      }
+      #ocupacao.aberto { display: block; }
+      #ocupacao-cabecalho { display: flex; align-items: center; gap: 8px; }
+      #ocupacao h2 { flex: 1; margin: 0; font-size: 12px; letter-spacing: 0.12em; color: #a9ccff; }
+      #ocupacao h3 { margin: 12px 0 6px; font-size: 11px; letter-spacing: 0.12em; opacity: 0.7; }
+      #fechar-ocupacao {
+        width: 36px; height: 36px; flex: 0 0 auto; padding: 0;
+        border: 1px solid var(--borda); border-radius: 10px;
+        background: rgba(0, 0, 0, 0.3); color: var(--texto);
+        font: 14px/1 ui-monospace, Menlo, Consolas, monospace; cursor: pointer;
+      }
+      /* A barra é o relógio da ação: sem ela o jogador não tem como saber se
+         faltam dois minutos ou duas horas, e o tempo real vira espera cega. */
+      .ocup-barra {
+        position: relative; height: 8px; margin-top: 6px;
+        border-radius: 999px; overflow: hidden;
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .ocup-barra i {
+        position: absolute; inset: 0 auto 0 0;
+        background: linear-gradient(90deg, #6aa9ff, #9ff0cf);
+      }
+      .ocup-vazio { margin: 4px 0 0; font-size: 10px; line-height: 1.5; opacity: 0.5; }
+      .ocup-custo { font-size: 10px; opacity: 0.6; }
+      .ocup-risco { color: #ffb0b0; }
+      #abrir-ocupacao {
+        width: 100%; min-height: var(--toque); margin-bottom: 6px;
+        border: 1px solid var(--borda); border-radius: 12px;
+        background: rgba(140, 190, 255, 0.2); color: var(--texto);
+        font: 13px/1 ui-monospace, Menlo, Consolas, monospace;
+        letter-spacing: 0.08em; cursor: pointer;
+      }
       #abrir-mochila {
         width: 100%; min-height: var(--toque); margin-bottom: 6px;
         border: 1px solid var(--borda); border-radius: 12px;
@@ -836,15 +903,20 @@
         left: max(8px, env(safe-area-inset-left));
         right: max(8px, env(safe-area-inset-right));
         display: flex;
-        gap: 6px;
+        /* Cinco indicadores não cabem numa linha de 412 px sem truncar cada um
+           deles. Quebrar é melhor que abreviar: "dia…" e "100…" não informam
+           nada, e Energia entrou como vital de primeira classe justamente para
+           ser lida. */
+        flex-wrap: wrap;
+        gap: 4px;
         justify-content: space-between;
-        padding: 6px;
+        padding: 5px;
         border: 1px solid var(--borda);
         border-radius: 12px;
         background: var(--painel);
         backdrop-filter: blur(10px);
         color: var(--texto);
-        font: 12px/1 ui-monospace, Menlo, Consolas, monospace;
+        font: 11px/1 ui-monospace, Menlo, Consolas, monospace;
         pointer-events: none;
       }
       .recurso {
@@ -952,6 +1024,12 @@
         <img src="ui/info/stopwatch.png" alt="" width="20" height="20" />
         <span class="valor">—</span>
       </button>
+      <!-- Energia entrou como vital de primeira classe na Rev 4.1: é ela que
+           esgota primeiro em quem trabalha sem dormir. -->
+      <div class="recurso" id="rec-energia" title="Energia">
+        <img src="ui/info/duration.png" alt="" width="20" height="20" />
+        <span class="valor">—</span>
+      </div>
       <div class="recurso" id="rec-obras" title="Construções em obra">
         <img src="ui/info/duration.png" alt="" width="20" height="20" />
         <span class="valor">—</span>
@@ -988,6 +1066,21 @@
            dias de salário agora para ganhar mais depois. -->
       <h3>QUALIFICAÇÃO</h3>
       <div id="lista-cursos"></div>
+    </aside>
+
+    <!-- A ocupação atual e a fila. É o relógio do jogo depois da Rev 4.1: uma
+         hora real é uma hora de mundo, e o cidadão enfileira até dez
+         ocupações futuras em vez de "virar o dia". -->
+    <aside id="ocupacao">
+      <div id="ocupacao-cabecalho">
+        <h2>OCUPAÇÃO</h2>
+        <button id="fechar-ocupacao" type="button" aria-label="Fechar">✕</button>
+      </div>
+      <div id="ocupacao-atual"></div>
+      <h3>NA FILA</h3>
+      <div id="ocupacao-fila"></div>
+      <h3>O QUE FAZER</h3>
+      <div id="ocupacao-opcoes"></div>
     </aside>
 
     <!-- A mochila. Existe porque comer e beber não tinham porta de entrada
@@ -1046,6 +1139,7 @@
       <div id="corpo">
         <button id="abrir-catalogo" type="button">CONSTRUIR</button>
         <button id="abrir-trabalho" type="button">TRABALHAR</button>
+        <button id="abrir-ocupacao" type="button">OCUPAÇÃO</button>
         <button id="abrir-mochila" type="button">MOCHILA</button>
         <!-- Fica desabilitado em campo aberto: mercado e governo são da cidade,
              e um botão que abre um painel vazio na estrada ensina errado. -->

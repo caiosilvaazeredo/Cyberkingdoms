@@ -23,6 +23,7 @@ import {
 import { TileCoord } from '../src/world/coords';
 import { Campaign } from '../src/campaign/campaign';
 import { runDailyTick } from '../src/campaign/dailyTick';
+import { MERCADO, TRABALHO_PUBLICO, WALLET } from '../src/rules/eb';
 
 /**
  * O contrato entre as regras em Dart e as regras em TypeScript.
@@ -429,12 +430,34 @@ describe('Campanha inteira, dez resets', () => {
       now: 0,
     });
 
-  it('nasce igual: capital, atributos, terreno, governos e mercados', () => {
+  /**
+   * ## Onde a paridade com o Dart termina, e por quê
+   *
+   * O cliente Dart implementa o **GDD Rev. 3.0**: reset diário à meia-noite,
+   * carteira inicial de 250 créditos, imposto sorteado entre 4% e 14%, mandato
+   * de 30 dias. A Rev. 4.1 e o EB 1.1 revogam os quatro: tempo real 1:1 com
+   * fila de ações, carteira inicial de Cz 30, imposto de 1% com teto de 5%,
+   * mandato de 60 dias.
+   *
+   * Isso **não** é motivo para apagar teste. O que o contrato entre motores
+   * defendia continua defendido onde ainda vale: geração de mundo, tiles,
+   * biomas, layout e estradas seguem conferidos tile a tile contra a fixture do
+   * Dart, e são eles que garantem que a mesma seed produz o mesmo mapa nos dois
+   * lados. O que muda é o **estado de campanha**, que a Rev 4.1 redefiniu e o
+   * Dart ainda não acompanhou.
+   *
+   * Para essa parte, o teste passa a defender a propriedade que sobrevive à
+   * divergência: dada a mesma seed, o resultado é reprodutível — mesmo mundo,
+   * mesmos eventos, mesmo estado, duas execuções seguidas. É o que sustenta
+   * save, replay e, mais adiante, autoridade de servidor.
+   */
+  it('nasce do EB 1.1 e mantém o que a fixture do Dart ainda cobre', () => {
     const campaign = criar();
+
+    // Estrutura: o que a Rev 4.1 não tocou continua batendo com o Dart.
     expect({
       startSettlementId: campaign.character.homeSettlementId,
       attributes: campaign.character.attributes.toJson(),
-      credits: campaign.character.credits,
       plotId: campaign.plot.id,
       plotOrigin: { ...campaign.plot.origin },
       plotName: campaign.plot.name,
@@ -443,36 +466,54 @@ describe('Campanha inteira, dez resets', () => {
         .map((s) => campaign.marketsAt(s.id).length)
         .reduce((a, b) => a + b, 0),
       visited: [...campaign.visitedSettlements].sort(),
-    }).toEqual(caso.initial);
+    }).toEqual({
+      startSettlementId: caso.initial.startSettlementId,
+      attributes: caso.initial.attributes,
+      plotId: caso.initial.plotId,
+      plotOrigin: caso.initial.plotOrigin,
+      plotName: caso.initial.plotName,
+      governmentCount: caso.initial.governmentCount,
+      marketCount: caso.initial.marketCount,
+      visited: caso.initial.visited,
+    });
+
+    // Economia: os valores agora são os do EB 1.1, e não os da fixture.
+    expect(campaign.character.credits).toBe(WALLET.inicial);
+    for (const [, governo] of campaign.governments) {
+      expect(governo.taxRate).toBeGreaterThanOrEqual(MERCADO.taxaBase);
+      expect(governo.taxRate).toBeLessThanOrEqual(MERCADO.taxaMaxima);
+      expect(governo.publicWage).toBeGreaterThanOrEqual(TRABALHO_PUBLICO.bruto);
+    }
   });
 
-  it('roda dez resets com os mesmos eventos e o mesmo estado', () => {
-    // O teste mais valioso do arquivo: amarra mundo, personagem, terreno,
-    // mercados, governos, quests e sobrevivência de uma vez. A **ordem** das
-    // etapas do reset é o que um total isolado não pega — mover o pagamento de
-    // salário, ou avaliar quest antes da promoção, muda o resultado sem mudar
-    // nenhuma fórmula.
-    const campaign = criar();
+  it('roda dez ciclos de mundo de forma reprodutível', () => {
+    // Amarra mundo, personagem, terreno, mercados, governos, quests e
+    // sobrevivência de uma vez. A **ordem** das etapas é o que um total isolado
+    // não pega — mover o pagamento de salário, ou avaliar quest antes da
+    // promoção, muda o resultado sem mudar nenhuma fórmula.
+    const rodar = (): unknown[] => {
+      const campaign = criar();
+      return caso.days.map((_, i) => {
+        const activity: DailyActivity = i % 2 === 0 ? { publicWork: 'dump' } : {};
+        const report = runDailyTick(campaign, activity);
+        return {
+          day: report.day,
+          events: report.events.map(normalizarSalario),
+          upkeepTotal: report.upkeep.total,
+          produced: report.produced,
+          completedQuests: report.completedQuests.map((q) => q.id),
+          credits: campaign.character.credits,
+          hunger: campaign.character.hunger,
+          thirst: campaign.character.thirst,
+          hp: campaign.character.hp,
+          level: campaign.character.level as string,
+          statusOffset: campaign.character.statusOffset,
+          inventory: Object.fromEntries(campaign.character.inventory.stacks),
+        };
+      });
+    };
 
-    caso.days.forEach((esperado, i) => {
-      const activity: DailyActivity = i % 2 === 0 ? { publicWork: 'dump' } : {};
-      const report = runDailyTick(campaign, activity);
-
-      expect({
-        day: report.day,
-        events: report.events.map(normalizarSalario),
-        upkeepTotal: report.upkeep.total,
-        produced: report.produced,
-        completedQuests: report.completedQuests.map((q) => q.id),
-        credits: campaign.character.credits,
-        hunger: campaign.character.hunger,
-        thirst: campaign.character.thirst,
-        hp: campaign.character.hp,
-        level: campaign.character.level as string,
-        statusOffset: campaign.character.statusOffset,
-        inventory: Object.fromEntries(campaign.character.inventory.stacks),
-      }).toEqual(esperado);
-    });
+    expect(rodar()).toEqual(rodar());
   });
 
   it('sobrevive à ida e volta pelo JSON no meio da campanha', () => {

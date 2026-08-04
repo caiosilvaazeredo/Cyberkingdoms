@@ -150,7 +150,8 @@ export function passoDaEscala(lado: number): number {
 }
 
 export function createMapScreen(deps: MapScreenDeps): Screen {
-  const alvo = el('div', { className: 'mapa-alvo' });
+  const camada = el('div', { className: 'mapa-camada' });
+  const alvo = el('div', { className: 'mapa-alvo', children: [camada] });
   const detalhe = el('div', { className: 'mapa-detalhe' });
   const legenda = el('div', { className: 'mapa-legenda' });
   const transito = el('p', { className: 'mapa-transito' });
@@ -167,6 +168,125 @@ export function createMapScreen(deps: MapScreenDeps): Screen {
     attrs: { 'aria-label': 'Mapa do mundo' },
     children: [el('h1', { text: 'MAPA' }), transito, alvo, legenda, detalhe, voltar],
   });
+
+  /**
+   * Zoom e deslocamento da vista.
+   *
+   * O mapa cabia numa caixinha e mostrava vinte cidades em 380 px: um satélite
+   * ocupava cinco pixels e o nome dele não cabia em lugar nenhum. Ampliar a
+   * caixa resolve metade; a outra metade é poder **aproximar**, porque num
+   * mundo de vinte cidades a decisão que interessa é sempre local — que rota
+   * sai daqui, quem é o vizinho.
+   *
+   * A transformação é CSS sobre a camada inteira, e não uma `viewBox` nova:
+   * assim o fundo de biomas e o vetor aproximam juntos, sem repintar as nove
+   * mil amostras a cada gesto, e o acerto de toque do SVG continua valendo
+   * porque o navegador mapeia o ponteiro pela mesma matriz.
+   */
+  let zoom = 1;
+  let deslocX = 0;
+  let deslocY = 0;
+
+  const ZOOM_MIN = 1;
+  const ZOOM_MAX = 6;
+
+  function aplicarVista(): void {
+    // Limita o deslocamento ao que a ampliação de fato liberou: sem isto o
+    // mapa some da tela num arrasto mais longo e o jogador não tem como voltar.
+    const folga = alvo.clientWidth * (zoom - 1);
+    deslocX = Math.max(-folga, Math.min(0, deslocX));
+    deslocY = Math.max(-folga, Math.min(0, deslocY));
+    camada.style.transform = `translate(${deslocX}px, ${deslocY}px) scale(${zoom})`;
+  }
+
+  /** Aproxima mantendo fixo o ponto sob o dedo. */
+  function aproximar(fator: number, ancoraX: number, ancoraY: number): void {
+    const anterior = zoom;
+    zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom * fator));
+    const razao = zoom / anterior;
+    // O ponto sob o dedo tem de continuar sob o dedo — é o que separa uma pinça
+    // que funciona de uma que "escorrega" para o canto.
+    deslocX = ancoraX - (ancoraX - deslocX) * razao;
+    deslocY = ancoraY - (ancoraY - deslocY) * razao;
+    aplicarVista();
+  }
+
+  alvo.addEventListener(
+    'wheel',
+    (e) => {
+      e.preventDefault();
+      const r = alvo.getBoundingClientRect();
+      aproximar(e.deltaY < 0 ? 1.18 : 1 / 1.18, e.clientX - r.left, e.clientY - r.top);
+    },
+    { passive: false },
+  );
+
+  // Arrasto com um dedo, pinça com dois. `pointer` unifica mouse e toque: com
+  // dois conjuntos de eventos, cada aparelho ganharia um comportamento
+  // ligeiramente diferente e só um deles seria testado.
+  const dedos = new Map<number, { x: number; y: number }>();
+  let distanciaAnterior = 0;
+  let arrastou = false;
+
+  alvo.addEventListener('pointerdown', (e) => {
+    dedos.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    arrastou = false;
+    if (dedos.size === 2) {
+      const [a, b] = [...dedos.values()];
+      distanciaAnterior = Math.hypot(a!.x - b!.x, a!.y - b!.y);
+    }
+  });
+
+  alvo.addEventListener('pointermove', (e) => {
+    const anterior = dedos.get(e.pointerId);
+    if (!anterior) return;
+    const dx = e.clientX - anterior.x;
+    const dy = e.clientY - anterior.y;
+    dedos.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (dedos.size === 1) {
+      if (Math.abs(dx) + Math.abs(dy) > 2) arrastou = true;
+      deslocX += dx;
+      deslocY += dy;
+      aplicarVista();
+      return;
+    }
+
+    if (dedos.size === 2) {
+      arrastou = true;
+      const [a, b] = [...dedos.values()];
+      const distancia = Math.hypot(a!.x - b!.x, a!.y - b!.y);
+      if (distanciaAnterior > 0) {
+        const r = alvo.getBoundingClientRect();
+        aproximar(
+          distancia / distanciaAnterior,
+          (a!.x + b!.x) / 2 - r.left,
+          (a!.y + b!.y) / 2 - r.top,
+        );
+      }
+      distanciaAnterior = distancia;
+    }
+  });
+
+  const soltar = (e: PointerEvent): void => {
+    dedos.delete(e.pointerId);
+    if (dedos.size < 2) distanciaAnterior = 0;
+  };
+  alvo.addEventListener('pointerup', soltar);
+  alvo.addEventListener('pointercancel', soltar);
+  // Um arrasto não pode virar toque numa cidade: quem deslocou o mapa não
+  // pediu para abrir a ficha de quem passou debaixo do dedo.
+  alvo.addEventListener(
+    'click',
+    (e) => {
+      if (arrastou) {
+        e.stopPropagation();
+        e.preventDefault();
+        arrastou = false;
+      }
+    },
+    true,
+  );
 
   /** Cidade aberta na ficha. */
   let selecionada: string | null = null;
@@ -204,13 +324,13 @@ export function createMapScreen(deps: MapScreenDeps): Screen {
 
   function desenhar(): void {
     const campaign = deps.campaign();
-    alvo.textContent = '';
+    camada.textContent = '';
     detalhe.textContent = '';
     legenda.textContent = '';
     transito.textContent = '';
 
     if (!campaign) {
-      alvo.appendChild(
+      camada.appendChild(
         el('p', {
           className: 'vazio',
           text: 'Nenhuma campanha aberta. O mapa é gerado junto com o mundo.',
@@ -227,7 +347,7 @@ export function createMapScreen(deps: MapScreenDeps): Screen {
     const pxX = (n: number): number => ((n - quadro.minX) / quadro.lado) * VIEW;
     const pxY = (n: number): number => ((n - quadro.minY) / quadro.lado) * VIEW;
 
-    alvo.appendChild(pintarFundo(campaign, quadro));
+    camada.appendChild(pintarFundo(campaign, quadro));
 
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('viewBox', `0 0 ${VIEW} ${VIEW}`);
@@ -407,7 +527,7 @@ export function createMapScreen(deps: MapScreenDeps): Screen {
     svg.appendChild(eu);
 
     svg.appendChild(regua(quadro));
-    alvo.appendChild(svg);
+    camada.appendChild(svg);
 
     for (const v of Object.keys(CORES)) {
       legenda.appendChild(
@@ -559,8 +679,14 @@ export function createMapScreen(deps: MapScreenDeps): Screen {
     root,
     onEnter() {
       // A seleção não sobrevive à saída: reabrir o mapa depois de viajar tem de
-      // mostrar o mundo, não a ficha de quem foi escolhido da última vez.
+      // mostrar o mundo, não a ficha de quem foi escolhido da última vez. O
+      // enquadramento também volta ao início — reabrir o mapa aproximado num
+      // canto qualquer é desorientador.
       selecionada = null;
+      zoom = 1;
+      deslocX = 0;
+      deslocY = 0;
+      aplicarVista();
       desenhar();
     },
   };

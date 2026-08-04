@@ -1,9 +1,11 @@
+import { ActionQueue, type ActionQueueJson } from './actionQueue';
 import { Plot, plotSizeForLevel, type PlotJson } from '../building/plot';
 import { VillageIdentity } from '../building/villageIdentity';
 import { AttributeSet, type CitizenLevel } from '../character/attributes';
 import { Character } from '../character/character';
 import { DeterministicRandom, hashLabel } from '../core/rng';
 import { Market, seedMarket, type MarketJson, type MarketKind } from '../economy/market';
+import { MERCADO, TRABALHO_PUBLICO } from '../rules/eb';
 import { Government, type GovernmentJson } from '../politics/government';
 import { TileCoord } from '../world/coords';
 import { WorldLayout, type WorldLayoutJson } from '../world/layout';
@@ -41,6 +43,10 @@ export interface CampaignJson {
   journal: string[];
   completedQuests: string[];
   visitedSettlements: string[];
+  /** A fila de ocupações. Ausente em save anterior à Rev 4.1. */
+  queue?: ActionQueueJson;
+  /** Conhecimento por área, de 0 a 100. */
+  knowledge?: Record<string, number>;
 }
 
 export interface CampaignSummary {
@@ -77,6 +83,24 @@ export class Campaign {
    */
   readonly visitedSettlements: Set<string>;
 
+  /**
+   * A fila de ocupações do cidadão — o relógio da Rev 4.1.
+   *
+   * Vive na campanha, e não no personagem, porque liquidar uma ação move
+   * dinheiro do cofre da cidade, item do mercado e posição no mapa: dar à fila
+   * acesso só ao personagem exigiria devolver os efeitos por outro caminho.
+   */
+  readonly queue: ActionQueue;
+
+  /**
+   * Conhecimento por área, de 0 a 100.
+   *
+   * Distinto de Inteligência, como a Rev 4.1 exige: Inteligência é capacidade e
+   * não muda; conhecimento é o que se aprende, e é ele que libera receita e
+   * certificação. Confundir os dois faria o atributo virar o único caminho.
+   */
+  private readonly knowledgeMap: Map<string, number>;
+
   constructor(
     readonly id: string,
     /** O texto que o jogador digitou — dá para recriar e compartilhar. */
@@ -94,6 +118,8 @@ export class Campaign {
       journal?: readonly string[];
       completedQuests?: Iterable<string>;
       visitedSettlements?: Iterable<string>;
+      queue?: ActionQueue;
+      knowledge?: Iterable<[string, number]>;
     } = {},
   ) {
     this.day = options.day ?? 1;
@@ -101,6 +127,23 @@ export class Campaign {
     this.journalList = [...(options.journal ?? [])];
     this.completedQuests = new Set(options.completedQuests ?? []);
     this.visitedSettlements = new Set(options.visitedSettlements ?? []);
+    this.queue = options.queue ?? new ActionQueue();
+    this.knowledgeMap = new Map(options.knowledge ?? []);
+  }
+
+  get knowledge(): ReadonlyMap<string, number> {
+    return this.knowledgeMap;
+  }
+
+  knowledgeOf(area: string): number {
+    return this.knowledgeMap.get(area) ?? 0;
+  }
+
+  /** Soma conhecimento numa área e devolve o total, limitado a 100. */
+  addKnowledge(area: string, ganho: number): number {
+    const total = Math.min(100, this.knowledgeOf(area) + Math.max(0, ganho));
+    this.knowledgeMap.set(area, total);
+    return total;
   }
 
   readonly createdAt: number | null;
@@ -146,8 +189,14 @@ export class Campaign {
         new Government(settlement.id, {
           // Capitais começam sem governador eleito — a primeira eleição é um
           // gancho de conteúdo logo no início da campanha.
-          taxRate: rng.rangeDouble(0.04, 0.14),
-          publicWage: rng.range(28, 62),
+          //
+          // Imposto e salário saem do EB 1.1, não de um sorteio largo: a taxa
+          // de mercado é 1% com teto de 5%, e o salário público de referência é
+          // Cz 20 pela jornada de 2 h. O sorteio antigo (4% a 14%, salário 28 a
+          // 62) nascia acima do teto que a governança pode praticar — a cidade
+          // já começava fora da lei que o próprio documento define.
+          taxRate: rng.rangeDouble(MERCADO.taxaBase, MERCADO.taxaMaxima),
+          publicWage: TRABALHO_PUBLICO.bruto + rng.range(0, 4),
           treasury: settlement.isCapital
             ? rng.range(40000, 180000)
             : rng.range(4000, 22000),
@@ -276,6 +325,8 @@ export class Campaign {
       journal: [...this.journalList],
       completedQuests: [...this.completedQuests],
       visitedSettlements: [...this.visitedSettlements],
+      queue: this.queue.toJson(),
+      knowledge: Object.fromEntries(this.knowledgeMap),
     };
   }
 
@@ -317,6 +368,10 @@ export class Campaign {
         journal: json.journal ?? [],
         completedQuests: json.completedQuests ?? [],
         visitedSettlements: json.visitedSettlements ?? [],
+        queue: ActionQueue.fromJson(json.queue),
+        knowledge: Object.entries(json.knowledge ?? {}).map(
+          ([area, valor]) => [area, Number(valor) || 0] as [string, number],
+        ),
       },
     );
   }
