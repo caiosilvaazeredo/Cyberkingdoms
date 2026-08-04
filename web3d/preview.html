@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>CyberKingdoms — teste de arte 3D pixel</title>
+    <style>
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1220; }
+      /* `image-rendering: pixelated` no canvas fecha o circuito: o alvo de
+         384×216 já é ampliado com vizinho mais próximo dentro do WebGL, e isto
+         garante que o navegador não suavize de novo ao esticar o canvas para a
+         resolução física da tela. */
+      #tela { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+      #rotulo {
+        position: fixed; left: 10px; bottom: 10px;
+        padding: 6px 10px; border-radius: 8px;
+        background: rgba(10, 16, 26, 0.8); color: #d6e4dd;
+        font: 11px/1.4 ui-monospace, Menlo, Consolas, monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="tela"></canvas>
+    <div id="rotulo">carregando…</div>
+    <script type="module" src="/src/preview.ts"></script>
+  </body>
+</html>
