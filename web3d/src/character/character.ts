@@ -2,7 +2,7 @@ import { allCertificates, type Certificate } from '../career/profession';
 import { maxHpFor } from '../combat/combat';
 import { Inventory } from '../economy/inventory';
 import { itemDef } from '../economy/item';
-import { VITAIS, WALLET } from '../rules/eb';
+import { PROPRIEDADE, VITAIS, WALLET } from '../rules/eb';
 import { SurvivalTables, type Upkeep } from '../survival/survival';
 import { TileCoord } from '../world/coords';
 import {
@@ -237,11 +237,17 @@ export class Character {
       case 'survivor':
         return true;
       case 'farmer':
-        return this.credits >= 1500;
+        // As faixas seguem a escala do EB 1.1, e não a da Rev 3.0: com a
+        // fazenda de entrada a Cz 60 e a oficina a Cz 180, exigir 1500 para
+        // subir de nível pedia vinte e cinco fazendas para comprar a primeira.
+        return this.credits >= PROPRIEDADE.fazendaN1;
       case 'industrialist':
-        return this.credits >= 12000 && this.inventory.estimatedValue >= 5000;
+        return (
+          this.credits >= PROPRIEDADE.oficinaN1 &&
+          this.inventory.estimatedValue >= PROPRIEDADE.fazendaN1
+        );
       case 'elite':
-        return this.credits >= 60000 && this.effectiveStatus >= 12;
+        return this.credits >= PROPRIEDADE.oficinaN1 * 10 && this.effectiveStatus >= 12;
     }
   }
 

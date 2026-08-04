@@ -1,6 +1,7 @@
 import type { Campaign } from '../campaign/campaign';
 import { itemDef } from '../economy/item';
 import { sellToGovernment } from '../economy/publicContract';
+import { formatCz } from '../rules/eb';
 import { describeCity, type BuyRow, type CityView, type SellRow } from './cityView';
 
 /**
@@ -50,7 +51,8 @@ export interface CityPanel {
 
 type Aba = 'mercado' | 'governo' | 'trabalho';
 
-const cr = (n: number): string => `${Math.round(n).toLocaleString('pt-BR')} cr`;
+// A moeda é Cz — EB 1.1, §02. "cr" era o nome da Rev 3.0.
+const cr = (n: number): string => formatCz(n);
 
 export function createCityPanel(deps: CityPanelDeps): CityPanel {
   const raiz = document.querySelector<HTMLElement>('#cidade');
@@ -82,7 +84,11 @@ export function createCityPanel(deps: CityPanelDeps): CityPanel {
     const mercado = c.marketOf(cidadeId, row.kind);
     if (!mercado) return;
 
-    const r = mercado.buy({
+    // Compra rápida: o jogador escolheu o **item**, não o anúncio, então a
+    // liquidação distribui uma unidade por rodada entre as ofertas de mesmo
+    // preço — EB 1.1, §13. Sem isso o primeiro anunciante da fila leva toda
+    // compra e nove vendedores equivalentes nunca vendem nada.
+    const r = mercado.quickBuy({
       item: row.item,
       quantity: quantidade,
       availableCredits: c.character.credits,
@@ -95,15 +101,20 @@ export function createCityPanel(deps: CityPanelDeps): CityPanel {
 
     // O mercado só mexe no livro de ofertas. Quem move crédito, item e tesouro
     // é quem fez o negócio — é o mesmo contrato que o resto do jogo usa, e é
-    // por isso que `buy` simula antes de efetivar.
+    // por isso que a compra simula antes de efetivar.
+    //
+    // A taxa **não** é somada ao que o comprador paga: ela sai do valor da
+    // venda e vai para o cofre local. Quem paga a taxa é quem lucrou com ela.
     c.character.credits -= r.totalPaid;
     c.character.inventory.add(r.item, r.quantity);
     gov.collectTax(r.tax);
-    c.log(`Comprou ${r.quantity}× ${itemDef(r.item).name} por ${r.totalPaid} cr.`);
+    c.log(`Comprou ${r.quantity}× ${itemDef(r.item).name} por ${r.totalPaid} Cz.`);
 
+    const vendedores = new Set(r.fills.map((f) => f.sellerId)).size;
     dizer(
       `Comprou ${r.quantity}× ${itemDef(r.item).name} por ${cr(r.totalPaid)}` +
-        (r.tax > 0 ? ` (${cr(r.tax)} de imposto).` : '.'),
+        (vendedores > 1 ? ` de ${vendedores} vendedores` : '') +
+        (r.tax > 0 ? ` · ${cr(r.tax)} de taxa ao cofre.` : '.'),
     );
     deps.onChange();
     desenhar();
@@ -128,7 +139,7 @@ export function createCityPanel(deps: CityPanelDeps): CityPanel {
     }
 
     c.character.credits += r.credited;
-    c.log(`Vendeu ${r.quantity}× ${itemDef(r.item).name} a ${s.name} por ${r.credited} cr.`);
+    c.log(`Vendeu ${r.quantity}× ${itemDef(r.item).name} a ${s.name} por ${r.credited} Cz.`);
     dizer(
       `Contrato fechado: ${cr(r.credited)} líquidos` +
         (r.tax > 0 ? ` (${cr(r.tax)} retidos de imposto).` : '.'),
@@ -239,17 +250,18 @@ export function createCityPanel(deps: CityPanelDeps): CityPanel {
     p.className = 'cidade-ficha';
     p.innerHTML =
       `<span><strong>Governador:</strong> ${v.governor ?? 'cargo vago — a cidade espera eleição'}</span>` +
-      `<span><strong>Imposto:</strong> ${Math.round(v.taxRate * 100)}% sobre o Mercado Central</span>` +
-      `<span><strong>Salário público:</strong> ${cr(v.publicWage)} por dia de trabalho</span>` +
+      `<span><strong>Imposto:</strong> ${Math.round(v.taxRate * 100)}% sobre cada venda no Mercado Central</span>` +
+      `<span><strong>Salário público:</strong> ${cr(v.publicWage)} por jornada de 2 h</span>` +
       `<span><strong>Caixa:</strong> ${cr(v.treasury)}</span>` +
       `<span><strong>Vagas públicas:</strong> ${v.publicJobSlots}</span>`;
     conteudo.appendChild(p);
 
     conteudo.appendChild(
       vazio(
-        'O imposto sai do bolso de quem compra no Central e volta para este ' +
-          'caixa — que é o mesmo que paga o seu salário e as compras públicas. ' +
-          'Caixa vazio é cidade que não compra e não paga.',
+        'A taxa sai do valor de cada venda no Central e cai neste caixa — que é ' +
+          'o mesmo que paga o seu salário e as compras públicas. Quem paga a ' +
+          'taxa é quem vendeu, não quem comprou. Caixa vazio é cidade que não ' +
+          'compra e não paga.',
       ),
     );
   }
@@ -289,9 +301,9 @@ export function createCityPanel(deps: CityPanelDeps): CityPanel {
 
     conteudo.appendChild(
       vazio(
-        'O salário é o da cidade onde você termina o dia: o reset paga ' +
-          'quem está aqui à meia-noite. Estudar troca o dia de salário por ' +
-          'um certificado — as matrículas estão em TRABALHAR.',
+        'A jornada dura 2 h de relógio e ocupa o cidadão até terminar: ela ' +
+          'entra na fila em OCUPAÇÃO e roda mesmo com a aba fechada. Estudar ' +
+          'troca a jornada por conhecimento — as matrículas estão em TRABALHAR.',
       ),
     );
   }

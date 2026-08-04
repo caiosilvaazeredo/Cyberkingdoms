@@ -200,13 +200,98 @@ describe('Mercado', () => {
     expect(m.supplyOf('scrap')).toBe(30);
   });
 
-  it('só o Central recolhe imposto', () => {
+  it('só o Central recolhe imposto, e ele sai da venda', () => {
+    // EB 1.1, §14: a taxa incide sobre a venda concluída e vai para o cofre
+    // local. Ela **não** é um acréscimo no preço do comprador — como acréscimo,
+    // empurraria o Central para cima e faria o clandestino parecer barato
+    // quando ele só é sonegado.
     const central = livro('central');
     const clandestino = livro('clandestine');
     const a = central.buy({ item: 'scrap', quantity: 10, availableCredits: 999, taxRate: 0.2 });
     const b = clandestino.buy({ item: 'scrap', quantity: 10, availableCredits: 999, taxRate: 0.2 });
+    expect(a.ok && a.totalPaid).toBe(30);
     expect(a.ok && a.tax).toBe(6);
     expect(b.ok && b.tax).toBe(0);
+  });
+
+  it('item barato não paga taxa artificial', () => {
+    // "Mínimo 0 Cz — sem taxa artificial em itens baratos." Arredondar para
+    // cima cobraria 1 Cz de uma venda de 3 Cz, que é 33%.
+    const m = livro('central');
+    const r = m.buy({ item: 'scrap', quantity: 1, availableCredits: 999, taxRate: 0.01 });
+    expect(r.ok && r.totalPaid).toBe(3);
+    expect(r.ok && r.tax).toBe(0);
+  });
+
+  /**
+   * A equalização por rodadas — EB 1.1, §13.
+   *
+   * Sem ela, o primeiro da fila leva tudo: com dez vendedores no mesmo preço,
+   * um vende dez e nove não vendem nada, e o mercado passa a premiar relógio em
+   * vez de preço. A meta de liquidez do EB (≥60% dos anúncios com venda) morre
+   * exatamente aí.
+   */
+  const empatados = (): Market => {
+    const m = new Market('cap_0', 'central');
+    for (const id of ['a', 'b', 'c']) {
+      m.postOrder({
+        sellerId: id, sellerName: id.toUpperCase(),
+        item: 'scrap', quantity: 10, unitPrice: 4, day: 1,
+      });
+    }
+    return m;
+  };
+
+  const porVendedor = (r: ReturnType<Market['quickBuy']>): Record<string, number> =>
+    r.ok ? Object.fromEntries(r.fills.map((f) => [f.sellerId, f.quantity])) : {};
+
+  it('a compra rápida distribui entre ofertas equivalentes', () => {
+    const m = empatados();
+    const r = m.quickBuy({ item: 'scrap', quantity: 6, availableCredits: 999, taxRate: 0 });
+    expect(r.ok).toBe(true);
+    expect(porVendedor(r)).toEqual({ a: 2, b: 2, c: 2 });
+  });
+
+  it('preço menor continua tendo prioridade sobre a rodada', () => {
+    // A rodada é dentro da faixa. Entre faixas, mercado é mercado: quem pede
+    // menos vende primeiro, e nenhuma equalização inverte isso.
+    const m = empatados();
+    m.postOrder({
+      sellerId: 'z', sellerName: 'Z', item: 'scrap', quantity: 5, unitPrice: 1, day: 1,
+    });
+    const r = m.quickBuy({ item: 'scrap', quantity: 6, availableCredits: 999, taxRate: 0 });
+    expect(porVendedor(r).z).toBe(5);
+    expect(r.ok && r.totalPaid).toBe(5 * 1 + 1 * 4);
+  });
+
+  it('o cursor avança: a compra seguinte começa em quem ficou de fora', () => {
+    // Sem persistir o cursor, toda compra começaria no mesmo vendedor e a
+    // rodada viraria enfeite.
+    const m = empatados();
+    const primeira = porVendedor(
+      m.quickBuy({ item: 'scrap', quantity: 1, availableCredits: 999, taxRate: 0 }),
+    );
+    const segunda = porVendedor(
+      m.quickBuy({ item: 'scrap', quantity: 1, availableCredits: 999, taxRate: 0 }),
+    );
+    expect(Object.keys(primeira)).not.toEqual(Object.keys(segunda));
+  });
+
+  it('a rodada esgota o grupo sem entrar em laço quando um vendedor acaba', () => {
+    const m = new Market('cap_0', 'central');
+    m.postOrder({ sellerId: 'a', sellerName: 'A', item: 'scrap', quantity: 1, unitPrice: 4, day: 1 });
+    m.postOrder({ sellerId: 'b', sellerName: 'B', item: 'scrap', quantity: 9, unitPrice: 4, day: 1 });
+    const r = m.quickBuy({ item: 'scrap', quantity: 10, availableCredits: 999, taxRate: 0 });
+    expect(porVendedor(r)).toEqual({ a: 1, b: 9 });
+    expect(m.supplyOf('scrap')).toBe(0);
+  });
+
+  it('a compra direta não passa pela rodada', () => {
+    // "Direct: sem rodada — escolha do comprador." Distribuir a compra de quem
+    // escolheu o anúncio seria desfazer a escolha.
+    const m = empatados();
+    const r = m.buy({ item: 'scrap', quantity: 6, availableCredits: 999, taxRate: 0 });
+    expect(porVendedor(r)).toEqual({ a: 6 });
   });
 
   it('o Central recusa contrabando; o clandestino aceita tudo', () => {

@@ -13,7 +13,7 @@
       }
     ],
     "reward": {
-      "credits": 150,
+      "credits": 10,
       "statusBonus": 0,
       "items": {}
     }
@@ -34,7 +34,7 @@
       }
     ],
     "reward": {
-      "credits": 150,
+      "credits": 10,
       "statusBonus": 0,
       "items": {}
     }
@@ -55,7 +55,7 @@
       }
     ],
     "reward": {
-      "credits": 300,
+      "credits": 15,
       "statusBonus": 0,
       "items": {}
     }
@@ -76,7 +76,7 @@
       }
     ],
     "reward": {
-      "credits": 400,
+      "credits": 15,
       "statusBonus": 0,
       "items": {
         "water": 5
@@ -98,7 +98,7 @@
       }
     ],
     "reward": {
-      "credits": 500,
+      "credits": 20,
       "statusBonus": 1,
       "items": {}
     }
@@ -114,7 +114,7 @@
     "objectives": [
       {
         "kind": "haveCredits",
-        "amount": 1500
+        "amount": 100
       },
       {
         "kind": "reachLevel",
@@ -122,7 +122,7 @@
       }
     ],
     "reward": {
-      "credits": 600,
+      "credits": 40,
       "statusBonus": 0,
       "items": {}
     }
@@ -148,7 +148,7 @@
       }
     ],
     "reward": {
-      "credits": 800,
+      "credits": 55,
       "statusBonus": 0,
       "items": {
         "polymer": 6
@@ -170,7 +170,7 @@
       }
     ],
     "reward": {
-      "credits": 900,
+      "credits": 60,
       "statusBonus": 1,
       "items": {}
     }
@@ -196,7 +196,7 @@
       }
     ],
     "reward": {
-      "credits": 1200,
+      "credits": 80,
       "statusBonus": 0,
       "items": {}
     }
@@ -220,7 +220,7 @@
       }
     ],
     "reward": {
-      "credits": 2500,
+      "credits": 165,
       "statusBonus": 2,
       "items": {}
     }
@@ -241,7 +241,7 @@
       }
     ],
     "reward": {
-      "credits": 3000,
+      "credits": 200,
       "statusBonus": 0,
       "items": {
         "rareEarth": 10
@@ -264,11 +264,11 @@
       },
       {
         "kind": "haveCredits",
-        "amount": 20000
+        "amount": 1200
       }
     ],
     "reward": {
-      "credits": 4000,
+      "credits": 265,
       "statusBonus": 0,
       "items": {}
     }
@@ -288,7 +288,7 @@
       }
     ],
     "reward": {
-      "credits": 2000,
+      "credits": 135,
       "statusBonus": 0,
       "items": {
         "pistol": 1
@@ -314,7 +314,7 @@
       }
     ],
     "reward": {
-      "credits": 8000,
+      "credits": 535,
       "statusBonus": 3,
       "items": {}
     }
@@ -333,7 +333,7 @@
       }
     ],
     "reward": {
-      "credits": 15000,
+      "credits": 1000,
       "statusBonus": 5,
       "items": {}
     }
@@ -354,7 +354,7 @@
       }
     ],
     "reward": {
-      "credits": 10000,
+      "credits": 665,
       "statusBonus": 3,
       "items": {}
     }
@@ -370,7 +370,7 @@
     "objectives": [
       {
         "kind": "haveCredits",
-        "amount": 150000
+        "amount": 9000
       },
       {
         "kind": "haveBuilding",
@@ -383,7 +383,7 @@
       }
     ],
     "reward": {
-      "credits": 50000,
+      "credits": 3335,
       "statusBonus": 10,
       "items": {}
     }

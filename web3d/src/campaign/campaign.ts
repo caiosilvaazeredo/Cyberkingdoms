@@ -169,8 +169,12 @@ export class Campaign {
       : World.fromSeed(seed);
     const rng = new DeterministicRandom(seed).fork('campaign');
 
-    // O jogador começa numa capital sorteada.
-    const startCapital = rng.pick(world.layout.capitals);
+    // O jogador começa numa capital sorteada **com peso** — Rev 4.1, §07:
+    // "sorteio ponderado favorece cidades menos populosas". Sorteio uniforme
+    // mantém a distribuição inicial para sempre, e a capital que já nasceu
+    // grande cresce mais rápido que as outras: em pouco tempo o servidor tem
+    // uma cidade viva e quatro vazias, com mercado ilíquido em todas elas.
+    const startCapital = escolherCidadeInicial(world.layout.capitals, rng);
 
     const character = new Character({
       id: 'player',
@@ -399,6 +403,36 @@ export function buildStartingPlot(
   );
   plot.identity = new VillageIdentity(`Terreno em ${settlement.name}`);
   return plot;
+}
+
+/**
+ * Sorteia a capital de entrada favorecendo as menos populosas.
+ *
+ * O peso é o inverso da população, normalizado pela maior: a cidade menor tem
+ * peso 1 e a maior tem peso proporcional ao quanto ela é menor que si mesma —
+ * ou seja, sempre menos. Não é exclusão: uma capital grande continua podendo
+ * receber gente nova, só recebe menos. Zerar a chance dela criaria o problema
+ * oposto, com as pequenas inchando até virarem as grandes.
+ *
+ * O piso de 0,15 impede que a maior capital pare de receber jogadores
+ * completamente num mundo muito desigual — "cidade ponderada não reduz
+ * acesso", diz o EB no capítulo de catch-up.
+ */
+export function escolherCidadeInicial(
+  capitais: readonly Settlement[],
+  rng: DeterministicRandom,
+): Settlement {
+  if (capitais.length === 0) throw new Error('mundo sem capitais');
+  const maior = Math.max(...capitais.map((c) => c.population), 1);
+  const pesos = capitais.map((c) => Math.max(0.15, 1 - c.population / maior) + 0.15);
+  const total = pesos.reduce((a, b) => a + b, 0);
+
+  let sorteio = rng.nextDouble() * total;
+  for (let i = 0; i < capitais.length; i++) {
+    sorteio -= pesos[i]!;
+    if (sorteio <= 0) return capitais[i]!;
+  }
+  return capitais[capitais.length - 1]!;
 }
 
 function marketKey(settlementId: string, kind: MarketKind): string {

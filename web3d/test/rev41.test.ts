@@ -7,7 +7,15 @@ import {
   novaAcao,
 } from '../src/campaign/actionQueue';
 import { acoesDisponiveis, enfileiravel, liquidar } from '../src/campaign/actions';
-import { Campaign } from '../src/campaign/campaign';
+import { Campaign, escolherCidadeInicial } from '../src/campaign/campaign';
+import { DeterministicRandom } from '../src/core/rng';
+import {
+  EFICIENCIA_MINIMA,
+  cabeMaisUma,
+  cobrarManutencao,
+  custoSemanal,
+  eficienciaApos,
+} from '../src/economy/upkeepProperty';
 import { MAX_TAX_RATE, TERM_LENGTH_IN_DAYS } from '../src/politics/government';
 import {
   CESTA,
@@ -15,6 +23,7 @@ import {
   HOUR_MS,
   MERCADO,
   POLITICA,
+  PROPRIEDADE,
   TRABALHO_PUBLICO,
   VITAIS,
   WALLET,
@@ -110,6 +119,76 @@ describe('Baseline EB 1.1', () => {
       expect(governo.taxRate).toBeLessThanOrEqual(MERCADO.taxaMaxima);
       expect(governo.publicWage).toBeGreaterThanOrEqual(TRABALHO_PUBLICO.bruto);
     }
+  });
+});
+
+describe('Propriedade e manutenção', () => {
+  it('a manutenção sobe com o nível da instalação', () => {
+    // 2%, 3% e 4% por semana: instalação maior custa mais para manter de pé, e
+    // é esse custo que impede o patrimônio de só crescer.
+    expect(custoSemanal(PROPRIEDADE.fazendaN1, 1)).toBe(1);
+    expect(custoSemanal(1000, 1)).toBe(20);
+    expect(custoSemanal(1000, 2)).toBe(30);
+    expect(custoSemanal(1000, 3)).toBe(40);
+    // Nível fora da tabela usa o mais alto em vez de estourar.
+    expect(custoSemanal(1000, 9)).toBe(40);
+  });
+
+  it('atrasar corta eficiência, mas nunca destrói', () => {
+    // "Nunca destrói instantaneamente sem aviso." Num jogo de tempo real, quem
+    // passou uma semana fora não pode voltar e achar a oficina demolida.
+    expect(eficienciaApos(0)).toBe(1);
+    expect(eficienciaApos(1)).toBeCloseTo(0.9, 5);
+    expect(eficienciaApos(3)).toBeCloseTo(0.7, 5);
+    expect(eficienciaApos(99)).toBe(EFICIENCIA_MINIMA);
+  });
+
+  it('saldo curto paga o que dá e o resto vira atraso', () => {
+    // Recusar o pagamento parcial deixaria o jogador com dinheiro no bolso e a
+    // propriedade em atraso total — o pior dos dois mundos.
+    const r = cobrarManutencao({ valor: 1000, nivel: 1, saldo: 12, ciclosAtrasados: 0 });
+    expect(r.pago).toBe(12);
+    expect(r.devido).toBe(8);
+    expect(r.eficiencia).toBeCloseTo(0.9, 5);
+
+    const emDia = cobrarManutencao({ valor: 1000, nivel: 1, saldo: 500, ciclosAtrasados: 3 });
+    expect(emDia.pago).toBe(20);
+    expect(emDia.devido).toBe(0);
+    // Voltar a pagar recupera: o atraso zera, não fica marcado para sempre.
+    expect(emDia.eficiencia).toBe(1);
+  });
+
+  it('o limite é duas fazendas e uma instalação industrial', () => {
+    // Escala vem de contratar gente, não de empilhar instalação: é o que mantém
+    // o mercado de trabalho relevante.
+    expect(cabeMaisUma('farm', 1)).toBe(true);
+    expect(cabeMaisUma('farm', 2)).toBe(false);
+    expect(cabeMaisUma('industrial', 0)).toBe(true);
+    expect(cabeMaisUma('industrial', 1)).toBe(false);
+  });
+});
+
+describe('Cidade inicial ponderada', () => {
+  it('favorece as capitais menos populosas sem excluir as grandes', () => {
+    // Sorteio uniforme mantém a distribuição inicial para sempre: a capital que
+    // nasceu grande cresce mais rápido, e o servidor acaba com uma cidade viva
+    // e quatro vazias — mercado ilíquido em todas.
+    const layout = Campaign.create({
+      id: 'peso', seedLabel: 'contrato-dart-ts', characterName: 'X', now: 0,
+    }).world.layout;
+    const capitais = [...layout.capitals].sort((a, b) => a.population - b.population);
+
+    const contagem = new Map<string, number>();
+    for (let i = 0; i < 4000; i++) {
+      const escolhida = escolherCidadeInicial(capitais, new DeterministicRandom(i));
+      contagem.set(escolhida.id, (contagem.get(escolhida.id) ?? 0) + 1);
+    }
+
+    const menor = contagem.get(capitais[0]!.id) ?? 0;
+    const maior = contagem.get(capitais[capitais.length - 1]!.id) ?? 0;
+    expect(menor).toBeGreaterThan(maior);
+    // Mas ninguém fica de fora: "cidade ponderada não reduz acesso".
+    for (const c of capitais) expect(contagem.get(c.id) ?? 0).toBeGreaterThan(0);
   });
 });
 

@@ -80,13 +80,34 @@ export class MarketOrder {
   }
 }
 
+/** Quanto cada vendedor entregou numa compra. */
+export interface Fill {
+  readonly orderId: string;
+  readonly sellerId: string;
+  readonly sellerName: string;
+  readonly quantity: number;
+  readonly unitPrice: number;
+}
+
 export type TradeResult =
   | {
       readonly ok: true;
       readonly item: string;
       readonly quantity: number;
+      /** O que sai do bolso do comprador. */
       readonly totalPaid: number;
+      /**
+       * Taxa de mercado — EB 1.1, §14.
+       *
+       * Sai do valor da venda e vai para o cofre local; **não** é um acréscimo
+       * cobrado do comprador. A diferença importa: como acréscimo, ela empurra
+       * o preço do Central para cima e o jogador acha que o clandestino é mais
+       * barato quando ele só é mais sonegado. Como desconto na venda, quem paga
+       * a taxa é quem lucrou com ela, que é o que o documento descreve.
+       */
       readonly tax: number;
+      /** Quem entregou o quê. Vazio quando o chamador não precisa saber. */
+      readonly fills: readonly Fill[];
     }
   | { readonly ok: false; readonly reason: string };
 
@@ -113,6 +134,15 @@ export interface MarketJson {
 
 export class Market {
   private readonly list: MarketOrder[];
+  /**
+   * Ponto de partida da rodada, por item e faixa de preço.
+   *
+   * Não vai para o save: é uma preferência de distribuição, não patrimônio.
+   * Perder o cursor num recarregamento faz a próxima compra começar do primeiro
+   * vendedor da faixa — inofensivo. Persistir custaria uma chave por item por
+   * preço em todo mundo salvo.
+   */
+  private readonly cursores = new Map<string, number>();
 
   constructor(
     readonly settlementId: string,
@@ -174,13 +204,12 @@ export class Market {
   }
 
   /**
-   * Compra varrendo as ofertas mais baratas primeiro.
+   * Compra direta: o comprador escolheu o anúncio — EB 1.1, §12 e §13.
    *
-   * A varredura acontece **duas vezes**: uma para simular, outra para efetivar.
-   * Numa passada só, o dinheiro acabando no meio deixaria metade das ofertas
-   * já debitadas e a compra recusada — o comprador não leva nada e o vendedor
-   * perde o estoque. Simular antes é o que torna a operação atômica sem
-   * precisar de transação.
+   * Varre da oferta mais barata para a mais cara e **não** passa pela rodada de
+   * equalização. É o que o documento chama de `direct`: quem escolheu o
+   * vendedor tem direito ao vendedor, e distribuir a compra dele entre outros
+   * seria desfazer a escolha.
    */
   buy(options: {
     item: string;
@@ -188,6 +217,120 @@ export class Market {
     availableCredits: number;
     taxRate: number;
   }): TradeResult {
+    return this.liquidar(options, (livro, quantidade) => {
+      // Compra direta: varre da mais barata para a mais cara, sem rodada. É a
+      // escolha do comprador, e o EB diz explicitamente que a direta não passa
+      // pela equalização — quem escolheu o vendedor tem direito ao vendedor.
+      const fills: Fill[] = [];
+      let restante = quantidade;
+      for (const order of livro) {
+        if (restante === 0) break;
+        const leva = Math.min(restante, order.quantity);
+        fills.push({
+          orderId: order.id,
+          sellerId: order.sellerId,
+          sellerName: order.sellerName,
+          quantity: leva,
+          unitPrice: order.unitPrice,
+        });
+        restante -= leva;
+      }
+      return fills;
+    });
+  }
+
+  /**
+   * Compra rápida com equalização por rodadas — EB 1.1, §13.
+   *
+   * ## O problema que a rodada resolve
+   *
+   * Varrendo só do mais barato para o mais caro, o primeiro da fila leva tudo.
+   * Com dez vendedores pedindo o mesmo preço, um vende dez e nove não vendem
+   * nada — e como quem publicou primeiro fica sempre na frente, o mercado
+   * premia relógio em vez de preço. A liquidez que o EB persegue (≥60% dos
+   * anúncios com venda) morre aí.
+   *
+   * Então: preço menor continua tendo prioridade absoluta — isso é mercado, não
+   * sorteio —, mas **dentro da mesma faixa de preço** a compra distribui uma
+   * unidade por vez entre os vendedores, e o ponto de partida da rodada avança
+   * a cada compra. É o A→B→C do documento.
+   *
+   * O cursor é guardado por item e faixa: sem persistir, toda compra começaria
+   * no mesmo vendedor e a rodada viraria enfeite.
+   */
+  quickBuy(options: {
+    item: string;
+    quantity: number;
+    availableCredits: number;
+    taxRate: number;
+  }): TradeResult {
+    return this.liquidar(options, (livro, quantidade) => {
+      const porPreco = new Map<number, MarketOrder[]>();
+      for (const o of livro) {
+        const grupo = porPreco.get(o.unitPrice);
+        if (grupo) grupo.push(o);
+        else porPreco.set(o.unitPrice, [o]);
+      }
+
+      const acumulado = new Map<string, Fill>();
+      let restante = quantidade;
+
+      for (const preco of [...porPreco.keys()].sort((a, b) => a - b)) {
+        if (restante === 0) break;
+        const grupo = porPreco.get(preco)!;
+        const chave = `${options.item}@${preco}`;
+        let cursor = this.cursores.get(chave) ?? 0;
+        const disponivel = new Map(grupo.map((o) => [o.id, o.quantity]));
+
+        // Uma unidade por rodada, do cursor em diante. O `voltas` protege
+        // contra o caso em que o grupo inteiro esgotou antes da quantidade.
+        let voltas = 0;
+        while (restante > 0 && voltas < grupo.length) {
+          const order = grupo[cursor % grupo.length]!;
+          cursor += 1;
+          const sobra = disponivel.get(order.id) ?? 0;
+          if (sobra <= 0) {
+            voltas += 1;
+            continue;
+          }
+          voltas = 0;
+          disponivel.set(order.id, sobra - 1);
+          restante -= 1;
+
+          const anterior = acumulado.get(order.id);
+          acumulado.set(order.id, {
+            orderId: order.id,
+            sellerId: order.sellerId,
+            sellerName: order.sellerName,
+            quantity: (anterior?.quantity ?? 0) + 1,
+            unitPrice: order.unitPrice,
+          });
+        }
+        this.cursores.set(chave, cursor % Math.max(1, grupo.length));
+      }
+
+      return [...acumulado.values()];
+    });
+  }
+
+  /**
+   * O tronco comum das duas compras.
+   *
+   * A varredura acontece **duas vezes**: uma para simular, outra para efetivar.
+   * Numa passada só, o dinheiro acabando no meio deixaria metade das ofertas já
+   * debitadas e a compra recusada — o comprador não leva nada e o vendedor
+   * perde o estoque. Simular antes é o que torna a operação atômica sem
+   * precisar de transação.
+   */
+  private liquidar(
+    options: {
+      item: string;
+      quantity: number;
+      availableCredits: number;
+      taxRate: number;
+    },
+    distribuir: (livro: MarketOrder[], quantidade: number) => Fill[],
+  ): TradeResult {
     const { item, quantity, availableCredits, taxRate } = options;
 
     if (quantity <= 0) return { ok: false, reason: 'Quantidade inválida.' };
@@ -201,33 +344,26 @@ export class Market {
       return { ok: false, reason: `Oferta insuficiente: só há ${oferta} em estoque.` };
     }
 
-    let restante = quantity;
-    let subtotal = 0;
-    for (const order of livro) {
-      if (restante === 0) break;
-      const leva = Math.min(restante, order.quantity);
-      subtotal += leva * order.unitPrice;
-      restante -= leva;
+    const fills = distribuir(livro, quantity);
+    const subtotal = fills.reduce((soma, f) => soma + f.quantity * f.unitPrice, 0);
+    if (subtotal > availableCredits) {
+      return { ok: false, reason: `Créditos insuficientes: precisa de ${subtotal}.` };
     }
 
     // Só o Central recolhe: o clandestino não passa por governo nenhum, e é
-    // justamente a diferença de imposto que dá razão para ele existir.
-    const tax = this.kind === 'central' ? Math.round(subtotal * taxRate) : 0;
-    const total = subtotal + tax;
-    if (total > availableCredits) {
-      return { ok: false, reason: `Créditos insuficientes: precisa de ${total}.` };
-    }
+    // justamente a diferença de imposto que dá razão para ele existir. Arredonda
+    // para baixo porque o EB fixa o mínimo em zero — item barato não paga taxa
+    // artificial de um Cz.
+    const tax = this.kind === 'central' ? Math.floor(subtotal * taxRate) : 0;
 
-    restante = quantity;
-    for (const order of livro) {
-      if (restante === 0) break;
-      const leva = Math.min(restante, order.quantity);
-      order.quantity -= leva;
-      restante -= leva;
+    const porId = new Map(livro.map((o) => [o.id, o]));
+    for (const f of fills) {
+      const order = porId.get(f.orderId);
+      if (order) order.quantity -= f.quantity;
     }
     this.removeEmpty();
 
-    return { ok: true, item, quantity, totalPaid: total, tax };
+    return { ok: true, item, quantity, totalPaid: subtotal, tax, fills };
   }
 
   /** Descarta ofertas antigas para o livro não crescer sem limite. */

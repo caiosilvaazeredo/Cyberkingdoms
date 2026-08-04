@@ -455,27 +455,28 @@ describe('Campanha inteira, dez resets', () => {
     const campaign = criar();
 
     // Estrutura: o que a Rev 4.1 não tocou continua batendo com o Dart.
+    //
+    // A cidade de entrada saiu da lista: a Rev 4.1 §07 troca o sorteio uniforme
+    // por um ponderado que favorece as capitais menos populosas, e com ele o
+    // terreno inicial muda de lugar junto. Os atributos continuam batendo
+    // porque saem de um `fork` por rótulo, e não da posição do fluxo.
     expect({
-      startSettlementId: campaign.character.homeSettlementId,
       attributes: campaign.character.attributes.toJson(),
-      plotId: campaign.plot.id,
-      plotOrigin: { ...campaign.plot.origin },
-      plotName: campaign.plot.name,
       governmentCount: campaign.governments.size,
       marketCount: campaign.world.layout.settlements
         .map((s) => campaign.marketsAt(s.id).length)
         .reduce((a, b) => a + b, 0),
-      visited: [...campaign.visitedSettlements].sort(),
     }).toEqual({
-      startSettlementId: caso.initial.startSettlementId,
       attributes: caso.initial.attributes,
-      plotId: caso.initial.plotId,
-      plotOrigin: caso.initial.plotOrigin,
-      plotName: caso.initial.plotName,
       governmentCount: caso.initial.governmentCount,
       marketCount: caso.initial.marketCount,
-      visited: caso.initial.visited,
     });
+
+    // E o cidadão continua nascendo dentro de uma capital, com terreno lá.
+    const capital = campaign.world.layout.byId(campaign.character.homeSettlementId);
+    expect(capital?.isCapital).toBe(true);
+    expect(campaign.plot.settlementId).toBe(capital?.id);
+    expect([...campaign.visitedSettlements]).toEqual([capital?.id]);
 
     // Economia: os valores agora são os do EB 1.1, e não os da fixture.
     expect(campaign.character.credits).toBe(WALLET.inicial);
