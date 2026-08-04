@@ -142,8 +142,14 @@ const offsets = new Float32Array(LAMINAS * 3);
 const escalas = new Float32Array(LAMINAS);
 const matizes = new Float32Array(LAMINAS);
 for (let i = 0; i < LAMINAS; i++) {
-  const x = rng.rangeDouble(-CHAO / 2, CHAO / 2);
-  const z = rng.rangeDouble(-CHAO / 2, CHAO / 2);
+  let x = rng.rangeDouble(-CHAO / 2, CHAO / 2);
+  let z = rng.rangeDouble(-CHAO / 2, CHAO / 2);
+  // Empurra para fora do miolo em vez de descartar: descartar deixaria buracos
+  // de densidade no resto do campo, que foi o defeito que custou caro no jogo.
+  if (Math.abs(x) < 13 && Math.abs(z) < 13) {
+    x += x >= 0 ? 13 : -13;
+    z += z >= 0 ? 13 : -13;
+  }
   offsets[i * 3] = x;
   offsets[i * 3 + 1] = alturaEm(x, z);
   offsets[i * 3 + 2] = z;
@@ -263,7 +269,7 @@ const alphaFolha = texturas.load('/art3d/leaf_alpha.png');
 alphaFolha.magFilter = THREE.NearestFilter;
 alphaFolha.minFilter = THREE.NearestFilter;
 
-function pixelar(objeto: THREE.Object3D, tipo: 'arvore' | 'pedra' | 'flor'): void {
+function pixelar(objeto: THREE.Object3D, tipo: 'arvore' | 'pedra' | 'flor' | 'construcao'): void {
   // As duas caixas precisam estar no **mesmo espaço**. Medir a árvore inteira
   // em mundo e cada malha em coordenadas locais foi o que inverteu a primeira
   // tentativa: a copa, cujo vértice local fica perto de zero, era classificada
@@ -281,7 +287,25 @@ function pixelar(objeto: THREE.Object3D, tipo: 'arvore' | 'pedra' | 'flor'): voi
     const alto = (centro.y - caixa.min.y) / alturaTotal > 0.4;
 
     let novo: THREE.MeshLambertMaterial;
-    if (tipo === 'arvore' && alto) {
+    if (tipo === 'construcao') {
+      // As construções do jogo vêm dos kits Kenney, e essas **têm** material:
+      // um mapa de cores único para o kit inteiro. Aqui a única coisa a fazer é
+      // trocar o filtro para vizinho mais próximo e desligar mipmap — com
+      // filtragem linear, o mapa de 256 px vira borrão assim que a construção
+      // se afasta, e a fachada perde a grade de pixels que o resto da cena tem.
+      const original = malha.material as THREE.MeshStandardMaterial;
+      const mapa = original.map ?? null;
+      if (mapa) {
+        mapa.magFilter = THREE.NearestFilter;
+        mapa.minFilter = THREE.NearestFilter;
+        mapa.generateMipmaps = false;
+        mapa.colorSpace = THREE.SRGBColorSpace;
+      }
+      novo = new THREE.MeshLambertMaterial({
+        map: mapa,
+        color: mapa ? 0xffffff : original.color,
+      });
+    } else if (tipo === 'arvore' && alto) {
       novo = new THREE.MeshLambertMaterial({
         color: CORES_DO_PACOTE.folha,
         alphaMap: alphaFolha,
@@ -318,10 +342,10 @@ interface Espalhar {
 }
 
 const plantio: Espalhar[] = [
-  { arquivo: '/art3d/tree3.glb', tipo: 'arvore', quantidade: 22, escala: [0.8, 1.4], raio: 40 },
-  { arquivo: '/art3d/tree.glb', tipo: 'arvore', quantidade: 16, escala: [0.7, 1.2], raio: 42 },
-  { arquivo: '/art3d/rock2.glb', tipo: 'pedra', quantidade: 26, escala: [0.12, 0.4], raio: 42 },
-  { arquivo: '/art3d/flower.glb', tipo: 'flor', quantidade: 120, escala: [0.5, 0.9], raio: 36 },
+  { arquivo: '/art3d/tree3.glb', tipo: 'arvore', quantidade: 18, escala: [0.8, 1.3], raio: 40 },
+  { arquivo: '/art3d/tree.glb', tipo: 'arvore', quantidade: 14, escala: [0.7, 1.1], raio: 42 },
+  { arquivo: '/art3d/rock2.glb', tipo: 'pedra', quantidade: 22, escala: [0.12, 0.35], raio: 42 },
+  { arquivo: '/art3d/flower.glb', tipo: 'flor', quantidade: 90, escala: [0.5, 0.9], raio: 38 },
 ];
 
 let carregando = plantio.length;
@@ -332,7 +356,10 @@ for (const item of plantio) {
     for (let i = 0; i < item.quantidade; i++) {
       const copia = gltf.scene.clone(true);
       const angulo = grupoRng.rangeDouble(0, Math.PI * 2);
-      const distancia = Math.sqrt(grupoRng.nextDouble()) * item.raio;
+      // Fora do miolo da vila: árvore nascendo dentro da praça esconderia a
+      // fachada que este teste existe para mostrar.
+      const distancia =
+        CENTRO_LIMPO + Math.sqrt(grupoRng.nextDouble()) * (item.raio - CENTRO_LIMPO);
       const x = Math.cos(angulo) * distancia;
       const z = Math.sin(angulo) * distancia;
       copia.position.set(x, alturaEm(x, z), z);
@@ -341,6 +368,59 @@ for (const item of plantio) {
       copia.scale.setScalar(s);
       cena.add(copia);
     }
+    carregando -= 1;
+    if (carregando === 0) (window as unknown as { __pronto: boolean }).__pronto = true;
+  });
+}
+
+// ------------------------------------------------------------------- vila
+//
+// As construções são as **do jogo**, pelo mesmo `spriteId` que o catálogo já
+// mapeia para um `.glb`. Sem elas o teste responderia só metade da pergunta:
+// vegetação em pixel art é a parte fácil, e o que decide se a arte serve é
+// como uma fachada de kit se comporta na mesma grade de pixels.
+interface Construcao {
+  readonly spriteId: string;
+  readonly largura: number;
+  readonly profundidade: number;
+  readonly x: number;
+  readonly z: number;
+  readonly giro: number;
+}
+
+const TILE_PREVIEW = 2.2;
+const vila: Construcao[] = [
+  { spriteId: 'city/building-small-a', largura: 2, profundidade: 2, x: -6, z: -4, giro: 0 },
+  { spriteId: 'city/building-small-b', largura: 2, profundidade: 1, x: -1, z: -6, giro: 0 },
+  { spriteId: 'city/building-small-c', largura: 2, profundidade: 1, x: 4, z: -5, giro: -Math.PI / 2 },
+  { spriteId: 'city/building-small-d', largura: 2, profundidade: 2, x: 8, z: -1, giro: -Math.PI / 2 },
+  { spriteId: 'castlekit/siege-tower', largura: 3, profundidade: 2, x: -8, z: 3, giro: Math.PI / 2 },
+  { spriteId: 'city/pavement-fountain', largura: 1, profundidade: 1, x: 1, z: 1, giro: 0 },
+  { spriteId: 'miniforest/building-structure', largura: 1, profundidade: 1, x: 5, z: 4, giro: 0.4 },
+  { spriteId: 'minidungeon/barrel', largura: 1, profundidade: 1, x: 3, z: 3, giro: 0 },
+];
+
+// O terreno da vila fica limpo de mato, como o lote do jogo: construção nascendo
+// no meio da grama alta esconderia justamente a fachada que se quer avaliar.
+const CENTRO_LIMPO = 13;
+
+carregando += vila.length;
+for (const c of vila) {
+  loader.load(`/models/${c.spriteId}.glb`, (gltf) => {
+    const modelo = gltf.scene;
+    pixelar(modelo, 'construcao');
+
+    // Encaixa o modelo no tamanho que a construção ocupa no lote, como o
+    // `plotView` faz no jogo: os kits vêm em escalas diferentes entre si.
+    const caixa = new THREE.Box3().setFromObject(modelo);
+    const tamanho = caixa.getSize(new THREE.Vector3());
+    const alvoLargura = c.largura * TILE_PREVIEW;
+    const fator = alvoLargura / Math.max(0.001, Math.max(tamanho.x, tamanho.z));
+    modelo.scale.setScalar(fator);
+    modelo.position.set(c.x, alturaEm(c.x, c.z), c.z);
+    modelo.rotation.y = c.giro;
+    cena.add(modelo);
+
     carregando -= 1;
     if (carregando === 0) (window as unknown as { __pronto: boolean }).__pronto = true;
   });
