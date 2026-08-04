@@ -107,6 +107,9 @@ export function createCityPanel(deps: CityPanelDeps): CityPanel {
     // venda e vai para o cofre local. Quem paga a taxa é quem lucrou com ela.
     c.character.credits -= r.totalPaid;
     c.character.inventory.add(r.item, r.quantity);
+    // O lote nasce agora: comida comprada hoje vence daqui a 72 h, e não junto
+    // com a que já estava na mochila.
+    c.pantry.register(r.item, r.quantity, Date.now());
     gov.collectTax(r.tax);
     c.log(`Comprou ${r.quantity}× ${itemDef(r.item).name} por ${r.totalPaid} Cz.`);
 

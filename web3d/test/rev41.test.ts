@@ -9,6 +9,8 @@ import {
 import { acoesDisponiveis, enfileiravel, liquidar } from '../src/campaign/actions';
 import { Campaign, escolherCidadeInicial } from '../src/campaign/campaign';
 import { DeterministicRandom } from '../src/core/rng';
+import { Inventory } from '../src/economy/inventory';
+import { Despensa, ehPerecivel, validadeHoras } from '../src/economy/perishable';
 import {
   EFICIENCIA_MINIMA,
   cabeMaisUma,
@@ -25,6 +27,7 @@ import {
   POLITICA,
   PROPRIEDADE,
   TRABALHO_PUBLICO,
+  VALIDADE,
   VITAIS,
   WALLET,
   custoDaAcao,
@@ -189,6 +192,79 @@ describe('Cidade inicial ponderada', () => {
     expect(menor).toBeGreaterThan(maior);
     // Mas ninguém fica de fora: "cidade ponderada não reduz acesso".
     for (const c of capitais) expect(contagem.get(c.id) ?? 0).toBeGreaterThan(0);
+  });
+});
+
+describe('Perecibilidade', () => {
+  const agora = 1_000_000;
+  const inv = () => new Inventory();
+
+  it('só comida e bebida têm validade', () => {
+    // Inventar prazo para sucata e chip criaria contabilidade sem decisão
+    // nenhuma associada.
+    expect(validadeHoras('streetFood')).toBe(VALIDADE.alimento);
+    expect(validadeHoras('water')).toBe(VALIDADE.aguaTratada);
+    expect(validadeHoras('scrap')).toBeNull();
+    expect(ehPerecivel('chip')).toBe(false);
+  });
+
+  it('lotes vencem separados, e não todos juntos', () => {
+    // Duas garrafas compradas com um dia de diferença vencem em dias
+    // diferentes. Uma validade por tipo obrigaria a escolher entre renovar
+    // tudo a cada compra ou vencer estoque bom junto com o velho.
+    const d = new Despensa();
+    const i = inv();
+    i.add('streetFood', 8);
+    d.register('streetFood', 5, agora);
+    d.register('streetFood', 3, agora + 24 * HOUR_MS);
+
+    const perdido = d.expire(i, agora + (VALIDADE.alimento + 1) * HOUR_MS);
+    expect(perdido['streetFood']).toBe(5);
+    expect(i.quantityOf('streetFood')).toBe(3);
+    expect(d.freshOf('streetFood', agora + 25 * HOUR_MS)).toBe(3);
+  });
+
+  it('refrigeração dobra a vida útil', () => {
+    const d = new Despensa();
+    const i = inv();
+    i.add('streetFood', 4);
+    d.register('streetFood', 4, agora, true);
+    // No prazo normal ainda está bom.
+    expect(d.expire(i, agora + (VALIDADE.alimento + 1) * HOUR_MS)).toEqual({});
+    expect(i.quantityOf('streetFood')).toBe(4);
+    // No dobro, não.
+    d.expire(i, agora + (VALIDADE.alimento * 2 + 1) * HOUR_MS);
+    expect(i.quantityOf('streetFood')).toBe(0);
+  });
+
+  it('consumir tira do lote que vence primeiro', () => {
+    const d = new Despensa();
+    d.register('water', 2, agora);
+    d.register('water', 5, agora + 48 * HOUR_MS);
+    d.consume('water', 2, agora);
+    expect(d.batches.map((l) => l.quantity)).toEqual([5]);
+  });
+
+  it('vencer nunca deixa o inventário negativo', () => {
+    // O jogador pode ter vendido o lote sem passar pela despensa; baixar a
+    // quantidade cheia deixaria saldo negativo.
+    const d = new Despensa();
+    const i = inv();
+    i.add('streetFood', 1);
+    d.register('streetFood', 9, agora);
+    const perdido = d.expire(i, agora + 999 * HOUR_MS);
+    expect(perdido['streetFood']).toBe(1);
+    expect(i.quantityOf('streetFood')).toBe(0);
+  });
+
+  it('a despensa sobrevive ao save, e save antigo carrega vazia', () => {
+    const c = campanha();
+    c.character.inventory.add('water', 3);
+    c.pantry.register('water', 3, agora);
+    const voltou = Campaign.fromJson(c.toJson());
+    expect(voltou.pantry.batches).toHaveLength(1);
+    expect(voltou.toJson()).toEqual(c.toJson());
+    expect(Despensa.fromJson(undefined).batches).toHaveLength(0);
   });
 });
 

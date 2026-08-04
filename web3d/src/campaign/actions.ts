@@ -196,6 +196,7 @@ export function liquidar(campaign: Campaign, feita: CompletedAction): ResultadoD
       if (rendeu) {
         const quantidade = 1 + rng.range(0, 2);
         character.inventory.add(rendeu, quantidade);
+        campaign.pantry.register(rendeu, quantidade, finishedAt);
         linhas.push(
           `Jornada em ${workById(trabalho).label}: ${formatCz(liquido)} e ` +
             `${quantidade}× ${itemDef(rendeu).name}.`,

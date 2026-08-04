@@ -508,6 +508,9 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
     const antesFome = character.hunger;
     const antesSede = character.thirst;
     if (!character.consume(id)) return;
+    // Sai o lote que vence primeiro: guardar o mais fresco e comer o mais velho
+    // é o que qualquer um faz com a própria geladeira, e é o que perde menos.
+    campaign.pantry.consume(id, 1, Date.now());
     if (mochilaRecado) {
       mochilaRecado.textContent =
         `${itemDef(id).name}: fome ${antesFome}→${character.hunger}, ` +
@@ -669,10 +672,20 @@ export function bootWorld(campaign: Campaign, options: BootOptions = {}): WorldH
    * exatamente o que "o tempo não para offline" quer dizer.
    */
   function avancarFila(): void {
-    const feitas = campaign.queue.advanceTo(Date.now());
-    if (feitas.length === 0) return;
+    const agora = Date.now();
+    const feitas = campaign.queue.advanceTo(agora);
 
+    // Validade vence com o relógio, não com a ação: dois dias de aba fechada
+    // estragam a comida mesmo que nada tenha sido enfileirado. Perder comida
+    // sem aviso parece defeito, então o que estragou vai para o diário.
     const linhas: string[] = [];
+    const estragou = campaign.pantry.expire(inventario, agora);
+    for (const [item, quantidade] of Object.entries(estragou)) {
+      linhas.push(`Estragou: ${quantidade}× ${itemDef(item).name}.`);
+    }
+
+    if (feitas.length === 0 && linhas.length === 0) return;
+
     for (const feita of feitas) linhas.push(...liquidar(campaign, feita).linhas);
 
     atualizarRecursos();

@@ -1,4 +1,5 @@
 import { ActionQueue, type ActionQueueJson } from './actionQueue';
+import { Despensa, type DespensaJson } from '../economy/perishable';
 import { Plot, plotSizeForLevel, type PlotJson } from '../building/plot';
 import { VillageIdentity } from '../building/villageIdentity';
 import { AttributeSet, type CitizenLevel } from '../character/attributes';
@@ -47,6 +48,8 @@ export interface CampaignJson {
   queue?: ActionQueueJson;
   /** Conhecimento por área, de 0 a 100. */
   knowledge?: Record<string, number>;
+  /** Lotes perecíveis com validade. Ausente em save anterior à Rev 4.1. */
+  pantry?: DespensaJson;
 }
 
 export interface CampaignSummary {
@@ -101,6 +104,14 @@ export class Campaign {
    */
   private readonly knowledgeMap: Map<string, number>;
 
+  /**
+   * A despensa: quando cada lote perecível vence.
+   *
+   * Anda ao lado do inventário porque a quantidade continua sendo dele — a
+   * despensa só guarda o prazo. Ao vencer, ela manda o inventário baixar.
+   */
+  readonly pantry: Despensa;
+
   constructor(
     readonly id: string,
     /** O texto que o jogador digitou — dá para recriar e compartilhar. */
@@ -120,6 +131,7 @@ export class Campaign {
       visitedSettlements?: Iterable<string>;
       queue?: ActionQueue;
       knowledge?: Iterable<[string, number]>;
+      pantry?: Despensa;
     } = {},
   ) {
     this.day = options.day ?? 1;
@@ -129,6 +141,7 @@ export class Campaign {
     this.visitedSettlements = new Set(options.visitedSettlements ?? []);
     this.queue = options.queue ?? new ActionQueue();
     this.knowledgeMap = new Map(options.knowledge ?? []);
+    this.pantry = options.pantry ?? new Despensa();
   }
 
   get knowledge(): ReadonlyMap<string, number> {
@@ -331,6 +344,7 @@ export class Campaign {
       visitedSettlements: [...this.visitedSettlements],
       queue: this.queue.toJson(),
       knowledge: Object.fromEntries(this.knowledgeMap),
+      pantry: this.pantry.toJson(),
     };
   }
 
@@ -373,6 +387,7 @@ export class Campaign {
         completedQuests: json.completedQuests ?? [],
         visitedSettlements: json.visitedSettlements ?? [],
         queue: ActionQueue.fromJson(json.queue),
+        pantry: Despensa.fromJson(json.pantry),
         knowledge: Object.entries(json.knowledge ?? {}).map(
           ([area, valor]) => [area, Number(valor) || 0] as [string, number],
         ),
