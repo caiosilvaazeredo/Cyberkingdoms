@@ -2,7 +2,10 @@ import { Biome } from '../world/biome';
 import { DeterministicRandom } from '../core/rng';
 import type { WorldGenerator } from '../world/worldGen';
 import { animacao, carregarImagem, desenharQuadro, quadroEm, type Animacao } from './atlas';
+import { dentroDoTerreno, type Predio, type RetanguloTerreno } from './predios';
 import { TILE, chaoPara, encostaNaAgua, mascaraDe } from './tileset';
+
+export type { Predio, RetanguloTerreno } from './predios';
 
 /**
  * O mundo do CyberKingdoms desenhado com a arte do Tiny Swords.
@@ -86,16 +89,6 @@ export async function carregarAssets(): Promise<Assets> {
   };
 }
 
-/** Uma construção posicionada, em coordenadas de tile. */
-export interface Predio {
-  readonly sprite: string;
-  readonly x: number;
-  readonly y: number;
-  /** Quantos tiles de largura o prédio ocupa. */
-  readonly tiles: number;
-  readonly rotulo?: string;
-}
-
 export interface Camera {
   /** Centro da vista, em tiles. */
   x: number;
@@ -117,12 +110,20 @@ export interface Mundo2D {
 export function criarMundo2D(options: {
   world: WorldGenerator;
   assets: Assets;
-  predios: readonly Predio[];
+  /**
+   * As construções, lidas a cada quadro.
+   *
+   * É função, e não lista, porque o terreno muda **durante** a partida: erguer
+   * uma construção precisa aparecer no mesmo quadro, sem recriar o mundo.
+   */
+  predios: () => readonly Predio[];
+  /** O terreno do jogador, em tiles do mundo. */
+  terreno?: RetanguloTerreno;
   camera?: Partial<Camera>;
   /** Onde o peão está, em tiles. */
   jogador: () => { x: number; y: number; andando: boolean };
 }): Mundo2D {
-  const { world, assets, predios } = options;
+  const { world, assets, terreno } = options;
   const camera: Camera = { x: 0, y: 0, zoom: 1, ...options.camera };
 
   // Uma consulta de bioma por tile é barata, mas o desenho pergunta pelo mesmo
@@ -216,26 +217,63 @@ export function criarMundo2D(options: {
       }
     }
 
+    // --- camada 3b: a divisa do terreno -------------------------------------
+    //
+    // A divisa é chão pisado, não uma linha desenhada — a mesma decisão do
+    // cliente 3D. Numa vista de cima, uma linha de um pixel some debaixo dos
+    // sprites; uma faixa de terra batida some debaixo de nada, e diz sem
+    // legenda onde o terreno do jogador começa.
+    if (terreno) {
+      const faixa = Math.max(2, Math.round(6 * escala));
+      ctx.save();
+      ctx.globalAlpha = 0.55;
+      ctx.fillStyle = '#6b4b2a';
+      for (let ty = terreno.minY; ty <= terreno.maxY; ty++) {
+        for (let tx = terreno.minX; tx <= terreno.maxX; tx++) {
+          if (tx > x0 + colunas || tx < x0 - 1 || ty > y0 + linhas || ty < y0 - 1) continue;
+          if (!ehTerra(tx, ty)) continue;
+          const naBorda =
+            tx === terreno.minX || tx === terreno.maxX ||
+            ty === terreno.minY || ty === terreno.maxY;
+          if (!naBorda) continue;
+          const px = Math.round(paraTelaX(tx));
+          const py = Math.round(paraTelaY(ty));
+          const lado = Math.ceil(tilePx);
+          if (ty === terreno.minY) ctx.fillRect(px, py, lado, faixa);
+          if (ty === terreno.maxY) ctx.fillRect(px, py + lado - faixa, lado, faixa);
+          if (tx === terreno.minX) ctx.fillRect(px, py, faixa, lado);
+          if (tx === terreno.maxX) ctx.fillRect(px + lado - faixa, py, faixa, lado);
+        }
+      }
+      ctx.restore();
+    }
+
     // --- camada 4: decoração ------------------------------------------------
     //
     // Espalhada por ruído determinístico, e não por sorteio guardado: o que
     // nasce em cada tile é função da seed e da coordenada, então o mesmo mundo
     // tem a mesma mata em qualquer sessão e nada disso precisa ir para o save.
+    const predios = options.predios();
     const desenhos: { y: number; desenhar: () => void }[] = [];
     for (let ty = y0; ty < y0 + linhas; ty++) {
       for (let tx = x0; tx < x0 + colunas; tx++) {
         if (!ehTerra(tx, ty)) continue;
+        // Dentro do terreno não nasce mato: é terra limpa, e é do jogador. O
+        // recorte por retângulo substitui a antiga folga em volta de cada
+        // prédio, que era uma aproximação de uma cerca que agora existe.
+        if (terreno && dentroDoTerreno(terreno, tx, ty)) continue;
         const dado = new DeterministicRandom(
           (world.seed ^ (tx * 374761393) ^ (ty * 668265263)) >>> 0,
         );
         const sorte = dado.nextDouble();
-        // A folga em volta do prédio é **meia** largura mais um tile — o
-        // raio, não o diâmetro. Usar `p.tiles` inteiro comparava distância com
-        // largura e limpava um quadrado de onze por onze em volta do castelo:
-        // de 304 tiles visíveis, 271 ficavam proibidos e o mapa saía pelado.
+        // Fora do terreno, o recorte é a pegada do prédio mais um tile de
+        // folga. Comparar distância com **largura** limpava um quadrado de
+        // onze por onze em volta do castelo: de 304 tiles visíveis, 271
+        // ficavam proibidos e o mapa saía pelado.
         const perto = predios.some(
           (p) =>
-            Math.abs(p.x - tx) <= p.tiles / 2 + 1 && Math.abs(p.y - ty) <= p.tiles / 2 + 1,
+            tx >= p.x - 1 && tx <= p.x + p.tiles &&
+            ty >= p.y - 1 && ty <= p.y + p.tilesAltura,
         );
         if (perto) continue;
 
@@ -283,12 +321,16 @@ export function criarMundo2D(options: {
     for (const p of predios) {
       const sprite = assets.construcoes[p.sprite];
       if (!sprite) continue;
+      // O prédio é centrado na **pegada inteira**, não no primeiro tile: uma
+      // construção 2×2 desenhada a partir do canto fica meio tile fora do
+      // próprio terreno, e o desencontro aparece justamente na divisa.
       const largura2 = p.tiles * TILE * escala;
       const altura2 = (sprite.height / sprite.width) * largura2;
-      const px = paraTelaX(p.x) + tilePx / 2;
-      const py = paraTelaY(p.y) + tilePx;
+      const px = paraTelaX(p.x) + (p.tiles * tilePx) / 2;
+      const py = paraTelaY(p.y) + p.tilesAltura * tilePx;
+      const emObra = (p.obraDias ?? 0) > 0;
       desenhos.push({
-        y: p.y,
+        y: p.y + p.tilesAltura,
         desenhar: () => {
           // A sombra vem antes e é a peça do pacote, deslocada um tile para
           // baixo como o guia manda: é ela que planta o prédio no chão.
@@ -301,7 +343,12 @@ export function criarMundo2D(options: {
             Math.ceil(s),
             Math.ceil(s),
           );
-          ctx.globalAlpha = 1;
+          // Obra aparece fantasma. O prédio já ocupa o espaço — a regra do
+          // jogo diz que ocupa — mas ainda não produz, e a tela precisa dizer
+          // isso sem que ninguém abra ficha nenhuma. Parada é o inverso: está
+          // de pé e não trabalha, então perde a cor em vez da presença.
+          ctx.globalAlpha = emObra ? 0.45 : 1;
+          if (p.parada) ctx.filter = 'grayscale(0.8)';
           ctx.drawImage(
             sprite,
             Math.round(px - largura2 / 2),
@@ -309,6 +356,20 @@ export function criarMundo2D(options: {
             Math.ceil(largura2),
             Math.ceil(altura2),
           );
+          ctx.filter = 'none';
+          ctx.globalAlpha = 1;
+
+          if (!p.rotulo) return;
+          const texto = emObra ? `${p.rotulo} · ${p.obraDias} d` : p.rotulo;
+          ctx.font = `${Math.round(11 * escala)}px ui-monospace, Menlo, monospace`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          ctx.lineWidth = Math.max(2, 3 * escala);
+          ctx.strokeStyle = 'rgba(30, 18, 8, 0.85)';
+          ctx.fillStyle = emObra ? '#ffd98a' : '#f4e4c1';
+          const ty2 = Math.round(py - altura2 - 4 * escala);
+          ctx.strokeText(texto, Math.round(px), ty2);
+          ctx.fillText(texto, Math.round(px), ty2);
         },
       });
     }

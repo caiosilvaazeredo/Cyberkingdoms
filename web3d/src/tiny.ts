@@ -1,8 +1,18 @@
 import { acoesDisponiveis, enfileiravel, liquidar } from './campaign/actions';
 import { formatarDuracao } from './campaign/actionQueue';
 import { Campaign } from './campaign/campaign';
-import { buildingDef } from './building/buildingType';
-import { carregarAssets, criarMundo2D, type Predio } from './render2d/world2d';
+import { runDailyTick } from './campaign/dailyTick';
+import { buildingsAvailableAt } from './building/buildingType';
+import {
+  centroDoTerreno,
+  prediosDoTerreno,
+  retanguloDoTerreno,
+  spriteDoPredio,
+  type Predio,
+} from './render2d/predios';
+import { carregarAssets, criarMundo2D } from './render2d/world2d';
+import { itemDef } from './economy/item';
+import { describeCity, type BuyRow } from './ui/cityView';
 import { formatCz } from './rules/eb';
 
 /**
@@ -42,51 +52,38 @@ const campanha = Campaign.create({
   now: Date.now(),
 });
 
-const cidade = campanha.world.layout.byId(campanha.character.homeSettlementId)!;
+const personagem = campanha.character;
+const terreno = campanha.plot;
+const cidade = campanha.world.layout.byId(personagem.homeSettlementId)!;
+const areaDoTerreno = retanguloDoTerreno(terreno);
 
 /**
- * As construções da cidade, no vocabulário visual do pacote.
+ * O que aparece na tela é o que a partida realmente tem.
  *
- * O catálogo do jogo tem 41 construções e o pacote gratuito tem oito prédios.
- * A ponte é por **categoria**, não por item: moradia vira casa, indústria vira
- * quartel, serviço público vira mosteiro ou torre. Mapear um a um daria oito
- * acertos e trinta e três buracos; mapear por categoria dá uma cidade legível
- * onde cada silhueta ainda diz o que aquilo faz.
+ * A primeira versão desta página desenhava seis construções escolhidas a dedo,
+ * espalhadas num círculo em volta da origem. Ficava bonito e não era o jogo:
+ * o terreno do jogador começa **vazio**, fica onde a campanha o reservou —
+ * cinco tiles a sudeste do centro da capital — e só ganha prédio quando alguém
+ * paga a obra. A vitrine escondia justamente o laço que importa.
+ *
+ * A lista é recalculada a cada quadro porque o terreno muda durante a partida.
+ * É barato: são poucas dezenas de construções, no máximo.
  */
-const PORTA_CATEGORIA: Record<string, readonly string[]> = {
-  housing: ['House1', 'House2', 'House3'],
-  extraction: ['Archery'],
-  refining: ['Barracks'],
-  manufacturing: ['Barracks', 'Archery'],
-  commerce: ['House1_yellow'],
-  infrastructure: ['Tower'],
-  defense: ['Tower'],
-  civic: ['Monastery'],
+const marcoDaCidade: Predio = {
+  sprite: cidade.isCapital ? 'Castle' : 'Tower',
+  x: cidade.center.x - (cidade.isCapital ? 2 : 1),
+  y: cidade.center.y - (cidade.isCapital ? 2 : 1),
+  tiles: cidade.isCapital ? 5 : 2,
+  tilesAltura: cidade.isCapital ? 4 : 2,
+  rotulo: cidade.name,
 };
 
-function spritePara(buildingId: string, indice: number): string {
-  const def = buildingDef(buildingId);
-  const opcoes = PORTA_CATEGORIA[def.category] ?? ['House1'];
-  return opcoes[indice % opcoes.length]!;
+function prediosAgora(): readonly Predio[] {
+  return [marcoDaCidade, ...prediosDoTerreno(terreno)];
 }
 
-// A capital ganha o castelo no centro; o resto se arruma em volta da praça.
-const predios: Predio[] = [
-  { sprite: cidade.isCapital ? 'Castle' : 'House1', x: 0, y: 0, tiles: cidade.isCapital ? 5 : 2 },
-];
-const doCatalogo = ['shack', 'capsuleBlock', 'apartment', 'hardwareWorkshop', 'textileWorkshop', 'refinery'];
-doCatalogo.forEach((id, i) => {
-  const angulo = (i / doCatalogo.length) * Math.PI * 2 + 0.6;
-  predios.push({
-    sprite: spritePara(id, i),
-    x: Math.round(Math.cos(angulo) * 7),
-    y: Math.round(Math.sin(angulo) * 5) + 3,
-    tiles: 2,
-    rotulo: buildingDef(id).name,
-  });
-});
-
-const jogador = { x: 0.5, y: 4, andando: false };
+const centro = centroDoTerreno(terreno);
+const jogador = { x: centro.x, y: centro.y, andando: false };
 
 /**
  * Procura a costa mais próxima, em espiral.
@@ -130,9 +127,10 @@ if (costa) {
 const mundo = criarMundo2D({
   world: campanha.world.generator,
   assets,
-  predios,
-  // O peão nasce na praça, e a câmera nasce nele: abrir o jogo olhando para o
-  // vazio obrigaria o jogador a procurar o próprio personagem.
+  predios: prediosAgora,
+  terreno: areaDoTerreno,
+  // O peão nasce no terreno, e a câmera nasce nele: abrir o jogo olhando para
+  // o vazio obrigaria o jogador a procurar o próprio personagem.
   camera: {
     x: Number(params.get('cx') ?? jogador.x),
     y: Number(params.get('cy') ?? jogador.y),
@@ -189,6 +187,10 @@ const elDia = document.querySelector<HTMLElement>('#hud-dia')!;
 const elCidade = document.querySelector<HTMLElement>('#hud-cidade')!;
 const elOcupacao = document.querySelector<HTMLElement>('#hud-ocupacao')!;
 const elAcoes = document.querySelector<HTMLElement>('#hud-acoes')!;
+const elTerreno = document.querySelector<HTMLElement>('#hud-terreno')!;
+const elAviso = document.querySelector<HTMLElement>('#aviso')!;
+const folhaObras = document.querySelector<HTMLElement>('#folha-obras')!;
+const listaObras = document.querySelector<HTMLElement>('#lista-obras')!;
 const barras = {
   fome: document.querySelector<HTMLElement>('#barra-fome')!,
   sede: document.querySelector<HTMLElement>('#barra-sede')!,
@@ -196,12 +198,252 @@ const barras = {
 };
 
 let assinaturaAcoes = '';
+let assinaturaObras = '';
+
+/** Avisos curtos, no lugar de `alert`: um modal congela o jogo por um erro. */
+let apagarAviso = 0;
+function avisar(texto: string): void {
+  elAviso.textContent = texto;
+  elAviso.style.opacity = '1';
+  window.clearTimeout(apagarAviso);
+  apagarAviso = window.setTimeout(() => {
+    elAviso.style.opacity = '0';
+  }, 3200);
+}
+
+/**
+ * A célula do terreno em que o peão está pisando.
+ *
+ * Construir "onde eu estou" é a forma mais direta de escolher um lugar sem
+ * inventar um segundo modo de mira: o jogador já anda, e andar já é a mira.
+ * Fora do terreno não há célula, e a recusa explica isso.
+ */
+function celulaSobOsPes(): { x: number; y: number } | null {
+  return terreno.gridCellFor({ x: Math.round(jogador.x), y: Math.round(jogador.y) });
+}
+
+function construir(tipo: string): void {
+  const celula = celulaSobOsPes();
+  if (!celula) {
+    avisar('Você está fora do terreno. Volte para dentro da divisa.');
+    return;
+  }
+  const check = terreno.canPlace(tipo, celula.x, celula.y, {
+    level: personagem.level,
+    credits: personagem.credits,
+    inventory: personagem.inventory,
+  });
+  if (!check.valid) {
+    avisar(check.reason ?? 'Não dá para construir aqui.');
+    return;
+  }
+  const r = terreno.build(tipo, celula.x, celula.y, {
+    level: personagem.level,
+    credits: personagem.credits,
+    inventory: personagem.inventory,
+  });
+  if (!r.ok) {
+    avisar(r.reason);
+    return;
+  }
+  // O terreno não conhece a carteira — quem paga é o personagem, exatamente
+  // como no cliente 3D. Ver `Plot.build`.
+  personagem.credits -= r.building.def.creditCost;
+  avisar(`${r.building.displayName}: obra de ${r.building.daysRemaining} dia(s).`);
+  assinaturaObras = '';
+  atualizarHud();
+}
+
+/**
+ * O catálogo de verdade, filtrado pelo nível de cidadão.
+ *
+ * São 41 construções e a lista mostra as que o nível permite, com o preço e o
+ * que falta. Esconder as caras seria mentir sobre o jogo: saber que existe um
+ * galpão de Cz 3 600 é o que dá sentido a juntar dinheiro.
+ */
+function pintarObras(): void {
+  const disponiveis = buildingsAvailableAt(personagem.level);
+  const assinatura =
+    disponiveis.map((d) => d.id).join('|') +
+    `#${personagem.credits}#${terreno.buildings.length}`;
+  if (assinatura === assinaturaObras) return;
+  assinaturaObras = assinatura;
+
+  listaObras.textContent = '';
+  for (const def of disponiveis) {
+    const linha = document.createElement('button');
+    linha.type = 'button';
+    linha.className = 'ts-linha';
+    // O material aparece pelo nome do catálogo, e não pelo id: "12× scrap" é
+    // como o arquivo de dados escreve, não como o jogo fala.
+    const materiais = Object.entries(def.materialCost)
+      .map(([id, qtd]) => `${qtd}× ${itemDef(id).name}`)
+      .join(', ');
+    const podePagar = personagem.credits >= def.creditCost;
+    linha.innerHTML =
+      `<img src="/tiny/buildings/${spriteDoPredio(def.category)}.png" alt="" />` +
+      `<span class="ts-linha-texto"><strong>${def.name}</strong>` +
+      `<small>${formatCz(def.creditCost)} · ${def.buildDays} d` +
+      `${materiais ? ` · ${materiais}` : ''}</small></span>`;
+    linha.classList.toggle('sem-caixa', !podePagar);
+    linha.addEventListener('click', () => construir(def.id));
+    listaObras.appendChild(linha);
+  }
+}
+
+document.querySelector('#abrir-obras')?.addEventListener('click', () => {
+  const abrindo = folhaObras.hidden;
+  folhaObras.hidden = !abrindo;
+  if (abrindo) {
+    assinaturaObras = '';
+    pintarObras();
+  }
+});
+document.querySelector('#fechar-obras')?.addEventListener('click', () => {
+  folhaObras.hidden = true;
+});
+
+// -------------------------------------------------------------- mercado e bolsa
+//
+// Sem isto, o botão de construir era beco sem saída: um Barraco custa Cz 120 e
+// **6 de sucata**, e sucata não cai do céu. O laço só fecha com o mercado
+// dentro da tela — trabalhar rende Cz, o Cz compra material e comida, o
+// material vira obra. É o mesmo mercado do cliente 3D, com a mesma taxa indo
+// para o mesmo cofre; nada aqui é uma segunda economia.
+
+const folhaFeira = document.querySelector<HTMLElement>('#folha-feira')!;
+const listaFeira = document.querySelector<HTMLElement>('#lista-feira')!;
+const listaBolsa = document.querySelector<HTMLElement>('#lista-bolsa')!;
+let assinaturaFeira = '';
+
+function comprar(row: BuyRow): void {
+  const gov = campanha.governmentOf(cidade.id);
+  const mercado = campanha.marketOf(cidade.id, row.kind);
+  if (!mercado) return;
+  const r = mercado.quickBuy({
+    item: row.item,
+    quantity: 1,
+    availableCredits: personagem.credits,
+    taxRate: gov.taxRate,
+  });
+  if (!r.ok) {
+    avisar(r.reason);
+    return;
+  }
+  // O mercado só mexe no livro de ofertas; crédito, item e cofre são movidos
+  // por quem fez o negócio. A taxa sai da venda, não do bolso do comprador.
+  personagem.credits -= r.totalPaid;
+  personagem.inventory.add(r.item, r.quantity);
+  // O lote nasce agora: comida comprada hoje vence daqui a 72 h, e não junto
+  // com a que já estava na mochila.
+  campanha.pantry.register(r.item, r.quantity, Date.now());
+  gov.collectTax(r.tax);
+  avisar(`Comprou 1× ${itemDef(r.item).name} por ${formatCz(r.totalPaid)}.`);
+  assinaturaFeira = '';
+  assinaturaObras = '';
+  atualizarHud();
+}
+
+function usar(id: string): void {
+  const antesFome = personagem.hunger;
+  const antesSede = personagem.thirst;
+  if (!personagem.consume(id)) {
+    avisar(`${itemDef(id).name} não serve para comer nem beber.`);
+    return;
+  }
+  // Sai o lote que vence primeiro: comer o mais velho é o que perde menos.
+  campanha.pantry.consume(id, 1, Date.now());
+  avisar(
+    `${itemDef(id).name}: fome ${antesFome}→${personagem.hunger}, ` +
+      `sede ${antesSede}→${personagem.thirst}.`,
+  );
+  assinaturaFeira = '';
+  atualizarHud();
+}
+
+function pintarFeira(): void {
+  const ficha = describeCity(campanha, cidade.id);
+  const bolsa = [...personagem.inventory.stacks.entries()].filter(([, q]) => q > 0);
+  const assinatura =
+    (ficha?.buy ?? []).map((r) => `${r.item}:${r.unitPrice}:${r.supply}`).join('|') +
+    '#' + bolsa.map(([id, q]) => `${id}:${q}`).join('|') +
+    `#${personagem.credits}`;
+  if (assinatura === assinaturaFeira) return;
+  assinaturaFeira = assinatura;
+
+  listaFeira.textContent = '';
+  for (const row of ficha?.buy ?? []) {
+    const linha = document.createElement('button');
+    linha.type = 'button';
+    linha.className = 'ts-linha';
+    linha.classList.toggle('sem-caixa', personagem.credits < row.unitPrice);
+    linha.innerHTML =
+      `<span class="ts-linha-texto"><strong>${row.name}</strong>` +
+      `<small>${formatCz(row.unitPrice)} · ${row.supply} un` +
+      `${row.bargain ? ' · pechincha' : ''}${row.legal ? '' : ' · ilegal'}</small></span>`;
+    linha.addEventListener('click', () => comprar(row));
+    listaFeira.appendChild(linha);
+  }
+
+  listaBolsa.textContent = '';
+  if (bolsa.length === 0) {
+    const vazio = document.createElement('p');
+    vazio.className = 'ts-dica';
+    vazio.textContent = 'Mochila vazia.';
+    listaBolsa.appendChild(vazio);
+  }
+  for (const [id, qtd] of bolsa) {
+    const linha = document.createElement('button');
+    linha.type = 'button';
+    linha.className = 'ts-linha';
+    linha.innerHTML =
+      `<span class="ts-linha-texto"><strong>${itemDef(id).name}</strong>` +
+      `<small>${qtd} un · toque para usar</small></span>`;
+    linha.addEventListener('click', () => usar(id));
+    listaBolsa.appendChild(linha);
+  }
+}
+
+document.querySelector('#abrir-feira')?.addEventListener('click', () => {
+  const abrindo = folhaFeira.hidden;
+  folhaFeira.hidden = !abrindo;
+  if (abrindo) {
+    assinaturaFeira = '';
+    pintarFeira();
+  }
+});
+document.querySelector('#fechar-feira')?.addEventListener('click', () => {
+  folhaFeira.hidden = true;
+});
+
+/**
+ * Encerrar o dia.
+ *
+ * Obra, manutenção e produção andam no reset diário — é `runDailyTick` quem
+ * desconta os dias que faltam. Sem um botão, a única forma de ver um galpão
+ * ficar pronto seria esperar 24 h de relógio de parede, o que não é ritmo de
+ * jogo: é castigo. É a mesma decisão que o cliente 3D já tinha tomado.
+ */
+document.querySelector('#dormir')?.addEventListener('click', () => {
+  const relatorio = runDailyTick(campanha);
+  const primeiro = relatorio.events[0];
+  avisar(`Dia ${relatorio.day} encerrado${primeiro ? ` · ${primeiro}` : ''}.`);
+  assinaturaObras = '';
+  atualizarHud();
+});
 
 function atualizarHud(): void {
-  const c = campanha.character;
+  const c = personagem;
   elCz.textContent = formatCz(c.credits);
   elDia.textContent = `Dia ${campanha.day}`;
   elCidade.textContent = `${cidade.name} · ${cidade.vocationDef.label}`;
+
+  const obras = terreno.buildings.filter((b) => !b.isReady).length;
+  elTerreno.textContent =
+    `${terreno.identity.name} · ${terreno.buildings.length}/${terreno.tileCount}` +
+    (obras > 0 ? ` · ${obras} em obra` : '');
+  if (!folhaObras.hidden) pintarObras();
+  if (!folhaFeira.hidden) pintarFeira();
 
   // O preenchimento mede o miolo da barra, e não a caixa inteira: as duas
   // tampas de madeira ocupam borda e não podem ser cobertas.
@@ -307,7 +549,7 @@ requestAnimationFrame(quadro);
 const diagnostico = document.querySelector<HTMLElement>('#diagnostico');
 if (diagnostico) {
   diagnostico.textContent =
-    `seed "${semente}" · ${cidade.name} · ${predios.length} construções · tile 64px`;
+    `seed "${semente}" · ${cidade.name} · ${terreno.buildings.length} construções · tile 64px`;
   setInterval(() => {
     diagnostico.textContent =
       `seed "${semente}" · ${cidade.name} · ${mundo.tilesDesenhados} tiles · ` +
@@ -315,3 +557,7 @@ if (diagnostico) {
   }, 1000);
 }
 (window as unknown as { __pronto: boolean }).__pronto = true;
+// A campanha fica exposta para o teste de tela: sem isso, verificar a obra
+// exigiria jogar sete jornadas de trabalho dentro do navegador só para chegar
+// aos Cz 120 do Barraco. É a mesma porta que o Modo Dev abre no cliente 3D.
+(window as unknown as { __campanha: Campaign }).__campanha = campanha;

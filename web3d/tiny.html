@@ -128,6 +128,83 @@
       }
       .ts-botao span { font-size: 10px; opacity: 0.85; font-weight: normal; }
 
+      .ts-botao.vermelho {
+        border-image: url('/tiny/ui9/btn-red.png') 64 fill stretch;
+      }
+      .ts-botao.vermelho:active {
+        border-image-source: url('/tiny/ui9/btn-red-pressed.png');
+      }
+      /* Três botões lado a lado não cabem: cada um carrega 16 px de moldura em
+         cada borda, e o painel tem 300 px. Em grade de duas colunas eles
+         crescem para baixo em vez de vazar para fora da tela. */
+      #hud-terreno-botoes {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px;
+      }
+      #hud-terreno-botoes .ts-botao {
+        min-width: 0; border-width: 14px; font-size: 11px;
+      }
+      #hud-terreno-botoes .vermelho { grid-column: 1 / -1; }
+
+      /* O aviso substitui o `alert`: um modal do navegador congela o laço de
+         desenho, e o motivo de uma obra recusada não vale uma tela parada. */
+      #aviso {
+        position: fixed; z-index: 6;
+        top: 25%; left: 50%; transform: translateX(-50%);
+        width: max-content; max-width: min(380px, 80vw); padding: 10px 14px;
+        border-style: solid; border-width: 18px;
+        border-image: url('/tiny/ui9/paper-dark.png') 64 fill stretch;
+        image-rendering: pixelated;
+        color: #f2e2bd; font-size: 12px; text-align: center;
+        opacity: 0; transition: opacity 0.25s ease;
+        pointer-events: none;
+      }
+      #aviso:empty { display: none; }
+
+      #folha-obras, #folha-feira {
+        position: fixed; z-index: 5;
+        top: max(60px, env(safe-area-inset-top));
+        left: 50%; transform: translateX(-50%);
+        width: min(460px, 92vw);
+        max-height: 70vh; overflow: auto; overscroll-behavior: contain;
+        padding: 0 10px 12px;
+      }
+      #folha-obras[hidden], #folha-feira[hidden] { display: none; }
+      #folha-obras header, #folha-feira header {
+        display: flex; align-items: center; justify-content: space-between;
+        position: sticky; top: 0;
+      }
+      #folha-obras h2, #folha-feira h2 {
+        margin: 0; font-size: 13px; letter-spacing: 0.1em;
+      }
+      .ts-secao { margin: 12px 0 4px; opacity: 0.8; }
+      .ts-dica { margin: 2px 0 8px; font-size: 10px; opacity: 0.75; }
+      .ts-fechar {
+        width: 34px; height: 34px; border: 0; cursor: pointer;
+        background: url('/tiny/ui/SmallRedSquareButton_Regular.png') center / contain no-repeat;
+        image-rendering: pixelated;
+        color: #fff; font: inherit; font-size: 16px; line-height: 1;
+      }
+      .ts-fechar:active {
+        background-image: url('/tiny/ui/SmallRedSquareButton_Pressed.png');
+      }
+      #lista-obras, #lista-feira, #lista-bolsa {
+        display: flex; flex-direction: column; gap: 4px;
+      }
+      .ts-linha {
+        display: flex; align-items: center; gap: 8px; text-align: left;
+        min-height: var(--toque); padding: 4px 8px; cursor: pointer;
+        border: 2px solid rgba(58, 36, 21, 0.25); border-radius: 4px;
+        background: rgba(255, 255, 255, 0.18);
+        color: var(--tinta); font: inherit; font-size: 12px;
+      }
+      .ts-linha:active { background: rgba(255, 255, 255, 0.45); }
+      .ts-linha img { width: 40px; height: 40px; object-fit: contain; image-rendering: pixelated; }
+      .ts-linha-texto { display: flex; flex-direction: column; }
+      .ts-linha-texto small { font-size: 10px; opacity: 0.8; }
+      /* Construção que o caixa não cobre continua na lista, apagada: saber que
+         ela existe é o que dá sentido a juntar dinheiro. */
+      .ts-linha.sem-caixa { opacity: 0.45; }
+
       #diagnostico {
         position: fixed; left: 50%; transform: translateX(-50%);
         bottom: 4px; font-size: 10px; opacity: 0.75;
@@ -147,7 +224,35 @@
       <div class="ts-ficha"><img src="/tiny/ui/Icon_04.png" alt="" /><span id="hud-cz">Cz 0</span></div>
       <div class="ts-ficha"><img src="/tiny/ui/Icon_10.png" alt="" /><span id="hud-dia">Dia 1</span></div>
       <div class="ts-ficha"><img src="/tiny/ui/Icon_07.png" alt="" /><span id="hud-cidade">—</span></div>
+      <div class="ts-ficha"><img src="/tiny/ui/Icon_02.png" alt="" /><span id="hud-terreno">—</span></div>
     </div>
+
+    <div id="aviso"></div>
+
+    <!-- O catálogo real: as 41 construções filtradas pelo nível de cidadão. A
+         folha é do pacote (papel especial) e cobre a tela em celular, porque
+         escolher uma construção é uma decisão que merece a tela inteira. -->
+    <aside id="folha-obras" class="ts-papel" hidden>
+      <header>
+        <h2>CONSTRUIR</h2>
+        <button id="fechar-obras" class="ts-fechar" type="button" aria-label="Fechar">×</button>
+      </header>
+      <p class="ts-dica">A obra sobe na célula em que o peão está pisando.</p>
+      <div id="lista-obras"></div>
+    </aside>
+
+    <!-- Mercado e mochila na mesma folha: comprar e consumir são o mesmo
+         gesto para o jogador, e separá-los em duas telas só somaria toques. -->
+    <aside id="folha-feira" class="ts-papel" hidden>
+      <header>
+        <h2>MERCADO</h2>
+        <button id="fechar-feira" class="ts-fechar" type="button" aria-label="Fechar">×</button>
+      </header>
+      <p class="ts-dica">Toque para comprar uma unidade.</p>
+      <div id="lista-feira"></div>
+      <h2 class="ts-secao">MOCHILA</h2>
+      <div id="lista-bolsa"></div>
+    </aside>
 
     <div id="vitais">
       <div class="ts-barra"><i id="barra-fome" style="width:100%"></i><span>FOME</span></div>
@@ -159,6 +264,11 @@
       <h2>OCUPAÇÃO</h2>
       <p id="hud-ocupacao">Ocioso</p>
       <div id="hud-acoes"></div>
+      <div id="hud-terreno-botoes">
+        <button id="abrir-feira" class="ts-botao" type="button">MERCADO</button>
+        <button id="abrir-obras" class="ts-botao" type="button">CONSTRUIR</button>
+        <button id="dormir" class="ts-botao vermelho" type="button">DORMIR</button>
+      </div>
     </aside>
 
     <div id="diagnostico">carregando…</div>
