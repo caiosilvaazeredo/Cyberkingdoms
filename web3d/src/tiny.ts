@@ -3,11 +3,11 @@ import { formatarDuracao } from './campaign/actionQueue';
 import { Campaign } from './campaign/campaign';
 import { runDailyTick } from './campaign/dailyTick';
 import { buildingsAvailableAt } from './building/buildingType';
+import { estiloDe } from './render2d/estilos';
 import {
   centroDoTerreno,
   prediosDoTerreno,
   retanguloDoTerreno,
-  spriteDoPredio,
   type Predio,
 } from './render2d/predios';
 import { carregarAssets, criarMundo2D } from './render2d/world2d';
@@ -69,13 +69,26 @@ const areaDoTerreno = retanguloDoTerreno(terreno);
  * A lista é recalculada a cada quadro porque o terreno muda durante a partida.
  * É barato: são poucas dezenas de construções, no máximo.
  */
+// A capital é castelo; o satélite, uma torre. O telhado segue a vocação da
+// cidade, então duas capitais vizinhas não saem iguais no horizonte.
+const COR_DA_VOCACAO = {
+  petrochemical: 'black',
+  foundry: 'red',
+  agroBio: 'yellow',
+  techHub: 'purple',
+  freePort: 'blue',
+} as const;
+
 const marcoDaCidade: Predio = {
-  sprite: cidade.isCapital ? 'Castle' : 'Tower',
+  forma: cidade.isCapital ? 'Castle' : 'Tower',
+  cor: COR_DA_VOCACAO[cidade.vocation],
+  enfeites: [],
   x: cidade.center.x - (cidade.isCapital ? 2 : 1),
   y: cidade.center.y - (cidade.isCapital ? 2 : 1),
   tiles: cidade.isCapital ? 5 : 2,
   tilesAltura: cidade.isCapital ? 4 : 2,
   rotulo: cidade.name,
+  escala: 1,
 };
 
 function prediosAgora(): readonly Predio[] {
@@ -280,8 +293,9 @@ function pintarObras(): void {
       .map(([id, qtd]) => `${qtd}× ${itemDef(id).name}`)
       .join(', ');
     const podePagar = personagem.credits >= def.creditCost;
+    const estilo = estiloDe(def.id, def.category);
     linha.innerHTML =
-      `<img src="/tiny/buildings/${spriteDoPredio(def.category)}.png" alt="" />` +
+      `<img src="/tiny/buildings/${estilo.cor}/${estilo.forma}.png" alt="" />` +
       `<span class="ts-linha-texto"><strong>${def.name}</strong>` +
       `<small>${formatCz(def.creditCost)} · ${def.buildDays} d` +
       `${materiais ? ` · ${materiais}` : ''}</small></span>`;

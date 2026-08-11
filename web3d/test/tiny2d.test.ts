@@ -6,12 +6,18 @@ import { PlacedBuilding, Plot } from '../src/building/plot';
 import { Settlement } from '../src/world/settlement';
 import { TileCoord } from '../src/world/coords';
 import {
-  SPRITE_POR_CATEGORIA,
+  CORES_USADAS,
+  ESTILOS,
+  FORMAS_USADAS,
+  LARGURA_DA_FORMA,
+  construcoesSemEstilo,
+  estiloDe,
+} from '../src/render2d/estilos';
+import {
   centroDoTerreno,
   dentroDoTerreno,
   prediosDoTerreno,
   retanguloDoTerreno,
-  spriteDoPredio,
 } from '../src/render2d/predios';
 
 /**
@@ -34,33 +40,54 @@ const CAPITAL = new Settlement(
   12000,
 );
 
-describe('sprites do pacote para o catálogo do jogo', () => {
-  it('cobre todas as categorias do catálogo', () => {
+describe('a identidade visual das construções', () => {
+  it('as 41 construções do catálogo têm estilo próprio', () => {
+    // Sem entrada, a construção cai no estilo de reserva da categoria e vira
+    // gêmea de outra. O buraco é invisível na tela: dois prédios iguais não
+    // parecem defeito, parecem descuido de arte.
+    expect(construcoesSemEstilo()).toEqual([]);
+  });
+
+  it('nenhuma construção é visualmente igual a outra', () => {
+    const vistas = new Map<string, string>();
     for (const def of allBuildings) {
-      expect(SPRITE_POR_CATEGORIA[def.category], def.id).toBeDefined();
-      expect(spriteDoPredio(def.category)).toBeTruthy();
+      const e = estiloDe(def.id, def.category);
+      const assinatura =
+        `${e.forma}|${e.cor}|${e.anexo ?? ''}|${[...e.enfeites].sort().join(',')}|${e.fx ?? ''}`;
+      const gemea = vistas.get(assinatura);
+      expect(gemea, `${def.id} é idêntica a ${gemea}`).toBeUndefined();
+      vistas.set(assinatura, def.id);
+    }
+    expect(vistas.size).toBe(allBuildings.length);
+  });
+
+  it('só usa forma e cor que existem no acervo carregado', () => {
+    const formas = new Set<string>(FORMAS_USADAS);
+    const cores = new Set<string>(CORES_USADAS);
+    for (const [id, e] of Object.entries(ESTILOS)) {
+      expect(formas.has(e.forma), `${id}: ${e.forma}`).toBe(true);
+      expect(cores.has(e.cor), `${id}: ${e.cor}`).toBe(true);
+      if (e.anexo) expect(formas.has(e.anexo), `${id}: anexo ${e.anexo}`).toBe(true);
+    }
+    // `world2d` carrega cor × forma; a matriz precisa fechar.
+    expect(FORMAS_USADAS.length * CORES_USADAS.length).toBe(40);
+  });
+
+  it('a forma não passa de um tile além da pegada da construção', () => {
+    // Um sprite de cinco colunas num terreno de 8×8 cobriria o vizinho. O
+    // desenho corta pela largura nativa, e a tabela precisa concordar.
+    for (const def of allBuildings) {
+      const e = estiloDe(def.id, def.category);
+      expect(
+        LARGURA_DA_FORMA[e.forma],
+        `${def.id}: ${e.forma} tem ${LARGURA_DA_FORMA[e.forma]} tiles para pegada ${def.width}`,
+      ).toBeLessThanOrEqual(Math.max(def.width + 1, 2) + 1);
     }
   });
 
-  it('não devolve sprite fora do acervo carregado', () => {
-    // A lista é a mesma que `world2d.carregarAssets` busca. Um nome a mais
-    // aqui é um prédio que simplesmente não desenha.
-    const acervo = new Set([
-      'House1', 'House2', 'House3', 'Tower', 'Barracks',
-      'Archery', 'Monastery', 'Castle', 'Castle_red', 'House1_yellow',
-    ]);
-    for (const nomes of Object.values(SPRITE_POR_CATEGORIA)) {
-      for (const n of nomes) expect(acervo.has(n), n).toBe(true);
-    }
-  });
-
-  it('o nível escolhe dentro da categoria, e satura no último sprite', () => {
-    expect(spriteDoPredio('housing', 1)).toBe('House1');
-    expect(spriteDoPredio('housing', 3)).toBe('House3');
-    // Nível acima do que a categoria oferece não pode virar `undefined`.
-    expect(spriteDoPredio('housing', 9)).toBe('House3');
-    expect(spriteDoPredio('refining', 5)).toBe('Barracks');
-    expect(spriteDoPredio('commerce', 0)).toBe('House1_yellow');
+  it('a reserva cobre id fora do catálogo sem estourar', () => {
+    const e = estiloDe('construcaoQueNaoExiste', 'civic');
+    expect(e.forma).toBe('Monastery');
   });
 });
 
@@ -105,6 +132,7 @@ describe('o terreno do jogador vira desenho', () => {
     ]);
     const [obra, parada] = prediosDoTerreno(plot);
 
+    expect(obra!.forma).toBe(estiloDe('apartment', 'housing').forma);
     expect(obra!.tiles).toBe(def.width);
     expect(obra!.tilesAltura).toBe(def.height);
     expect(obra!.obraDias).toBe(3);
@@ -114,7 +142,7 @@ describe('o terreno do jogador vira desenho', () => {
     expect(parada!.parada).toBe(true);
   });
 
-  it('o rótulo mostra o nível quando há evolução', () => {
+  it('o rótulo mostra o nível, e o porte cresce sem trocar a identidade', () => {
     const plot = new Plot('p', 'cap_teste', { x: 0, y: 0 }, 16, 16, [
       new PlacedBuilding('n1', 'shack', 0, 0, 0),
       new PlacedBuilding('n2', 'shack', 2, 2, 0, 0, false, 2),
@@ -122,7 +150,22 @@ describe('o terreno do jogador vira desenho', () => {
     const [um, dois] = prediosDoTerreno(plot);
     expect(um!.rotulo).toBe('Barraco');
     expect(dois!.rotulo).toBe('Barraco II');
-    // E o sprite acompanha: evoluir precisa aparecer no terreno.
-    expect(dois!.sprite).not.toBe(um!.sprite);
+    // Evoluir aparece no porte. A forma e a cor **não** mudam: um barraco
+    // melhorado continua sendo aquele barraco.
+    expect(dois!.escala).toBeGreaterThan(um!.escala);
+    expect(dois!.forma).toBe(um!.forma);
+    expect(dois!.cor).toBe(um!.cor);
+  });
+
+  it('só solta fumaça quem está produzindo', () => {
+    const plot = new Plot('p', 'cap_teste', { x: 0, y: 0 }, 16, 16, [
+      new PlacedBuilding('pronta', 'foundry', 0, 0, 0),
+      new PlacedBuilding('obra', 'foundry', 4, 0, 2),
+      new PlacedBuilding('parada', 'foundry', 8, 0, 0, 0, true),
+    ]);
+    const [pronta, obra, parada] = prediosDoTerreno(plot);
+    expect(pronta!.fx).toBe('fogo');
+    expect(obra!.fx).toBeUndefined();
+    expect(parada!.fx).toBeUndefined();
   });
 });

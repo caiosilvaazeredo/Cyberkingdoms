@@ -2,6 +2,7 @@ import { Biome } from '../world/biome';
 import { DeterministicRandom } from '../core/rng';
 import type { WorldGenerator } from '../world/worldGen';
 import { animacao, carregarImagem, desenharQuadro, quadroEm, type Animacao } from './atlas';
+import { CORES_USADAS, FORMAS_USADAS, LARGURA_DA_FORMA } from './estilos';
 import { dentroDoTerreno, type Predio, type RetanguloTerreno } from './predios';
 import { TILE, chaoPara, encostaNaAgua, mascaraDe } from './tileset';
 
@@ -38,7 +39,13 @@ export interface Assets {
   readonly arvores: readonly Animacao[];
   readonly arbustos: readonly Animacao[];
   readonly pedras: readonly HTMLImageElement[];
+  /** Indexado por `"cor/Forma"`. São 8 formas × 5 cores de telhado. */
   readonly construcoes: Readonly<Record<string, HTMLImageElement>>;
+  /** Montes de recurso, ferramentas e afins, indexados pelo nome do enfeite. */
+  readonly enfeites: Readonly<Record<string, HTMLImageElement>>;
+  readonly ovelha: Animacao;
+  readonly fogo: Animacao;
+  readonly fumaca: Animacao;
   readonly peaoParado: Animacao;
   readonly peaoCorrendo: Animacao;
 }
@@ -62,17 +69,39 @@ export async function carregarAssets(): Promise<Assets> {
     img('units/Pawn_Idle.png'), img('units/Pawn_Run.png'),
   ]);
 
-  const nomes = [
-    'House1', 'House2', 'House3', 'Tower', 'Barracks',
-    'Archery', 'Monastery', 'Castle', 'Castle_red', 'House1_yellow',
-  ];
-  const carregadas = await Promise.all(nomes.map((n) => img(`buildings/${n}.png`)));
+  // Toda cor × forma. São 40 arquivos de ~10 kB: carregar tudo de uma vez sai
+  // mais barato que descobrir no meio do jogo que falta um telhado roxo.
+  const chaves: string[] = [];
+  for (const cor of CORES_USADAS) {
+    for (const forma of FORMAS_USADAS) chaves.push(`${cor}/${forma}`);
+  }
+  const carregadas = await Promise.all(chaves.map((k) => img(`buildings/${k}.png`)));
   const construcoes: Record<string, HTMLImageElement> = {};
-  nomes.forEach((n, i) => {
-    construcoes[n] = carregadas[i]!;
+  chaves.forEach((k, i) => {
+    construcoes[k] = carregadas[i]!;
   });
 
+  const nomesEnfeite = [
+    'madeira', 'ouro', 'pedra', 'carne', 'pedregulho', 'arbusto', 'toco',
+    'ferramenta1', 'ferramenta2', 'ferramenta3', 'ferramenta4',
+  ];
+  const enfeitesCarregados = await Promise.all(
+    nomesEnfeite.map((n) => img(`props/${n}.png`)),
+  );
+  const enfeites: Record<string, HTMLImageElement> = {};
+  nomesEnfeite.forEach((n, i) => {
+    enfeites[n] = enfeitesCarregados[i]!;
+  });
+
+  const [ovelha, fogo, fumaca] = await Promise.all([
+    img('props/ovelha.png'), img('fx/fogo.png'), img('fx/fumaca.png'),
+  ]);
+
   return {
+    enfeites,
+    ovelha: animacao(ovelha, 6),
+    fogo: animacao(fogo, 12),
+    fumaca: animacao(fumaca, 10),
     chao,
     agua,
     // A espuma é a única animação do terreno, e é lenta de propósito: o guia
@@ -318,13 +347,44 @@ export function criarMundo2D(options: {
     decoracoesDesenhadas = desenhos.length;
 
     // --- camada 5: construções e o peão ------------------------------------
+    //
+    // A posição do peão é lida antes das construções porque o rótulo depende
+    // dela: só tem nome o prédio que está perto de quem joga.
+    const jogador = options.jogador();
+
+    // Só o prédio mais próximo do peão mostra o nome. Um terreno cheio tem
+    // doze construções encostadas, e doze rótulos ao mesmo tempo viram uma
+    // mancha de texto por cima justamente da arte que os telhados acabaram de
+    // diferenciar. Obra é exceção: o prazo interessa mesmo de longe.
+    let maisPerto: Predio | null = null;
+    let menorDistancia = Infinity;
     for (const p of predios) {
-      const sprite = assets.construcoes[p.sprite];
+      const d = Math.hypot(
+        jogador.x - (p.x + p.tiles / 2),
+        jogador.y - (p.y + p.tilesAltura / 2),
+      );
+      if (d < menorDistancia) {
+        menorDistancia = d;
+        maisPerto = p;
+      }
+    }
+    for (const p of predios) {
+      const sprite = assets.construcoes[`${p.cor}/${p.forma}`];
       if (!sprite) continue;
       // O prédio é centrado na **pegada inteira**, não no primeiro tile: uma
       // construção 2×2 desenhada a partir do canto fica meio tile fora do
       // próprio terreno, e o desencontro aparece justamente na divisa.
-      const largura2 = p.tiles * TILE * escala;
+      //
+      // A largura sai da **forma**, e não da pegada: esticar um sprite de duas
+      // colunas para caber num tile achata o desenho e o pixel deixa de ser
+      // quadrado. O prédio ocupa a largura nativa da forma, no máximo o que a
+      // pegada permitir mais um tile de transbordo — que é como esta arte já
+      // trata copa de árvore e telhado.
+      const larguraEmTiles = Math.min(
+        LARGURA_DA_FORMA[p.forma],
+        Math.max(p.tiles, 1.3),
+      ) * p.escala;
+      const largura2 = larguraEmTiles * TILE * escala;
       const altura2 = (sprite.height / sprite.width) * largura2;
       const px = paraTelaX(p.x) + (p.tiles * tilePx) / 2;
       const py = paraTelaY(p.y) + p.tilesAltura * tilePx;
@@ -333,8 +393,10 @@ export function criarMundo2D(options: {
         y: p.y + p.tilesAltura,
         desenhar: () => {
           // A sombra vem antes e é a peça do pacote, deslocada um tile para
-          // baixo como o guia manda: é ela que planta o prédio no chão.
-          const s = TILE * 2 * escala;
+          // baixo como o guia manda: é ela que planta o prédio no chão. Ela
+          // acompanha o porte: fixa em dois tiles, sumia debaixo do quartel e
+          // sobrava debaixo do barraco.
+          const s = largura2 * 1.05;
           ctx.globalAlpha = 0.5;
           ctx.drawImage(
             assets.sombra,
@@ -343,6 +405,27 @@ export function criarMundo2D(options: {
             Math.ceil(s),
             Math.ceil(s),
           );
+
+          // O anexo vem **antes** do principal: encostado à esquerda e um
+          // pouco atrás, ele fica parcialmente coberto, que é como um conjunto
+          // de construções se lê numa vista de cima. Desenhado depois, ele
+          // passaria por cima da casa grande e o conjunto viraria colagem.
+          // Mesma cor de telhado: é o mesmo dono.
+          if (p.anexo) {
+            const sa = assets.construcoes[`${p.cor}/${p.anexo}`];
+            if (sa) {
+              const la = largura2 * 0.6;
+              const ha = (sa.height / sa.width) * la;
+              ctx.globalAlpha = emObra ? 0.45 : 1;
+              ctx.drawImage(
+                sa,
+                Math.round(px - largura2 * 0.66),
+                Math.round(py - ha - tilePx * 0.18),
+                Math.ceil(la), Math.ceil(ha),
+              );
+            }
+          }
+
           // Obra aparece fantasma. O prédio já ocupa o espaço — a regra do
           // jogo diz que ocupa — mas ainda não produz, e a tela precisa dizer
           // isso sem que ninguém abra ficha nenhuma. Parada é o inverso: está
@@ -359,7 +442,53 @@ export function criarMundo2D(options: {
           ctx.filter = 'none';
           ctx.globalAlpha = 1;
 
+          // --- composição: o que a construção faz, espalhado ao pé dela -----
+          //
+          // É esta camada que separa cinco oficinas com o mesmo telhado. A
+          // forma dá o porte, a cor dá a família, e o enfeite dá o ofício:
+          // pilha de madeira, monte de minério, ferramenta caída, ovelha.
+          // Obra não ganha enfeite: o pátio ainda não existe.
+          if (!emObra) {
+            const passo = tilePx * 0.72;
+            const base = px - ((p.enfeites.length - 1) * passo) / 2;
+            p.enfeites.forEach((nome, i) => {
+              const ex = base + i * passo;
+              const ey = py + tilePx * 0.18;
+              if (nome === 'ovelha') {
+                desenharQuadro(
+                  ctx, assets.ovelha, quadroEm(assets.ovelha, tempo, i * 3),
+                  ex, ey, escala * 0.5,
+                );
+                return;
+              }
+              const peca = assets.enfeites[nome];
+              if (!peca) return;
+              const lado = TILE * escala * 0.8;
+              ctx.drawImage(
+                peca,
+                Math.round(ex - lado / 2), Math.round(ey - lado),
+                Math.ceil(lado), Math.ceil(lado),
+              );
+            });
+
+            // Fogo e fumaça saem do topo, e só de quem está produzindo. É a
+            // leitura de "trabalhando" mais barata que existe numa vista de
+            // cima: não custa texto nem ícone, e se lê de longe.
+            if (p.fx) {
+              const anim = p.fx === 'fogo' ? assets.fogo : assets.fumaca;
+              const deslocamento = ((p.x * 5 + p.y * 11) % anim.quadros + anim.quadros) %
+                anim.quadros;
+              ctx.globalAlpha = p.fx === 'fumaca' ? 0.65 : 1;
+              desenharQuadro(
+                ctx, anim, quadroEm(anim, tempo, deslocamento),
+                px, Math.round(py - altura2 + tilePx * 0.5), escala * 0.7,
+              );
+              ctx.globalAlpha = 1;
+            }
+          }
+
           if (!p.rotulo) return;
+          if (p !== maisPerto && !emObra) return;
           const texto = emObra ? `${p.rotulo} · ${p.obraDias} d` : p.rotulo;
           ctx.font = `${Math.round(11 * escala)}px ui-monospace, Menlo, monospace`;
           ctx.textAlign = 'center';
@@ -374,7 +503,6 @@ export function criarMundo2D(options: {
       });
     }
 
-    const jogador = options.jogador();
     const anim = jogador.andando ? assets.peaoCorrendo : assets.peaoParado;
     desenhos.push({
       y: jogador.y,

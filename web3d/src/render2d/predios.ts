@@ -1,47 +1,23 @@
 import type { Plot, PlacedBuilding } from '../building/plot';
-import type { BuildingCategory } from '../building/buildingType';
+import { estiloDe, type Cor, type Enfeite, type Forma, type Fx } from './estilos';
 
 /**
- * A ponte entre o catálogo do jogo e os sprites do pacote.
+ * O terreno do jogador, traduzido para o que a tela desenha.
  *
- * ## Por que a ponte é por categoria
- *
- * O catálogo tem 41 construções; o pacote gratuito tem dez prédios. Mapear um a
- * um daria dez acertos e trinta e um buracos. Mapear por **categoria** dá uma
- * cidade legível: a silhueta não diz *qual* construção é, mas diz o que ela
- * faz — casa, oficina, torre, templo — e o rótulo diz o resto.
- *
- * É uma limitação de acervo, não de desenho: quando existir arte própria, só
- * esta tabela muda.
- *
- * ## Por que o nível escolhe dentro da categoria
- *
- * Quando a categoria tem mais de um sprite, o nível da construção decide qual.
- * Evoluir passa a ter efeito visível no terreno, que é o retorno que faltava:
- * antes, subir de nível só mexia num número na ficha.
+ * A identidade de cada construção — forma, cor de telhado e enfeites — mora em
+ * `estilos.ts`. Aqui fica só a conversão: célula do terreno vira tile do mundo,
+ * estado da regra vira estado de desenho.
  */
-
-export const SPRITE_POR_CATEGORIA: Record<BuildingCategory, readonly string[]> = {
-  housing: ['House1', 'House2', 'House3'],
-  extraction: ['House3', 'Archery'],
-  refining: ['Barracks'],
-  manufacturing: ['Archery', 'Barracks'],
-  commerce: ['House1_yellow'],
-  infrastructure: ['Tower'],
-  defense: ['Tower', 'Castle_red'],
-  civic: ['Monastery', 'Castle'],
-};
-
-/** O sprite do pacote que representa uma construção do catálogo. */
-export function spriteDoPredio(categoria: BuildingCategory, nivel = 1): string {
-  const opcoes = SPRITE_POR_CATEGORIA[categoria] ?? SPRITE_POR_CATEGORIA.housing;
-  const i = Math.min(Math.max(nivel, 1), opcoes.length) - 1;
-  return opcoes[i]!;
-}
 
 /** Uma construção posicionada, em coordenadas de tile do mundo. */
 export interface Predio {
-  readonly sprite: string;
+  readonly forma: Forma;
+  readonly cor: Cor;
+  /** Segunda construção, menor, encostada na principal. Ver `estilos.ts`. */
+  readonly anexo?: Forma;
+  readonly enfeites: readonly Enfeite[];
+  /** Fogo ou fumaça. Só sai da chaminé quando a construção está produzindo. */
+  readonly fx?: Fx;
   readonly x: number;
   readonly y: number;
   /** Quantos tiles de largura o prédio ocupa. */
@@ -59,6 +35,15 @@ export interface Predio {
   readonly obraDias?: number;
   /** Construção pronta e parada por falta de gente ou de insumo. */
   readonly parada?: boolean;
+  /**
+   * Multiplicador de tamanho pelo nível.
+   *
+   * A identidade do prédio é forma + cor, e ela **não** muda ao evoluir: um
+   * armazém melhorado continua sendo aquele armazém. O que muda é o porte, e
+   * um pouco basta — 12 % por nível se nota lado a lado e não atropela o
+   * vizinho de terreno.
+   */
+  readonly escala: number;
 }
 
 /** O retângulo do terreno, em tiles do mundo. */
@@ -111,15 +96,25 @@ export function prediosDoTerreno(plot: Plot): Predio[] {
   return plot.buildings.map((b: PlacedBuilding) => {
     const def = b.def;
     const tile = plot.worldTileFor(b.x, b.y);
+    const estilo = estiloDe(b.type, def.category);
+    const emObra = !b.isReady;
+    const parada = b.isReady && b.idle;
     return {
-      sprite: spriteDoPredio(def.category, b.level),
+      forma: estilo.forma,
+      cor: estilo.cor,
+      anexo: estilo.anexo,
+      enfeites: estilo.enfeites,
+      // Chaminé apagada é a forma mais barata de dizer "esta oficina está
+      // parada" — e obra nenhuma solta fumaça antes de existir.
+      fx: emObra || parada ? undefined : estilo.fx,
       x: tile.x,
       y: tile.y,
       tiles: def.width,
       tilesAltura: def.height,
       rotulo: b.level > 1 ? b.labelWithLevel : b.displayName,
-      obraDias: b.isReady ? 0 : b.daysRemaining,
-      parada: b.isReady && b.idle,
+      obraDias: emObra ? b.daysRemaining : 0,
+      parada,
+      escala: 1 + (b.level - 1) * 0.12,
     };
   });
 }
