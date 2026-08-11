@@ -1,0 +1,52 @@
+# Publicação no Render.
+#
+# O jogo é um site estático: todo o estado vive no `localStorage` do navegador e
+# não há servidor por trás. Por isso o tipo é `static`, que no Render é grátis e
+# não hiberna — um serviço web no plano gratuito dorme depois de quinze minutos
+# sem acesso e leva quase um minuto para acordar, o que num jogo é a diferença
+# entre abrir e desistir.
+#
+# ## Como usar
+#
+# No painel do Render: New → Blueprint → aponte para este repositório. Ele lê
+# este arquivo e cria o serviço com tudo já configurado. Dá para fazer pela
+# interface também (New → Static Site), preenchendo os mesmos campos à mão.
+services:
+  - type: web
+    runtime: static
+    name: cyberkingdoms
+    # O repositório tem o cliente Flutter na raiz; o site é o `web3d`.
+    rootDir: web3d
+    # `--include=dev` não é decorativo: o Render define `NODE_ENV=production`, e
+    # com isso o `npm ci` pularia as dependências de desenvolvimento — entre
+    # elas o TypeScript e o próprio Vite, que são exatamente o que o build usa.
+    # Sem essa opção o deploy falha com "vite: not found".
+    buildCommand: npm ci --include=dev && npm run build
+    staticPublishPath: dist
+
+    routes:
+      # O jogo tem uma página só, mas o roteador de telas usa `history.pushState`
+      # para o botão "voltar" do Android funcionar. Um recarregamento numa URL
+      # empilhada bateria em 404 sem esta regra. Arquivo que existe continua
+      # sendo servido normalmente — `preview.html` e os modelos não passam por
+      # aqui.
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+    headers:
+      # Os nomes em `assets/` levam hash do conteúdo: mudou o código, mudou o
+      # nome. Então podem ser guardados para sempre, e uma publicação nova nunca
+      # entrega arquivo velho.
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      # Modelos e texturas não têm hash no nome. Uma hora de cache é o meio
+      # termo: economiza a maior parte dos downloads e ainda deixa uma troca de
+      # arte aparecer no mesmo dia.
+      - path: /models/*
+        name: Cache-Control
+        value: public, max-age=3600
+      - path: /art3d/*
+        name: Cache-Control
+        value: public, max-age=3600
