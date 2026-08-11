@@ -31,17 +31,17 @@ export const allOffices: readonly PoliticalOfficeDef[] = [
   },
   {
     id: 'districtAdmin',
-    label: 'Administrador de Distrito',
-    description: 'Gere um distrito da capital.',
+    label: 'Bailio',
+    description: 'Gere um bairro da capital.',
   },
   {
     id: 'interimGovernor',
-    label: 'Governador Provisório',
+    label: 'Regente',
     description: 'Assume após um golpe, até a próxima eleição.',
   },
   {
     id: 'militia',
-    label: 'Milícia',
+    label: 'Guarda',
     description: 'Braço armado do governo. Reprime rebeliões.',
   },
 ];

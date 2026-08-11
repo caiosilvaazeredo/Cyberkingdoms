@@ -381,16 +381,16 @@ class WorldGenerator {
   // ===========================================================================
 
   static const _cityPrefix = [
-    'Neo', 'Novo', 'Alto', 'Porto', 'Vale', 'Setor', 'Distrito',
-    'Cidade', 'Colônia', 'Zona',
+    'Alto', 'Novo', 'Porto', 'Vale', 'Vila', 'Burgo', 'Forte',
+    'Cidade', 'Colina', 'Ponte',
   ];
   static const _cityRoot = [
-    'Kaji', 'Ventra', 'Solaris', 'Mirim', 'Orixá', 'Tanaka', 'Corvo',
-    'Ferrolho', 'Aurora', 'Kobalt', 'Ipê', 'Ronin', 'Serpente', 'Vidro',
-    'Cinza', 'Âmbar', 'Nagai', 'Pantanal', 'Krom', 'Sabiá',
+    'Corvo', 'Ferrolho', 'Âmbar', 'Serpente', 'Cinza', 'Sabiá', 'Ipê',
+    'Aurora', 'Pantanal', 'Falcão', 'Espinho', 'Carvalho', 'Pedra', 'Ravena',
+    'Junco', 'Lobo', 'Bruma', 'Sino', 'Torga', 'Veiga',
   ];
   static const _citySuffix = [
-    '', '', '', ' Prime', ' Norte', ' Sul', '-9', '-Alfa', ' Baixa', ' Velha',
+    '', '', '', ' Maior', ' Norte', ' Sul', ' de Cima', ' do Vau', ' Baixa', ' Velha',
   ];
 
   String _cityName(DeterministicRandom rng, {required bool isCapital}) {

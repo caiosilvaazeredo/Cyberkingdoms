@@ -66,7 +66,9 @@ describe('Qualificação', () => {
     const quimico = allProfessions.find((p) => p.id === 'quimico')!;
     const r = canPractise(quimico, { certificates: nenhum, level: 'elite' });
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.reason).toContain('Química Aplicada');
+    // O nome vem do catálogo, e não de uma cópia aqui: uma passada de nomes
+    // não deveria quebrar um teste sobre qualificação.
+    if (!r.ok) expect(r.reason).toContain(certificateDef('chemistry').label);
   });
 
   it('certificado sem o nível também é recusado', () => {

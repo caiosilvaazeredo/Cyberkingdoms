@@ -91,7 +91,7 @@ const categoryLabels: Record<string, string> = {
 export function objectiveLabel(o: QuestObjective): string {
   switch (o.kind) {
     case 'haveCredits':
-      return `Acumular ${o.amount} créditos`;
+      return `Acumular ${o.amount} coroas`;
     case 'haveItem':
       return `Ter ${o.quantity} ${itemDef(o.item).name}`;
     case 'haveBuilding':

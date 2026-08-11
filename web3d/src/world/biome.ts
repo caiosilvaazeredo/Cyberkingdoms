@@ -55,7 +55,7 @@ export interface BiomeDef {
 const defs: Record<Biome, BiomeDef> = {
   [Biome.neonCore]: {
     id: Biome.neonCore,
-    label: 'Núcleo Neon',
+    label: 'Cidadela',
     travelCost: 1.0,
     soil: 0x3a4055,
     grassBase: 0x2f5c4a,
@@ -68,7 +68,7 @@ const defs: Record<Biome, BiomeDef> = {
   },
   [Biome.sprawl]: {
     id: Biome.sprawl,
-    label: 'Cortiço',
+    label: 'Arrabalde',
     travelCost: 1.1,
     soil: 0x4b4152,
     grassBase: 0x3c6b48,
@@ -81,7 +81,7 @@ const defs: Record<Biome, BiomeDef> = {
   },
   [Biome.scrapyard]: {
     id: Biome.scrapyard,
-    label: 'Lixão',
+    label: 'Pedreira',
     travelCost: 1.4,
     soil: 0x5f5340,
     grassBase: 0x5a5f33,
@@ -94,7 +94,7 @@ const defs: Record<Biome, BiomeDef> = {
   },
   [Biome.oilFields]: {
     id: Biome.oilFields,
-    label: 'Campo de Petróleo',
+    label: 'Veio de Breu',
     travelCost: 1.3,
     soil: 0x3d332b,
     grassBase: 0x4c4728,
@@ -107,7 +107,7 @@ const defs: Record<Biome, BiomeDef> = {
   },
   [Biome.rareEarthMine]: {
     id: Biome.rareEarthMine,
-    label: 'Mina de Terras Raras',
+    label: 'Veio de Prata',
     travelCost: 1.6,
     soil: 0x51455e,
     grassBase: 0x445356,
@@ -120,7 +120,7 @@ const defs: Record<Biome, BiomeDef> = {
   },
   [Biome.bioFarm]: {
     id: Biome.bioFarm,
-    label: 'Bio-Fazenda',
+    label: 'Lavoura',
     travelCost: 1.0,
     soil: 0x54462f,
     grassBase: 0x3f7f45,
@@ -133,7 +133,7 @@ const defs: Record<Biome, BiomeDef> = {
   },
   [Biome.reclaimedForest]: {
     id: Biome.reclaimedForest,
-    label: 'Mata Reflorestada',
+    label: 'Floresta',
     travelCost: 1.5,
     soil: 0x453f2a,
     grassBase: 0x2c6f4c,
@@ -146,7 +146,7 @@ const defs: Record<Biome, BiomeDef> = {
   },
   [Biome.toxicMarsh]: {
     id: Biome.toxicMarsh,
-    label: 'Pântano Tóxico',
+    label: 'Charco',
     travelCost: 2.0,
     soil: 0x3a4c46,
     grassBase: 0x2e6f66,
@@ -159,7 +159,7 @@ const defs: Record<Biome, BiomeDef> = {
   },
   [Biome.wasteland]: {
     id: Biome.wasteland,
-    label: 'Terra Devastada',
+    label: 'Ermo',
     travelCost: 1.7,
     soil: 0x6a5c4e,
     grassBase: 0x6b6244,
@@ -185,7 +185,7 @@ const defs: Record<Biome, BiomeDef> = {
   },
   [Biome.deadWater]: {
     id: Biome.deadWater,
-    label: 'Água Morta',
+    label: 'Água Parada',
     travelCost: 999,
     soil: 0x1b3a56,
     grassBase: 0x1e4c62,

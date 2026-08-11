@@ -11,7 +11,7 @@ import '../economy/item.dart';
 enum Biome {
   /// Núcleo urbano iluminado. Sem extração — é onde ficam mercado e política.
   neonCore(
-    label: 'Núcleo Neon',
+    label: 'Cidadela',
     primary: Color(0xFF1B1F3A),
     accent: Color(0xFF00E5FF),
     travelCost: 1.0,
@@ -20,7 +20,7 @@ enum Biome {
 
   /// Cinturão de cortiços em volta das capitais. Mão de obra barata.
   sprawl(
-    label: 'Cortiço',
+    label: 'Arrabalde',
     primary: Color(0xFF241C2E),
     accent: Color(0xFFFF2D95),
     travelCost: 1.1,
@@ -29,7 +29,7 @@ enum Biome {
 
   /// Lixão. Fonte principal de sucata, e o trabalho público mais pesado.
   scrapyard(
-    label: 'Lixão',
+    label: 'Pedreira',
     primary: Color(0xFF2E2A1F),
     accent: Color(0xFFFFB300),
     travelCost: 1.4,
@@ -38,7 +38,7 @@ enum Biome {
 
   /// Campos de petróleo. Alto retorno, alto consumo de sede.
   oilFields(
-    label: 'Campo de Petróleo',
+    label: 'Veio de Breu',
     primary: Color(0xFF1A1614),
     accent: Color(0xFFFF6D00),
     travelCost: 1.3,
@@ -47,7 +47,7 @@ enum Biome {
 
   /// Mina de terras raras. O recurso mais escasso e mais disputado.
   rareEarthMine(
-    label: 'Mina de Terras Raras',
+    label: 'Veio de Prata',
     primary: Color(0xFF231A2E),
     accent: Color(0xFFB388FF),
     travelCost: 1.6,
@@ -56,7 +56,7 @@ enum Biome {
 
   /// Fazendas verticais e hidropônicos. Comida do servidor.
   bioFarm(
-    label: 'Bio-Fazenda',
+    label: 'Lavoura',
     primary: Color(0xFF13291F),
     accent: Color(0xFF00E676),
     travelCost: 1.0,
@@ -65,7 +65,7 @@ enum Biome {
 
   /// Mata reflorestada por corporações. Biomassa e cobertura para emboscadas.
   reclaimedForest(
-    label: 'Mata Reflorestada',
+    label: 'Floresta',
     primary: Color(0xFF14261C),
     accent: Color(0xFF69F0AE),
     travelCost: 1.5,
@@ -74,7 +74,7 @@ enum Biome {
 
   /// Pântano contaminado. Travessia cara, mas esconde contrabando.
   toxicMarsh(
-    label: 'Pântano Tóxico',
+    label: 'Charco',
     primary: Color(0xFF1B2A28),
     accent: Color(0xFF00BFA5),
     travelCost: 2.0,
@@ -83,7 +83,7 @@ enum Biome {
 
   /// Deserto de concreto. O vazio entre regiões.
   wasteland(
-    label: 'Terra Devastada',
+    label: 'Ermo',
     primary: Color(0xFF262024),
     accent: Color(0xFF8D6E63),
     travelCost: 1.7,
@@ -101,7 +101,7 @@ enum Biome {
 
   /// Água morta. Intransponível a pé.
   deadWater(
-    label: 'Água Morta',
+    label: 'Água Parada',
     primary: Color(0xFF0E1A2B),
     accent: Color(0xFF2979FF),
     travelCost: 999.0,

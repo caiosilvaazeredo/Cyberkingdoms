@@ -30,25 +30,25 @@ export interface CityVocationDef {
 export const allVocations: readonly CityVocationDef[] = [
   {
     id: 'petrochemical',
-    label: 'Petroquímica',
+    label: 'Poços de Breu',
     produces: ['oil', 'polymer', 'catalyst'],
     demands: ['culturedMeat', 'chip', 'water'],
   },
   {
     id: 'foundry',
-    label: 'Metalúrgica',
+    label: 'Ferrarias',
     produces: ['scrap', 'circuitBoard'],
     demands: ['biomass', 'rareEarth', 'rationPack'],
   },
   {
     id: 'agroBio',
-    label: 'Agro-Bio',
+    label: 'Celeiro do Reino',
     produces: ['biomass', 'culturedMeat', 'rationPack', 'water'],
     demands: ['polymer', 'chip', 'scrap'],
   },
   {
     id: 'techHub',
-    label: 'Tecnópole',
+    label: 'Prataria',
     produces: ['chip', 'drone', 'metabolicImplant'],
     demands: ['rareEarth', 'oil', 'culturedMeat'],
   },

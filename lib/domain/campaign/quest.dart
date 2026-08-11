@@ -25,13 +25,13 @@ sealed class QuestObjective {
   }
 }
 
-/// Ter uma quantidade de créditos.
+/// Ter uma quantidade de coroas.
 class HaveCredits extends QuestObjective {
   const HaveCredits(this.amount);
   final int amount;
 
   @override
-  String get label => 'Acumular $amount créditos';
+  String get label => 'Acumular $amount coroas';
 
   @override
   (int, int) progress(Campaign campaign) =>

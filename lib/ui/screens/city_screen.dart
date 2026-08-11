@@ -59,7 +59,7 @@ class CityScreen extends ConsumerWidget {
                           '${_daysToElection(campaign.day)} dia(s)',
                 ),
                 _KeyValue(
-                  'Imposto (Mercado Central)',
+                  'Imposto (Feira Central)',
                   '${(government.taxRate * 100).toStringAsFixed(1)}%',
                 ),
                 _KeyValue('Salário público', '${government.publicWage}¢/dia'),

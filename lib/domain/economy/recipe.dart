@@ -52,12 +52,12 @@ class Recipe {
 /// Onde uma receita pode ser executada.
 enum CraftStation {
   extractionSite('Jazida', ProductionTier.extraction),
-  refinery('Refinaria', ProductionTier.refining),
-  textileWorkshop('Oficina de Tecidos', ProductionTier.refining),
-  hardwareWorkshop('Oficina de Hardware', ProductionTier.manufacturing),
-  laboratory('Laboratório', ProductionTier.manufacturing),
-  gunsmith('Armeiro', ProductionTier.manufacturing),
-  kitchen('Cozinha Industrial', ProductionTier.manufacturing);
+  refinery('Casa de Ofícios', ProductionTier.refining),
+  textileWorkshop('Tecelagem', ProductionTier.refining),
+  hardwareWorkshop('Oficina do Ferreiro', ProductionTier.manufacturing),
+  laboratory('Botica', ProductionTier.manufacturing),
+  gunsmith('Besteiro', ProductionTier.manufacturing),
+  kitchen('Cozinha da Vila', ProductionTier.manufacturing);
 
   const CraftStation(this.label, this.tier);
   final String label;

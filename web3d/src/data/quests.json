@@ -178,7 +178,7 @@
   {
     "id": "q1_refino",
     "stage": "farmer",
-    "title": "Camada Dois",
+    "title": "Segunda Camada",
     "briefing": "Matéria-prima bruta vale pouco. O dinheiro está em transformar: petróleo vira polímero, biomassa vira tecido, sucata vira placa. Monte a sua primeira oficina.",
     "requires": [
       "q1_fazenda"
@@ -341,7 +341,7 @@
   {
     "id": "q3_implante",
     "stage": "elite",
-    "title": "Carne Obsoleta",
+    "title": "Fé de Peregrino",
     "briefing": "Não existe treinamento de atributos neste mundo. A única evolução real do corpo vem da clínica: um implante metabólico corta 30% de tudo que você consome, para sempre.",
     "requires": [
       "q3_elite"

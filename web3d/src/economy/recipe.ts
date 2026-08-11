@@ -88,12 +88,12 @@ export function recipeYield(recipe: Recipe, attributes: AttributeSet): number {
 
 export const craftStationLabels: Record<CraftStation, string> = {
   extractionSite: 'Jazida',
-  refinery: 'Refinaria',
-  textileWorkshop: 'Oficina de Tecidos',
-  hardwareWorkshop: 'Oficina de Hardware',
-  laboratory: 'Laboratório',
-  gunsmith: 'Armeiro',
-  kitchen: 'Cozinha Industrial',
+  refinery: 'Casa de Ofícios',
+  textileWorkshop: 'Tecelagem',
+  hardwareWorkshop: 'Oficina do Ferreiro',
+  laboratory: 'Botica',
+  gunsmith: 'Besteiro',
+  kitchen: 'Cozinha da Vila',
 };
 
 export const craftStationTiers: Record<CraftStation, ProductionTier> = {

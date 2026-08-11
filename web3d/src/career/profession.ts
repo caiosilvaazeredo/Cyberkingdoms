@@ -54,7 +54,7 @@ export interface CertificateDef {
 export const allCertificates: readonly CertificateDef[] = [
   {
     id: 'basic',
-    label: 'Alfabetização Técnica',
+    label: 'Letras e Contas',
     description:
       'Ler um manual, assinar um contrato e não morrer no primeiro turno. ' +
       'É o que separa o catador do trabalhador registrado.',
@@ -65,7 +65,7 @@ export const allCertificates: readonly CertificateDef[] = [
   },
   {
     id: 'agro',
-    label: 'Manejo Agro-Bio',
+    label: 'Ofício do Campo',
     description:
       'Hidroponia, biomassa e bioreatores. A cadeia de comida é a única que ' +
       'ninguém pode deixar de comprar.',
@@ -76,7 +76,7 @@ export const allCertificates: readonly CertificateDef[] = [
   },
   {
     id: 'industrial',
-    label: 'Operação Industrial',
+    label: 'Ofício da Forja',
     description:
       'Prensa, tecelagem e placa de circuito. Sem isto, oficina é só um ' +
       'galpão com ferramenta cara dentro.',
@@ -87,7 +87,7 @@ export const allCertificates: readonly CertificateDef[] = [
   },
   {
     id: 'chemistry',
-    label: 'Química Aplicada',
+    label: 'Ofício da Botica',
     description:
       'Catalisador, refino e o que mais o laboratório aceitar. É a licença ' +
       'que separa o farmacêutico do envenenador.',
@@ -98,7 +98,7 @@ export const allCertificates: readonly CertificateDef[] = [
   },
   {
     id: 'gunsmithing',
-    label: 'Armeiro Licenciado',
+    label: 'Carta de Besteiro',
     description:
       'Montar e manter arma de fogo. A licença é cara porque o governo ' +
       'prefere que ela seja.',
@@ -136,7 +136,7 @@ export interface ProfessionDef {
 export const allProfessions: readonly ProfessionDef[] = [
   {
     id: 'catador',
-    label: 'Catador',
+    label: 'Cavouqueiro',
     description:
       'Sucata do lixão da capital. Não pede nada de ninguém, e é por isso ' +
       'que todo mundo começa aqui.',
@@ -147,7 +147,7 @@ export const allProfessions: readonly ProfessionDef[] = [
   },
   {
     id: 'lavrador',
-    label: 'Lavrador Público',
+    label: 'Lavrador Comunal',
     description: 'Turno no cultivo público. Paga pouco, mas paga todo dia.',
     work: 'publicFarming',
     requires: null,
@@ -156,7 +156,7 @@ export const allProfessions: readonly ProfessionDef[] = [
   },
   {
     id: 'petroleiro',
-    label: 'Petroleiro',
+    label: 'Breeiro',
     description: 'Bomba de óleo. Trabalho sujo, salário melhor.',
     work: 'oil',
     requires: 'basic',
@@ -165,7 +165,7 @@ export const allProfessions: readonly ProfessionDef[] = [
   },
   {
     id: 'mineiro',
-    label: 'Mineiro de Terras Raras',
+    label: 'Mineiro de Prata',
     description:
       'A camada 1 mais disputada do mapa. É daqui que sai o chip, e é por ' +
       'isso que o gargalo da economia começa nesta mina.',
@@ -176,7 +176,7 @@ export const allProfessions: readonly ProfessionDef[] = [
   },
   {
     id: 'hidroponista',
-    label: 'Hidroponista',
+    label: 'Hortelão',
     description: 'Estufa da própria fazenda. Rende mais com Inteligência alta.',
     work: 'hydroponics',
     requires: 'agro',
@@ -185,7 +185,7 @@ export const allProfessions: readonly ProfessionDef[] = [
   },
   {
     id: 'biotecnico',
-    label: 'Biotécnico',
+    label: 'Vaqueiro',
     description: 'Bioreatores: carne cultivada, a base da ração de verdade.',
     work: 'bioreactors',
     requires: 'agro',
@@ -203,7 +203,7 @@ export const allProfessions: readonly ProfessionDef[] = [
   },
   {
     id: 'eletricista',
-    label: 'Eletricista Industrial',
+    label: 'Ferreiro',
     description: 'Placa de circuito — o insumo que trava a linha inteira.',
     work: 'hardware',
     requires: 'industrial',
@@ -212,7 +212,7 @@ export const allProfessions: readonly ProfessionDef[] = [
   },
   {
     id: 'quimico',
-    label: 'Químico',
+    label: 'Boticário',
     description: 'Catalisador. Metade das receitas de refino passa por aqui.',
     work: 'laboratory',
     requires: 'chemistry',
@@ -221,7 +221,7 @@ export const allProfessions: readonly ProfessionDef[] = [
   },
   {
     id: 'armeiro',
-    label: 'Armeiro',
+    label: 'Besteiro',
     description: 'Pistola e rifle. Legal, caro, e sempre com fila.',
     work: 'gunsmith',
     requires: 'gunsmithing',

@@ -127,16 +127,16 @@ function indexRoadTiles(roads: readonly Road[]): Set<number> {
 // ============================================================ geração
 
 const CITY_PREFIX = [
-  'Neo', 'Novo', 'Alto', 'Porto', 'Vale', 'Setor', 'Distrito',
-  'Cidade', 'Colônia', 'Zona',
+  'Alto', 'Novo', 'Porto', 'Vale', 'Vila', 'Burgo', 'Forte',
+  'Cidade', 'Colina', 'Ponte',
 ];
 const CITY_ROOT = [
-  'Kaji', 'Ventra', 'Solaris', 'Mirim', 'Orixá', 'Tanaka', 'Corvo',
-  'Ferrolho', 'Aurora', 'Kobalt', 'Ipê', 'Ronin', 'Serpente', 'Vidro',
-  'Cinza', 'Âmbar', 'Nagai', 'Pantanal', 'Krom', 'Sabiá',
+  'Corvo', 'Ferrolho', 'Âmbar', 'Serpente', 'Cinza', 'Sabiá', 'Ipê',
+  'Aurora', 'Pantanal', 'Falcão', 'Espinho', 'Carvalho', 'Pedra', 'Ravena',
+  'Junco', 'Lobo', 'Bruma', 'Sino', 'Torga', 'Veiga',
 ];
 const CITY_SUFFIX = [
-  '', '', '', ' Prime', ' Norte', ' Sul', '-9', '-Alfa', ' Baixa', ' Velha',
+  '', '', '', ' Maior', ' Norte', ' Sul', ' de Cima', ' do Vau', ' Baixa', ' Velha',
 ];
 
 function cityName(rng: DeterministicRandom, isCapital: boolean): string {

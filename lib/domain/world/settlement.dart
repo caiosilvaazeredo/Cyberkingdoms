@@ -9,22 +9,22 @@ import 'coords.dart';
 /// então o comércio entre regiões deixa de ser opcional.
 enum CityVocation {
   petrochemical(
-    label: 'Petroquímica',
+    label: 'Poços de Breu',
     produces: [ItemId.oil, ItemId.polymer, ItemId.catalyst],
     demands: [ItemId.culturedMeat, ItemId.chip, ItemId.water],
   ),
   foundry(
-    label: 'Metalúrgica',
+    label: 'Ferrarias',
     produces: [ItemId.scrap, ItemId.circuitBoard],
     demands: [ItemId.biomass, ItemId.rareEarth, ItemId.rationPack],
   ),
   agroBio(
-    label: 'Agro-Bio',
+    label: 'Celeiro do Reino',
     produces: [ItemId.biomass, ItemId.culturedMeat, ItemId.rationPack, ItemId.water],
     demands: [ItemId.polymer, ItemId.chip, ItemId.scrap],
   ),
   techHub(
-    label: 'Tecnópole',
+    label: 'Prataria',
     produces: [ItemId.chip, ItemId.drone, ItemId.metabolicImplant],
     demands: [ItemId.rareEarth, ItemId.oil, ItemId.culturedMeat],
   ),

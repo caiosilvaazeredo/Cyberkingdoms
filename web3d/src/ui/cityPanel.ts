@@ -254,7 +254,7 @@ export function createCityPanel(deps: CityPanelDeps): CityPanel {
     p.className = 'cidade-ficha';
     p.innerHTML =
       `<span><strong>Governador:</strong> ${v.governor ?? 'cargo vago — a cidade espera eleição'}</span>` +
-      `<span><strong>Imposto:</strong> ${Math.round(v.taxRate * 100)}% sobre cada venda no Mercado Central</span>` +
+      `<span><strong>Imposto:</strong> ${Math.round(v.taxRate * 100)}% sobre cada venda na Feira Central</span>` +
       `<span><strong>Salário público:</strong> ${cr(v.publicWage)} por jornada de 2 h</span>` +
       `<span><strong>Caixa:</strong> ${cr(v.treasury)}</span>` +
       `<span><strong>Vagas públicas:</strong> ${v.publicJobSlots}</span>`;

@@ -385,7 +385,7 @@ export class Plot {
       }
     }
     if (options.credits !== undefined && options.credits < def.creditCost) {
-      return { valid: false, reason: 'Créditos insuficientes.' };
+      return { valid: false, reason: 'Coroas insuficientes.' };
     }
     if (options.inventory) {
       for (const [id, qty] of Object.entries(def.materialCost)) {
@@ -464,7 +464,7 @@ export class Plot {
 
     const def = building.def;
     const cost = upgradeCreditCost(def, building.level);
-    if (options.credits < cost) return { ok: false, reason: 'Créditos insuficientes.' };
+    if (options.credits < cost) return { ok: false, reason: 'Coroas insuficientes.' };
 
     const materials = upgradeMaterialCost(def, building.level);
     for (const [id, qty] of Object.entries(materials)) {
@@ -498,7 +498,7 @@ export class Plot {
       return { ok: false, reason: `${mod.label} não serve nesta construção.` };
     }
     if (options.credits < mod.creditCost) {
-      return { ok: false, reason: 'Créditos insuficientes.' };
+      return { ok: false, reason: 'Coroas insuficientes.' };
     }
     for (const [id, qty] of Object.entries(mod.materialCost)) {
       if (!options.inventory.has(id, qty)) {

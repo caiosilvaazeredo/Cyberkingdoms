@@ -1,7 +1,7 @@
 [
   {
     "id": "extraArm",
-    "label": "Braço Industrial",
+    "label": "Fole Extra",
     "description": "+30% de produção. Consome mais manutenção.",
     "creditCost": 1800,
     "materialCost": {
@@ -27,7 +27,7 @@
   },
   {
     "id": "storageAnnex",
-    "label": "Anexo de Estoque",
+    "label": "Paiol",
     "description": "+120 de capacidade de armazenamento.",
     "creditCost": 1200,
     "materialCost": {
@@ -55,7 +55,7 @@
   },
   {
     "id": "dedicatedGenerator",
-    "label": "Gerador Dedicado",
+    "label": "Roda d'Água",
     "description": "Corta 60% da manutenção — a construção se paga sozinha.",
     "creditCost": 3200,
     "materialCost": {
@@ -82,7 +82,7 @@
   },
   {
     "id": "automationCore",
-    "label": "Núcleo de Automação",
+    "label": "Engenho de Roldanas",
     "description": "A construção rende cheio mesmo sem funcionários.",
     "creditCost": 6500,
     "materialCost": {
@@ -108,7 +108,7 @@
   },
   {
     "id": "securityGrid",
-    "label": "Grade de Segurança",
+    "label": "Fosso",
     "description": "+18 de defesa do terreno.",
     "creditCost": 2200,
     "materialCost": {
@@ -135,7 +135,7 @@
   },
   {
     "id": "neonSign",
-    "label": "Letreiro Neon",
+    "label": "Brasão Pintado",
     "description": "+2 de Status. Aparência é poder político.",
     "creditCost": 900,
     "materialCost": {
@@ -161,7 +161,7 @@
   },
   {
     "id": "filtrationUnit",
-    "label": "Unidade de Filtragem",
+    "label": "Filtro de Areia",
     "description": "-10% de consumo de Sede enquanto você estiver no terreno.",
     "creditCost": 2600,
     "materialCost": {
@@ -187,7 +187,7 @@
   },
   {
     "id": "insulationLayer",
-    "label": "Camada Térmica",
+    "label": "Forro de Palha",
     "description": "-10% de consumo de Fome enquanto você estiver no terreno.",
     "creditCost": 2400,
     "materialCost": {

@@ -23,10 +23,10 @@ class Upkeep {
 
 /// Trabalhos em Serviços Públicos. Vagas limitadas, controlados pelo governo.
 enum PublicWork {
-  publicFarming('Cultivo Público', Upkeep(4, 5)),
-  dump('Lixão', Upkeep(8, 10)),
-  oil('Petróleo', Upkeep(9, 12)),
-  rareEarth('Terras Raras', Upkeep(10, 12));
+  publicFarming('Lavoura Comunal', Upkeep(4, 5)),
+  dump('Pedreira', Upkeep(8, 10)),
+  oil('Poço de Breu', Upkeep(9, 12)),
+  rareEarth('Veio de Prata', Upkeep(10, 12));
 
   const PublicWork(this.label, this.upkeep);
   final String label;
@@ -35,9 +35,9 @@ enum PublicWork {
 
 /// Fazendas de jogador. Sem limite de vagas, produção privada.
 enum PlayerFarmWork {
-  hydroponics('Hidropônicos', Upkeep(5, 6)),
-  biomass('Biomassa', Upkeep(6, 8)),
-  bioreactors('Biorreatores', Upkeep(7, 8));
+  hydroponics('Hortas', Upkeep(5, 6)),
+  biomass('Cevada', Upkeep(6, 8)),
+  bioreactors('Currais', Upkeep(7, 8));
 
   const PlayerFarmWork(this.label, this.upkeep);
   final String label;
@@ -47,8 +47,8 @@ enum PlayerFarmWork {
 /// Oficinas — a Camada 2/3 da cadeia produtiva.
 enum WorkshopWork {
   textiles('Tecidos', Upkeep(4, 4)),
-  hardware('Hardware', Upkeep(5, 5)),
-  laboratory('Laboratório', Upkeep(6, 6)),
+  hardware('Ferragem', Upkeep(5, 5)),
+  laboratory('Botica', Upkeep(6, 6)),
   gunsmith('Armeiro', Upkeep(7, 7));
 
   const WorkshopWork(this.label, this.upkeep);

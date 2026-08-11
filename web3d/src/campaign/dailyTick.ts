@@ -241,7 +241,7 @@ function runPlot(campaign: Campaign, events: string[]): PlotTickResult {
   character.credits -= result.upkeepPaid;
 
   if (result.upkeepPaid > 0) {
-    events.push(`Manutenção do terreno: -${result.upkeepPaid} créditos.`);
+    events.push(`Manutenção do terreno: -${result.upkeepPaid} coroas.`);
   }
   for (const building of result.completed) {
     events.push(`Obra concluída: ${building.def.name}.`);
@@ -357,7 +357,7 @@ function payWages(
   if (pago > 0) {
     campaign.character.credits += pago;
     const nome = profissao ? profissao.label : 'Serviço público';
-    events.push(`${nome}: +${pago} créditos de salário.`);
+    events.push(`${nome}: +${pago} coroas de salário.`);
   } else {
     events.push('O governo não tinha caixa para pagar o salário.');
   }
@@ -452,7 +452,7 @@ function rollRoadEncounter(
     const premio = raiderRng.range(60, 320);
     character.credits += premio;
     events.push(
-      `Emboscada na estrada: você venceu em ${report.rounds} rodadas. +${premio} créditos.`,
+      `Emboscada na estrada: você venceu em ${report.rounds} rodadas. +${premio} coroas.`,
     );
   } else {
     const loot = rollLoot(character.inventory, mix(campaign.seed, campaign.day * 17));
@@ -465,7 +465,7 @@ function rollRoadEncounter(
     const tipos = Object.keys(loot).length;
     events.push(
       `Emboscada na estrada: você perdeu em ${report.rounds} rodadas. ` +
-        `-${perdidos} créditos, -${report.statusLost} Status` +
+        `-${perdidos} coroas, -${report.statusLost} Status` +
         (tipos === 0 ? '' : `, ${tipos} tipo(s) de item saqueado(s)`) +
         '.',
     );

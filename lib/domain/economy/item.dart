@@ -161,7 +161,7 @@ abstract final class ItemCatalog {
     // ============ Camada 1 — Extração ============
     ItemId.oil: ItemDef(
       id: ItemId.oil,
-      name: 'Petróleo Bruto',
+      name: 'Breu',
       tier: ProductionTier.extraction,
       category: ItemCategory.rawMaterial,
       baseValue: 18,
@@ -170,7 +170,7 @@ abstract final class ItemCatalog {
     ),
     ItemId.scrap: ItemDef(
       id: ItemId.scrap,
-      name: 'Sucata',
+      name: 'Minério de Ferro',
       tier: ProductionTier.extraction,
       category: ItemCategory.rawMaterial,
       baseValue: 8,
@@ -179,7 +179,7 @@ abstract final class ItemCatalog {
     ),
     ItemId.rareEarth: ItemDef(
       id: ItemId.rareEarth,
-      name: 'Terras Raras',
+      name: 'Prata Bruta',
       tier: ProductionTier.extraction,
       category: ItemCategory.rawMaterial,
       baseValue: 45,
@@ -188,7 +188,7 @@ abstract final class ItemCatalog {
     ),
     ItemId.biomass: ItemDef(
       id: ItemId.biomass,
-      name: 'Biomassa',
+      name: 'Cevada',
       tier: ProductionTier.extraction,
       category: ItemCategory.rawMaterial,
       baseValue: 10,
@@ -197,7 +197,7 @@ abstract final class ItemCatalog {
     ),
     ItemId.culturedMeat: ItemDef(
       id: ItemId.culturedMeat,
-      name: 'Carne Cultivada',
+      name: 'Carne Curada',
       tier: ProductionTier.extraction,
       category: ItemCategory.rawMaterial,
       baseValue: 22,
@@ -208,7 +208,7 @@ abstract final class ItemCatalog {
     // ============ Camada 2 — Refino ============
     ItemId.chip: ItemDef(
       id: ItemId.chip,
-      name: 'Chip',
+      name: 'Prata Lavrada',
       tier: ProductionTier.refining,
       category: ItemCategory.component,
       baseValue: 120,
@@ -216,7 +216,7 @@ abstract final class ItemCatalog {
     ),
     ItemId.polymer: ItemDef(
       id: ItemId.polymer,
-      name: 'Polímero',
+      name: 'Madeira Tratada',
       tier: ProductionTier.refining,
       category: ItemCategory.component,
       baseValue: 40,
@@ -224,7 +224,7 @@ abstract final class ItemCatalog {
     ),
     ItemId.fabric: ItemDef(
       id: ItemId.fabric,
-      name: 'Tecido Sintético',
+      name: 'Linho',
       tier: ProductionTier.refining,
       category: ItemCategory.component,
       baseValue: 35,
@@ -232,7 +232,7 @@ abstract final class ItemCatalog {
     ),
     ItemId.circuitBoard: ItemDef(
       id: ItemId.circuitBoard,
-      name: 'Placa',
+      name: 'Ferragem',
       tier: ProductionTier.refining,
       category: ItemCategory.component,
       baseValue: 90,
@@ -240,7 +240,7 @@ abstract final class ItemCatalog {
     ),
     ItemId.catalyst: ItemDef(
       id: ItemId.catalyst,
-      name: 'Catalisador',
+      name: 'Salitre',
       tier: ProductionTier.refining,
       category: ItemCategory.component,
       baseValue: 75,
@@ -250,7 +250,7 @@ abstract final class ItemCatalog {
     // ============ Camada 3 — Manufatura ============
     ItemId.clothing: ItemDef(
       id: ItemId.clothing,
-      name: 'Roupa Urbana',
+      name: 'Traje de Corte',
       tier: ProductionTier.manufacturing,
       category: ItemCategory.gear,
       baseValue: 110,
@@ -260,7 +260,7 @@ abstract final class ItemCatalog {
     ),
     ItemId.pistol: ItemDef(
       id: ItemId.pistol,
-      name: 'Pistola',
+      name: 'Besta',
       tier: ProductionTier.manufacturing,
       category: ItemCategory.weapon,
       baseValue: 260,
@@ -269,7 +269,7 @@ abstract final class ItemCatalog {
     ),
     ItemId.rifle: ItemDef(
       id: ItemId.rifle,
-      name: 'Rifle',
+      name: 'Arco Longo',
       tier: ProductionTier.manufacturing,
       category: ItemCategory.weapon,
       baseValue: 620,
@@ -279,7 +279,7 @@ abstract final class ItemCatalog {
     ),
     ItemId.drone: ItemDef(
       id: ItemId.drone,
-      name: 'Drone de Combate',
+      name: 'Cão de Guerra',
       tier: ProductionTier.manufacturing,
       category: ItemCategory.weapon,
       baseValue: 1400,
@@ -290,7 +290,7 @@ abstract final class ItemCatalog {
     ),
     ItemId.metabolicImplant: ItemDef(
       id: ItemId.metabolicImplant,
-      name: 'Implante Metabólico',
+      name: 'Amuleto do Peregrino',
       tier: ProductionTier.manufacturing,
       category: ItemCategory.implant,
       baseValue: 2600,
@@ -301,7 +301,7 @@ abstract final class ItemCatalog {
     ),
     ItemId.hydrationPack: ItemDef(
       id: ItemId.hydrationPack,
-      name: 'Mochila de Hidratação',
+      name: 'Cantil de Couro',
       tier: ProductionTier.manufacturing,
       category: ItemCategory.gear,
       baseValue: 380,
@@ -310,7 +310,7 @@ abstract final class ItemCatalog {
     ),
     ItemId.thermalJacket: ItemDef(
       id: ItemId.thermalJacket,
-      name: 'Jaqueta Térmica',
+      name: 'Manto de Lã',
       tier: ProductionTier.manufacturing,
       category: ItemCategory.gear,
       baseValue: 340,
@@ -320,7 +320,7 @@ abstract final class ItemCatalog {
     ),
     ItemId.rationPack: ItemDef(
       id: ItemId.rationPack,
-      name: 'Refeição Industrial',
+      name: 'Ração de Marcha',
       tier: ProductionTier.manufacturing,
       category: ItemCategory.food,
       baseValue: 55,
@@ -330,7 +330,7 @@ abstract final class ItemCatalog {
     ),
     ItemId.luxuryMeal: ItemDef(
       id: ItemId.luxuryMeal,
-      name: 'Refeição de Luxo',
+      name: 'Banquete',
       tier: ProductionTier.manufacturing,
       category: ItemCategory.food,
       baseValue: 210,
@@ -343,7 +343,7 @@ abstract final class ItemCatalog {
     // ============ Básicos ============
     ItemId.water: ItemDef(
       id: ItemId.water,
-      name: 'Água Filtrada',
+      name: 'Água de Poço',
       tier: ProductionTier.basic,
       category: ItemCategory.drink,
       baseValue: 12,
@@ -352,7 +352,7 @@ abstract final class ItemCatalog {
     ),
     ItemId.streetFood: ItemDef(
       id: ItemId.streetFood,
-      name: 'Comida de Rua',
+      name: 'Pão de Feira',
       tier: ProductionTier.basic,
       category: ItemCategory.food,
       baseValue: 20,
@@ -361,7 +361,7 @@ abstract final class ItemCatalog {
     ),
     ItemId.energyDrink: ItemDef(
       id: ItemId.energyDrink,
-      name: 'Energético',
+      name: 'Cerveja de Cevada',
       tier: ProductionTier.basic,
       category: ItemCategory.drink,
       baseValue: 34,
@@ -373,7 +373,7 @@ abstract final class ItemCatalog {
     // ============ Estimulantes — tabela exata do GDD ============
     ItemId.redRush: ItemDef(
       id: ItemId.redRush,
-      name: 'Red Rush',
+      name: 'Aguardente Vermelha',
       tier: ProductionTier.manufacturing,
       category: ItemCategory.drug,
       baseValue: 150,
@@ -384,7 +384,7 @@ abstract final class ItemCatalog {
     ),
     ItemId.caffeine: ItemDef(
       id: ItemId.caffeine,
-      name: 'Cafeína',
+      name: 'Chá Forte',
       tier: ProductionTier.refining,
       category: ItemCategory.drug,
       baseValue: 45,
@@ -394,7 +394,7 @@ abstract final class ItemCatalog {
     ),
     ItemId.glowVodka: ItemDef(
       id: ItemId.glowVodka,
-      name: 'Glow Vodka',
+      name: 'Hidromel',
       tier: ProductionTier.manufacturing,
       category: ItemCategory.drug,
       baseValue: 80,
@@ -406,16 +406,16 @@ abstract final class ItemCatalog {
     // ============ Contrabando ============
     ItemId.stolenGoods: ItemDef(
       id: ItemId.stolenGoods,
-      name: 'Carga Roubada',
+      name: 'Espólio Roubado',
       tier: ProductionTier.basic,
       category: ItemCategory.contraband,
       baseValue: 95,
       legal: false,
-      description: 'Só circula no Mercado Clandestino.',
+      description: 'Só circula na Feira Furtiva.',
     ),
     ItemId.illegalWeapon: ItemDef(
       id: ItemId.illegalWeapon,
-      name: 'Arma Ilegal',
+      name: 'Lâmina Proibida',
       tier: ProductionTier.manufacturing,
       category: ItemCategory.weapon,
       baseValue: 900,
@@ -425,7 +425,7 @@ abstract final class ItemCatalog {
     ),
     ItemId.syntheticDrug: ItemDef(
       id: ItemId.syntheticDrug,
-      name: 'Droga Sintética',
+      name: 'Elixir Proibido',
       tier: ProductionTier.manufacturing,
       category: ItemCategory.drug,
       baseValue: 320,

@@ -5,10 +5,10 @@ import 'item.dart';
 /// Os dois mercados do GDD.
 enum MarketKind {
   /// Legalizado — aceita apenas produtos lícitos, cobra imposto do governo.
-  central('Mercado Central'),
+  central('Feira Central'),
 
   /// Sem fiscalização — drogas, itens roubados, armas ilegais, contrabando.
-  clandestine('Mercado Clandestino');
+  clandestine('Feira Furtiva');
 
   const MarketKind(this.label);
   final String label;
@@ -183,7 +183,7 @@ class Market {
     final tax = kind == MarketKind.central ? (subtotal * taxRate).round() : 0;
     final total = subtotal + tax;
     if (total > availableCredits) {
-      return TradeFailure('Créditos insuficientes: precisa de $total.');
+      return TradeFailure('Coroas insuficientes: precisa de $total.');
     }
 
     // Efetiva.

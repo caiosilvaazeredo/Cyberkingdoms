@@ -46,7 +46,7 @@ export interface NewCampaignScreen extends Screen {
 }
 
 const NOMES = ['Kaia Vex', 'Rui Halden', 'Nina Corvo', 'Dax Orrin', 'Sol Amaru'];
-const PALAVRAS = ['neon', 'aurora', 'krom', 'ferro', 'vapor', 'cinza', 'brasa'];
+const PALAVRAS = ['corvo', 'aurora', 'carvalho', 'ferro', 'bruma', 'cinza', 'brasa'];
 
 const sorteia = <T>(lista: readonly T[]): T =>
   lista[Math.floor(Math.random() * lista.length)]!;

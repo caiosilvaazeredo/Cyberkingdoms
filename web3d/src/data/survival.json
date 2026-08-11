@@ -28,39 +28,39 @@
   "consecutiveDaysToDeath": 4,
   "publicWork": {
     "publicFarming": {
-      "label": "Cultivo Público",
+      "label": "Lavoura Comunal",
       "hunger": 4,
       "thirst": 5
     },
     "dump": {
-      "label": "Lixão",
+      "label": "Pedreira",
       "hunger": 8,
       "thirst": 10
     },
     "oil": {
-      "label": "Petróleo",
+      "label": "Poço de Breu",
       "hunger": 9,
       "thirst": 12
     },
     "rareEarth": {
-      "label": "Terras Raras",
+      "label": "Veio de Prata",
       "hunger": 10,
       "thirst": 12
     }
   },
   "playerFarmWork": {
     "hydroponics": {
-      "label": "Hidropônicos",
+      "label": "Hortas",
       "hunger": 5,
       "thirst": 6
     },
     "biomass": {
-      "label": "Biomassa",
+      "label": "Cevada",
       "hunger": 6,
       "thirst": 8
     },
     "bioreactors": {
-      "label": "Biorreatores",
+      "label": "Currais",
       "hunger": 7,
       "thirst": 8
     }
@@ -72,12 +72,12 @@
       "thirst": 4
     },
     "hardware": {
-      "label": "Hardware",
+      "label": "Ferragem",
       "hunger": 5,
       "thirst": 5
     },
     "laboratory": {
-      "label": "Laboratório",
+      "label": "Botica",
       "hunger": 6,
       "thirst": 6
     },

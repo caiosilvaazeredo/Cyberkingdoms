@@ -1,7 +1,7 @@
 [
   {
     "id": "shack",
-    "name": "Barraco",
+    "name": "Choupana",
     "category": "housing",
     "width": 1,
     "height": 1,
@@ -29,7 +29,7 @@
   },
   {
     "id": "capsuleBlock",
-    "name": "Bloco de Cápsulas",
+    "name": "Alojamento",
     "category": "housing",
     "width": 2,
     "height": 1,
@@ -54,11 +54,11 @@
     "hungerUpkeepModifier": 0.0,
     "thirstUpkeepModifier": 0.0,
     "legal": true,
-    "description": "Dormitório vertical barato. Aloja a mão de obra."
+    "description": "Dormida barata e apertada. Aloja a mão de obra."
   },
   {
     "id": "apartment",
-    "name": "Edifício Residencial",
+    "name": "Casa de Pedra",
     "category": "housing",
     "width": 2,
     "height": 2,
@@ -87,7 +87,7 @@
   },
   {
     "id": "penthouse",
-    "name": "Cobertura Corporativa",
+    "name": "Solar",
     "category": "housing",
     "width": 2,
     "height": 2,
@@ -113,11 +113,11 @@
     "hungerUpkeepModifier": 0.0,
     "thirstUpkeepModifier": 0.0,
     "legal": true,
-    "description": "Endereço de elite. Status alto pesa em eleição."
+    "description": "Endereço de nobre. Status alto pesa em eleição."
   },
   {
     "id": "oilDerrick",
-    "name": "Torre de Petróleo",
+    "name": "Poço de Breu",
     "category": "extraction",
     "width": 2,
     "height": 2,
@@ -142,11 +142,11 @@
     "hungerUpkeepModifier": 0.0,
     "thirstUpkeepModifier": 0.0,
     "legal": true,
-    "description": "Só funciona se o terreno estiver sobre campo de petróleo."
+    "description": "Só funciona se o terreno estiver sobre veio de breu."
   },
   {
     "id": "scrapYard",
-    "name": "Pátio de Sucata",
+    "name": "Mina de Ferro",
     "category": "extraction",
     "width": 2,
     "height": 2,
@@ -170,11 +170,11 @@
     "hungerUpkeepModifier": 0.0,
     "thirstUpkeepModifier": 0.0,
     "legal": true,
-    "description": "Reciclagem bruta. Barato e sempre útil."
+    "description": "Escavação rasa. Barata e sempre útil."
   },
   {
     "id": "rareEarthShaft",
-    "name": "Poço de Terras Raras",
+    "name": "Mina de Prata",
     "category": "extraction",
     "width": 2,
     "height": 2,
@@ -199,11 +199,11 @@
     "hungerUpkeepModifier": 0.0,
     "thirstUpkeepModifier": 0.0,
     "legal": true,
-    "description": "O gargalo da economia. Quem controla isso, controla chips."
+    "description": "O gargalo da economia. Quem controla isso, controla o cadinho."
   },
   {
     "id": "hydroponicBay",
-    "name": "Estufa Hidropônica",
+    "name": "Horta Irrigada",
     "category": "extraction",
     "width": 2,
     "height": 1,
@@ -230,11 +230,11 @@
     "hungerUpkeepModifier": 0.0,
     "thirstUpkeepModifier": 0.0,
     "legal": true,
-    "description": "Consome água e devolve biomassa."
+    "description": "Consome água e devolve cevada."
   },
   {
     "id": "bioreactor",
-    "name": "Biorreator",
+    "name": "Curral",
     "category": "extraction",
     "width": 2,
     "height": 2,
@@ -261,11 +261,11 @@
     "hungerUpkeepModifier": 0.0,
     "thirstUpkeepModifier": 0.0,
     "legal": true,
-    "description": "Carne cultivada — base das refeições industriais."
+    "description": "Carne curada — base das rações de marcha."
   },
   {
     "id": "biomassField",
-    "name": "Campo de Biomassa",
+    "name": "Campo de Cevada",
     "category": "extraction",
     "width": 3,
     "height": 2,
@@ -293,7 +293,7 @@
   },
   {
     "id": "waterReclaimer",
-    "name": "Recuperador de Água",
+    "name": "Poço de Água",
     "category": "extraction",
     "width": 1,
     "height": 1,
@@ -318,11 +318,11 @@
     "hungerUpkeepModifier": 0.0,
     "thirstUpkeepModifier": 0.0,
     "legal": true,
-    "description": "Água é o item mais negociado do servidor."
+    "description": "Água é o item mais negociado do reino."
   },
   {
     "id": "refinery",
-    "name": "Refinaria",
+    "name": "Casa de Ofícios",
     "category": "refining",
     "width": 3,
     "height": 2,
@@ -347,11 +347,11 @@
     "hungerUpkeepModifier": 0.0,
     "thirstUpkeepModifier": 0.0,
     "legal": true,
-    "description": "Destrava as receitas de polímero, placa e chip."
+    "description": "Destrava as receitas de madeira tratada, ferragem e prata lavrada."
   },
   {
     "id": "textileWorkshop",
-    "name": "Oficina de Tecidos",
+    "name": "Tecelagem",
     "category": "refining",
     "width": 2,
     "height": 1,
@@ -376,11 +376,11 @@
     "hungerUpkeepModifier": 0.0,
     "thirstUpkeepModifier": 0.0,
     "legal": true,
-    "description": "Tecido sintético, roupas e mochilas."
+    "description": "Linho, trajes e cantis."
   },
   {
     "id": "hardwareWorkshop",
-    "name": "Oficina de Hardware",
+    "name": "Oficina do Ferreiro",
     "category": "refining",
     "width": 2,
     "height": 2,
@@ -405,11 +405,11 @@
     "hungerUpkeepModifier": 0.0,
     "thirstUpkeepModifier": 0.0,
     "legal": true,
-    "description": "Onde drones e eletrônica pesada são montados."
+    "description": "Onde ferragem pesada e arreios de guerra são montados."
   },
   {
     "id": "chemLab",
-    "name": "Laboratório Químico",
+    "name": "Botica",
     "category": "refining",
     "width": 2,
     "height": 2,
@@ -434,11 +434,11 @@
     "hungerUpkeepModifier": 0.0,
     "thirstUpkeepModifier": 0.0,
     "legal": true,
-    "description": "Catalisadores, implantes — e, se quiser, drogas."
+    "description": "Salitre, amuletos — e, se quiser, elixires proibidos."
   },
   {
     "id": "foundry",
-    "name": "Fundição",
+    "name": "Forja",
     "category": "refining",
     "width": 3,
     "height": 2,
@@ -465,11 +465,11 @@
     "hungerUpkeepModifier": 0.0,
     "thirstUpkeepModifier": 0.0,
     "legal": true,
-    "description": "Converte sucata em placa sem precisar de refinaria."
+    "description": "Converte minério em ferragem sem precisar da Casa de Ofícios."
   },
   {
     "id": "gunsmithy",
-    "name": "Armeiro",
+    "name": "Besteiro",
     "category": "manufacturing",
     "width": 2,
     "height": 1,
@@ -494,11 +494,11 @@
     "hungerUpkeepModifier": 0.0,
     "thirstUpkeepModifier": 0.0,
     "legal": true,
-    "description": "Pistolas, rifles — e armas sem registro."
+    "description": "Bestas, arcos — e lâminas sem selo."
   },
   {
     "id": "droneAssembly",
-    "name": "Montadora de Drones",
+    "name": "Canil de Guerra",
     "category": "manufacturing",
     "width": 3,
     "height": 2,
@@ -528,11 +528,11 @@
     "hungerUpkeepModifier": 0.0,
     "thirstUpkeepModifier": 0.0,
     "legal": true,
-    "description": "Drone por dia. É o que decide guerra de milícia."
+    "description": "Um cão por dia. É o que decide briga entre guardas."
   },
   {
     "id": "implantClinic",
-    "name": "Clínica de Implantes",
+    "name": "Santuário",
     "category": "manufacturing",
     "width": 2,
     "height": 2,
@@ -558,11 +558,11 @@
     "hungerUpkeepModifier": 0.0,
     "thirstUpkeepModifier": 0.0,
     "legal": true,
-    "description": "Endgame do GDD: implantes ciberneticos."
+    "description": "Fim de jogo: amuletos que o corpo aprende a usar."
   },
   {
     "id": "industrialKitchen",
-    "name": "Cozinha Industrial",
+    "name": "Cozinha da Vila",
     "category": "manufacturing",
     "width": 2,
     "height": 2,
@@ -624,7 +624,7 @@
   },
   {
     "id": "shopFront",
-    "name": "Loja",
+    "name": "Tenda",
     "category": "commerce",
     "width": 1,
     "height": 1,
@@ -653,7 +653,7 @@
   },
   {
     "id": "warehouse",
-    "name": "Armazém",
+    "name": "Celeiro",
     "category": "commerce",
     "width": 3,
     "height": 2,
@@ -682,7 +682,7 @@
   },
   {
     "id": "tradingPost",
-    "name": "Entreposto",
+    "name": "Posto de Comércio",
     "category": "commerce",
     "width": 2,
     "height": 2,
@@ -737,11 +737,11 @@
     "hungerUpkeepModifier": 0.0,
     "thirstUpkeepModifier": 0.0,
     "legal": true,
-    "description": "Onde os cartéis fecham negócio B2B."
+    "description": "Onde as guildas fecham negócio grande."
   },
   {
     "id": "blackMarketStall",
-    "name": "Banca Clandestina",
+    "name": "Banca Furtiva",
     "category": "commerce",
     "width": 1,
     "height": 1,
@@ -766,11 +766,11 @@
     "hungerUpkeepModifier": 0.0,
     "thirstUpkeepModifier": 0.0,
     "legal": false,
-    "description": "Escoa contrabando. Se o governo achar, confisca."
+    "description": "Escoa contrabando. Se o senhor achar, confisca."
   },
   {
     "id": "generator",
-    "name": "Gerador",
+    "name": "Moinho",
     "category": "infrastructure",
     "width": 1,
     "height": 1,
@@ -797,11 +797,11 @@
     "hungerUpkeepModifier": 0.0,
     "thirstUpkeepModifier": 0.0,
     "legal": true,
-    "description": "Queima petróleo. Sem energia, oficina para."
+    "description": "Queima breu para tocar os foles. Sem ele, oficina para."
   },
   {
     "id": "waterTower",
-    "name": "Torre de Água",
+    "name": "Cisterna",
     "category": "infrastructure",
     "width": 1,
     "height": 1,
@@ -830,7 +830,7 @@
   },
   {
     "id": "commsAntenna",
-    "name": "Antena de Comunicação",
+    "name": "Pombal",
     "category": "infrastructure",
     "width": 1,
     "height": 1,
@@ -855,11 +855,11 @@
     "hungerUpkeepModifier": 0.0,
     "thirstUpkeepModifier": 0.0,
     "legal": true,
-    "description": "Acompanha preços de outras capitais em tempo real."
+    "description": "Acompanha preços de outras capitais pelo correio de pombos."
   },
   {
     "id": "garage",
-    "name": "Garagem",
+    "name": "Estrebaria",
     "category": "infrastructure",
     "width": 2,
     "height": 1,
@@ -888,7 +888,7 @@
   },
   {
     "id": "greenhouse",
-    "name": "Estufa",
+    "name": "Pomar",
     "category": "infrastructure",
     "width": 2,
     "height": 2,
@@ -913,11 +913,11 @@
     "hungerUpkeepModifier": -0.12,
     "thirstUpkeepModifier": 0.0,
     "legal": true,
-    "description": "-12% de consumo de Fome e um pouco de biomassa."
+    "description": "-12% de consumo de Fome e um pouco de cevada."
   },
   {
     "id": "wastePlant",
-    "name": "Usina de Resíduos",
+    "name": "Casa de Refugo",
     "category": "infrastructure",
     "width": 2,
     "height": 2,
@@ -944,11 +944,11 @@
     "hungerUpkeepModifier": 0.0,
     "thirstUpkeepModifier": 0.0,
     "legal": true,
-    "description": "Fecha o ciclo: lixo orgânico vira metal reaproveitado."
+    "description": "Fecha o ciclo: refugo vira ferro reaproveitado."
   },
   {
     "id": "perimeterWall",
-    "name": "Muro de Perímetro",
+    "name": "Paliçada",
     "category": "defense",
     "width": 1,
     "height": 1,
@@ -972,7 +972,7 @@
     "hungerUpkeepModifier": 0.0,
     "thirstUpkeepModifier": 0.0,
     "legal": true,
-    "description": "Barato. Colocar vários é o ponto."
+    "description": "Barata. Colocar várias é o ponto."
   },
   {
     "id": "watchtower",
@@ -1005,7 +1005,7 @@
   },
   {
     "id": "armoredGate",
-    "name": "Portão Blindado",
+    "name": "Portão Fortificado",
     "category": "defense",
     "width": 2,
     "height": 1,
@@ -1034,7 +1034,7 @@
   },
   {
     "id": "bunker",
-    "name": "Bunker",
+    "name": "Torre do Tesouro",
     "category": "defense",
     "width": 2,
     "height": 2,
@@ -1060,7 +1060,7 @@
     "hungerUpkeepModifier": 0.0,
     "thirstUpkeepModifier": 0.0,
     "legal": true,
-    "description": "Protege o estoque mesmo num golpe de estado."
+    "description": "Protege o estoque mesmo numa tomada de poder."
   },
   {
     "id": "plaza",
@@ -1093,7 +1093,7 @@
   },
   {
     "id": "bar",
-    "name": "Bar",
+    "name": "Taberna",
     "category": "civic",
     "width": 1,
     "height": 1,
@@ -1120,11 +1120,11 @@
     "hungerUpkeepModifier": 0.0,
     "thirstUpkeepModifier": 0.0,
     "legal": true,
-    "description": "Onde os contratos B2B realmente são fechados."
+    "description": "Onde os contratos realmente são fechados."
   },
   {
     "id": "fightPit",
-    "name": "Arena de Combate",
+    "name": "Arena",
     "category": "civic",
     "width": 3,
     "height": 3,
@@ -1153,7 +1153,7 @@
   },
   {
     "id": "militiaHall",
-    "name": "Sede de Milícia",
+    "name": "Casa da Guarda",
     "category": "civic",
     "width": 2,
     "height": 2,
@@ -1179,11 +1179,11 @@
     "hungerUpkeepModifier": 0.0,
     "thirstUpkeepModifier": 0.0,
     "legal": true,
-    "description": "Recruta milícia própria — ou o braço armado da rebelião."
+    "description": "Recruta guarda própria — ou o braço armado da revolta."
   },
   {
     "id": "committeeHall",
-    "name": "Sede do Comitê",
+    "name": "Casa do Conselho",
     "category": "civic",
     "width": 2,
     "height": 2,
@@ -1208,6 +1208,6 @@
     "hungerUpkeepModifier": 0.0,
     "thirstUpkeepModifier": 0.0,
     "legal": false,
-    "description": "Organiza o Comitê Revolucionário. Ilegal, obviamente."
+    "description": "Organiza o Conselho Rebelde. Ilegal, obviamente."
   }
 ]

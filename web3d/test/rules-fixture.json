@@ -406,7 +406,7 @@
           }
         },
         {
-          "label": "Trabalho: Lixão",
+          "label": "Trabalho: Pedreira",
           "upkeep": {
             "hunger": 8,
             "thirst": 10
@@ -438,7 +438,7 @@
           }
         },
         {
-          "label": "Trabalho: Lixão",
+          "label": "Trabalho: Pedreira",
           "upkeep": {
             "hunger": 8,
             "thirst": 10
@@ -562,14 +562,14 @@
           }
         },
         {
-          "label": "Oficina: Laboratório",
+          "label": "Oficina: Botica",
           "upkeep": {
             "hunger": 6,
             "thirst": 6
           }
         },
         {
-          "label": "Red Rush",
+          "label": "Aguardente Vermelha",
           "upkeep": {
             "hunger": 0,
             "thirst": 15
@@ -601,14 +601,14 @@
           }
         },
         {
-          "label": "Oficina: Laboratório",
+          "label": "Oficina: Botica",
           "upkeep": {
             "hunger": 6,
             "thirst": 6
           }
         },
         {
-          "label": "Red Rush",
+          "label": "Aguardente Vermelha",
           "upkeep": {
             "hunger": 0,
             "thirst": 15
@@ -1117,7 +1117,7 @@
       "settlements": [
         {
           "id": "cap_0",
-          "name": "Distrito Solaris",
+          "name": "Forte Âmbar",
           "kind": "capital",
           "center": {
             "x": 646,
@@ -1130,7 +1130,7 @@
         },
         {
           "id": "cap_1",
-          "name": "Alto Tanaka-9",
+          "name": "Porto Sabiá de Cima",
           "kind": "capital",
           "center": {
             "x": 124,
@@ -1143,7 +1143,7 @@
         },
         {
           "id": "cap_2",
-          "name": "Setor Ipê Velha",
+          "name": "Burgo Espinho Velha",
           "kind": "capital",
           "center": {
             "x": -564,
@@ -1156,7 +1156,7 @@
         },
         {
           "id": "cap_3",
-          "name": "Vale Pantanal-Alfa",
+          "name": "Vila Sino do Vau",
           "kind": "capital",
           "center": {
             "x": -482,
@@ -1169,7 +1169,7 @@
         },
         {
           "id": "cap_4",
-          "name": "Zona Tanaka Prime",
+          "name": "Ponte Sabiá Maior",
           "kind": "capital",
           "center": {
             "x": 153,
@@ -1182,7 +1182,7 @@
         },
         {
           "id": "sat_0",
-          "name": "Neo Ventra",
+          "name": "Alto Ferrolho",
           "kind": "satellite",
           "center": {
             "x": 833,
@@ -1195,7 +1195,7 @@
         },
         {
           "id": "sat_1",
-          "name": "Zona Tanaka",
+          "name": "Ponte Sabiá",
           "kind": "satellite",
           "center": {
             "x": 527,
@@ -1208,7 +1208,7 @@
         },
         {
           "id": "sat_2",
-          "name": "Ipê Baixa",
+          "name": "Espinho Baixa",
           "kind": "satellite",
           "center": {
             "x": 709,
@@ -1221,7 +1221,7 @@
         },
         {
           "id": "sat_3",
-          "name": "Vale Serpente",
+          "name": "Vila Pedra",
           "kind": "satellite",
           "center": {
             "x": -103,
@@ -1234,7 +1234,7 @@
         },
         {
           "id": "sat_4",
-          "name": "Vale Serpente",
+          "name": "Vila Pedra",
           "kind": "satellite",
           "center": {
             "x": 227,
@@ -1247,7 +1247,7 @@
         },
         {
           "id": "sat_5",
-          "name": "Novo Corvo",
+          "name": "Novo Ipê",
           "kind": "satellite",
           "center": {
             "x": 33,
@@ -1260,7 +1260,7 @@
         },
         {
           "id": "sat_6",
-          "name": "Vidro Baixa",
+          "name": "Ravena Baixa",
           "kind": "satellite",
           "center": {
             "x": -779,
@@ -1273,7 +1273,7 @@
         },
         {
           "id": "sat_7",
-          "name": "Novo Corvo",
+          "name": "Novo Ipê",
           "kind": "satellite",
           "center": {
             "x": -326,
@@ -1286,7 +1286,7 @@
         },
         {
           "id": "sat_8",
-          "name": "Setor Kaji",
+          "name": "Burgo Corvo",
           "kind": "satellite",
           "center": {
             "x": -368,
@@ -1299,7 +1299,7 @@
         },
         {
           "id": "sat_9",
-          "name": "Ferrolho-Alfa",
+          "name": "Aurora do Vau",
           "kind": "satellite",
           "center": {
             "x": -481,
@@ -1312,7 +1312,7 @@
         },
         {
           "id": "sat_10",
-          "name": "Cidade Ventra",
+          "name": "Cidade Ferrolho",
           "kind": "satellite",
           "center": {
             "x": -423,
@@ -1325,7 +1325,7 @@
         },
         {
           "id": "sat_11",
-          "name": "Alto Sabiá",
+          "name": "Porto Veiga",
           "kind": "satellite",
           "center": {
             "x": -602,
@@ -1338,7 +1338,7 @@
         },
         {
           "id": "sat_12",
-          "name": "Serpente",
+          "name": "Pedra",
           "kind": "satellite",
           "center": {
             "x": 25,
@@ -1351,7 +1351,7 @@
         },
         {
           "id": "sat_13",
-          "name": "Sabiá Prime",
+          "name": "Veiga Maior",
           "kind": "satellite",
           "center": {
             "x": 24,
@@ -1364,7 +1364,7 @@
         },
         {
           "id": "sat_14",
-          "name": "Neo Nagai",
+          "name": "Alto Bruma",
           "kind": "satellite",
           "center": {
             "x": 257,
@@ -1699,7 +1699,7 @@
       "settlements": [
         {
           "id": "cap_0",
-          "name": "Porto Ventra",
+          "name": "Vale Ferrolho",
           "kind": "capital",
           "center": {
             "x": 626,
@@ -1712,7 +1712,7 @@
         },
         {
           "id": "cap_1",
-          "name": "Alto Corvo",
+          "name": "Porto Ipê",
           "kind": "capital",
           "center": {
             "x": 260,
@@ -1725,7 +1725,7 @@
         },
         {
           "id": "cap_2",
-          "name": "Neo Ventra-Alfa",
+          "name": "Alto Ferrolho do Vau",
           "kind": "capital",
           "center": {
             "x": -463,
@@ -1738,7 +1738,7 @@
         },
         {
           "id": "cap_3",
-          "name": "Setor Aurora Norte",
+          "name": "Burgo Pantanal Norte",
           "kind": "capital",
           "center": {
             "x": -410,
@@ -1751,7 +1751,7 @@
         },
         {
           "id": "cap_4",
-          "name": "Porto Corvo Norte",
+          "name": "Vale Ipê Norte",
           "kind": "capital",
           "center": {
             "x": 293,
@@ -1764,7 +1764,7 @@
         },
         {
           "id": "sat_0",
-          "name": "Ipê Baixa",
+          "name": "Espinho Baixa",
           "kind": "satellite",
           "center": {
             "x": 673,
@@ -1777,7 +1777,7 @@
         },
         {
           "id": "sat_1",
-          "name": "Zona Cinza",
+          "name": "Ponte Junco",
           "kind": "satellite",
           "center": {
             "x": 823,
@@ -1790,7 +1790,7 @@
         },
         {
           "id": "sat_2",
-          "name": "Kaji-9",
+          "name": "Corvo de Cima",
           "kind": "satellite",
           "center": {
             "x": 740,
@@ -1803,7 +1803,7 @@
         },
         {
           "id": "sat_3",
-          "name": "Porto Aurora",
+          "name": "Vale Pantanal",
           "kind": "satellite",
           "center": {
             "x": 395,
@@ -1816,7 +1816,7 @@
         },
         {
           "id": "sat_4",
-          "name": "Sabiá",
+          "name": "Veiga",
           "kind": "satellite",
           "center": {
             "x": 166,
@@ -1829,7 +1829,7 @@
         },
         {
           "id": "sat_5",
-          "name": "Setor Kaji",
+          "name": "Burgo Corvo",
           "kind": "satellite",
           "center": {
             "x": 72,
@@ -1842,7 +1842,7 @@
         },
         {
           "id": "sat_6",
-          "name": "Cidade Orixá",
+          "name": "Cidade Cinza",
           "kind": "satellite",
           "center": {
             "x": -333,
@@ -1855,7 +1855,7 @@
         },
         {
           "id": "sat_7",
-          "name": "Nagai Prime",
+          "name": "Bruma Maior",
           "kind": "satellite",
           "center": {
             "x": -435,
@@ -1868,7 +1868,7 @@
         },
         {
           "id": "sat_8",
-          "name": "Neo Aurora",
+          "name": "Alto Pantanal",
           "kind": "satellite",
           "center": {
             "x": -357,
@@ -1881,7 +1881,7 @@
         },
         {
           "id": "sat_9",
-          "name": "Porto Corvo",
+          "name": "Vale Ipê",
           "kind": "satellite",
           "center": {
             "x": -610,
@@ -1894,7 +1894,7 @@
         },
         {
           "id": "sat_10",
-          "name": "Mirim",
+          "name": "Serpente",
           "kind": "satellite",
           "center": {
             "x": -335,
@@ -1907,7 +1907,7 @@
         },
         {
           "id": "sat_11",
-          "name": "Setor Pantanal",
+          "name": "Burgo Sino",
           "kind": "satellite",
           "center": {
             "x": -473,
@@ -1920,7 +1920,7 @@
         },
         {
           "id": "sat_12",
-          "name": "Neo Kaji",
+          "name": "Alto Corvo",
           "kind": "satellite",
           "center": {
             "x": 174,
@@ -1933,7 +1933,7 @@
         },
         {
           "id": "sat_13",
-          "name": "Nagai",
+          "name": "Bruma",
           "kind": "satellite",
           "center": {
             "x": 413,
@@ -1946,7 +1946,7 @@
         },
         {
           "id": "sat_14",
-          "name": "Zona Serpente",
+          "name": "Ponte Pedra",
           "kind": "satellite",
           "center": {
             "x": 285,
@@ -2281,7 +2281,7 @@
       "settlements": [
         {
           "id": "cap_0",
-          "name": "Cidade Cinza Velha",
+          "name": "Cidade Junco Velha",
           "kind": "capital",
           "center": {
             "x": 437,
@@ -2294,7 +2294,7 @@
         },
         {
           "id": "cap_1",
-          "name": "Vale Aurora Baixa",
+          "name": "Vila Pantanal Baixa",
           "kind": "capital",
           "center": {
             "x": 175,
@@ -2307,7 +2307,7 @@
         },
         {
           "id": "cap_2",
-          "name": "Neo Kobalt Sul",
+          "name": "Alto Falcão Sul",
           "kind": "capital",
           "center": {
             "x": -441,
@@ -2320,7 +2320,7 @@
         },
         {
           "id": "cap_3",
-          "name": "Novo Kobalt",
+          "name": "Novo Falcão",
           "kind": "capital",
           "center": {
             "x": -396,
@@ -2333,7 +2333,7 @@
         },
         {
           "id": "cap_4",
-          "name": "Novo Serpente Velha",
+          "name": "Novo Pedra Velha",
           "kind": "capital",
           "center": {
             "x": 39,
@@ -2346,7 +2346,7 @@
         },
         {
           "id": "sat_0",
-          "name": "Zona Ventra",
+          "name": "Ponte Ferrolho",
           "kind": "satellite",
           "center": {
             "x": 391,
@@ -2359,7 +2359,7 @@
         },
         {
           "id": "sat_1",
-          "name": "Setor Pantanal",
+          "name": "Burgo Sino",
           "kind": "satellite",
           "center": {
             "x": 417,
@@ -2372,7 +2372,7 @@
         },
         {
           "id": "sat_2",
-          "name": "Tanaka Sul",
+          "name": "Sabiá Sul",
           "kind": "satellite",
           "center": {
             "x": 419,
@@ -2385,7 +2385,7 @@
         },
         {
           "id": "sat_3",
-          "name": "Porto Cinza",
+          "name": "Vale Junco",
           "kind": "satellite",
           "center": {
             "x": -6,
@@ -2398,7 +2398,7 @@
         },
         {
           "id": "sat_4",
-          "name": "Kaji",
+          "name": "Corvo",
           "kind": "satellite",
           "center": {
             "x": 354,
@@ -2411,7 +2411,7 @@
         },
         {
           "id": "sat_5",
-          "name": "Vale Corvo",
+          "name": "Vila Ipê",
           "kind": "satellite",
           "center": {
             "x": 253,
@@ -2424,7 +2424,7 @@
         },
         {
           "id": "sat_6",
-          "name": "Neo Vidro",
+          "name": "Alto Ravena",
           "kind": "satellite",
           "center": {
             "x": -432,
@@ -2437,7 +2437,7 @@
         },
         {
           "id": "sat_7",
-          "name": "Setor Tanaka",
+          "name": "Burgo Sabiá",
           "kind": "satellite",
           "center": {
             "x": -590,
@@ -2450,7 +2450,7 @@
         },
         {
           "id": "sat_8",
-          "name": "Mirim Sul",
+          "name": "Serpente Sul",
           "kind": "satellite",
           "center": {
             "x": -649,
@@ -2463,7 +2463,7 @@
         },
         {
           "id": "sat_9",
-          "name": "Solaris",
+          "name": "Âmbar",
           "kind": "satellite",
           "center": {
             "x": -276,
@@ -2476,7 +2476,7 @@
         },
         {
           "id": "sat_10",
-          "name": "Alto Cinza",
+          "name": "Porto Junco",
           "kind": "satellite",
           "center": {
             "x": -529,
@@ -2489,7 +2489,7 @@
         },
         {
           "id": "sat_11",
-          "name": "Ferrolho Prime",
+          "name": "Aurora Maior",
           "kind": "satellite",
           "center": {
             "x": -609,
@@ -2502,7 +2502,7 @@
         },
         {
           "id": "sat_12",
-          "name": "Nagai",
+          "name": "Bruma",
           "kind": "satellite",
           "center": {
             "x": -140,
@@ -2515,7 +2515,7 @@
         },
         {
           "id": "sat_13",
-          "name": "Zona Cinza",
+          "name": "Ponte Junco",
           "kind": "satellite",
           "center": {
             "x": -106,
@@ -2528,7 +2528,7 @@
         },
         {
           "id": "sat_14",
-          "name": "Solaris Baixa",
+          "name": "Âmbar Baixa",
           "kind": "satellite",
           "center": {
             "x": 179,
@@ -3318,7 +3318,7 @@
         "x": 158,
         "y": -458
       },
-      "plotName": "Terreno em Zona Tanaka Prime",
+      "plotName": "Terreno em Ponte Sabiá Maior",
       "governmentCount": 20,
       "marketCount": 32,
       "visited": [
@@ -3329,8 +3329,8 @@
       {
         "day": 1,
         "events": [
-          "Serviço público (Lixão): +3 Sucata.",
-          "Salário público: +45 créditos."
+          "Serviço público (Pedreira): +3 Minério de Ferro.",
+          "Salário público: +45 coroas."
         ],
         "upkeepTotal": {
           "hunger": 16,
@@ -3372,8 +3372,8 @@
       {
         "day": 3,
         "events": [
-          "Serviço público (Lixão): +3 Sucata.",
-          "Salário público: +45 créditos."
+          "Serviço público (Pedreira): +3 Minério de Ferro.",
+          "Salário público: +45 coroas."
         ],
         "upkeepTotal": {
           "hunger": 16,
@@ -3415,8 +3415,8 @@
       {
         "day": 5,
         "events": [
-          "Serviço público (Lixão): +3 Sucata.",
-          "Salário público: +45 créditos."
+          "Serviço público (Pedreira): +3 Minério de Ferro.",
+          "Salário público: +45 coroas."
         ],
         "upkeepTotal": {
           "hunger": 16,
@@ -3458,9 +3458,9 @@
       {
         "day": 7,
         "events": [
-          "Serviço público (Lixão): +3 Sucata.",
+          "Serviço público (Pedreira): +3 Minério de Ferro.",
           "Você passou o dia com sede. -25 HP.",
-          "Salário público: +45 créditos."
+          "Salário público: +45 coroas."
         ],
         "upkeepTotal": {
           "hunger": 16,
@@ -3504,7 +3504,7 @@
       {
         "day": 9,
         "events": [
-          "Serviço público (Lixão): +3 Sucata.",
+          "Serviço público (Pedreira): +3 Minério de Ferro.",
           "Você passou o dia com fome. -25 HP.",
           "Você passou o dia com sede. -25 HP.",
           "MORTE PERMANENTE: abandono por fome e sede."

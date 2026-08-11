@@ -174,7 +174,7 @@ class DailyTick {
     character.credits -= result.upkeepPaid;
 
     if (result.upkeepPaid > 0) {
-      events.add('Manutenção do terreno: -${result.upkeepPaid} créditos.');
+      events.add('Manutenção do terreno: -${result.upkeepPaid} coroas.');
     }
     for (final building in result.completed) {
       events.add('Obra concluída: ${building.def.name}.');
@@ -268,7 +268,7 @@ class DailyTick {
     final paid = government.payWages(1);
     if (paid > 0) {
       campaign.character.credits += paid;
-      events.add('Salário público: +$paid créditos.');
+      events.add('Salário público: +$paid coroas.');
     } else {
       events.add('O governo não tinha caixa para pagar o salário.');
     }
@@ -363,7 +363,7 @@ class DailyTick {
       final reward = raiderRng.range(60, 320);
       character.credits += reward;
       events.add(
-        'Emboscada na estrada: você venceu em ${report.rounds} rodadas. +$reward créditos.',
+        'Emboscada na estrada: você venceu em ${report.rounds} rodadas. +$reward coroas.',
       );
     } else {
       final loot = CombatResolver.rollLoot(
@@ -378,7 +378,7 @@ class DailyTick {
       character.statusOffset -= report.statusLost;
       events.add(
         'Emboscada na estrada: você perdeu em ${report.rounds} rodadas. '
-        '-$creditsLost créditos, -${report.statusLost} Status'
+        '-$creditsLost coroas, -${report.statusLost} Status'
         '${loot.isEmpty ? '' : ', ${loot.length} tipo(s) de item saqueado(s)'}.',
       );
     }

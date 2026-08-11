@@ -175,7 +175,7 @@ abstract final class BuildingCatalog {
     // ======================= MORADIA =======================
     BuildingId.shack: BuildingDef(
       id: BuildingId.shack,
-      name: 'Barraco',
+      name: 'Choupana',
       category: BuildingCategory.housing,
       width: 1, height: 1,
       creditCost: 120,
@@ -187,7 +187,7 @@ abstract final class BuildingCatalog {
     ),
     BuildingId.capsuleBlock: BuildingDef(
       id: BuildingId.capsuleBlock,
-      name: 'Bloco de Cápsulas',
+      name: 'Alojamento',
       category: BuildingCategory.housing,
       width: 2, height: 1,
       creditCost: 900,
@@ -201,7 +201,7 @@ abstract final class BuildingCatalog {
     ),
     BuildingId.apartment: BuildingDef(
       id: BuildingId.apartment,
-      name: 'Edifício Residencial',
+      name: 'Casa de Pedra',
       category: BuildingCategory.housing,
       width: 2, height: 2,
       creditCost: 3600,
@@ -216,7 +216,7 @@ abstract final class BuildingCatalog {
     ),
     BuildingId.penthouse: BuildingDef(
       id: BuildingId.penthouse,
-      name: 'Cobertura Corporativa',
+      name: 'Solar',
       category: BuildingCategory.housing,
       width: 2, height: 2,
       creditCost: 14000,
@@ -233,7 +233,7 @@ abstract final class BuildingCatalog {
     // ======================= EXTRAÇÃO =======================
     BuildingId.oilDerrick: BuildingDef(
       id: BuildingId.oilDerrick,
-      name: 'Torre de Petróleo',
+      name: 'Poço de Breu',
       category: BuildingCategory.extraction,
       width: 2, height: 2,
       creditCost: 2400,
@@ -249,7 +249,7 @@ abstract final class BuildingCatalog {
     ),
     BuildingId.scrapYard: BuildingDef(
       id: BuildingId.scrapYard,
-      name: 'Pátio de Sucata',
+      name: 'Mina de Ferro',
       category: BuildingCategory.extraction,
       width: 2, height: 2,
       creditCost: 700,
@@ -264,7 +264,7 @@ abstract final class BuildingCatalog {
     ),
     BuildingId.rareEarthShaft: BuildingDef(
       id: BuildingId.rareEarthShaft,
-      name: 'Poço de Terras Raras',
+      name: 'Mina de Prata',
       category: BuildingCategory.extraction,
       width: 2, height: 2,
       creditCost: 6200,
@@ -280,7 +280,7 @@ abstract final class BuildingCatalog {
     ),
     BuildingId.hydroponicBay: BuildingDef(
       id: BuildingId.hydroponicBay,
-      name: 'Estufa Hidropônica',
+      name: 'Horta Irrigada',
       category: BuildingCategory.extraction,
       width: 2, height: 1,
       creditCost: 800,
@@ -296,7 +296,7 @@ abstract final class BuildingCatalog {
     ),
     BuildingId.bioreactor: BuildingDef(
       id: BuildingId.bioreactor,
-      name: 'Biorreator',
+      name: 'Curral',
       category: BuildingCategory.extraction,
       width: 2, height: 2,
       creditCost: 3200,
@@ -313,7 +313,7 @@ abstract final class BuildingCatalog {
     ),
     BuildingId.biomassField: BuildingDef(
       id: BuildingId.biomassField,
-      name: 'Campo de Biomassa',
+      name: 'Campo de Cevada',
       category: BuildingCategory.extraction,
       width: 3, height: 2,
       creditCost: 500,
@@ -328,7 +328,7 @@ abstract final class BuildingCatalog {
     ),
     BuildingId.waterReclaimer: BuildingDef(
       id: BuildingId.waterReclaimer,
-      name: 'Recuperador de Água',
+      name: 'Poço de Água',
       category: BuildingCategory.extraction,
       width: 1, height: 1,
       creditCost: 1100,
@@ -345,7 +345,7 @@ abstract final class BuildingCatalog {
     // ======================= REFINO =======================
     BuildingId.refinery: BuildingDef(
       id: BuildingId.refinery,
-      name: 'Refinaria',
+      name: 'Casa de Ofícios',
       category: BuildingCategory.refining,
       width: 3, height: 2,
       creditCost: 4800,
@@ -360,7 +360,7 @@ abstract final class BuildingCatalog {
     ),
     BuildingId.textileWorkshop: BuildingDef(
       id: BuildingId.textileWorkshop,
-      name: 'Oficina de Tecidos',
+      name: 'Tecelagem',
       category: BuildingCategory.refining,
       width: 2, height: 1,
       creditCost: 1400,
@@ -374,7 +374,7 @@ abstract final class BuildingCatalog {
     ),
     BuildingId.hardwareWorkshop: BuildingDef(
       id: BuildingId.hardwareWorkshop,
-      name: 'Oficina de Hardware',
+      name: 'Oficina do Ferreiro',
       category: BuildingCategory.refining,
       width: 2, height: 2,
       creditCost: 5200,
@@ -389,7 +389,7 @@ abstract final class BuildingCatalog {
     ),
     BuildingId.chemLab: BuildingDef(
       id: BuildingId.chemLab,
-      name: 'Laboratório Químico',
+      name: 'Botica',
       category: BuildingCategory.refining,
       width: 2, height: 2,
       creditCost: 4400,
@@ -404,7 +404,7 @@ abstract final class BuildingCatalog {
     ),
     BuildingId.foundry: BuildingDef(
       id: BuildingId.foundry,
-      name: 'Fundição',
+      name: 'Forja',
       category: BuildingCategory.refining,
       width: 3, height: 2,
       creditCost: 3900,
@@ -423,7 +423,7 @@ abstract final class BuildingCatalog {
     // ======================= MANUFATURA =======================
     BuildingId.gunsmithy: BuildingDef(
       id: BuildingId.gunsmithy,
-      name: 'Armeiro',
+      name: 'Besteiro',
       category: BuildingCategory.manufacturing,
       width: 2, height: 1,
       creditCost: 6800,
@@ -438,7 +438,7 @@ abstract final class BuildingCatalog {
     ),
     BuildingId.droneAssembly: BuildingDef(
       id: BuildingId.droneAssembly,
-      name: 'Montadora de Drones',
+      name: 'Canil de Guerra',
       category: BuildingCategory.manufacturing,
       width: 3, height: 2,
       creditCost: 18000,
@@ -455,7 +455,7 @@ abstract final class BuildingCatalog {
     ),
     BuildingId.implantClinic: BuildingDef(
       id: BuildingId.implantClinic,
-      name: 'Clínica de Implantes',
+      name: 'Santuário',
       category: BuildingCategory.manufacturing,
       width: 2, height: 2,
       creditCost: 22000,
@@ -471,7 +471,7 @@ abstract final class BuildingCatalog {
     ),
     BuildingId.industrialKitchen: BuildingDef(
       id: BuildingId.industrialKitchen,
-      name: 'Cozinha Industrial',
+      name: 'Cozinha da Vila',
       category: BuildingCategory.manufacturing,
       width: 2, height: 2,
       creditCost: 2600,
@@ -508,7 +508,7 @@ abstract final class BuildingCatalog {
     // ======================= COMÉRCIO =======================
     BuildingId.shopFront: BuildingDef(
       id: BuildingId.shopFront,
-      name: 'Loja',
+      name: 'Tenda',
       category: BuildingCategory.commerce,
       width: 1, height: 1,
       creditCost: 900,
@@ -522,7 +522,7 @@ abstract final class BuildingCatalog {
     ),
     BuildingId.warehouse: BuildingDef(
       id: BuildingId.warehouse,
-      name: 'Armazém',
+      name: 'Celeiro',
       category: BuildingCategory.commerce,
       width: 3, height: 2,
       creditCost: 2200,
@@ -536,7 +536,7 @@ abstract final class BuildingCatalog {
     ),
     BuildingId.tradingPost: BuildingDef(
       id: BuildingId.tradingPost,
-      name: 'Entreposto',
+      name: 'Posto de Comércio',
       category: BuildingCategory.commerce,
       width: 2, height: 2,
       creditCost: 5400,
@@ -568,7 +568,7 @@ abstract final class BuildingCatalog {
     ),
     BuildingId.blackMarketStall: BuildingDef(
       id: BuildingId.blackMarketStall,
-      name: 'Banca Clandestina',
+      name: 'Banca Furtiva',
       category: BuildingCategory.commerce,
       width: 1, height: 1,
       creditCost: 3000,
@@ -586,7 +586,7 @@ abstract final class BuildingCatalog {
     // ======================= INFRAESTRUTURA =======================
     BuildingId.generator: BuildingDef(
       id: BuildingId.generator,
-      name: 'Gerador',
+      name: 'Moinho',
       category: BuildingCategory.infrastructure,
       width: 1, height: 1,
       creditCost: 1600,
@@ -600,7 +600,7 @@ abstract final class BuildingCatalog {
     ),
     BuildingId.waterTower: BuildingDef(
       id: BuildingId.waterTower,
-      name: 'Torre de Água',
+      name: 'Cisterna',
       category: BuildingCategory.infrastructure,
       width: 1, height: 1,
       creditCost: 1900,
@@ -613,7 +613,7 @@ abstract final class BuildingCatalog {
     ),
     BuildingId.commsAntenna: BuildingDef(
       id: BuildingId.commsAntenna,
-      name: 'Antena de Comunicação',
+      name: 'Pombal',
       category: BuildingCategory.infrastructure,
       width: 1, height: 1,
       creditCost: 4200,
@@ -627,7 +627,7 @@ abstract final class BuildingCatalog {
     ),
     BuildingId.garage: BuildingDef(
       id: BuildingId.garage,
-      name: 'Garagem',
+      name: 'Estrebaria',
       category: BuildingCategory.infrastructure,
       width: 2, height: 1,
       creditCost: 1500,
@@ -641,7 +641,7 @@ abstract final class BuildingCatalog {
     ),
     BuildingId.greenhouse: BuildingDef(
       id: BuildingId.greenhouse,
-      name: 'Estufa',
+      name: 'Pomar',
       category: BuildingCategory.infrastructure,
       width: 2, height: 2,
       creditCost: 2100,
@@ -657,7 +657,7 @@ abstract final class BuildingCatalog {
     ),
     BuildingId.wastePlant: BuildingDef(
       id: BuildingId.wastePlant,
-      name: 'Usina de Resíduos',
+      name: 'Casa de Refugo',
       category: BuildingCategory.infrastructure,
       width: 2, height: 2,
       creditCost: 3400,
@@ -676,7 +676,7 @@ abstract final class BuildingCatalog {
     // ======================= DEFESA =======================
     BuildingId.perimeterWall: BuildingDef(
       id: BuildingId.perimeterWall,
-      name: 'Muro de Perímetro',
+      name: 'Paliçada',
       category: BuildingCategory.defense,
       width: 1, height: 1,
       creditCost: 260,
@@ -702,7 +702,7 @@ abstract final class BuildingCatalog {
     ),
     BuildingId.armoredGate: BuildingDef(
       id: BuildingId.armoredGate,
-      name: 'Portão Blindado',
+      name: 'Portão Fortificado',
       category: BuildingCategory.defense,
       width: 2, height: 1,
       creditCost: 2600,
@@ -716,7 +716,7 @@ abstract final class BuildingCatalog {
     ),
     BuildingId.bunker: BuildingDef(
       id: BuildingId.bunker,
-      name: 'Bunker',
+      name: 'Torre do Tesouro',
       category: BuildingCategory.defense,
       width: 2, height: 2,
       creditCost: 9000,
@@ -746,7 +746,7 @@ abstract final class BuildingCatalog {
     ),
     BuildingId.bar: BuildingDef(
       id: BuildingId.bar,
-      name: 'Bar',
+      name: 'Taberna',
       category: BuildingCategory.civic,
       width: 1, height: 1,
       creditCost: 2400,
@@ -763,7 +763,7 @@ abstract final class BuildingCatalog {
     ),
     BuildingId.fightPit: BuildingDef(
       id: BuildingId.fightPit,
-      name: 'Arena de Combate',
+      name: 'Arena',
       category: BuildingCategory.civic,
       width: 3, height: 3,
       creditCost: 8500,
@@ -779,7 +779,7 @@ abstract final class BuildingCatalog {
     ),
     BuildingId.militiaHall: BuildingDef(
       id: BuildingId.militiaHall,
-      name: 'Sede de Milícia',
+      name: 'Casa da Guarda',
       category: BuildingCategory.civic,
       width: 2, height: 2,
       creditCost: 11000,
@@ -795,7 +795,7 @@ abstract final class BuildingCatalog {
     ),
     BuildingId.committeeHall: BuildingDef(
       id: BuildingId.committeeHall,
-      name: 'Sede do Comitê',
+      name: 'Casa do Conselho',
       category: BuildingCategory.civic,
       width: 2, height: 2,
       creditCost: 7200,

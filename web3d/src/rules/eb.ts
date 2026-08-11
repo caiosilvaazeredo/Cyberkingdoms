@@ -49,7 +49,15 @@ export function cz(valor: number): number {
   return Math.max(0, Math.round(valor));
 }
 
-/** Formata para a interface. A unidade é Cz e vem sempre grudada no número. */
+/**
+ * Formata para a interface. A unidade vem sempre grudada no número.
+ *
+ * `Cz` continua sendo a sigla — é como o EB 1.1 escreve a moeda em toda tabela
+ * de preço e de salário, e trocar a sigla desencontraria o código do documento
+ * que o equilibra. O que mudou foi o **nome falado**: a moeda se chama coroa, e
+ * `Cz` se lê como a abreviação dela. A conta é a mesma, a planilha é a mesma, e
+ * o jogo deixou de falar em crédito no meio de um cenário medieval.
+ */
 export function formatCz(valor: number): string {
   return `Cz ${Math.round(valor).toLocaleString('pt-BR')}`;
 }

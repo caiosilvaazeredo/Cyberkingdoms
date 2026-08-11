@@ -21,8 +21,8 @@ import { allItems, itemDef } from './item';
 export type MarketKind = 'central' | 'clandestine';
 
 export const marketKindLabels: Record<MarketKind, string> = {
-  central: 'Mercado Central',
-  clandestine: 'Mercado Clandestino',
+  central: 'Feira Central',
+  clandestine: 'Feira Furtiva',
 };
 
 /** O Central só aceita produto lícito; o clandestino aceita tudo. */
@@ -347,7 +347,7 @@ export class Market {
     const fills = distribuir(livro, quantity);
     const subtotal = fills.reduce((soma, f) => soma + f.quantity * f.unitPrice, 0);
     if (subtotal > availableCredits) {
-      return { ok: false, reason: `Créditos insuficientes: precisa de ${subtotal}.` };
+      return { ok: false, reason: `Coroas insuficientes: precisa de ${subtotal}.` };
     }
 
     // Só o Central recolhe: o clandestino não passa por governo nenhum, e é

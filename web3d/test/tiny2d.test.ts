@@ -148,8 +148,9 @@ describe('o terreno do jogador vira desenho', () => {
       new PlacedBuilding('n2', 'shack', 2, 2, 0, 0, false, 2),
     ]);
     const [um, dois] = prediosDoTerreno(plot);
-    expect(um!.rotulo).toBe('Barraco');
-    expect(dois!.rotulo).toBe('Barraco II');
+    const nome = buildingDef('shack').name;
+    expect(um!.rotulo).toBe(nome);
+    expect(dois!.rotulo).toBe(`${nome} II`);
     // Evoluir aparece no porte. A forma e a cor **não** mudam: um barraco
     // melhorado continua sendo aquele barraco.
     expect(dois!.escala).toBeGreaterThan(um!.escala);

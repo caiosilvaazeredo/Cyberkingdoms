@@ -1,7 +1,7 @@
 [
   {
     "id": "oil",
-    "name": "Petróleo Bruto",
+    "name": "Breu",
     "tier": "extraction",
     "tierLevel": 1,
     "category": "rawMaterial",
@@ -20,11 +20,11 @@
     "thirstUpkeepModifier": 0.0,
     "attackPower": 0,
     "defensePower": 0,
-    "description": "Extraído dos campos. Base de polímeros e combustível."
+    "description": "Tirado dos poços. Base de madeira tratada e de fogo."
   },
   {
     "id": "scrap",
-    "name": "Sucata",
+    "name": "Minério de Ferro",
     "tier": "extraction",
     "tierLevel": 1,
     "category": "rawMaterial",
@@ -43,11 +43,11 @@
     "thirstUpkeepModifier": 0.0,
     "attackPower": 0,
     "defensePower": 0,
-    "description": "Metal recuperado do lixão. Abundante e barato."
+    "description": "Arrancado da mina comunal. Abundante e barato."
   },
   {
     "id": "rareEarth",
-    "name": "Terras Raras",
+    "name": "Prata Bruta",
     "tier": "extraction",
     "tierLevel": 1,
     "category": "rawMaterial",
@@ -66,11 +66,11 @@
     "thirstUpkeepModifier": 0.0,
     "attackPower": 0,
     "defensePower": 0,
-    "description": "Insumo de chips e implantes. O gargalo da economia."
+    "description": "Insumo de prata lavrada e de relicário. O gargalo da economia."
   },
   {
     "id": "biomass",
-    "name": "Biomassa",
+    "name": "Cevada",
     "tier": "extraction",
     "tierLevel": 1,
     "category": "rawMaterial",
@@ -89,11 +89,11 @@
     "thirstUpkeepModifier": 0.0,
     "attackPower": 0,
     "defensePower": 0,
-    "description": "Matéria orgânica para biorreatores e comida."
+    "description": "Grão para o curral e para a mesa."
   },
   {
     "id": "culturedMeat",
-    "name": "Carne Cultivada",
+    "name": "Carne Curada",
     "tier": "extraction",
     "tierLevel": 1,
     "category": "rawMaterial",
@@ -112,11 +112,11 @@
     "thirstUpkeepModifier": 0.0,
     "attackPower": 0,
     "defensePower": 0,
-    "description": "Proteína de biorreator. Base das refeições industriais."
+    "description": "Proteína do curral. Base das rações de marcha."
   },
   {
     "id": "chip",
-    "name": "Chip",
+    "name": "Prata Lavrada",
     "tier": "refining",
     "tierLevel": 2,
     "category": "component",
@@ -135,11 +135,11 @@
     "thirstUpkeepModifier": 0.0,
     "attackPower": 0,
     "defensePower": 0,
-    "description": "Terras raras refinadas. Nada avançado existe sem ele."
+    "description": "Prata batida no cadinho. Nada refinado existe sem ela."
   },
   {
     "id": "polymer",
-    "name": "Polímero",
+    "name": "Madeira Tratada",
     "tier": "refining",
     "tierLevel": 2,
     "category": "component",
@@ -158,11 +158,11 @@
     "thirstUpkeepModifier": 0.0,
     "attackPower": 0,
     "defensePower": 0,
-    "description": "Petróleo craqueado. Estrutura de quase tudo."
+    "description": "Tábua fervida em breu. Estrutura de quase tudo."
   },
   {
     "id": "fabric",
-    "name": "Tecido Sintético",
+    "name": "Linho",
     "tier": "refining",
     "tierLevel": 2,
     "category": "component",
@@ -181,11 +181,11 @@
     "thirstUpkeepModifier": 0.0,
     "attackPower": 0,
     "defensePower": 0,
-    "description": "Fibra de biomassa tratada."
+    "description": "Fibra de cevada tratada no tear."
   },
   {
     "id": "circuitBoard",
-    "name": "Placa",
+    "name": "Ferragem",
     "tier": "refining",
     "tierLevel": 2,
     "category": "component",
@@ -204,11 +204,11 @@
     "thirstUpkeepModifier": 0.0,
     "attackPower": 0,
     "defensePower": 0,
-    "description": "Sucata + polímero. O esqueleto da eletrônica."
+    "description": "Ferro e madeira tratada. O esqueleto de toda máquina."
   },
   {
     "id": "catalyst",
-    "name": "Catalisador",
+    "name": "Salitre",
     "tier": "refining",
     "tierLevel": 2,
     "category": "component",
@@ -227,11 +227,11 @@
     "thirstUpkeepModifier": 0.0,
     "attackPower": 0,
     "defensePower": 0,
-    "description": "Acelera reações. Usado em drogas e combustível."
+    "description": "Acelera o que ferve. Usado em elixir e em fogo."
   },
   {
     "id": "clothing",
-    "name": "Roupa Urbana",
+    "name": "Traje de Corte",
     "tier": "manufacturing",
     "tierLevel": 3,
     "category": "gear",
@@ -254,7 +254,7 @@
   },
   {
     "id": "pistol",
-    "name": "Pistola",
+    "name": "Besta",
     "tier": "manufacturing",
     "tierLevel": 3,
     "category": "weapon",
@@ -273,11 +273,11 @@
     "thirstUpkeepModifier": 0.0,
     "attackPower": 8,
     "defensePower": 0,
-    "description": "Arma leve e legal de portar nas capitais."
+    "description": "Arma leve e de porte legal nas capitais."
   },
   {
     "id": "rifle",
-    "name": "Rifle",
+    "name": "Arco Longo",
     "tier": "manufacturing",
     "tierLevel": 3,
     "category": "weapon",
@@ -296,11 +296,11 @@
     "thirstUpkeepModifier": 0.0,
     "attackPower": 18,
     "defensePower": 0,
-    "description": "Poder de fogo de milícia."
+    "description": "Poder de fogo de guarda armada."
   },
   {
     "id": "drone",
-    "name": "Drone de Combate",
+    "name": "Cão de Guerra",
     "tier": "manufacturing",
     "tierLevel": 3,
     "category": "weapon",
@@ -323,7 +323,7 @@
   },
   {
     "id": "metabolicImplant",
-    "name": "Implante Metabólico",
+    "name": "Amuleto do Peregrino",
     "tier": "manufacturing",
     "tierLevel": 3,
     "category": "implant",
@@ -342,11 +342,11 @@
     "thirstUpkeepModifier": -0.3,
     "attackPower": 0,
     "defensePower": 0,
-    "description": "-30% de consumo de Fome e Sede. Endgame do Nível 3."
+    "description": "-30% de consumo de Fome e Sede. Fim de jogo do Nível 3."
   },
   {
     "id": "hydrationPack",
-    "name": "Mochila de Hidratação",
+    "name": "Cantil de Couro",
     "tier": "manufacturing",
     "tierLevel": 3,
     "category": "gear",
@@ -369,7 +369,7 @@
   },
   {
     "id": "thermalJacket",
-    "name": "Jaqueta Térmica",
+    "name": "Manto de Lã",
     "tier": "manufacturing",
     "tierLevel": 3,
     "category": "gear",
@@ -392,7 +392,7 @@
   },
   {
     "id": "rationPack",
-    "name": "Refeição Industrial",
+    "name": "Ração de Marcha",
     "tier": "manufacturing",
     "tierLevel": 3,
     "category": "food",
@@ -415,7 +415,7 @@
   },
   {
     "id": "luxuryMeal",
-    "name": "Refeição de Luxo",
+    "name": "Banquete",
     "tier": "manufacturing",
     "tierLevel": 3,
     "category": "food",
@@ -434,11 +434,11 @@
     "thirstUpkeepModifier": 0.0,
     "attackPower": 0,
     "defensePower": 0,
-    "description": "Cara, mas concede Status e Resistência temporários."
+    "description": "Caro, mas concede Status e Resistência temporários."
   },
   {
     "id": "water",
-    "name": "Água Filtrada",
+    "name": "Água de Poço",
     "tier": "basic",
     "tierLevel": 0,
     "category": "drink",
@@ -457,11 +457,11 @@
     "thirstUpkeepModifier": 0.0,
     "attackPower": 0,
     "defensePower": 0,
-    "description": "O item mais negociado do servidor."
+    "description": "O item mais negociado do reino."
   },
   {
     "id": "streetFood",
-    "name": "Comida de Rua",
+    "name": "Pão de Feira",
     "tier": "basic",
     "tierLevel": 0,
     "category": "food",
@@ -480,11 +480,11 @@
     "thirstUpkeepModifier": 0.0,
     "attackPower": 0,
     "defensePower": 0,
-    "description": "Barata, enche a barra, sem nenhum bônus."
+    "description": "Barato, enche a barra, sem nenhum bônus."
   },
   {
     "id": "energyDrink",
-    "name": "Energético",
+    "name": "Cerveja de Cevada",
     "tier": "basic",
     "tierLevel": 0,
     "category": "drink",
@@ -507,7 +507,7 @@
   },
   {
     "id": "redRush",
-    "name": "Red Rush",
+    "name": "Aguardente Vermelha",
     "tier": "manufacturing",
     "tierLevel": 3,
     "category": "drug",
@@ -530,7 +530,7 @@
   },
   {
     "id": "caffeine",
-    "name": "Cafeína",
+    "name": "Chá Forte",
     "tier": "refining",
     "tierLevel": 2,
     "category": "drug",
@@ -553,7 +553,7 @@
   },
   {
     "id": "glowVodka",
-    "name": "Glow Vodka",
+    "name": "Hidromel",
     "tier": "manufacturing",
     "tierLevel": 3,
     "category": "drug",
@@ -576,7 +576,7 @@
   },
   {
     "id": "stolenGoods",
-    "name": "Carga Roubada",
+    "name": "Espólio Roubado",
     "tier": "basic",
     "tierLevel": 0,
     "category": "contraband",
@@ -595,11 +595,11 @@
     "thirstUpkeepModifier": 0.0,
     "attackPower": 0,
     "defensePower": 0,
-    "description": "Só circula no Mercado Clandestino."
+    "description": "Só circula na Feira Furtiva."
   },
   {
     "id": "illegalWeapon",
-    "name": "Arma Ilegal",
+    "name": "Lâmina Proibida",
     "tier": "manufacturing",
     "tierLevel": 3,
     "category": "weapon",
@@ -618,11 +618,11 @@
     "thirstUpkeepModifier": 0.0,
     "attackPower": 22,
     "defensePower": 0,
-    "description": "Poder de rifle sem registro. Porte é crime."
+    "description": "Poder de arco sem selo do senhor. Porte é crime."
   },
   {
     "id": "syntheticDrug",
-    "name": "Droga Sintética",
+    "name": "Elixir Proibido",
     "tier": "manufacturing",
     "tierLevel": 3,
     "category": "drug",
@@ -641,6 +641,6 @@
     "thirstUpkeepModifier": 0.0,
     "attackPower": 0,
     "defensePower": 0,
-    "description": "Muito potente, muito ilegal, muito lucrativa."
+    "description": "Muito potente, muito ilegal, muito lucrativo."
   }
 ]
