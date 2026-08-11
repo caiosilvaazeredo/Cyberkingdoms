@@ -15,10 +15,16 @@ import { defineConfig } from 'vite';
  */
 export default defineConfig({
   build: {
+    // `await` no topo do módulo é o jeito natural de carregar sprites antes de
+    // desenhar o primeiro quadro, e o alvo padrão do Vite (es2020) não o
+    // aceita. `es2022` é suportado por todo navegador que roda WebGL2 — o
+    // mesmo público que o jogo já exigia antes desta página existir.
+    target: 'es2022',
     rollupOptions: {
       input: {
         principal: resolve(__dirname, 'index.html'),
         preview: resolve(__dirname, 'preview.html'),
+        tiny: resolve(__dirname, 'tiny.html'),
       },
     },
     // O `three` sozinho passa de 500 kB e o aviso do Rollup vira ruído em todo
