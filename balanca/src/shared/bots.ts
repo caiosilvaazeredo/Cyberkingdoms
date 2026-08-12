@@ -1,4 +1,4 @@
-import { CLASSES_COM_CHAPEU, perfil } from './classes';
+import { CLASSES_COM_CHAPEU, perfil, type Classe } from './classes';
 import { princesaDe, unidade, type Estado, type Unidade } from './estado';
 import type { Arena } from './arena';
 import type { Navegador } from './navegacao';
@@ -8,10 +8,13 @@ import type { Comando } from './protocolo';
 import {
   ALCANCE_DE_AJUDA,
   ALCANCE_DE_COLETA,
+  CUSTO_DO_NIVEL,
   DT,
+  NIVEL_MAXIMO,
   PESO_MAXIMO,
   carregadoresPara,
   outroTime,
+  type Time,
 } from './regras';
 
 /**
@@ -50,6 +53,17 @@ export type Papel = 'cozinheiro' | 'atacante' | 'defensor';
 /** A cara que cada papel dá ao time. Seis bots viram 2/2/2. */
 const RODIZIO: readonly Papel[] = ['atacante', 'cozinheiro', 'defensor'];
 
+/**
+ * Os ofícios, na ordem em que um time deve preenchê-los.
+ *
+ * O **primeiro** cozinheiro de cada time é caçador e não muda mais: carne é a
+ * única entrada do bolo, e o bolo é o que move a balança — se ninguém caçar por
+ * princípio, o time perde o diferencial do jogo enquanto constrói uma obra
+ * bonita. Do segundo em diante o ofício é escolhido pela falta: madeira ou ouro,
+ * o que estiver travando o próximo nível.
+ */
+const OFICIOS: readonly Classe[] = ['cacador', 'lenhador', 'minerador'];
+
 /** Segundos entre ver o alvo e conseguir atirar nele. */
 const ESPERA_PARA_MIRAR = 0.3;
 
@@ -58,6 +72,8 @@ const VIDA_PARA_COMER = 0.35;
 
 interface Memoria {
   papel: Papel;
+  /** A classe que este bot quer vestir. `null` para quem briga. */
+  oficio: Classe | null;
   /**
    * O temperamento deste bot, de 0 a 1.
    *
@@ -76,10 +92,15 @@ interface Memoria {
   usarPor: number;
   /** Segundos até poder apertar usar de novo. Evita martelar a chapelaria. */
   esperaDoUsar: number;
+  /** Segundos até rever o ofício. Dá inércia à troca de chapéu. */
+  esperaDoOficio: number;
+  /** Ofício que não se revê. É o caçador de plantão de cada time. */
+  fixo: boolean;
 }
 
 export class Bots {
   private readonly memorias = new Map<number, Memoria>();
+  private readonly cozinheiros = new Map<Time, number>();
   private proximoPapel = 0;
 
   constructor(
@@ -87,9 +108,18 @@ export class Bots {
     private readonly navegador: Navegador,
   ) {}
 
-  adotar(id: number, papel?: Papel): Papel {
+  adotar(id: number, time: Time, papel?: Papel): Papel {
     const escolhido = papel ?? RODIZIO[this.proximoPapel++ % RODIZIO.length]!;
-    this.memorias.set(id, vazia(escolhido, id));
+    let oficio: Classe | null = null;
+    let fixo = false;
+    if (escolhido === 'cozinheiro') {
+      const quantos = this.cozinheiros.get(time) ?? 0;
+      this.cozinheiros.set(time, quantos + 1);
+      oficio = OFICIOS[Math.min(quantos, OFICIOS.length - 1)]!;
+      // O caçador do time é fixo; os outros trocam de chapéu conforme a falta.
+      fixo = quantos === 0;
+    }
+    this.memorias.set(id, vazia(escolhido, id, oficio, fixo));
     return escolhido;
   }
 
@@ -105,7 +135,7 @@ export class Bots {
   pensar(partida: Partida): void {
     for (const u of partida.estado.unidades) {
       if (!u.bot) continue;
-      const memoria = this.memorias.get(u.id) ?? vazia(this.adotar(u.id), u.id);
+      const memoria = this.memorias.get(u.id) ?? vazia(this.adotar(u.id, u.time), u.id, null, false);
       this.memorias.set(u.id, memoria);
       partida.comandar(u.id, this.decidir(partida.estado, u, memoria));
     }
@@ -251,7 +281,7 @@ export class Bots {
 
     // --- papel ------------------------------------------------------------
 
-    if (m.papel === 'cozinheiro') return this.planoDoCozinheiro(estado, u, ir);
+    if (m.papel === 'cozinheiro') return this.planoDoCozinheiro(estado, u, m, ir);
 
     if (u.classe === 'aldeao' && this.temChapeu(estado, u)) {
       const chapelaria = this.arena.estrutura('chapelaria', meu);
@@ -272,9 +302,36 @@ export class Bots {
     return ir(this.arena.estrutura('jaula', inimigo), false, 120, true);
   }
 
+  /**
+   * O ofício que o time está pedindo agora.
+   *
+   * A conta é a ordem das urgências do jogo: sem carne não há bolo, e sem bolo a
+   * balança não se move; com a cozinha abastecida, o que falta é o material que
+   * está travando o próximo nível da obra. É o que permite dois cozinheiros
+   * cobrirem três cadeias — eles trocam de chapéu conforme a falta.
+   */
+  private oficioNecessario(estado: Estado, u: Unidade): Classe {
+    const oficina = estado.oficinas.find((o) => o.time === u.time);
+    if (oficina && oficina.nivel < NIVEL_MAXIMO) {
+      const custo = CUSTO_DO_NIVEL[oficina.nivel + 1]!;
+      // O material mais atrasado primeiro: a obra exige os dois, então insistir
+      // no que já está sobrando é trabalho que não vira nível.
+      const faltaMadeira = custo.madeira - oficina.madeira;
+      const faltaOuro = custo.ouro - oficina.ouro;
+      if (faltaMadeira > 0 || faltaOuro > 0) {
+        return faltaMadeira >= faltaOuro ? 'lenhador' : 'minerador';
+      }
+    }
+    // Obra pronta: o resto do time vira carne, que é o que move a balança.
+    const cozinha = estado.cozinhas.find((c) => c.time === u.time);
+    if (cozinha && cozinha.bolos === 0) return 'cacador';
+    return 'cacador';
+  }
+
   private planoDoCozinheiro(
     estado: Estado,
     u: Unidade,
+    m: Memoria,
     ir: (
       destino: { x: number; y: number } | null,
       usar?: boolean,
@@ -287,7 +344,43 @@ export class Bots {
     const jaula = this.arena.estrutura('jaula', meu);
     const refem = princesaDe(estado, outroTime(meu));
 
-    if (u.carga === 'trigo') return ir(cozinha, this.chegou(u, cozinha, ALCANCE_DE_COLETA * 0.7));
+    // Carga no chão perto é o trabalho mais barato do mapa: a carne que o
+    // caçador acabou de derrubar, a madeira que caiu de quem morreu. Sem isto o
+    // bot mata a ovelha e vai atrás da próxima, deixando a carne apodrecer.
+    if (u.carga === 'nada') {
+      const largada = estado.itens
+        .filter((i) => i.tipo !== 'chapeu' && Math.hypot(i.x - u.x, i.y - u.y) < 420)
+        .sort(
+          (a, b) => Math.hypot(a.x - u.x, a.y - u.y) - Math.hypot(b.x - u.x, b.y - u.y),
+        )[0];
+      if (largada) return ir(largada, this.chegou(u, largada, ALCANCE_DE_COLETA * 0.8));
+    }
+
+    // O ofício é revisto conforme a falta do time, com um pouco de inércia para
+    // o bot não passar a partida trocando de chapéu.
+    m.esperaDoOficio -= DT;
+    if (!m.fixo && m.esperaDoOficio <= 0 && u.carga === 'nada') {
+      m.oficio = this.oficioNecessario(estado, u);
+      m.esperaDoOficio = 12;
+    }
+
+    // Primeiro a ferramenta: um caçador sem faca leva o dobro do tempo para
+    // derrubar um bicho, e um lenhador sem machado é um aldeão com pressa.
+    if (
+      u.carga === 'nada' &&
+      m.oficio !== null &&
+      u.classe !== m.oficio &&
+      estado.estoque[meu][m.oficio] > 0
+    ) {
+      const chapelaria = this.arena.estrutura('chapelaria', meu);
+      return ir(chapelaria, this.chegou(u, chapelaria, ALCANCE_DE_COLETA * 0.7));
+    }
+
+    if (u.carga === 'carne') return ir(cozinha, this.chegou(u, cozinha, ALCANCE_DE_COLETA * 0.7));
+    if (u.carga === 'madeira' || u.carga === 'ouro') {
+      const chapelaria = this.arena.estrutura('chapelaria', meu);
+      return ir(chapelaria, this.chegou(u, chapelaria, ALCANCE_DE_COLETA * 0.7));
+    }
     if (u.carga === 'bolo') return ir(jaula, this.chegou(u, jaula, ALCANCE_DE_COLETA * 0.7));
 
     const minhaCozinha = estado.cozinhas.find((c) => c.time === meu)!;
@@ -297,18 +390,29 @@ export class Bots {
       return ir(cozinha, this.chegou(u, cozinha, ALCANCE_DE_COLETA * 0.7));
     }
 
-    // O trigal mais perto **pelo caminho**, não em linha reta: o lago do meio
-    // faz um trigo do outro lado parecer perto e ficar longe.
+    // O alvo do ofício mais perto **pelo caminho**, não em linha reta: o lago do
+    // meio faz uma jazida do outro lado parecer perto e ficar longe.
+    const oficio = perfil(u.classe).oficio;
+
+    if (oficio === 'carne' || oficio === null) {
+      const bicho = this.animalMaisPerto(estado, u);
+      if (bicho) return ir(bicho, false, 0, false);
+    }
+
     let melhor: { x: number; y: number } | null = null;
     let menor = Infinity;
-    for (const t of this.arena.trigais) {
-      const estadoDoTrigal = estado.trigais.find((x) => x.id === t.id);
-      if (!estadoDoTrigal?.maduro) continue;
-      if (estadoDoTrigal.ocupadoPor !== null && estadoDoTrigal.ocupadoPor !== u.id) continue;
-      const d = this.navegador.distancia(u.x, u.y, t.x, t.y);
+    for (const j of this.arena.jazidas) {
+      // Cada ofício vai à jazida dele. O aldeão, que faz tudo devagar, aceita
+      // qualquer uma — é o que o mantém útil enquanto espera por um chapéu.
+      if (oficio === 'madeira' && j.tipo !== 'arvore') continue;
+      if (oficio === 'ouro' && j.tipo !== 'ouro') continue;
+      const dela = estado.jazidas.find((x) => x.id === j.id);
+      if (!dela?.cheia) continue;
+      if (dela.ocupadaPor !== null && dela.ocupadaPor !== u.id) continue;
+      const d = this.navegador.distancia(u.x, u.y, j.x, j.y);
       if (d < menor) {
         menor = d;
-        melhor = t;
+        melhor = j;
       }
     }
     if (!melhor) return ir(cozinha, false, 120);
@@ -341,7 +445,7 @@ export class Bots {
     // o bot parar de andar para nada.
     if (u.carga === 'princesa') return null;
 
-    const alvo = this.alvoDeAtaque(estado, u, p.alcance);
+    const alvo = this.alvoDeAtaque(estado, u, p.alcance) ?? this.bichoNaMira(estado, u, m, p.alcance);
     if (!alvo) {
       m.alvo = null;
       m.mirando = 0;
@@ -385,6 +489,47 @@ export class Bots {
     return melhor;
   }
 
+  /**
+   * O bicho ao alcance, para quem vive de carne.
+   *
+   * Caçar é a única coleta do jogo que se faz atacando, então ela precisa
+   * entrar pelo mesmo caminho do combate — sem isto o bot chega na ovelha, para
+   * na frente dela e espera por uma barra de progresso que não existe.
+   */
+  private bichoNaMira(
+    estado: Estado,
+    u: Unidade,
+    m: Memoria,
+    alcance: number,
+  ): { id: number; x: number; y: number; carga: string } | null {
+    if (u.carga !== 'nada') return null;
+    const cacador = perfil(u.classe).oficio === 'carne' || m.oficio === 'cacador';
+    if (!cacador) return null;
+    for (const a of estado.animais) {
+      if (!a.vivo) continue;
+      if (Math.hypot(a.x - u.x, a.y - u.y) > alcance) continue;
+      // O id do bicho e o da unidade vivem em contadores diferentes; o negativo
+      // evita que a memória de mira confunda uma ovelha com um jogador.
+      return { id: -1000 - a.id, x: a.x, y: a.y, carga: 'nada' };
+    }
+    return null;
+  }
+
+  /** O bicho mais perto que ainda está de pé. O caçador vive disso. */
+  private animalMaisPerto(estado: Estado, u: Unidade): { x: number; y: number } | null {
+    let melhor: { x: number; y: number } | null = null;
+    let menor = Infinity;
+    for (const a of estado.animais) {
+      if (!a.vivo) continue;
+      const d = this.navegador.distancia(u.x, u.y, a.x, a.y);
+      if (d < menor) {
+        menor = d;
+        melhor = a;
+      }
+    }
+    return melhor;
+  }
+
   private inimigoMaisPertoDe(
     estado: Estado,
     u: Unidade,
@@ -413,8 +558,10 @@ export class Bots {
   }
 }
 
-const vazia = (papel: Papel, id: number): Memoria => ({
+const vazia = (papel: Papel, id: number, oficio: Classe | null, fixo: boolean): Memoria => ({
   papel,
+  oficio,
+  fixo,
   // Hash do id, e não sorteio: o mesmo bot tem sempre o mesmo temperamento, o
   // que mantém a partida reproduzível a partir da seed e da lista de entradas.
   tempero: ((Math.imul(id, 2654435761) >>> 0) % 1000) / 1000,
@@ -422,4 +569,5 @@ const vazia = (papel: Papel, id: number): Memoria => ({
   alvo: null,
   usarPor: 0,
   esperaDoUsar: 0,
+  esperaDoOficio: 0,
 });

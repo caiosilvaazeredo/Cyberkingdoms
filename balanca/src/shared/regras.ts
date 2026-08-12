@@ -32,8 +32,9 @@
  * é território ganho nos dois sentidos.
  *
  * A consequência tática que fecha o desenho: bolo não nasce do chão. Sai de
- * trigo que um aldeão colheu e levou à cozinha — e aldeão colhendo é um a menos
- * segurando o portão. O custo do domínio da balança é medido em gente.
+ * carne, e carne sai de bicho que alguém teve de caçar no meio do mapa — e quem
+ * está caçando é um a menos segurando a ponte. O custo do domínio da balança é
+ * medido em gente.
  *
  * ## O segundo diferencial: chapéu cai, e chapéu se rouba
  *
@@ -41,8 +42,8 @@
  * chapéu **cai no chão** quando o dono morre — e quem passar pega, inclusive o
  * inimigo. Um time que domina as trocas não só mata mais: ele desmonta a
  * composição do outro e veste a própria com o que roubou. Quando o time
- * vermelho não tem mais magos, isso é uma história que aconteceu na partida,
- * não um número no menu.
+ * vermelho não tem mais arqueiros, isso é uma história que aconteceu na
+ * partida, não um número no menu.
  *
  * ## Por que tudo é constante nomeada e nada é número solto
  *
@@ -106,8 +107,8 @@ export const PESO_MAXIMO = PESO_TOTAL - PESO_MINIMO;
 /** Quanto uma fatia move na balança. */
 export const PESO_POR_BOLO = 12;
 
-/** Trigo que a cozinha consome para assar um bolo. */
-export const TRIGO_POR_BOLO = 3;
+/** Carne que a cozinha consome para assar um bolo. */
+export const CARNE_POR_BOLO = 2;
 
 /** Segundos de forno depois que o trigo entrou. */
 export const TEMPO_DE_FORNO = 6;
@@ -152,8 +153,47 @@ export const ALCANCE_DE_USO = 70;
 /** Alcance de coleta e de entrega. */
 export const ALCANCE_DE_COLETA = 80;
 
-/** Segundos colhendo um pé de trigo. */
-export const TEMPO_DE_COLHEITA = 2.2;
+/** Segundos de picareta ou machado até a carga sair da jazida. */
+export const TEMPO_DE_TRABALHO = 2.4;
+
+/** Segundos até a árvore rebrotar e a pedreira voltar a render. */
+export const JAZIDA_VOLTA_EM = 14;
+
+// --- a caça ----------------------------------------------------------------
+
+/** Vida de um bicho. O caçador derruba em três golpes; um guerreiro, em oito. */
+export const ANIMAL_VIDA = 58;
+
+/** Velocidade pastando e velocidade em pânico. */
+export const ANIMAL_PASTANDO = 70;
+export const ANIMAL_FUGINDO = 205;
+
+/** Segundos de pânico depois de apanhar. */
+export const ANIMAL_PANICO = 3;
+
+/** Segundos até outro bicho aparecer no lugar do que morreu. */
+export const ANIMAL_VOLTA_EM = 18;
+
+/** Até onde um bicho se afasta do lugar onde nasceu. */
+export const ANIMAL_PASTO = 4 * TILE;
+
+// --- a obra ----------------------------------------------------------------
+
+/**
+ * O que cada nível da chapelaria custa, em madeira e ouro.
+ *
+ * Os dois materiais são exigidos juntos de propósito: um time que só tem
+ * lenhador acumula madeira e não sobe nada. A obra é o único lugar do jogo que
+ * obriga dois ofícios diferentes a existirem ao mesmo tempo.
+ */
+export const CUSTO_DO_NIVEL: readonly { madeira: number; ouro: number }[] = [
+  { madeira: 0, ouro: 0 },
+  { madeira: 0, ouro: 0 },
+  { madeira: 4, ouro: 4 },
+  { madeira: 6, ouro: 6 },
+];
+
+export const NIVEL_MAXIMO = 3;
 
 /** Distância máxima entre carregadores para a princesa andar. */
 export const ALCANCE_DE_AJUDA = 110;

@@ -28,8 +28,10 @@ function estadoVazio(): Estado {
     princesas: [],
     projeteis: [],
     itens: [],
-    trigais: [],
+    jazidas: [],
+    animais: [],
     cozinhas: [],
+    oficinas: [],
     estoque,
     eventos: [],
     vencedor: null,
@@ -47,7 +49,7 @@ describe('o retrato', () => {
     heroi.vida = 42;
     heroi.carga = 'bolo';
     const rival = partida.entrar({ nome: 'Rival', bot: true, time: 'vermelho' });
-    rival.classe = 'mago';
+    rival.classe = 'lanceiro';
 
     partida.comandar(heroi.id, { seq: 77, mx: 1, my: 0, ax: 1, ay: 0, atacar: true, usar: false });
     for (let i = 0; i < 3; i++) partida.passo();
@@ -64,6 +66,8 @@ describe('o retrato', () => {
     expect(heroiCopia.time).toBe('azul');
     expect(heroiCopia.classe).toBe('arqueiro');
     expect(heroiCopia.carga).toBe('bolo');
+    // O relógio do gesto viaja: sem ele o golpe do vizinho não anima.
+    expect(heroiCopia.golpe).toBeCloseTo(heroi.golpe, 1);
     expect(heroiCopia.vida).toBe(42);
     expect(heroiCopia.ultimoComando).toBe(77);
     expect(Math.round(heroiCopia.x)).toBe(Math.round(heroi.x));
@@ -74,8 +78,10 @@ describe('o retrato', () => {
       partida.estado.princesas.map((p) => p.peso),
     );
     expect(copia.estoque.azul).toEqual(partida.estado.estoque.azul);
-    expect(copia.trigais).toHaveLength(partida.estado.trigais.length);
+    expect(copia.jazidas).toHaveLength(partida.estado.jazidas.length);
+    expect(copia.animais).toHaveLength(partida.estado.animais.length);
     expect(copia.cozinhas.map((c) => c.time)).toEqual(partida.estado.cozinhas.map((c) => c.time));
+    expect(copia.oficinas).toEqual(partida.estado.oficinas);
   });
 
   it('preserva quem carrega a princesa', () => {

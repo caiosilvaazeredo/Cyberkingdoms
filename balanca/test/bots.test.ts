@@ -19,6 +19,7 @@ function clienteMudo(nome: string): Cliente {
     chave: nome,
     nome,
     unidade: null,
+    time: null,
     silencio: 0,
     enviar() {},
     fechar() {},
@@ -28,6 +29,7 @@ function clienteMudo(nome: string): Cliente {
 /** Roda a sala e junta o que aconteceu no caminho. */
 function jogar(segundos: number, seed: number) {
   const sala = new Sala({ nome: 'teste', seed, porTime: 6, esperaPorJogadores: 0 });
+  // Um espectador basta para a sala existir; os bots jogam a partida.
   sala.entrar(clienteMudo('Observador'));
   const eventos: string[] = [];
   // O maior desequilíbrio que a balança alcançou. Olhar só o peso final
@@ -80,7 +82,10 @@ describe('os bots', () => {
   it('cabem no orçamento de tempo de um tick', () => {
     const sala = new Sala({ nome: 'perf', seed: 25, porTime: 6, esperaPorJogadores: 0 });
     sala.entrar(clienteMudo('Observador'));
-    for (let i = 0; i < 60; i++) sala.passo();
+    for (let i = 0; i < 60; i++) {
+      sala.tocar('Observador');
+      sala.passo();
+    }
 
     const inicio = performance.now();
     const quantos = 600;

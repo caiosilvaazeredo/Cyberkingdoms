@@ -40,8 +40,15 @@ pagina.on('console', (m) => {
 pagina.on('pageerror', (e) => erros.push(String(e)));
 
 await pagina.goto(endereco, { waitUntil: 'networkidle' });
+await pagina.screenshot({ path: 'fumaca-menu.png' });
 await pagina.fill('#nome', 'Fumaça');
 await pagina.click('#jogar');
+
+// A escolha de lado aparece por cima da partida; entrar é uma tecla.
+await pagina.waitForFunction(() => window.balanca?.tela() === 'escolha', { timeout: 30000 });
+await pagina.screenshot({ path: 'fumaca-escolha.png' });
+await pagina.click('#confirmar');
+await pagina.waitForFunction(() => window.balanca?.tela() === 'jogo', { timeout: 15000 });
 
 const medidas = [];
 for (let volta = 0; volta < 6; volta++) {

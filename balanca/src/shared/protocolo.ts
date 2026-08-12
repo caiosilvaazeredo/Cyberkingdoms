@@ -1,5 +1,15 @@
 import { CLASSES, CLASSES_COM_CHAPEU, type Classe } from './classes';
-import type { Carga, Estado, Evento, Fase, Item, Princesa, Projetil, Unidade } from './estado';
+import type {
+  Carga,
+  Estado,
+  Evento,
+  Fase,
+  Item,
+  Princesa,
+  Projetil,
+  TipoDeItem,
+  Unidade,
+} from './estado';
 import { TIMES, type Time } from './regras';
 
 /**
@@ -30,7 +40,7 @@ import { TIMES, type Time } from './regras';
  * O mapa não viaja: o cliente monta a arena a partir da seed.
  */
 
-export const VERSAO_DO_PROTOCOLO = 1;
+export const VERSAO_DO_PROTOCOLO = 2;
 
 // --- cliente → servidor ----------------------------------------------------
 
@@ -57,6 +67,14 @@ export interface Comando {
 
 export type DoCliente =
   | { t: 'entrar'; nome: string; versao: number }
+  /**
+   * Escolher o lado é uma mensagem separada de entrar, e não um campo dela.
+   *
+   * Quem acabou de conectar ainda não sabe o que quer: precisa **ver** os dois
+   * times para escolher, e para ver precisa já estar conectado. Então entrar dá
+   * um espectador, e é esta mensagem que transforma o espectador em jogador.
+   */
+  | { t: 'escolherTime'; time: Time }
   | { t: 'comando'; c: Comando }
   | { t: 'ping'; tempo: number }
   | { t: 'sair' };
@@ -73,12 +91,15 @@ export interface FichaDeJogador {
 export type DoServidor =
   | {
       t: 'bemvindo';
-      /** A unidade que este cliente controla. */
-      voce: number;
       seed: number;
       sala: string;
       porTime: number;
     }
+  /**
+   * O espectador virou jogador. Chega depois de `escolherTime`, e de novo a
+   * cada partida nova — a sala não morre no fim do jogo, monta a próxima.
+   */
+  | { t: 'nasceu'; voce: number; time: Time }
   | { t: 'elenco'; jogadores: FichaDeJogador[] }
   | { t: 'retrato'; r: Retrato }
   | { t: 'pong'; tempo: number }
@@ -91,15 +112,21 @@ export interface Retrato {
   pr: number[][];
   pj: number[][];
   it: number[][];
-  tg: number[][];
+  /** Jazidas: cheias ou em recomposição. */
+  jz: number[][];
+  /** Os bichos. */
+  an: number[][];
   cz: number[][];
+  /** A obra de cada time. */
+  of: number[][];
   /** Chapéus em estoque: azul e vermelho, na ordem de `CLASSES_COM_CHAPEU`. */
   es: number[][];
   ev: Evento[];
 }
 
 const FASES: readonly Fase[] = ['aquecimento', 'jogando', 'ponto', 'fim'];
-const CARGAS: readonly Carga[] = ['nada', 'trigo', 'bolo', 'princesa'];
+const CARGAS: readonly Carga[] = ['nada', 'madeira', 'ouro', 'carne', 'bolo', 'princesa'];
+const ITENS: readonly TipoDeItem[] = ['chapeu', 'bolo', 'carne', 'madeira', 'ouro'];
 const ONDES: readonly Princesa['onde'][] = ['jaula', 'carregada', 'chao', 'salva'];
 
 const idxTime = (t: Time): number => TIMES.indexOf(t);
@@ -120,8 +147,12 @@ export function empacotar(estado: Estado): Retrato {
       estado.vencedor === null ? -1 : idxTime(estado.vencedor),
     ],
     // `[id, time, classe, x, y, olharX*100, olharY*100, vida, vivo, carga,
-    //   golpe, colheita*100, renasceEm*10, ultimoComando, abates, mortes,
-    //   fatias, resgates]`
+    //   golpe*100, colheita*100, renasceEm*10, ultimoComando, abates, mortes,
+    //   fatias, resgates, entregas]`
+    //
+    // `golpe` vai como centésimos de segundo, e não como um sim/não: é o
+    // relógio da animação de ataque, e o cliente precisa dele para saber em que
+    // ponto do arco da espada o boneco está.
     u: estado.unidades.map((u) => [
       u.id,
       idxTime(u.time),
@@ -133,7 +164,7 @@ export function empacotar(estado: Estado): Retrato {
       arred(u.vida),
       u.vivo ? 1 : 0,
       CARGAS.indexOf(u.carga),
-      u.golpe > 0 ? 1 : 0,
+      arred(u.golpe * 100),
       arred(u.colheita * 100),
       arred(u.renasceEm * 10),
       u.ultimoComando,
@@ -141,6 +172,7 @@ export function empacotar(estado: Estado): Retrato {
       u.mortes,
       u.fatias,
       u.resgates,
+      u.entregas,
     ]),
     // `[time, peso, onde, x, y, portador, ajudantes, voltaEm]`
     pr: estado.princesas.map((p) => [
@@ -153,28 +185,37 @@ export function empacotar(estado: Estado): Retrato {
       p.ajudantes,
       arred(p.voltaEm),
     ]),
-    // `[id, tipo(0 flecha/1 bola), time, x, y, vx, vy]`
+    // `[id, time, x, y, vx, vy]`
     pj: estado.projeteis.map((p) => [
       p.id,
-      p.tipo === 'flecha' ? 0 : 1,
       idxTime(p.time),
       arred(p.x),
       arred(p.y),
       arred(p.vx),
       arred(p.vy),
     ]),
-    // `[id, tipo(0 chapéu/1 bolo), classe, origem, x, y]`
+    // `[id, tipo, classe, origem, x, y]`
     it: estado.itens.map((i) => [
       i.id,
-      i.tipo === 'chapeu' ? 0 : 1,
+      ITENS.indexOf(i.tipo),
       i.classe === null ? -1 : idxClasse(i.classe),
       i.origem === null ? -1 : idxTime(i.origem),
       arred(i.x),
       arred(i.y),
     ]),
-    tg: estado.trigais.map((t) => [t.id, t.maduro ? 1 : 0]),
-    // `[time, trigo, assando*10, bolos]`
-    cz: estado.cozinhas.map((c) => [idxTime(c.time), c.trigo, arred(c.assando * 10), c.bolos]),
+    jz: estado.jazidas.map((j) => [j.id, j.cheia ? 1 : 0]),
+    // `[id, x, y, vivo, fugindo]`
+    an: estado.animais.map((a) => [
+      a.id,
+      arred(a.x),
+      arred(a.y),
+      a.vivo ? 1 : 0,
+      a.fugindo > 0 ? 1 : 0,
+    ]),
+    // `[time, carne, assando*10, bolos]`
+    cz: estado.cozinhas.map((c) => [idxTime(c.time), c.carne, arred(c.assando * 10), c.bolos]),
+    // `[time, madeira, ouro, nivel]`
+    of: estado.oficinas.map((o) => [idxTime(o.time), o.madeira, o.ouro, o.nivel]),
     es: TIMES.map((t) => CLASSES_COM_CHAPEU.map((c) => estado.estoque[t][c])),
     ev: estado.eventos,
   };
@@ -222,6 +263,7 @@ export function desempacotar(r: Retrato, base: Estado): Estado {
       mortes: 0,
       fatias: 0,
       resgates: 0,
+      entregas: 0,
       ultimoComando: 0,
     };
     u.time = timePorIdx(linha[1]!);
@@ -233,7 +275,7 @@ export function desempacotar(r: Retrato, base: Estado): Estado {
     u.vida = linha[7]!;
     u.vivo = linha[8]! === 1;
     u.carga = CARGAS[linha[9]!]!;
-    u.golpe = linha[10]! === 1 ? 0.2 : 0;
+    u.golpe = linha[10]! / 100;
     u.colheita = linha[11]! / 100;
     u.renasceEm = linha[12]! / 10;
     u.ultimoComando = linha[13]!;
@@ -241,6 +283,7 @@ export function desempacotar(r: Retrato, base: Estado): Estado {
     u.mortes = linha[15]!;
     u.fatias = linha[16]!;
     u.resgates = linha[17]!;
+    u.entregas = linha[18]!;
     return u;
   });
 
@@ -258,15 +301,14 @@ export function desempacotar(r: Retrato, base: Estado): Estado {
   base.projeteis = r.pj.map(
     (l): Projetil => ({
       id: l[0]!,
-      tipo: l[1]! === 0 ? 'flecha' : 'bola',
-      time: timePorIdx(l[2]!),
+      tipo: 'flecha',
+      time: timePorIdx(l[1]!),
       dono: -1,
-      x: l[3]!,
-      y: l[4]!,
-      vx: l[5]!,
-      vy: l[6]!,
+      x: l[2]!,
+      y: l[3]!,
+      vx: l[4]!,
+      vy: l[5]!,
       dano: 0,
-      raioDoEstouro: 0,
       vida: 1,
     }),
   );
@@ -274,7 +316,7 @@ export function desempacotar(r: Retrato, base: Estado): Estado {
   base.itens = r.it.map(
     (l): Item => ({
       id: l[0]!,
-      tipo: l[1]! === 0 ? 'chapeu' : 'bolo',
+      tipo: ITENS[l[1]!]!,
       classe: l[2]! < 0 ? null : CLASSES[l[2]!]!,
       origem: l[3]! < 0 ? null : timePorIdx(l[3]!),
       x: l[4]!,
@@ -283,18 +325,51 @@ export function desempacotar(r: Retrato, base: Estado): Estado {
     }),
   );
 
-  base.trigais = r.tg.map((l) => ({
+  base.jazidas = r.jz.map((l) => ({
     id: l[0]!,
-    maduro: l[1]! === 1,
-    cresceEm: 0,
-    ocupadoPor: null,
+    cheia: l[1]! === 1,
+    voltaEm: 0,
+    ocupadaPor: null,
   }));
+
+  const antigos = new Map(base.animais.map((a) => [a.id, a]));
+  base.animais = r.an.map((l) => {
+    const id = l[0]!;
+    const a = antigos.get(id) ?? {
+      id,
+      x: l[1]!,
+      y: l[2]!,
+      vida: 0,
+      vivo: true,
+      voltaEm: 0,
+      destinoX: l[1]!,
+      destinoY: l[2]!,
+      pensaEm: 0,
+      fugindo: 0,
+    };
+    // A posição anterior fica guardada no destino: é o que o desenho usa para
+    // interpolar a ovelha entre dois retratos, do mesmo jeito que faz com gente.
+    a.destinoX = a.x;
+    a.destinoY = a.y;
+    a.x = l[1]!;
+    a.y = l[2]!;
+    a.vivo = l[3]! === 1;
+    a.fugindo = l[4]! === 1 ? 1 : 0;
+    return a;
+  });
 
   base.cozinhas = r.cz.map((l) => ({
     time: timePorIdx(l[0]!),
-    trigo: l[1]!,
+    carne: l[1]!,
     assando: l[2]! / 10,
     bolos: l[3]!,
+  }));
+
+  base.oficinas = r.of.map((l) => ({
+    time: timePorIdx(l[0]!),
+    madeira: l[1]!,
+    ouro: l[2]!,
+    nivel: l[3]!,
   }));
 
   for (const [i, t] of TIMES.entries()) {

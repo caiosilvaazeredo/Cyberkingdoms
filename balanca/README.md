@@ -28,17 +28,17 @@ tela é literalmente um cabo de guerra, e é o placar que mais se olha durante a
 partida — inclusive porque ela **desempata** o jogo: acabado o tempo com o
 placar igual, ganha o reino cuja princesa está mais leve.
 
-O que fecha o desenho é o custo. Bolo não nasce do chão: sai de trigo que um
-aldeão colheu e levou à cozinha, e aldeão colhendo é um a menos segurando a
-ponte. Dominar a balança se paga em gente.
+O que fecha o desenho é o custo. Bolo não nasce do chão: sai de **carne**, e
+carne sai de bicho que alguém teve de caçar no meio do mapa — e quem está caçando
+é um a menos segurando a ponte. Dominar a balança se paga em gente.
 
 ### O segundo diferencial: chapéu cai, e chapéu se rouba
 
 A classe vem do chapéu, como no original — mas o estoque é finito e o chapéu
 **cai no chão** quando o dono morre. Quem passar pega, inclusive o inimigo. Um
 time que domina as trocas não só mata mais: desmonta a composição do outro e
-veste a própria com o que roubou. "O vermelho não tem mais magos" vira uma coisa
-que aconteceu na partida, não um número no menu.
+veste a própria com o que roubou. "O vermelho não tem mais arqueiros" vira uma
+coisa que aconteceu na partida, não um número no menu.
 
 ---
 
@@ -73,37 +73,73 @@ vencem; doze minutos no relógio.
 |---|---|
 | `W` `A` `S` `D` | andar |
 | mouse | mirar (dá para recuar atirando) |
-| clique / `J` | atacar |
-| `E` / botão direito | usar: pegar, entregar, alimentar, vestir, colher |
+| clique / `J` | atacar — e caçar, que é atacar bicho |
+| `E` / botão direito | usar: pegar, entregar, alimentar, vestir, trabalhar |
 | `Tab` | placar |
 
-No celular: manche na metade esquerda da tela, botões na direita.
+No celular: manche numa metade da tela e botões na outra — de que lado fica cada
+coisa é ajustável.
 
 O botão de contexto é um só, e a dica no rodapé diz sempre o que ele vai fazer.
+Na chapelaria ele **roda a lista** de chapéus: aperte até chegar no que quer.
+Durante o aquecimento é a única ação liberada — é para isso que o aquecimento
+existe.
 
-### As cinco classes
+### As quatro telas
 
-| classe | vida | o que faz |
-|---|---|---|
-| Aldeão | 90 | colhe trigo e abastece a cozinha; é o padrão, e é infinito |
-| Guerreiro | 170 | aguenta pancada e segura ponte |
-| Arqueiro | 95 | fura a linha de longe, frágil de perto |
-| Mago | 80 | bola de fogo lenta que estoura em área |
-| Sacerdote | 105 | cura — ganha partida sem matar ninguém |
+Menu → espera → escolha de lado → jogo.
 
-### O ciclo do bolo
+O menu tem abas (jogar, como se joga, ajustes) e os ajustes gravam no navegador
+a cada clique, sem botão de salvar: campo de visão, nomes na tela, mato ligado ou
+desligado, registro de eventos e o lado do manche.
+
+A **escolha de lado** é uma camada por cima da partida já rodando, como no Super
+Smash Bros. e no Overcooked: os dois reinos aparecem com as vagas preenchidas ao
+vivo — quem é gente, quem é bot, quanto está o placar — e você decide vendo o
+campo atrás do painel. `A`/`D` ou clique troca de lado, `Enter` entra. Escolher o
+lado mais cheio é permitido; só o que está cheio de **gente** é recusado, e com o
+motivo escrito.
+
+### As sete classes: quatro que brigam, três que sustentam
+
+Cada uma tem as folhas de animação dela no pacote Tiny Swords — parado, corrida e
+o **gesto de golpe** próprio. Numa briga de doze bonecos, o movimento é o que diz
+de longe quem é quem.
+
+| classe | vida | golpe | o que faz |
+|---|---|---|---|
+| Guerreiro | 175 | espada em dois arcos que se alternam | acerta tudo à frente; segura ponte |
+| Lanceiro | 130 | estocada, com folha por direção | fura a fila: atinge todos na linha, alcance 108 |
+| Arqueiro | 95 | puxa o arco e solta | flecha a 520 de distância; frágil de perto |
+| Clérigo | 110 | ergue o cajado, com aura no curado | cura o aliado mais ferido no alcance |
+| Minerador | 125 | picareta | tira **ouro** da jazida |
+| Lenhador | 130 | machado | tira **madeira** da árvore |
+| Caçador | 100 | faca, rápida | abate o bicho e leva a **carne** |
+| Aldeão | 90 | sem arma | é o padrão, e é infinito: junta de tudo 1,8× mais devagar |
+
+### As três cadeias da economia
 
 ```
-trigal → aldeão colhe (2,2 s parado) → cozinha (3 trigo por bolo)
-      → forno (6 s) → bolo → masmorra → fatia → a balança pende
+ovelha → caçador abate (3 golpes) → carne no chão → cozinha (2 carnes)
+       → forno (6 s) → bolo → masmorra → fatia → a balança pende
+
+árvore → lenhador  (2,4 s parado) → madeira ┐
+jazida → minerador (2,4 s parado) → ouro    ┴→ chapelaria → obra I → II → III
+                                               (+15% de vida e dano por nível)
 ```
 
-Andar cancela a colheita: colher é o momento em que o aldeão está indefeso, e é
-isso que faz a economia do bolo custar posição em vez de não custar nada.
+Caçar é a única coleta que se faz **atacando**: o bicho corre, e o caçador o
+derruba em três golpes — qualquer outra classe leva o dobro do tempo e vira alvo
+fácil enquanto tenta. Nas jazidas é o contrário: andar cancela o trabalho, e é
+isso que faz o ofício custar posição em vez de não custar nada.
 
-Dois trigais ficam dentro de cada castelo e dois no campo aberto, mais dois no
-meio do mapa. A economia mínima é segura; a economia que **ganha** a balança
-exige sair de casa.
+A obra exige os **dois** materiais, de propósito: um time só de lenhador acumula
+madeira e não levanta nada. É o único lugar do jogo que obriga dois ofícios
+diferentes a existirem ao mesmo tempo.
+
+Parte das jazidas fica dentro do castelo e parte no campo aberto, e as ovelhas
+estão em maioria no meio do mapa: a economia mínima é segura, a economia que
+**ganha** a balança exige sair de casa.
 
 Longe da masmorra, o bolo vira o que qualquer bolo é: comida. Comer cura 45.
 
@@ -130,7 +166,7 @@ npm start            # http://localhost:8787
 ### Testes
 
 ```sh
-npm test             # 49 testes de regra, rede e comportamento dos bots
+npm test             # 60 testes de regra, rede e comportamento dos bots
 npm run check        # TypeScript, sem emitir
 node tools/fumaca.mjs  # sobe um Chromium, entra numa partida e confere
 ```
@@ -148,7 +184,9 @@ o cliente parar de mandar comando.
 src/
   shared/       a simulação, e ela é a mesma dos dois lados
     regras.ts     todos os números do jogo, num arquivo só
+    classes.ts    as sete classes, o estoque de chapéus e os ofícios
     arena.ts      o mapa como função pura da seed
+    estado.ts     os tipos da partida, sem nenhuma regra
     partida.ts    o tick autoritativo
     bots.ts       a IA, escrevendo o mesmo Comando que um humano
     navegacao.ts  campos de distância por BFS, um por destino
@@ -158,11 +196,41 @@ src/
     lobby.ts      quantas salas existem e quem cai em qual
     index.ts      HTTP + WebSocket, no mesmo processo
   client/
+    telas.ts      menu, ajustes, espera e escolha de lado (em HTML)
+    ajustes.ts    preferências, saneadas na leitura
+    arte.ts       as folhas do pacote, por classe e por time
     rede.ts       previsão local e interpolação
-    desenho.ts    o mundo em canvas 2D com a arte Tiny Swords
+    desenho.ts    o mundo em canvas 2D, e qual folha cada unidade usa
     hud.ts        a balança, o placar, o registro
+    contexto.ts   o que o botão de contexto vai fazer, em português
     entrada.ts    teclado, mouse e dedo virando o mesmo comando
+tools/
+  importar-arte.mjs  traz do pacote Tiny Swords só a arte que o jogo desenha
+  fumaca.mjs         teste de fumaça num Chromium de verdade
 ```
+
+## A arte
+
+Do pacote [Tiny Swords](https://pixelfrog-assets.itch.io/tiny-swords), de Pixel
+Frog (grátis, "name your own price"; a licença permite uso e modificação em
+projeto comercial e proíbe redistribuir o pacote).
+
+`tools/importar-arte.mjs` copia só o que entra na tela e **renomeia para o
+vocabulário do jogo** — Warrior vira `guerreiro`, Monk vira `clerigo`, o Pawn com
+machado vira `lenhador` — para que o inglês do pacote não apareça no meio de um
+`switch` em português:
+
+```sh
+node tools/importar-arte.mjs "/caminho/para/Tiny Swords (Free Pack)"
+```
+
+O terreno segue o [guia de tilemap](https://pixelfrog-assets.itch.io/tiny-swords/devlog/1138989/tilemap-guide)
+do próprio pacote: grade de 64 px, e as camadas na ordem que ele prescreve —
+cor de fundo (água), espuma, chão plano. A espuma é de 128 px desenhada sobre a
+grade de 64 e **transborda de propósito**, com cada instância começando num
+quadro diferente, como o guia pede. Elevação e escadas, que o guia também
+descreve, ficaram de fora: este mapa é de um nível só, e o fosso faz o papel do
+desnível.
 
 ### Três decisões que sustentam o resto
 

@@ -1,6 +1,7 @@
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { extname, join, normalize, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { WebSocketServer, type WebSocket } from 'ws';
 
 import { Lobby } from './lobby';
@@ -22,7 +23,18 @@ import { VERSAO_DO_PROTOCOLO, type DoCliente, type DoServidor } from '../shared/
  */
 
 const PORTA = Number(process.env.PORT ?? 8787);
-const RAIZ = resolve(process.cwd(), 'dist');
+
+/**
+ * A pasta publicada, achada a partir **deste arquivo** e não do diretório de
+ * trabalho.
+ *
+ * `process.cwd()` é o que quem chamou o processo escolheu, e nem sempre é a
+ * raiz do projeto: um serviço de nuvem que inicie o processo de um degrau acima
+ * transforma um jogo inteiro em erro 503, e a mensagem que sobra ("compile o
+ * cliente") aponta para o lugar errado. O caminho do módulo não depende de
+ * quem chamou.
+ */
+const RAIZ = resolve(fileURLToPath(new URL('.', import.meta.url)), '../../dist');
 
 const lobby = new Lobby();
 lobby.ligar();
@@ -72,10 +84,31 @@ function servirArquivo(req: IncomingMessage, res: ServerResponse): void {
   const caminho = normalize(join(RAIZ, decodeURIComponent(pedido)));
   const dentro = caminho.startsWith(RAIZ);
   const existe = dentro && existsSync(caminho) && statSync(caminho).isFile();
-  // Qualquer rota desconhecida cai no `index.html`: o cliente tem uma página só
-  // e resolve o resto no navegador.
-  const arquivo = existe ? caminho : join(RAIZ, 'index.html');
+
+  if (!existe) {
+    // Um pedido com extensão é um **arquivo**: se não existe, a resposta certa
+    // é 404. Devolver o `index.html` no lugar dele — que é o que o roteador de
+    // página única faz com as outras rotas — troca "faltou o PNG" por "esta
+    // imagem não pode ser decodificada", que é a mesma falha contada de um
+    // jeito que ninguém consegue depurar.
+    if (extname(pedido) !== '') {
+      res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+      res.end(`não existe: ${pedido}`);
+      return;
+    }
+    // Rota sem extensão é navegação: o cliente tem uma página só e resolve o
+    // resto no navegador.
+    enviarArquivo(res, join(RAIZ, 'index.html'));
+    return;
+  }
+  enviarArquivo(res, caminho);
+}
+
+function enviarArquivo(res: ServerResponse, arquivo: string): void {
   const tipo = TIPOS[extname(arquivo)] ?? 'application/octet-stream';
+  // Os nomes em `assets/` levam hash do conteúdo: mudou o código, mudou o nome,
+  // então podem ser guardados para sempre. O resto não tem hash e precisa ser
+  // reconferido a cada visita.
   const cache = arquivo.includes(`${join('assets')}`)
     ? 'public, max-age=31536000, immutable'
     : 'no-cache';
@@ -95,6 +128,7 @@ wss.on('connection', (ws: WebSocket) => {
     chave,
     nome: 'Anônimo',
     unidade: null,
+    time: null,
     silencio: 0,
     enviar(msg: DoServidor) {
       if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(msg));
@@ -124,6 +158,13 @@ wss.on('connection', (ws: WebSocket) => {
         cliente.nome = apelido(msg.nome);
         sala = lobby.acolher(cliente);
         if (!sala) ws.close();
+        return;
+      }
+      case 'escolherTime': {
+        if (!sala) return;
+        sala.tocar(chave);
+        if (msg.time !== 'azul' && msg.time !== 'vermelho') return;
+        sala.escolher(chave, msg.time);
         return;
       }
       case 'comando':
@@ -167,4 +208,7 @@ function apelido(bruto: unknown): string {
 
 servidor.listen(PORTA, () => {
   console.log(`A Balança do Reino ouvindo em http://localhost:${PORTA}`);
+  // O caminho vai para o log de propósito: quando a arte some em produção, a
+  // primeira pergunta é sempre "de onde este processo está servindo?".
+  console.log(existsSync(RAIZ) ? `servindo ${RAIZ}` : `SEM cliente compilado em ${RAIZ}`);
 });

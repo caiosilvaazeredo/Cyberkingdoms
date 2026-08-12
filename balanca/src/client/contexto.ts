@@ -1,9 +1,11 @@
 import type { Arena } from '../shared/arena';
-import { perfil } from '../shared/classes';
-import { cozinhaDe, princesaDe, type Estado, type Unidade } from '../shared/estado';
+import { LERDEZA_DO_ALDEAO, perfil, vidaMaxima } from '../shared/classes';
+import { cozinhaDe, nivelDe, princesaDe, type Estado, type Unidade } from '../shared/estado';
 import {
   ALCANCE_DE_COLETA,
   ALCANCE_DE_USO,
+  CUSTO_DO_NIVEL,
+  NIVEL_MAXIMO,
   PESO_MAXIMO,
   outroTime,
 } from '../shared/regras';
@@ -50,13 +52,30 @@ export function dicaDeUso(arena: Arena, estado: Estado, u: Unidade): Dica | null
         ? { texto: 'a balança está no talo', alvo: jaula }
         : { texto: 'dar a fatia — pesa nela, alivia a sua', alvo: jaula };
     }
-    if (u.vida < perfil(u.classe).vida) return { texto: 'comer o bolo' };
+    if (u.vida < vidaMaxima(u.classe, nivelDe(estado, meu))) return { texto: 'comer o bolo' };
     return null;
   }
 
-  if (u.carga === 'trigo') {
+  if (u.carga === 'carne') {
     const cozinha = arena.estrutura('cozinha', meu);
-    if (perto(cozinha, ALCANCE_DE_COLETA)) return { texto: 'entregar o trigo', alvo: cozinha };
+    if (perto(cozinha, ALCANCE_DE_COLETA)) return { texto: 'entregar a carne', alvo: cozinha };
+    return null;
+  }
+
+  if (u.carga === 'madeira' || u.carga === 'ouro') {
+    const chapelaria = arena.estrutura('chapelaria', meu);
+    if (perto(chapelaria, ALCANCE_DE_COLETA)) {
+      const oficina = estado.oficinas.find((o) => o.time === meu);
+      const custo = CUSTO_DO_NIVEL[Math.min(NIVEL_MAXIMO, (oficina?.nivel ?? 1) + 1)]!;
+      const falta =
+        oficina && oficina.nivel < NIVEL_MAXIMO
+          ? ` — falta ${Math.max(0, custo.madeira - oficina.madeira)} madeira e ${Math.max(
+              0,
+              custo.ouro - oficina.ouro,
+            )} ouro`
+          : '';
+      return { texto: `entregar na obra${falta}`, alvo: chapelaria };
+    }
     return null;
   }
 
@@ -64,7 +83,7 @@ export function dicaDeUso(arena: Arena, estado: Estado, u: Unidade): Dica | null
     .filter((i) => perto(i, ALCANCE_DE_COLETA))
     .sort((a, b) => Math.hypot(a.x - u.x, a.y - u.y) - Math.hypot(b.x - u.x, b.y - u.y))[0];
   if (item) {
-    if (item.tipo === 'bolo') return { texto: 'pegar o bolo', alvo: item };
+    if (item.tipo !== 'chapeu') return { texto: `pegar ${item.tipo}`, alvo: item };
     const roubo = item.origem !== null && item.origem !== u.time;
     return {
       texto: roubo ? `roubar o chapéu de ${item.classe}` : `vestir o chapéu de ${item.classe}`,
@@ -81,18 +100,31 @@ export function dicaDeUso(arena: Arena, estado: Estado, u: Unidade): Dica | null
   if (perto(cozinha, ALCANCE_DE_USO)) {
     const forno = cozinhaDe(estado, meu);
     if (forno.bolos > 0) return { texto: 'pegar um bolo', alvo: cozinha };
-    return { texto: 'a cozinha está vazia — falta trigo', alvo: cozinha };
+    return { texto: 'a cozinha está vazia — falta carne', alvo: cozinha };
   }
 
   const chapelaria = arena.estrutura('chapelaria', meu);
   if (perto(chapelaria, ALCANCE_DE_USO)) return { texto: 'trocar de chapéu', alvo: chapelaria };
 
-  if (perfil(u.classe).colhe) {
-    for (const t of arena.trigais) {
-      if (!perto(t, ALCANCE_DE_COLETA)) continue;
-      const estadoDoTrigal = estado.trigais.find((x) => x.id === t.id);
-      if (estadoDoTrigal?.maduro) return { texto: 'colher trigo', alvo: t };
-    }
+  for (const j of arena.jazidas) {
+    if (!perto(j, ALCANCE_DE_COLETA)) continue;
+    const dela = estado.jazidas.find((x) => x.id === j.id);
+    if (!dela?.cheia) continue;
+    const oficio = perfil(u.classe).oficio;
+    const combina = (j.tipo === 'arvore' && oficio === 'madeira') || (j.tipo === 'ouro' && oficio === 'ouro');
+    const material = j.tipo === 'arvore' ? 'madeira' : 'ouro';
+    return {
+      texto: combina
+        ? `tirar ${material}`
+        : `tirar ${material} devagar — ${LERDEZA_DO_ALDEAO}× sem a ferramenta certa`,
+      alvo: j,
+    };
   }
+
+  // O bicho não se "usa": se mata. A dica existe porque um caçador novo fica
+  // apertando E na frente da ovelha esperando uma barra de progresso.
+  const bicho = estado.animais.find((a) => a.vivo && perto(a, ALCANCE_DE_COLETA * 1.5));
+  if (bicho) return { texto: 'ataque o bicho para tirar a carne', alvo: bicho };
+
   return null;
 }

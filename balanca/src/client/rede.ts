@@ -57,13 +57,21 @@ export class Rede {
   arena: Arena | null = null;
   estado: Estado | null = null;
   meuId: number | null = null;
+  meuTime: Time | null = null;
   sala = '';
+  porTime = 0;
+  /** Verdadeiro entre conectar e escolher o lado. */
+  get espectador(): boolean {
+    return this.meuId === null && this.arena !== null;
+  }
   ping = 0;
   fechado = false;
   motivo: string | null = null;
   readonly elenco = new Map<number, FichaDeJogador>();
   readonly avisos: Aviso[] = [];
   readonly eventosNovos: Evento[] = [];
+  /** Bênçãos do clérigo em curso: o desenho toca o efeito sobre o curado. */
+  readonly brilhos: { alvo: number; quando: number }[] = [];
 
   private anterior = new Map<number, Retratada>();
   private atual = new Map<number, Retratada>();
@@ -71,6 +79,7 @@ export class Rede {
   private pendentes: Comando[] = [];
   private previsao: Unidade | null = null;
   private seq = 0;
+  private ultimoAceno = 0;
 
   constructor(url: string) {
     this.url = url;
@@ -93,6 +102,28 @@ export class Rede {
     };
   }
 
+  /**
+   * Mantém a conexão viva enquanto o jogador só assiste.
+   *
+   * O servidor derruba quem fica calado vinte segundos, e o espectador não manda
+   * comando — sem isto, quem demora para escolher o lado é desconectado
+   * justamente enquanto lê a tela de escolha.
+   */
+  manterVivo(): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    const agora = performance.now();
+    if (agora - this.ultimoAceno < 2000) return;
+    this.ultimoAceno = agora;
+    this.ws.send(JSON.stringify({ t: 'ping', tempo: agora }));
+  }
+
+  /** Pede o lado. O servidor responde com `nasceu`, ou recusa com o motivo. */
+  escolherTime(time: Time): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    this.motivo = null;
+    this.ws.send(JSON.stringify({ t: 'escolherTime', time }));
+  }
+
   desconectar(): void {
     this.ws?.close();
     this.ws = null;
@@ -107,11 +138,23 @@ export class Rede {
   private receber(msg: DoServidor): void {
     switch (msg.t) {
       case 'bemvindo': {
-        this.meuId = msg.voce;
         this.sala = msg.sala;
+        this.porTime = msg.porTime;
+        // Chega como espectador: a unidade só existe depois de escolher o lado,
+        // e numa partida nova ela é outra. Zerar aqui evita desenhar o boneco
+        // da partida passada por um quadro.
+        this.meuId = null;
+        this.meuTime = null;
         // A arena nasce da seed. Nenhum tile viaja pela rede.
         this.arena = criarArena(msg.seed);
         this.estado = estadoVazio();
+        this.previsao = null;
+        this.pendentes = [];
+        return;
+      }
+      case 'nasceu': {
+        this.meuId = msg.voce;
+        this.meuTime = msg.time;
         this.previsao = null;
         this.pendentes = [];
         return;
@@ -145,6 +188,14 @@ export class Rede {
         }
         this.recebidoEm = performance.now();
         this.eventosNovos.push(...this.estado.eventos);
+        for (const e of this.estado.eventos) {
+          if (e.tipo === 'cura') this.brilhos.push({ alvo: e.alvo, quando: this.recebidoEm });
+        }
+        // A lista é curta e velha some: um efeito de cura vale um segundo, e
+        // guardar mais que isso é vazamento com cara de animação.
+        while (this.brilhos.length > 0 && performance.now() - this.brilhos[0]!.quando > 1200) {
+          this.brilhos.shift();
+        }
         this.reconciliar();
         return;
       }
@@ -153,7 +204,9 @@ export class Rede {
         return;
       case 'recusado':
         this.motivo = msg.motivo;
-        this.fechado = true;
+        // Uma recusa de lado cheio não derruba a conexão: o jogador continua
+        // espectador e escolhe o outro lado. Só a recusa de entrada fecha.
+        if (this.arena === null) this.fechado = true;
         return;
       default:
         return;
@@ -236,6 +289,11 @@ export class Rede {
     return Math.max(0, (agora - this.recebidoEm) / 1000);
   }
 
+  /** O fator de interpolação entre os dois últimos retratos. */
+  alfa(agora: number): number {
+    return Math.min(1.4, (agora - this.recebidoEm) / INTERVALO_DE_ENVIO);
+  }
+
   avisar(texto: string, cor?: string): void {
     this.avisos.unshift({ texto, quando: performance.now(), ...(cor ? { cor } : {}) });
     if (this.avisos.length > 6) this.avisos.pop();
@@ -256,8 +314,10 @@ function estadoVazio(): Estado {
     princesas: [],
     projeteis: [],
     itens: [],
-    trigais: [],
+    jazidas: [],
+    animais: [],
     cozinhas: [],
+    oficinas: [],
     estoque,
     eventos: [],
     vencedor: null,

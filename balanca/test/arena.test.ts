@@ -24,6 +24,22 @@ const TIPOS: TipoDeEstrutura[] = ['trono', 'jaula', 'cozinha', 'chapelaria', 'na
 describe('a arena', () => {
   const arena = criarArena(123);
 
+  it('dá a cada reino as mesmas jazidas e os mesmos pastos', () => {
+    for (const tipo of ['arvore', 'ouro'] as const) {
+      const azul = arena.jazidas.filter((j) => j.lado === 'azul' && j.tipo === tipo);
+      const vermelho = arena.jazidas.filter((j) => j.lado === 'vermelho' && j.tipo === tipo);
+      expect(azul).toHaveLength(vermelho.length);
+      // E no espelho exato: uma árvore um tile mais longe da cozinha de um lado
+      // é vantagem econômica que ninguém escolheu dar.
+      expect(azul.map((j) => espelhar(Math.floor(j.x / TILE))).sort()).toEqual(
+        vermelho.map((j) => Math.floor(j.x / TILE)).sort(),
+      );
+    }
+    expect(arena.pastos.filter((p) => p.lado === 'azul')).toHaveLength(
+      arena.pastos.filter((p) => p.lado === 'vermelho').length,
+    );
+  });
+
   it('é espelhada: o que vale para um reino vale para o outro', () => {
     for (let ty = 0; ty < arena.altura; ty++) {
       for (let tx = 0; tx < arena.largura; tx++) {
@@ -45,8 +61,8 @@ describe('a arena', () => {
     for (const e of arena.estruturas) {
       expect(arena.bloqueado(e.tx, e.ty)).toBe(false);
     }
-    for (const t of arena.trigais) {
-      expect(arena.bloqueado(Math.floor(t.x / TILE), Math.floor(t.y / TILE))).toBe(false);
+    for (const ponto of [...arena.jazidas, ...arena.pastos]) {
+      expect(arena.bloqueado(Math.floor(ponto.x / TILE), Math.floor(ponto.y / TILE))).toBe(false);
     }
   });
 
@@ -57,7 +73,8 @@ describe('a arena', () => {
       const destinos = [
         ...arena.estruturas.filter((e) => e.time !== time),
         ...arena.estruturas.filter((e) => e.time === time),
-        ...arena.trigais,
+        ...arena.jazidas,
+        ...arena.pastos,
       ];
       for (const destino of destinos) {
         expect(navegador.distancia(casa.x, casa.y, destino.x, destino.y)).toBeLessThan(Infinity);

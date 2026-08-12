@@ -53,6 +53,13 @@ export class Entrada {
   private toquesEmBotao = new Map<number, string>();
   /** Retângulos dos botões de tela, redesenhados pelo HUD a cada quadro. */
   botoes: Record<string, Retangulo> = {};
+  /**
+   * De que lado da tela fica o manche, no celular.
+   *
+   * Vem dos ajustes e é lido a cada toque em vez de guardado: quem troca a
+   * preferência no meio da partida não deveria precisar recarregar a página.
+   */
+  ladoDoManche: 'esquerda' | 'direita' = 'esquerda';
   placarAberto = false;
   /** Verdadeiro no quadro em que o manche virtual está em uso. */
   get usandoToque(): boolean {
@@ -121,7 +128,7 @@ export class Entrada {
       } else if (this.toqueDeMirar?.id === t.identifier) {
         this.toqueDeMirar.x = x;
         this.toqueDeMirar.y = y;
-      } else if (x < r.width / 2 && !this.toqueDeMover) {
+      } else if (this.noLadoDoManche(x, r.width) && !this.toqueDeMover) {
         this.toqueDeMover = { id: t.identifier, x0: x, y0: y, x, y };
       } else if (!this.toqueDeMirar) {
         this.toqueDeMirar = { id: t.identifier, x, y };
@@ -136,6 +143,10 @@ export class Entrada {
       if (this.toqueDeMirar?.id === t.identifier) this.toqueDeMirar = null;
       this.toquesEmBotao.delete(t.identifier);
     }
+  }
+
+  private noLadoDoManche(x: number, largura: number): boolean {
+    return this.ladoDoManche === 'esquerda' ? x < largura / 2 : x >= largura / 2;
   }
 
   private algum(codigos: readonly string[]): boolean {

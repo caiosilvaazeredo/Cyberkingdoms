@@ -1,30 +1,33 @@
-import type { Time } from '../shared/regras';
+import { CLASSES, type Classe } from '../shared/classes';
+import { TIMES, type Time } from '../shared/regras';
 
 /**
- * A arte: carregamento, recorte de folha e tintura por time.
+ * A arte: carregamento das folhas do Tiny Swords e recorte em quadros.
  *
- * ## De onde vem o desenho
+ * ## Cada classe tem as folhas dela, e é isso que dá identidade ao jogo
  *
- * O pacote Tiny Swords, o mesmo que o resto do repositório usa. Ele traz um
- * peão, prédios em cinco cores de telhado, mato e água — e é quase exatamente o
- * que este jogo precisa, porque um jogo de castelo com dois times de bonequinho
- * gordo é o que aquele pacote foi desenhado para ser.
+ * O pacote traz unidades inteiras — Warrior, Lancer, Archer, Monk e o Pawn com
+ * machado, picareta e faca —, cada uma com parado, corrida e o próprio gesto de
+ * golpe. Usar as folhas certas em vez de recolorir um peão só é a diferença
+ * entre doze bonecos iguais e um campo onde se lê, de longe, que o vulto que
+ * vem pela ponte é um lanceiro.
  *
- * Só a arte que entra na tela foi copiada para `public/tiny`: dois telhados dos
- * cinco, cinco formas das oito, e nada da interface de papel — o HUD é
- * desenhado. Copiar o pacote inteiro seria um megabyte que o jogador baixa para
- * não ver.
+ * Os nomes já chegam traduzidos: `tools/importar-arte.mjs` copia do pacote e
+ * renomeia para o vocabulário do jogo, para que o inglês do Pixel Frog não
+ * apareça no meio de um `switch` em português.
  *
- * ## Por que a tintura é feita uma vez, e não a cada quadro
+ * ## Por que o lado do quadro sai da altura da imagem
  *
- * Colorir um sprite no `canvas` custa duas operações de composição. Fazer isso
- * doze vezes por quadro, sessenta vezes por segundo, é trabalho suficiente para
- * aparecer no celular. Como só existem dois times, as duas folhas tintas são
- * pintadas uma vez no carregamento e depois só se desenham.
+ * Todas as folhas do pacote são tiras horizontais de quadros quadrados: o
+ * `guerreiro_parado` tem 1536×192, que são oito quadros de 192; o lanceiro usa
+ * caixa de 320 porque a lança não cabe em 192. Deduzir o lado pela **altura**
+ * cobre o pacote inteiro sem uma tabela de metadados para manter em sincronia.
  *
- * A tintura é `source-atop` com transparência: mantém o sombreado original do
- * pixel art por baixo e empurra a matiz para a cor do time. Substituir a cor
- * chapada apagaria o volume que o desenhista pintou à mão.
+ * ## Por que não se tinge mais nada
+ *
+ * Antes o peão era pintado com a cor do time por composição. Agora não precisa:
+ * o pacote entrega cada unidade nas cinco cores, e o azul e o vermelho vêm
+ * prontos do desenhista — com o sombreado certo, que a tintura achatava.
  */
 
 export interface Animacao {
@@ -34,38 +37,35 @@ export interface Animacao {
   readonly fps: number;
 }
 
+const RAIZ = '/tiny';
+
+/** Quadros por segundo que o pacote assume. Está escrito na página dele. */
+const FPS_DO_PACOTE = 10;
+
+/** As folhas de cada unidade, por chave (`'guerreiro_parado'`). */
+export type Folhas = Readonly<Record<string, Animacao>>;
+
 export interface Arte {
   readonly chao: HTMLImageElement;
   readonly agua: HTMLImageElement;
   readonly espuma: Animacao;
+  readonly sombra: HTMLImageElement;
   readonly arvores: readonly Animacao[];
+  readonly tocos: readonly HTMLImageElement[];
   readonly arbustos: readonly Animacao[];
   readonly pedras: readonly HTMLImageElement[];
   readonly predios: Readonly<Record<string, HTMLImageElement>>;
   readonly fogo: Animacao;
   readonly fumaca: Animacao;
-  /** Peão parado e correndo, já tintos, por time. */
-  readonly parado: Readonly<Record<Time, Animacao>>;
-  readonly correndo: Readonly<Record<Time, Animacao>>;
-  /** A princesa é o mesmo peão, tinto de rosa. */
-  readonly princesa: Animacao;
-  readonly princesaCorrendo: Animacao;
+  /** Unidades, por time e por chave de folha. */
+  readonly unidades: Readonly<Record<Time, Folhas>>;
+  readonly ovelha: Readonly<Record<'parada' | 'andando' | 'pastando', Animacao>>;
+  readonly recursos: Readonly<Record<'carne' | 'madeira' | 'ouro', HTMLImageElement>>;
+  readonly jazidaOuro: HTMLImageElement;
+  readonly jazidaOuroVazia: HTMLImageElement;
+  /** A princesa é o peão do time, aumentada e rosada na hora de desenhar. */
+  readonly princesa: Readonly<Record<Time, Animacao>>;
 }
-
-const RAIZ = '/tiny';
-
-/** As cores de telhado que cada time veste. */
-export const COR_DO_TIME: Readonly<Record<Time, string>> = {
-  azul: 'blue',
-  vermelho: 'red',
-};
-
-export const TINTA_DO_TIME: Readonly<Record<Time, string>> = {
-  azul: '#2f6fd0',
-  vermelho: '#cf3b2f',
-};
-
-const FORMAS = ['Castle', 'Tower', 'Monastery', 'Barracks', 'House1'] as const;
 
 async function carregar(caminho: string): Promise<HTMLImageElement> {
   const img = new Image();
@@ -74,11 +74,7 @@ async function carregar(caminho: string): Promise<HTMLImageElement> {
   return img;
 }
 
-function animacao(imagem: CanvasImageSource, largura: number, altura: number, fps: number): Animacao {
-  return { imagem, lado: altura, quadros: Math.max(1, Math.round(largura / altura)), fps };
-}
-
-/** Pinta uma folha inteira com a cor do time, preservando o sombreado. */
+/** Pinta uma folha inteira com uma cor, preservando o sombreado. */
 function tingir(img: HTMLImageElement, cor: string, forca: number): HTMLCanvasElement {
   const tela = document.createElement('canvas');
   tela.width = img.width;
@@ -93,57 +89,177 @@ function tingir(img: HTMLImageElement, cor: string, forca: number): HTMLCanvasEl
   return tela;
 }
 
-export async function carregarArte(): Promise<Arte> {
-  const [chao, agua, espuma, parado, correndo, fogo, fumaca] = await Promise.all([
-    carregar('terrain/ground.png'),
-    carregar('terrain/water.png'),
-    carregar('terrain/foam.png'),
-    carregar('units/Pawn_Idle.png'),
-    carregar('units/Pawn_Run.png'),
-    carregar('fx/fogo.png'),
-    carregar('fx/fumaca.png'),
-  ]);
+export function animacao(imagem: HTMLImageElement, fps = FPS_DO_PACOTE): Animacao {
+  const lado = imagem.height;
+  return { imagem, lado, quadros: Math.max(1, Math.round(imagem.width / lado)), fps };
+}
 
-  const arvores = await Promise.all([1, 2, 3, 4].map((n) => carregar(`deco/Tree${n}.png`)));
-  const arbustos = await Promise.all([1, 2, 3, 4].map((n) => carregar(`deco/Bushe${n}.png`)));
-  const pedras = await Promise.all([1, 2, 3, 4].map((n) => carregar(`deco/Rock${n}.png`)));
+/** As folhas que cada classe pede, além das comuns a todas. */
+const FOLHAS_POR_CLASSE: Readonly<Record<Classe, readonly string[]>> = {
+  aldeao: [],
+  guerreiro: ['golpe1', 'golpe2'],
+  // A lança é a única com folha por direção — o pacote desenha a estocada para
+  // cima, para o lado e para baixo, e o espelho horizontal dá o resto.
+  lanceiro: ['golpe_lado', 'golpe_cima_lado', 'golpe_baixo_lado', 'golpe_cima', 'golpe_baixo'],
+  arqueiro: ['golpe'],
+  clerigo: ['golpe', 'bencao'],
+  minerador: ['trabalhando'],
+  lenhador: ['trabalhando'],
+  cacador: ['trabalhando'],
+};
 
-  const predios: Record<string, HTMLImageElement> = {};
+/** O nome do arquivo de cada ofício segue a ferramenta, como no pacote. */
+export const FERRAMENTA_DA_CLASSE: Readonly<Partial<Record<Classe, string>>> = {
+  minerador: 'picareta',
+  lenhador: 'machado',
+  cacador: 'faca',
+};
+
+/** A carga na mão troca a folha inteira: o peão carrega com os dois braços. */
+export const CARGAS_DESENHADAS = ['madeira', 'ouro', 'carne'] as const;
+
+function arquivoDaClasse(classe: Classe): string {
+  return FERRAMENTA_DA_CLASSE[classe] ?? classe;
+}
+
+/** Progresso do carregamento, para a tela de espera mostrar algo honesto. */
+export type AoCarregar = (feitos: number, total: number) => void;
+
+export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
+  const pedidos: { chave: string; caminho: string }[] = [];
+  const pede = (chave: string, caminho: string): void => {
+    pedidos.push({ chave, caminho });
+  };
+
+  pede('chao', 'terrain/ground.png');
+  pede('agua', 'terrain/water.png');
+  pede('espuma', 'terrain/foam.png');
+  pede('sombra', 'terrain/shadow.png');
+  pede('fogo', 'fx/fogo.png');
+  pede('fumaca', 'fx/fumaca.png');
+  for (let i = 1; i <= 4; i++) {
+    pede(`arvore${i}`, `deco/Tree${i}.png`);
+    pede(`toco${i}`, `deco/Stump${i}.png`);
+    pede(`arbusto${i}`, `deco/Bushe${i}.png`);
+    pede(`pedra${i}`, `deco/Rock${i}.png`);
+  }
+  for (const cor of ['blue', 'red']) {
+    for (const forma of ['Castle', 'Tower', 'Monastery', 'Barracks', 'House1']) {
+      pede(`predio:${cor}/${forma}`, `buildings/${cor}/${forma}.png`);
+    }
+  }
+  pede('ovelha_parada', 'recursos/ovelha_parada.png');
+  pede('ovelha_andando', 'recursos/ovelha_andando.png');
+  pede('ovelha_pastando', 'recursos/ovelha_pastando.png');
+  pede('recurso_carne', 'recursos/carne.png');
+  pede('recurso_madeira', 'recursos/madeira.png');
+  pede('recurso_ouro', 'recursos/ouro.png');
+  pede('jazida_ouro', 'recursos/jazida_ouro.png');
+  pede('jazida_ouro_vazia', 'recursos/jazida_ouro_vazia.png');
+
+  for (const time of TIMES) {
+    for (const classe of CLASSES) {
+      const base = arquivoDaClasse(classe);
+      pede(`u:${time}:${classe}_parado`, `units/${time}/${base}_parado.png`);
+      pede(`u:${time}:${classe}_correndo`, `units/${time}/${base}_correndo.png`);
+      for (const extra of FOLHAS_POR_CLASSE[classe]) {
+        pede(`u:${time}:${classe}_${extra}`, `units/${time}/${base}_${extra}.png`);
+      }
+    }
+    for (const carga of CARGAS_DESENHADAS) {
+      pede(`u:${time}:carregando_${carga}_parado`, `units/${time}/carregando_${carga}_parado.png`);
+      pede(
+        `u:${time}:carregando_${carga}_correndo`,
+        `units/${time}/carregando_${carga}_correndo.png`,
+      );
+    }
+    pede(`u:${time}:flecha`, `units/${time}/flecha.png`);
+  }
+
+  const total = pedidos.length;
+  let feitos = 0;
+  const imagens: Record<string, HTMLImageElement> = {};
   await Promise.all(
-    (['blue', 'red'] as const).flatMap((cor) =>
-      FORMAS.map(async (forma) => {
-        predios[`${cor}/${forma}`] = await carregar(`buildings/${cor}/${forma}.png`);
-      }),
-    ),
+    pedidos.map(async ({ chave, caminho }) => {
+      imagens[chave] = await carregar(caminho);
+      feitos++;
+      aoCarregar?.(feitos, total);
+    }),
   );
 
-  const porTime = <T>(fn: (t: Time) => T): Record<Time, T> => ({
-    azul: fn('azul'),
-    vermelho: fn('vermelho'),
-  });
+  const img = (chave: string): HTMLImageElement => {
+    const i = imagens[chave];
+    if (!i) throw new Error(`arte ausente: ${chave}`);
+    return i;
+  };
+
+  const unidades = {} as Record<Time, Record<string, Animacao>>;
+  const princesa = {} as Record<Time, Animacao>;
+  for (const time of TIMES) {
+    const folhas: Record<string, Animacao> = {};
+    for (const { chave } of pedidos) {
+      const prefixo = `u:${time}:`;
+      if (!chave.startsWith(prefixo)) continue;
+      folhas[chave.slice(prefixo.length)] = animacao(img(chave));
+    }
+    unidades[time] = folhas;
+    // A princesa é o aldeão do time, desenhado grande e cor de rosa. Não há
+    // sprite de princesa no pacote, e inventar um em pixel art que não
+    // destoasse do resto custaria mais do que o jogo ganha.
+    //
+    // A tintura é feita **uma vez**, aqui: `source-atop` com transparência
+    // mantém o sombreado que o desenhista pintou e só empurra a matiz. Repintar
+    // a cada quadro custaria duas composições por princesa, sessenta vezes por
+    // segundo, para chegar ao mesmo pixel.
+    princesa[time] = {
+      ...animacao(img(`u:${time}:aldeao_parado`), 6),
+      imagem: tingir(img(`u:${time}:aldeao_parado`), '#ff7bc2', 0.5),
+    };
+  }
+
+  const predios: Record<string, HTMLImageElement> = {};
+  for (const { chave } of pedidos) {
+    if (chave.startsWith('predio:')) predios[chave.slice('predio:'.length)] = img(chave);
+  }
 
   return {
-    chao,
-    agua,
-    espuma: animacao(espuma, espuma.width, espuma.height, 8),
-    arvores: arvores.map((i) => animacao(i, i.width, i.height, 8)),
-    arbustos: arbustos.map((i) => animacao(i, i.width, i.height, 6)),
-    pedras,
+    chao: img('chao'),
+    agua: img('agua'),
+    espuma: animacao(img('espuma'), 8),
+    sombra: img('sombra'),
+    arvores: [1, 2, 3, 4].map((i) => animacao(img(`arvore${i}`), 8)),
+    tocos: [1, 2, 3, 4].map((i) => img(`toco${i}`)),
+    arbustos: [1, 2, 3, 4].map((i) => animacao(img(`arbusto${i}`), 6)),
+    pedras: [1, 2, 3, 4].map((i) => img(`pedra${i}`)),
     predios,
-    fogo: animacao(fogo, fogo.width, fogo.height, 12),
-    fumaca: animacao(fumaca, fumaca.width, fumaca.height, 10),
-    parado: porTime((t) =>
-      animacao(tingir(parado, TINTA_DO_TIME[t], 0.5), parado.width, parado.height, 8),
-    ),
-    correndo: porTime((t) =>
-      animacao(tingir(correndo, TINTA_DO_TIME[t], 0.5), correndo.width, correndo.height, 12),
-    ),
-    princesa: animacao(tingir(parado, '#ff7bc2', 0.55), parado.width, parado.height, 6),
-    princesaCorrendo: animacao(tingir(correndo, '#ff7bc2', 0.55), correndo.width, correndo.height, 10),
+    fogo: animacao(img('fogo'), 12),
+    fumaca: animacao(img('fumaca'), 10),
+    unidades,
+    ovelha: {
+      parada: animacao(img('ovelha_parada'), 8),
+      andando: animacao(img('ovelha_andando'), 10),
+      pastando: animacao(img('ovelha_pastando'), 8),
+    },
+    recursos: {
+      carne: img('recurso_carne'),
+      madeira: img('recurso_madeira'),
+      ouro: img('recurso_ouro'),
+    },
+    jazidaOuro: img('jazida_ouro'),
+    jazidaOuroVazia: img('jazida_ouro_vazia'),
+    princesa,
   };
 }
 
-/** Desenha um quadro ancorado no pé do sprite. */
+/**
+ * Desenha um quadro.
+ *
+ * @param ancora `'pe'` planta o sprite no chão pelo pé — é o que serve para
+ * árvore e prédio. `'centro'` põe o meio do quadro no ponto, que é o que as
+ * folhas de unidade pedem: o pacote desenha o boneco no centro de uma caixa
+ * grande o bastante para a arma, e ancorar pelo pé faria o lanceiro (caixa de
+ * 320) flutuar meio corpo acima do guerreiro (caixa de 192).
+ */
 export function quadro(
   ctx: CanvasRenderingContext2D,
   anim: Animacao,
@@ -151,6 +267,7 @@ export function quadro(
   x: number,
   y: number,
   escala: number,
+  ancora: 'pe' | 'centro' = 'pe',
 ): void {
   const q = ((indice % anim.quadros) + anim.quadros) % anim.quadros;
   const lado = anim.lado * escala;
@@ -161,7 +278,7 @@ export function quadro(
     anim.lado,
     anim.lado,
     Math.round(x - lado / 2),
-    Math.round(y - lado),
+    Math.round(ancora === 'pe' ? y - lado : y - lado / 2),
     Math.ceil(lado),
     Math.ceil(lado),
   );
@@ -169,4 +286,9 @@ export function quadro(
 
 export function quadroEm(anim: Animacao, segundos: number, deslocamento = 0): number {
   return Math.floor(segundos * anim.fps) + deslocamento;
+}
+
+/** O quadro de uma animação que toca **uma vez**, dado o quanto ela já andou. */
+export function quadroDaVez(anim: Animacao, progresso: number): number {
+  return Math.min(anim.quadros - 1, Math.max(0, Math.floor(progresso * anim.quadros)));
 }

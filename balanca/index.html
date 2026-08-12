@@ -7,13 +7,25 @@
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
     <title>A Balança do Reino</title>
+    <!--
+      Ícone embutido como SVG: uma balança de dois pratos, um cheio e um vazio.
+      Vai por `data:` para não custar um pedido — e para o navegador parar de
+      procurar `/favicon.ico`, cujo 404 aparecia no console de erro e escondia
+      os erros que importam.
+    -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2310121a'/%3E%3Crect x='4' y='13' width='11' height='7' fill='%233b7fe0'/%3E%3Crect x='17' y='13' width='11' height='7' fill='%23e04b3b'/%3E%3Crect x='15' y='8' width='2' height='17' fill='%23ffd479'/%3E%3C/svg%3E"
+    />
     <style>
       :root {
         color-scheme: dark;
         --papel: #f2e6c9;
-        --tinta: #1a1410;
         --azul: #3b7fe0;
+        --azul-claro: #8fc0ff;
         --vermelho: #e04b3b;
+        --vermelho-claro: #ff9c8f;
+        --ouro: #ffd479;
       }
       * {
         box-sizing: border-box;
@@ -35,53 +47,106 @@
         touch-action: none;
         cursor: crosshair;
       }
-      #menu {
+      .tela {
         position: fixed;
         inset: 0;
         display: grid;
         place-items: center;
-        padding: 24px;
-        background:
-          radial-gradient(circle at 50% 20%, rgba(90, 130, 200, 0.25), transparent 60%),
-          linear-gradient(160deg, #10121a, #1c1a26 60%, #241a1a);
+        padding: 20px;
         overflow-y: auto;
         z-index: 10;
       }
-      #menu.escondido {
+      .tela.oculta {
         display: none;
       }
+      #menu,
+      #carregando {
+        background:
+          radial-gradient(circle at 50% 18%, rgba(90, 130, 200, 0.28), transparent 60%),
+          linear-gradient(160deg, #10121a, #1c1a26 55%, #2a1a1a);
+      }
+      /* A escolha de time é jogada por cima da partida: dá para ver o campo. */
+      #escolha {
+        background: rgba(8, 10, 16, 0.72);
+        backdrop-filter: blur(2px);
+      }
       .cartao {
-        width: min(640px, 100%);
-        background: rgba(16, 18, 26, 0.86);
+        width: min(660px, 100%);
+        background: rgba(16, 18, 26, 0.9);
         border: 1px solid rgba(242, 230, 201, 0.18);
         border-radius: 16px;
-        padding: 28px 30px 24px;
+        padding: 26px 30px 22px;
         box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
       }
       h1 {
         margin: 0;
-        font-size: clamp(28px, 6vw, 44px);
+        font-size: clamp(26px, 6vw, 42px);
         letter-spacing: 0.5px;
       }
       h1 small {
         display: block;
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 400;
         letter-spacing: 2px;
         text-transform: uppercase;
         opacity: 0.55;
-        margin-bottom: 6px;
+        margin-bottom: 4px;
+      }
+      .balanca-enfeite {
+        display: flex;
+        height: 12px;
+        border-radius: 6px;
+        overflow: hidden;
+        margin: 14px 0 16px;
+        border: 1px solid rgba(0, 0, 0, 0.5);
+      }
+      .balanca-enfeite i {
+        display: block;
+      }
+      .balanca-enfeite i:first-child {
+        width: 62%;
+        background: var(--azul);
+      }
+      .balanca-enfeite i:last-child {
+        width: 38%;
+        background: var(--vermelho);
+      }
+      .abas {
+        display: flex;
+        gap: 6px;
+        margin: 0 0 14px;
+        border-bottom: 1px solid rgba(242, 230, 201, 0.15);
+      }
+      .abas button {
+        background: transparent;
+        color: var(--papel);
+        border: none;
+        border-bottom: 2px solid transparent;
+        border-radius: 0;
+        padding: 8px 12px;
+        font: inherit;
+        font-size: 14px;
+        opacity: 0.6;
+        cursor: pointer;
+      }
+      .abas button[aria-selected='true'] {
+        opacity: 1;
+        color: var(--ouro);
+        border-bottom-color: var(--ouro);
+      }
+      .painel[hidden] {
+        display: none;
       }
       .linha {
         display: flex;
         gap: 10px;
-        margin: 22px 0 10px;
+        margin: 16px 0 8px;
         flex-wrap: wrap;
       }
-      input {
+      input[type='text'] {
         flex: 1 1 220px;
         min-width: 0;
-        padding: 14px 16px;
+        padding: 13px 15px;
         font: inherit;
         font-size: 17px;
         color: var(--papel);
@@ -89,8 +154,8 @@
         border: 1px solid rgba(242, 230, 201, 0.22);
         border-radius: 10px;
       }
-      button {
-        padding: 14px 26px;
+      button.grande {
+        padding: 13px 24px;
         font: inherit;
         font-size: 17px;
         font-weight: 700;
@@ -100,34 +165,15 @@
         border-radius: 10px;
         cursor: pointer;
       }
-      button:disabled {
+      button.grande:disabled {
         opacity: 0.55;
         cursor: progress;
       }
-      #recado {
-        margin: 4px 0 20px;
+      .recado {
+        margin: 6px 0 0;
         min-height: 18px;
         font-size: 14px;
-        opacity: 0.7;
-      }
-      .balanca {
-        display: flex;
-        height: 14px;
-        border-radius: 7px;
-        overflow: hidden;
-        margin: 6px 0 18px;
-        border: 1px solid rgba(0, 0, 0, 0.5);
-      }
-      .balanca i {
-        display: block;
-      }
-      .balanca i:first-child {
-        width: 62%;
-        background: var(--azul);
-      }
-      .balanca i:last-child {
-        width: 38%;
-        background: var(--vermelho);
+        opacity: 0.75;
       }
       p,
       li {
@@ -137,16 +183,32 @@
       .regras {
         margin: 0;
         padding-left: 18px;
-        opacity: 0.85;
+        opacity: 0.88;
       }
       .regras b {
-        color: #ffd479;
+        color: var(--ouro);
+      }
+      .classes {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .classes div {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        padding: 8px 10px;
+        font-size: 13px;
+      }
+      .classes b {
+        display: block;
+        color: var(--ouro);
       }
       .teclas {
         display: flex;
-        gap: 16px;
+        gap: 14px;
         flex-wrap: wrap;
-        margin-top: 18px;
+        margin-top: 16px;
         font-size: 13px;
         opacity: 0.7;
       }
@@ -157,46 +219,285 @@
         padding: 2px 7px;
         font-family: inherit;
       }
+      /* --- ajustes --- */
+      .ajuste {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 9px 0;
+        border-bottom: 1px solid rgba(242, 230, 201, 0.08);
+        font-size: 15px;
+      }
+      .ajuste span small {
+        display: block;
+        opacity: 0.55;
+        font-size: 12px;
+      }
+      .opcoes {
+        display: flex;
+        gap: 4px;
+        flex: 0 0 auto;
+      }
+      .opcoes button {
+        background: rgba(255, 255, 255, 0.07);
+        color: var(--papel);
+        border: 1px solid rgba(242, 230, 201, 0.18);
+        border-radius: 7px;
+        padding: 6px 11px;
+        font: inherit;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .opcoes button[aria-pressed='true'] {
+        background: var(--ouro);
+        color: #1a1410;
+        border-color: transparent;
+        font-weight: 700;
+      }
+      /* --- carregando --- */
+      .barra {
+        width: min(420px, 90vw);
+        height: 14px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(242, 230, 201, 0.2);
+        border-radius: 8px;
+        overflow: hidden;
+        margin: 18px 0 10px;
+      }
+      .barra i {
+        display: block;
+        height: 100%;
+        width: 0;
+        background: linear-gradient(90deg, #ffd479, #e8a83c);
+        transition: width 0.15s linear;
+      }
+      .centro {
+        text-align: center;
+        max-width: 520px;
+      }
+      .conselho {
+        font-size: 14px;
+        opacity: 0.7;
+        min-height: 44px;
+      }
+      /* --- escolha de time --- */
+      .escolha-caixa {
+        width: min(900px, 100%);
+      }
+      .escolha-topo {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 10px;
+      }
+      .escolha-topo h2 {
+        margin: 0;
+        font-size: clamp(20px, 4vw, 30px);
+      }
+      .lados {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      @media (max-width: 640px) {
+        .lados {
+          grid-template-columns: 1fr;
+        }
+      }
+      .lado {
+        border: 3px solid transparent;
+        border-radius: 14px;
+        padding: 14px;
+        background: rgba(16, 18, 26, 0.86);
+        cursor: pointer;
+        transition:
+          transform 0.12s ease,
+          border-color 0.12s ease;
+      }
+      .lado[data-time='azul'] {
+        box-shadow: inset 0 0 0 1px rgba(59, 127, 224, 0.5);
+      }
+      .lado[data-time='vermelho'] {
+        box-shadow: inset 0 0 0 1px rgba(224, 75, 59, 0.5);
+      }
+      .lado[aria-selected='true'] {
+        transform: translateY(-4px) scale(1.015);
+      }
+      .lado[data-time='azul'][aria-selected='true'] {
+        border-color: var(--azul-claro);
+      }
+      .lado[data-time='vermelho'][aria-selected='true'] {
+        border-color: var(--vermelho-claro);
+      }
+      .lado h3 {
+        margin: 0 0 2px;
+        font-size: 20px;
+      }
+      .lado[data-time='azul'] h3 {
+        color: var(--azul-claro);
+      }
+      .lado[data-time='vermelho'] h3 {
+        color: var(--vermelho-claro);
+      }
+      .lado .sub {
+        font-size: 12px;
+        opacity: 0.6;
+        margin-bottom: 10px;
+      }
+      .vagas {
+        display: grid;
+        gap: 5px;
+      }
+      .vaga {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 7px;
+        padding: 6px 9px;
+        font-size: 14px;
+        min-height: 34px;
+      }
+      .vaga.livre {
+        opacity: 0.4;
+        font-style: italic;
+      }
+      .vaga.bot {
+        opacity: 0.72;
+      }
+      .vaga.eu {
+        background: rgba(255, 212, 121, 0.18);
+        font-weight: 700;
+      }
+      .ficha {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        flex: 0 0 auto;
+      }
+      .lado[data-time='azul'] .ficha {
+        background: var(--azul);
+      }
+      .lado[data-time='vermelho'] .ficha {
+        background: var(--vermelho);
+      }
+      .escolha-rodape {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-top: 14px;
+        flex-wrap: wrap;
+      }
+      .escolha-rodape .dica {
+        font-size: 13px;
+        opacity: 0.7;
+      }
     </style>
   </head>
   <body>
     <canvas id="tela"></canvas>
 
-    <div id="menu">
+    <!-- ------------------------------------------------------- menu inicial -->
+    <section id="menu" class="tela">
       <div class="cartao">
         <h1><small>Cyberkingdoms apresenta</small>A Balança do Reino</h1>
+        <div class="balanca-enfeite"><i></i><i></i></div>
 
-        <div class="balanca"><i></i><i></i></div>
-
-        <p>
-          Duas princesas, uma balança só. A sua está presa na masmorra inimiga —
-          traga-a para o trono e o ponto é seu. O bolo é a arma:
-          <b>cada fatia dada à refém que você guarda engorda ela e alivia a sua</b>,
-          na mesma hora e na mesma medida. O peso do reino não aumenta, só muda de lado.
-        </p>
-
-        <ul class="regras">
-          <li>Princesa pesada precisa de até <b>três carregadores</b> e anda devagar.</li>
-          <li>Bolo não nasce do chão: <b>aldeão colhe trigo</b>, a cozinha assa.</li>
-          <li>A classe vem do chapéu, o chapéu <b>cai no chão</b> — e o inimigo pega.</li>
-          <li>Só multiplayer. Entrou sozinho? <b>Bots completam o time</b> e saem quando chega gente.</li>
-        </ul>
-
-        <div class="linha">
-          <input id="nome" maxlength="16" placeholder="seu apelido" autocomplete="off" />
-          <button id="jogar">entrar na batalha</button>
+        <div class="abas" role="tablist">
+          <button role="tab" data-aba="jogar" aria-selected="true">Jogar</button>
+          <button role="tab" data-aba="regras" aria-selected="false">Como se joga</button>
+          <button role="tab" data-aba="ajustes" aria-selected="false">Ajustes</button>
         </div>
-        <p id="recado"></p>
 
-        <div class="teclas">
-          <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> andar</span>
-          <span><kbd>mouse</kbd> mirar · <kbd>clique</kbd> atacar</span>
-          <span><kbd>E</kbd> usar</span>
-          <span><kbd>Tab</kbd> placar</span>
-          <span>no celular: manche à esquerda, botões à direita</span>
+        <div class="painel" data-painel="jogar">
+          <p>
+            Duas princesas, uma balança só. A sua está presa na masmorra inimiga —
+            traga-a ao trono e o ponto é seu. O bolo é a arma:
+            <b>cada fatia dada à refém que você guarda engorda ela e alivia a sua</b>,
+            na mesma hora e na mesma medida. O peso do reino não aumenta, só muda de lado.
+          </p>
+          <div class="linha">
+            <input id="nome" type="text" maxlength="16" placeholder="seu apelido" autocomplete="off" />
+            <button id="jogar" class="grande">entrar na batalha</button>
+          </div>
+          <p class="recado" id="recado"></p>
+        </div>
+
+        <div class="painel" data-painel="regras" hidden>
+          <ul class="regras">
+            <li>Princesa pesada precisa de até <b>três carregadores</b> e anda devagar.</li>
+            <li>Bolo sai de <b>carne</b>, e carne sai de <b>bicho caçado</b> no meio do mapa.</li>
+            <li><b>Madeira e ouro</b> entregues na chapelaria sobem a obra — mais vida e mais dano para o time.</li>
+            <li>A classe vem do chapéu, o chapéu <b>cai no chão</b> — e o inimigo pega.</li>
+            <li>Só multiplayer. Entrou sozinho? <b>Bots completam o time</b> e saem quando chega gente.</li>
+          </ul>
+          <div class="classes">
+            <div><b>Guerreiro</b>espada em arco, acerta tudo à frente</div>
+            <div><b>Lanceiro</b>estocada que fura a fila</div>
+            <div><b>Arqueiro</b>flecha de longe, frágil de perto</div>
+            <div><b>Clérigo</b>cura quem carrega a princesa</div>
+            <div><b>Minerador</b>picareta: ouro para a obra</div>
+            <div><b>Lenhador</b>machado: madeira para a obra</div>
+            <div><b>Caçador</b>abate o bicho e leva a carne</div>
+            <div><b>Aldeão</b>sem chapéu: faz de tudo, devagar</div>
+          </div>
+          <div class="teclas">
+            <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> andar</span>
+            <span><kbd>mouse</kbd> mirar · <kbd>clique</kbd> atacar</span>
+            <span><kbd>E</kbd> usar</span>
+            <span><kbd>Tab</kbd> placar</span>
+            <span>no celular: manche à esquerda, botões à direita</span>
+          </div>
+        </div>
+
+        <div class="painel" data-painel="ajustes" hidden>
+          <div id="ajustes"></div>
+          <div class="linha">
+            <button id="padroes" class="grande">restaurar padrões</button>
+          </div>
         </div>
       </div>
-    </div>
+    </section>
+
+    <!-- ---------------------------------------------------- tela de espera -->
+    <section id="carregando" class="tela oculta">
+      <div class="centro">
+        <h1><small>preparando o reino</small>A Balança do Reino</h1>
+        <div class="barra"><i id="progresso"></i></div>
+        <p class="recado" id="etapa">carregando a arte…</p>
+        <p class="conselho" id="conselho"></p>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------------- escolha de time -->
+    <section id="escolha" class="tela oculta">
+      <div class="escolha-caixa">
+        <div class="escolha-topo">
+          <h2>escolha o seu lado</h2>
+          <span class="dica" id="escolha-status"></span>
+        </div>
+        <div class="lados">
+          <div class="lado" data-time="azul" aria-selected="true">
+            <h3>Reino Azul</h3>
+            <div class="sub" id="sub-azul"></div>
+            <div class="vagas" id="vagas-azul"></div>
+          </div>
+          <div class="lado" data-time="vermelho" aria-selected="false">
+            <h3>Reino Vermelho</h3>
+            <div class="sub" id="sub-vermelho"></div>
+            <div class="vagas" id="vagas-vermelho"></div>
+          </div>
+        </div>
+        <div class="escolha-rodape">
+          <span class="dica">
+            <kbd>A</kbd> <kbd>D</kbd> ou clique para trocar de lado · <kbd>Enter</kbd> para entrar
+          </span>
+          <button id="confirmar" class="grande">entrar no Reino Azul</button>
+        </div>
+      </div>
+    </section>
 
     <script type="module" src="/src/client/main.ts"></script>
   </body>

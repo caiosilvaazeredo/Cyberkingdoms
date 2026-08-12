@@ -21,6 +21,7 @@ function clienteFalso(nome: string): Cliente & { recebidas: DoServidor[] } {
     chave: nome,
     nome,
     unidade: null,
+    time: null,
     silencio: 0,
     recebidas,
     enviar(msg) {
@@ -32,6 +33,14 @@ function clienteFalso(nome: string): Cliente & { recebidas: DoServidor[] } {
 
 const contar = (sala: Sala, time: Time, bot: boolean): number =>
   sala.estado.unidades.filter((u) => u.time === time && u.bot === bot).length;
+
+/** Entra e escolhe o lado — o caminho completo de quem senta para jogar. */
+function jogarPor(sala: Sala, nome: string, time: Time) {
+  const cliente = clienteFalso(nome);
+  sala.entrar(cliente);
+  sala.escolher(cliente.chave, time);
+  return cliente;
+}
 
 function rodar(sala: Sala, segundos: number): void {
   for (let i = 0; i < Math.ceil(segundos * TICKS_POR_SEGUNDO); i++) sala.passo();
@@ -46,8 +55,7 @@ describe('a lotação da sala', () => {
 
   it('dá adversários na hora, e espera antes de dar companheiros', () => {
     const sala = new Sala({ nome: 'r1', seed: 2, porTime: 3, esperaPorJogadores: 4 });
-    const ana = clienteFalso('Ana');
-    expect(sala.entrar(ana)).toBe(true);
+    jogarPor(sala, 'Ana', 'azul');
 
     // Um segundo depois já há inimigos: jogar contra o vazio não é jogar.
     rodar(sala, 1);
@@ -62,25 +70,58 @@ describe('a lotação da sala', () => {
 
   it('quem chega tira o lugar de um bot, na hora', () => {
     const sala = new Sala({ nome: 'r2', seed: 3, porTime: 3, esperaPorJogadores: 0 });
-    sala.entrar(clienteFalso('Ana'));
+    jogarPor(sala, 'Ana', 'azul');
     rodar(sala, 2);
     expect(sala.estado.unidades).toHaveLength(6);
 
-    const bruno = clienteFalso('Bruno');
-    expect(sala.entrar(bruno)).toBe(true);
+    jogarPor(sala, 'Bruno', 'vermelho');
     // O total não passa do tamanho combinado: entrou gente, saiu bot.
     expect(sala.estado.unidades).toHaveLength(6);
     expect(sala.estado.unidades.filter((u) => !u.bot)).toHaveLength(2);
-    // E os dois humanos ficaram em times diferentes, que é o equilíbrio que
-    // interessa — seis contra seis com todos os humanos de um lado não é
-    // partida equilibrada.
     expect(contar(sala, 'azul', false)).toBe(1);
     expect(contar(sala, 'vermelho', false)).toBe(1);
   });
 
+  it('respeita o lado escolhido, mesmo o mais cheio de gente', () => {
+    const sala = new Sala({ nome: 'r2b', seed: 31, porTime: 3, esperaPorJogadores: 0 });
+    jogarPor(sala, 'Ana', 'azul');
+    jogarPor(sala, 'Bruno', 'azul');
+    rodar(sala, 2);
+    // Escolher o lado é do jogador: quem quer jogar com a amiga joga com ela,
+    // e o servidor completa o outro lado com bot.
+    expect(contar(sala, 'azul', false)).toBe(2);
+    expect(contar(sala, 'vermelho', false)).toBe(0);
+  });
+
+  it('recusa o lado cheio de gente sem trocar a escolha por baixo', () => {
+    const sala = new Sala({ nome: 'r2c', seed: 32, porTime: 1, esperaPorJogadores: 0 });
+    jogarPor(sala, 'Ana', 'azul');
+    const bruno = clienteFalso('Bruno');
+    sala.entrar(bruno);
+    expect(sala.escolher(bruno.chave, 'azul')).toBe(false);
+    expect(bruno.recebidas.some((m) => m.t === 'recusado')).toBe(true);
+    expect(bruno.unidade).toBeNull();
+    // E o outro lado continua aberto para ele.
+    expect(sala.escolher(bruno.chave, 'vermelho')).toBe(true);
+    expect(bruno.unidade).not.toBeNull();
+  });
+
+  it('quem entra fica assistindo até escolher', () => {
+    const sala = new Sala({ nome: 'r2d', seed: 33, porTime: 3, esperaPorJogadores: 0 });
+    const ana = clienteFalso('Ana');
+    sala.entrar(ana);
+    rodar(sala, 2);
+    expect(ana.unidade).toBeNull();
+    // A partida corre sem ela: há o que assistir enquanto se escolhe o lado.
+    expect(sala.estado.unidades.filter((u) => u.bot)).toHaveLength(6);
+    expect(ana.recebidas.some((m) => m.t === 'bemvindo')).toBe(true);
+    expect(ana.recebidas.some((m) => m.t === 'elenco')).toBe(true);
+    expect(ana.recebidas.some((m) => m.t === 'nasceu')).toBe(false);
+  });
+
   it('conta vaga por gente, não por unidade', () => {
     const sala = new Sala({ nome: 'r3', seed: 4, porTime: 2, esperaPorJogadores: 0 });
-    sala.entrar(clienteFalso('Ana'));
+    jogarPor(sala, 'Ana', 'azul');
     rodar(sala, 2);
     expect(sala.estado.unidades).toHaveLength(4);
     // Quatro em campo, e ainda há três vagas: as outras três são de bot.
@@ -90,19 +131,26 @@ describe('a lotação da sala', () => {
 
   it('recusa quem chega quando as vagas de gente acabaram', () => {
     const sala = new Sala({ nome: 'r4', seed: 5, porTime: 1, esperaPorJogadores: 0 });
-    expect(sala.entrar(clienteFalso('A'))).toBe(true);
-    expect(sala.entrar(clienteFalso('B'))).toBe(true);
+    jogarPor(sala, 'A', 'azul');
+    jogarPor(sala, 'B', 'vermelho');
     const terceiro = clienteFalso('C');
     expect(sala.entrar(terceiro)).toBe(false);
     expect(terceiro.recebidas.some((m) => m.t === 'recusado')).toBe(true);
   });
 
+  it('quem ainda está escolhendo já ocupa vaga', () => {
+    const sala = new Sala({ nome: 'r4b', seed: 51, porTime: 1, esperaPorJogadores: 0 });
+    expect(sala.entrar(clienteFalso('A'))).toBe(true);
+    expect(sala.entrar(clienteFalso('B'))).toBe(true);
+    // Dois espectadores já lotam uma sala de um por time: dizer "não cabe"
+    // agora é melhor que dizer depois que a pessoa escolheu o lado.
+    expect(sala.entrar(clienteFalso('C'))).toBe(false);
+  });
+
   it('quem sai libera a vaga, e o bot volta a cobri-la', () => {
     const sala = new Sala({ nome: 'r5', seed: 6, porTime: 2, esperaPorJogadores: 0 });
-    const ana = clienteFalso('Ana');
-    const bruno = clienteFalso('Bruno');
-    sala.entrar(ana);
-    sala.entrar(bruno);
+    jogarPor(sala, 'Ana', 'azul');
+    const bruno = jogarPor(sala, 'Bruno', 'vermelho');
     rodar(sala, 2);
     expect(sala.estado.unidades).toHaveLength(4);
 
@@ -117,8 +165,7 @@ describe('a lotação da sala', () => {
 describe('o silêncio do cliente', () => {
   it('quem para de mandar comando é considerado ido', () => {
     const sala = new Sala({ nome: 'r6', seed: 8, porTime: 2, esperaPorJogadores: 0 });
-    const ana = clienteFalso('Ana');
-    sala.entrar(ana);
+    jogarPor(sala, 'Ana', 'azul');
     rodar(sala, 5);
     expect(sala.humanos).toBe(1);
     // Vinte segundos sem uma palavra: a conexão morreu sem avisar, que é como
@@ -129,8 +176,7 @@ describe('o silêncio do cliente', () => {
 
   it('quem continua mandando comando fica', () => {
     const sala = new Sala({ nome: 'r7', seed: 9, porTime: 2, esperaPorJogadores: 0 });
-    const ana = clienteFalso('Ana');
-    sala.entrar(ana);
+    const ana = jogarPor(sala, 'Ana', 'azul');
     for (let i = 0; i < 30 * TICKS_POR_SEGUNDO; i++) {
       sala.tocar(ana.chave);
       sala.passo();

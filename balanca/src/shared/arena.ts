@@ -55,11 +55,25 @@ export interface Estrutura {
   readonly ty: number;
 }
 
-export interface Trigal {
+/** O que uma jazida rende: árvore dá madeira, pedra de ouro dá ouro. */
+export type TipoDeJazida = 'arvore' | 'ouro';
+
+export interface Jazida {
+  readonly id: number;
+  readonly tipo: TipoDeJazida;
+  readonly x: number;
+  readonly y: number;
+  /** `null` quando é do meio do campo, disputada pelos dois. */
+  readonly lado: Time | null;
+  /** Variante do sprite, para a mata não sair toda igual. */
+  readonly variante: number;
+}
+
+/** Onde um bicho nasce e para onde ele volta se ninguém o incomodar. */
+export interface Pasto {
   readonly id: number;
   readonly x: number;
   readonly y: number;
-  /** `null` quando é do meio do campo, disputado pelos dois. */
   readonly lado: Time | null;
 }
 
@@ -69,7 +83,8 @@ export interface Arena {
   readonly altura: number;
   readonly tiles: Uint8Array;
   readonly estruturas: readonly Estrutura[];
-  readonly trigais: readonly Trigal[];
+  readonly jazidas: readonly Jazida[];
+  readonly pastos: readonly Pasto[];
   tile(tx: number, ty: number): number;
   ehChao(tx: number, ty: number): boolean;
   bloqueado(tx: number, ty: number): boolean;
@@ -99,24 +114,50 @@ const PLANTA: Readonly<Record<TipoDeEstrutura, readonly [number, number]>> = {
 };
 
 /**
- * Trigais do lado azul, e os do meio (que aparecem só uma vez).
+ * As jazidas do lado azul: onde há madeira e onde há ouro.
  *
- * Dois ficam **dentro** do castelo e dois fora, e a divisão é o desenho
- * econômico do jogo. Só com trigo no campo aberto, um time encurralado perde a
- * cozinha junto com o território e não tem como voltar — a partida acabaria
- * antes do placar. Só com trigo em casa, ninguém precisaria sair, e o meio do
- * mapa seria enfeite. Com os dois, a economia mínima é segura e a economia que
- * **ganha a balança** exige sair de casa.
+ * Parte fica **dentro** do castelo e parte fora, e a divisão é o desenho
+ * econômico do jogo. Só com jazida em campo aberto, um time encurralado perde a
+ * economia junto com o território e não tem como voltar. Só com jazida em casa,
+ * ninguém precisaria sair, e o meio do mapa seria enfeite. Com as duas, a obra
+ * mínima é segura e a obra que **decide a partida** exige sair de casa.
  */
-const TRIGAIS_DO_LADO: readonly (readonly [number, number])[] = [
-  [13, 16],
-  [8, 24],
-  [19, 8],
-  [19, 25],
+const JAZIDAS_DO_LADO: readonly (readonly [number, number, TipoDeJazida])[] = [
+  [13, 15, 'arvore'],
+  [13, 17, 'arvore'],
+  [8, 25, 'ouro'],
+  [20, 9, 'arvore'],
+  [20, 24, 'ouro'],
+  [24, 16, 'ouro'],
 ];
-const TRIGAIS_DO_MEIO: readonly (readonly [number, number])[] = [
-  [30, 6],
-  [30, 27],
+// O meio do mapa é escrito em **pares espelhados** — (29, y) e (30, y) —
+// porque um ponto solto na coluna 30 teria o espelho na 29 e sairia do lugar.
+const JAZIDAS_DO_MEIO: readonly (readonly [number, number, TipoDeJazida])[] = [
+  [29, 4, 'arvore'],
+  [30, 4, 'arvore'],
+  [29, 29, 'arvore'],
+  [30, 29, 'arvore'],
+];
+
+/**
+ * Os pastos, que são de onde vem a carne — e a carne é o que move a balança.
+ *
+ * O grosso das ovelhas fica no meio do mapa de propósito: caçar é sair de casa,
+ * e é isso que faz a economia do bolo custar exposição em vez de custar tempo.
+ * Um pasto por castelo garante que um time cercado ainda tenha o que comer.
+ */
+const PASTOS_DO_LADO: readonly (readonly [number, number])[] = [
+  [10, 10],
+  [22, 20],
+];
+const PASTOS_DO_MEIO: readonly (readonly [number, number])[] = [
+  [29, 10],
+  [30, 10],
+  [29, 23],
+  [30, 23],
+  // Estes dois abraçam o lago pelos flancos: dentro dele seria água.
+  [25, 16],
+  [34, 16],
 ];
 
 const centro = (tx: number, ty: number): { x: number; y: number } => ({
@@ -184,26 +225,44 @@ export function criarArena(seed: number): Arena {
     }
   }
 
-  const trigais: Trigal[] = [];
-  let idTrigal = 0;
+  const jazidas: Jazida[] = [];
+  let idJazida = 0;
   for (const time of TIMES) {
-    for (const [tx, ty] of TRIGAIS_DO_LADO) {
+    for (const [tx, ty, tipo] of JAZIDAS_DO_LADO) {
       const cx = time === 'azul' ? tx : espelhar(tx);
-      trigais.push({ id: idTrigal++, lado: time, ...centro(cx, ty) });
+      jazidas.push({
+        id: idJazida++,
+        tipo,
+        lado: time,
+        variante: (tx + ty) % 4,
+        ...centro(cx, ty),
+      });
     }
   }
-  for (const [tx, ty] of TRIGAIS_DO_MEIO) {
-    trigais.push({ id: idTrigal++, lado: null, ...centro(tx, ty) });
+  for (const [tx, ty, tipo] of JAZIDAS_DO_MEIO) {
+    jazidas.push({ id: idJazida++, tipo, lado: null, variante: (tx + ty) % 4, ...centro(tx, ty) });
   }
 
-  // Nenhum trigal pode nascer dentro d'água — o lago do meio é grande e a
-  // planta é escrita à mão. Errar isso deixaria um trigo inalcançável, e a
-  // economia do time morreria por um erro de digitação.
-  for (const t of trigais) {
-    const tx = Math.floor(t.x / TILE);
-    const ty = Math.floor(t.y / TILE);
+  const pastos: Pasto[] = [];
+  let idPasto = 0;
+  for (const time of TIMES) {
+    for (const [tx, ty] of PASTOS_DO_LADO) {
+      const cx = time === 'azul' ? tx : espelhar(tx);
+      pastos.push({ id: idPasto++, lado: time, ...centro(cx, ty) });
+    }
+  }
+  for (const [tx, ty] of PASTOS_DO_MEIO) {
+    pastos.push({ id: idPasto++, lado: null, ...centro(tx, ty) });
+  }
+
+  // Nada pode nascer dentro d'água — o lago do meio é grande e a planta é
+  // escrita à mão. Errar isso deixaria uma jazida inalcançável, e a economia do
+  // time morreria por um erro de digitação.
+  for (const ponto of [...jazidas, ...pastos]) {
+    const tx = Math.floor(ponto.x / TILE);
+    const ty = Math.floor(ponto.y / TILE);
     if (tiles[ty * largura + tx] === AGUA) {
-      throw new Error(`trigal ${t.id} caiu na água em (${tx}, ${ty})`);
+      throw new Error(`ponto ${ponto.id} caiu na água em (${tx}, ${ty})`);
     }
   }
 
@@ -218,7 +277,8 @@ export function criarArena(seed: number): Arena {
     altura,
     tiles,
     estruturas,
-    trigais,
+    jazidas,
+    pastos,
     tile,
     ehChao: (tx, ty) => tile(tx, ty) !== AGUA,
     bloqueado: (tx, ty) => tile(tx, ty) === AGUA,
@@ -326,8 +386,11 @@ export function decoracaoEm(
   for (const e of arena.estruturas) {
     if (Math.abs(e.tx - tx) <= 2 && Math.abs(e.ty - ty) <= 2) return null;
   }
-  for (const t of arena.trigais) {
-    if (Math.abs(t.x / TILE - 0.5 - tx) <= 1.5 && Math.abs(t.y / TILE - 0.5 - ty) <= 1.5) {
+  for (const ponto of [...arena.jazidas, ...arena.pastos]) {
+    if (
+      Math.abs(ponto.x / TILE - 0.5 - tx) <= 1.5 &&
+      Math.abs(ponto.y / TILE - 0.5 - ty) <= 1.5
+    ) {
       return null;
     }
   }

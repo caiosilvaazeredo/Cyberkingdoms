@@ -1,5 +1,5 @@
-import { CLASSES_COM_CHAPEU, perfil } from '../shared/classes';
-import { princesaDe, type Estado, type Evento, type Unidade } from '../shared/estado';
+import { CLASSES_COM_CHAPEU, perfil, vidaMaxima } from '../shared/classes';
+import { nivelDe, princesaDe, type Estado, type Evento, type Unidade } from '../shared/estado';
 import {
   PESO_TOTAL,
   PONTOS_PARA_VENCER,
@@ -7,6 +7,7 @@ import {
   outroTime,
   type Time,
 } from '../shared/regras';
+import type { Ajustes } from './ajustes';
 import type { Entrada } from './entrada';
 import type { Rede } from './rede';
 
@@ -45,6 +46,7 @@ export function desenharHud(
   largura: number,
   altura: number,
   tempo: number,
+  ajustes: Ajustes,
 ): void {
   const estado = rede.estado;
   const eu = rede.eu;
@@ -60,7 +62,7 @@ export function desenharHud(
     cartaoDaClasse(ctx, estado, eu, altura);
     avisosDoCentro(ctx, estado, eu, largura, altura, tempo);
   }
-  registro(ctx, rede, largura, altura);
+  if (ajustes.registro) registro(ctx, rede, largura, altura);
   faixaDeFase(ctx, estado, largura, altura, tempo);
   if (entrada.placarAberto) tabela(ctx, estado, largura, altura);
   botoesDeToque(ctx, entrada, largura, altura);
@@ -161,11 +163,13 @@ function cartaoDaClasse(
   altura: number,
 ): void {
   const p = perfil(eu.classe);
+  const nivel = nivelDe(estado, eu.time);
+  const max = vidaMaxima(eu.classe, nivel);
   const x = 12;
-  const y = altura - 92;
+  const y = altura - 108;
   ctx.save();
   ctx.fillStyle = 'rgba(12, 14, 20, 0.72)';
-  arredondado(ctx, x, y, 258, 80, 10);
+  arredondado(ctx, x, y, 272, 96, 10);
   ctx.fill();
 
   ctx.textAlign = 'left';
@@ -177,22 +181,32 @@ function cartaoDaClasse(
   const barra = 170;
   ctx.fillStyle = 'rgba(255,255,255,0.18)';
   ctx.fillRect(x + 12, y + 32, barra, 8);
-  ctx.fillStyle = eu.vida / p.vida > 0.35 ? '#6ac46a' : '#d9534f';
-  ctx.fillRect(x + 12, y + 32, (barra * Math.max(0, eu.vida)) / p.vida, 8);
+  ctx.fillStyle = eu.vida / max > 0.35 ? '#6ac46a' : '#d9534f';
+  ctx.fillRect(x + 12, y + 32, (barra * Math.max(0, eu.vida)) / max, 8);
   ctx.font = '500 11px "Trebuchet MS", system-ui, sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.75)';
-  ctx.fillText(`${Math.max(0, Math.round(eu.vida))}/${p.vida}`, x + 190, y + 30);
+  ctx.fillText(`${Math.max(0, Math.round(eu.vida))}/${max}`, x + 190, y + 30);
 
   const estoque = estado.estoque[eu.time];
-  const chapeus = CLASSES_COM_CHAPEU.map((c) => `${c[0]!.toUpperCase()}${estoque[c]}`).join('  ');
+  const chapeus = CLASSES_COM_CHAPEU.filter((c) => estoque[c] > 0)
+    .map((c) => `${perfil(c).nome.slice(0, 3).toLowerCase()} ${estoque[c]}`)
+    .join(' · ');
   ctx.fillStyle = 'rgba(255,255,255,0.6)';
-  ctx.fillText(`chapelaria: ${chapeus}`, x + 12, y + 50);
+  ctx.fillText(`chapelaria: ${chapeus || 'vazia'}`, x + 12, y + 48);
   const forno = estado.cozinhas.find((c) => c.time === eu.time);
   if (forno) {
     ctx.fillText(
-      `cozinha: ${forno.bolos} bolo(s) · ${forno.trigo} trigo${forno.assando > 0 ? ' · assando' : ''}`,
+      `cozinha: ${forno.bolos} bolo(s) · ${forno.carne} carne${forno.assando > 0 ? ' · assando' : ''}`,
       x + 12,
-      y + 64,
+      y + 62,
+    );
+  }
+  const oficina = estado.oficinas.find((o) => o.time === eu.time);
+  if (oficina) {
+    ctx.fillText(
+      `obra ${'I'.repeat(oficina.nivel)} · ${oficina.madeira} madeira · ${oficina.ouro} ouro`,
+      x + 12,
+      y + 76,
     );
   }
   ctx.restore();
@@ -221,6 +235,12 @@ function avisosDoCentro(
     ctx.fillText(`volta em ${Math.ceil(eu.renasceEm)}s`, largura / 2, altura / 2 + 18);
     ctx.restore();
     return;
+  }
+
+  if (eu.colheita > 0 && eu.colheita < 1) {
+    ctx.font = '600 16px "Trebuchet MS", system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(255,233,168,0.9)';
+    ctx.fillText('trabalhando — andar cancela', largura / 2, altura - 172);
   }
 
   if (eu.carga === 'princesa') {
@@ -349,7 +369,7 @@ function tabela(
     ctx.font = '500 12px "Trebuchet MS", system-ui, sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.5)';
     ctx.fillText('jogador', cx, y + 42);
-    ctx.fillText('aba  mor  fat  res', cx + l / 2 - 150, y + 42);
+    ctx.fillText('aba  mor  fat  res  ent', cx + l / 2 - 168, y + 42);
 
     const time_ = estado.unidades
       .filter((u) => u.time === time)
@@ -360,8 +380,8 @@ function tabela(
       ctx.font = '500 13px "Trebuchet MS", system-ui, sans-serif';
       ctx.fillText(`${u.nome}${u.bot ? ' ⚙' : ''} · ${perfil(u.classe).nome}`, cx, ly);
       ctx.fillText(
-        `${pad(u.abates)}  ${pad(u.mortes)}  ${pad(u.fatias)}  ${pad(u.resgates)}`,
-        cx + l / 2 - 150,
+        `${pad(u.abates)}  ${pad(u.mortes)}  ${pad(u.fatias)}  ${pad(u.resgates)}  ${pad(u.entregas)}`,
+        cx + l / 2 - 168,
         ly,
       );
     });
@@ -370,7 +390,11 @@ function tabela(
   ctx.textAlign = 'center';
   ctx.font = '500 12px "Trebuchet MS", system-ui, sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.55)';
-  ctx.fillText('aba = abates · mor = mortes · fat = fatias entregues · res = resgates', largura / 2, y + a - 26);
+  ctx.fillText(
+    'aba = abates · mor = mortes · fat = fatias · res = resgates · ent = carga entregue',
+    largura / 2,
+    y + a - 26,
+  );
   ctx.restore();
 }
 
@@ -388,9 +412,12 @@ function botoesDeToque(
     return;
   }
   const r = 46;
+  // Os botões ficam do lado **oposto** ao manche: é a mão que sobra.
+  const aDireita = entrada.ladoDoManche === 'esquerda';
+  const bx = (recuo: number): number => (aDireita ? largura - recuo : recuo - r * 2);
   entrada.botoes = {
-    atacar: { x: largura - 150, y: altura - 130, largura: r * 2, altura: r * 2 },
-    usar: { x: largura - 240, y: altura - 80, largura: r * 2, altura: r * 2 },
+    atacar: { x: bx(150), y: altura - 130, largura: r * 2, altura: r * 2 },
+    usar: { x: bx(240), y: altura - 80, largura: r * 2, altura: r * 2 },
   };
   ctx.save();
   ctx.font = '600 14px "Trebuchet MS", system-ui, sans-serif';
@@ -466,6 +493,15 @@ export function narrar(
       return evento.roubado
         ? { texto: `${nome(evento.unidade)} roubou um chapéu de ${evento.classe}`, cor: '#ffd479' }
         : null;
+    case 'nivel':
+      return {
+        texto: `a obra do ${NOME_DO_TIME[evento.time]} chegou ao nível ${'I'.repeat(evento.nivel)}`,
+        cor: COR_CLARA[evento.time],
+      };
+    case 'caca':
+      return null;
+    case 'cura':
+      return null;
     case 'pegouPrincesa':
       return {
         texto: `${nome(evento.unidade)} pegou a princesa do ${NOME_DO_TIME[evento.princesa]}`,

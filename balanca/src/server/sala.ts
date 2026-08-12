@@ -44,8 +44,16 @@ export interface Cliente {
   /** Identidade da conexão, antes de virar unidade. */
   readonly chave: string;
   nome: string;
-  /** A unidade que este cliente controla, quando já entrou na partida. */
+  /**
+   * A unidade que este cliente controla, ou `null` enquanto ele só assiste.
+   *
+   * Espectador não é um estado de erro: é por onde todo mundo entra. Quem
+   * acabou de conectar está na tela de escolha de time, vendo a partida correr
+   * e decidindo de que lado entra.
+   */
   unidade: number | null;
+  /** O lado escolhido. Sobrevive ao fim da partida e vale na próxima. */
+  time: Time | null;
   /** Segundos desde a última mensagem recebida. */
   silencio: number;
   enviar(msg: DoServidor): void;
@@ -94,38 +102,76 @@ export class Sala {
     return this.clientes.size;
   }
 
+  /**
+   * Vagas de **gente**, contando quem já está em campo e quem está escolhendo.
+   *
+   * Espectador ocupa vaga. Sem isso, vinte pessoas entrariam numa sala de doze,
+   * escolheriam o lado e onze seriam recusadas depois de já terem visto a tela
+   * de escolha — que é o pior momento possível para dizer "não cabe".
+   */
   get vagas(): number {
-    return this.porTime * 2 - this.partida.estado.unidades.filter((u) => !u.bot).length;
+    const emCampo = this.partida.estado.unidades.filter((u) => !u.bot).length;
+    const escolhendo = [...this.clientes.values()].filter((c) => c.unidade === null).length;
+    return this.porTime * 2 - emCampo - escolhendo;
   }
 
   get cheiaDeGente(): boolean {
     return this.vagas <= 0;
   }
 
+  /** Quantos humanos cada lado tem, para a tela de escolha mostrar. */
+  vagasDoTime(time: Time): number {
+    return this.porTime - this.contarHumanos(time);
+  }
+
   // --- entrada e saída ----------------------------------------------------
 
+  /** Aceita a conexão como espectador. A unidade só nasce em `escolher`. */
   entrar(cliente: Cliente): boolean {
     if (this.cheiaDeGente) {
       cliente.enviar({ t: 'recusado', motivo: 'sala cheia' });
       return false;
     }
-    const time = this.timeParaOProximoHumano();
+    cliente.unidade = null;
+    cliente.time = null;
+    cliente.silencio = 0;
+    this.clientes.set(cliente.chave, cliente);
+    cliente.enviar({
+      t: 'bemvindo',
+      seed: this.seed,
+      sala: this.nome,
+      porTime: this.porTime,
+    });
+    // O elenco vai na hora: a tela de escolha precisa saber quem já está de que
+    // lado antes do primeiro retrato chegar.
+    cliente.enviar({ t: 'elenco', jogadores: this.elenco() });
+    return true;
+  }
+
+  /**
+   * O espectador escolhe o lado e entra em campo.
+   *
+   * O time pedido é respeitado sempre que couber gente nele. Não cabendo, a
+   * escolha é recusada com o motivo — e não silenciosamente trocada pelo outro
+   * lado, que é a forma mais rápida de alguém achar que o jogo ignorou o clique.
+   */
+  escolher(chave: string, time: Time): boolean {
+    const cliente = this.clientes.get(chave);
+    if (!cliente) return false;
+    if (cliente.unidade !== null) return false;
+    if (this.contarHumanos(time) >= this.porTime) {
+      cliente.enviar({ t: 'recusado', motivo: 'esse lado está cheio de gente' });
+      return false;
+    }
     // O humano tem preferência sobre o bot, e a preferência é imediata: se o
     // time escolhido está lotado de bots, um deles sai agora.
     if (this.contar(time) >= this.porTime) this.dispensarUmBot(time);
 
     const u = this.partida.entrar({ nome: cliente.nome, bot: false, time });
     cliente.unidade = u.id;
-    cliente.silencio = 0;
-    this.clientes.set(cliente.chave, cliente);
+    cliente.time = time;
     this.elencoSujo = true;
-    cliente.enviar({
-      t: 'bemvindo',
-      voce: u.id,
-      seed: this.seed,
-      sala: this.nome,
-      porTime: this.porTime,
-    });
+    cliente.enviar({ t: 'nasceu', voce: u.id, time });
     return true;
   }
 
@@ -207,7 +253,7 @@ export class Sala {
       if (this.esperando < this.espera && humanos > 0) continue;
 
       const u = this.partida.entrar({ nome: nomeDeBot(this.partida.estado.proximoId), bot: true, time });
-      this.bots.adotar(u.id);
+      this.bots.adotar(u.id, time);
       this.elencoSujo = true;
     }
   }
@@ -226,14 +272,6 @@ export class Sala {
     this.elencoSujo = true;
   }
 
-  private timeParaOProximoHumano(): Time {
-    // Equilibra por **humanos**, não por unidades: um time com cinco bots e um
-    // com cinco pessoas têm o mesmo tamanho e não têm o mesmo peso.
-    const azul = this.contarHumanos('azul');
-    const vermelho = this.contarHumanos('vermelho');
-    if (azul !== vermelho) return azul < vermelho ? 'azul' : 'vermelho';
-    return this.contar('azul') <= this.contar('vermelho') ? 'azul' : 'vermelho';
-  }
 
   private contar(time: Time): number {
     return this.partida.estado.unidades.filter((u) => u.time === time).length;
@@ -264,15 +302,17 @@ export class Sala {
     this.esperando = 0;
 
     for (const c of antigos) {
-      const u = this.partida.entrar({ nome: c.nome, bot: false });
+      c.enviar({ t: 'bemvindo', seed: this.seed, sala: this.nome, porTime: this.porTime });
+      // Quem estava jogando volta para o mesmo lado, sem passar pela tela de
+      // escolha de novo: trocar de time entre partidas é decisão do jogador,
+      // não uma pergunta que o servidor faz a cada dez minutos.
+      if (c.time === null) {
+        c.unidade = null;
+        continue;
+      }
+      const u = this.partida.entrar({ nome: c.nome, bot: false, time: c.time });
       c.unidade = u.id;
-      c.enviar({
-        t: 'bemvindo',
-        voce: u.id,
-        seed: this.seed,
-        sala: this.nome,
-        porTime: this.porTime,
-      });
+      c.enviar({ t: 'nasceu', voce: u.id, time: c.time });
     }
     this.elencoSujo = true;
   }
