@@ -145,6 +145,31 @@
       }
       #hud-terreno-botoes .vermelho { grid-column: 1 / -1; }
 
+      /* O mapa é a tela toda: escolher para onde ir é a decisão mais cara do
+         jogo, e ela não cabe numa caixinha de canto. */
+      #folha-mapa {
+        position: fixed; z-index: 7; inset: 12px;
+        display: flex; flex-direction: column;
+        padding: 0 10px 10px;
+      }
+      #folha-mapa[hidden] { display: none; }
+      #tela-mapa {
+        flex: 1; min-height: 0; width: 100%;
+        image-rendering: pixelated; cursor: crosshair;
+        border: 3px solid rgba(58, 36, 21, 0.35); border-radius: 4px;
+      }
+      #ficha-viagem {
+        display: flex; flex-direction: column; gap: 2px;
+        min-height: 74px; padding-top: 6px;
+        font-size: 12px; color: var(--tinta);
+      }
+      #ficha-viagem small { font-size: 10px; opacity: 0.85; }
+      /* Sair sem mantimento é a única recusa que o jogo não faz por você: a
+         viagem é permitida, e o aviso é o que separa uma escolha de um
+         acidente. */
+      #ficha-viagem .alerta { color: #a32c1c; opacity: 1; font-weight: bold; }
+      #ficha-viagem .ts-botao { margin-top: 4px; border-width: 14px; }
+
       /* O aviso substitui o `alert`: um modal do navegador congela o laço de
          desenho, e o motivo de uma obra recusada não vale uma tela parada. */
       #aviso {
@@ -169,11 +194,11 @@
         padding: 0 10px 12px;
       }
       #folha-obras[hidden], #folha-feira[hidden] { display: none; }
-      #folha-obras header, #folha-feira header {
+      #folha-obras header, #folha-feira header, #folha-mapa header {
         display: flex; align-items: center; justify-content: space-between;
         position: sticky; top: 0;
       }
-      #folha-obras h2, #folha-feira h2 {
+      #folha-obras h2, #folha-feira h2, #folha-mapa h2 {
         margin: 0; font-size: 13px; letter-spacing: 0.1em;
       }
       .ts-secao { margin: 12px 0 4px; opacity: 0.8; }
@@ -254,6 +279,17 @@
       <div id="lista-bolsa"></div>
     </aside>
 
+    <!-- O mapa ocupa a tela toda: escolher para onde ir é a decisão mais cara
+         do jogo, e ela não cabe numa caixinha de canto. -->
+    <aside id="folha-mapa" class="ts-papel" hidden>
+      <header>
+        <h2>O REINO</h2>
+        <button id="fechar-mapa" class="ts-fechar" type="button" aria-label="Fechar">×</button>
+      </header>
+      <canvas id="tela-mapa"></canvas>
+      <div id="ficha-viagem"></div>
+    </aside>
+
     <div id="vitais">
       <div class="ts-barra"><i id="barra-fome" style="width:100%"></i><span>FOME</span></div>
       <div class="ts-barra"><i id="barra-sede" style="width:100%"></i><span>SEDE</span></div>
@@ -267,6 +303,7 @@
       <div id="hud-terreno-botoes">
         <button id="abrir-feira" class="ts-botao" type="button">MERCADO</button>
         <button id="abrir-obras" class="ts-botao" type="button">CONSTRUIR</button>
+        <button id="abrir-mapa" class="ts-botao" type="button">MAPA</button>
         <button id="dormir" class="ts-botao vermelho" type="button">DORMIR</button>
       </div>
     </aside>

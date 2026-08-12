@@ -11,9 +11,13 @@ import {
   type Predio,
 } from './render2d/predios';
 import { carregarAssets, criarMundo2D } from './render2d/world2d';
+import { criarMapa2D } from './render2d/mapa2d';
+import { acampar } from './campaign/camp';
+import { daysOfSupplies, planJourney, startJourney } from './campaign/journey';
 import { itemDef } from './economy/item';
 import { describeCity, type BuyRow } from './ui/cityView';
 import { formatCz } from './rules/eb';
+import type { Settlement } from './world/settlement';
 
 /**
  * O cliente do CyberKingdoms com a arte do Tiny Swords.
@@ -54,8 +58,21 @@ const campanha = Campaign.create({
 
 const personagem = campanha.character;
 const terreno = campanha.plot;
-const cidade = campanha.world.layout.byId(personagem.homeSettlementId)!;
+const casa = campanha.world.layout.byId(personagem.homeSettlementId)!;
 const areaDoTerreno = retanguloDoTerreno(terreno);
+
+/**
+ * A cidade em que o peão está agora.
+ *
+ * Não é sempre a de casa: depois de uma viagem o jogador acorda em outra
+ * capital, e é a feira **dela** que ele vê, com os preços dela. Perguntar à
+ * campanha em vez de guardar numa variável evita a classe de defeito em que a
+ * tela mostra uma cidade e a compra acontece em outra.
+ */
+function cidadeAtual(): Settlement {
+  const id = campanha.currentSettlementId;
+  return (id ? campanha.world.layout.byId(id) : null) ?? casa;
+}
 
 /**
  * O que aparece na tela é o que a partida realmente tem.
@@ -79,20 +96,27 @@ const COR_DA_VOCACAO = {
   freePort: 'blue',
 } as const;
 
-const marcoDaCidade: Predio = {
-  forma: cidade.isCapital ? 'Castle' : 'Tower',
-  cor: COR_DA_VOCACAO[cidade.vocation],
-  enfeites: [],
-  x: cidade.center.x - (cidade.isCapital ? 2 : 1),
-  y: cidade.center.y - (cidade.isCapital ? 2 : 1),
-  tiles: cidade.isCapital ? 5 : 2,
-  tilesAltura: cidade.isCapital ? 4 : 2,
-  rotulo: cidade.name,
-  escala: 1,
-};
+function marcoDaCidade(s: Settlement): Predio {
+  return {
+    forma: s.isCapital ? 'Castle' : 'Tower',
+    cor: COR_DA_VOCACAO[s.vocation],
+    enfeites: [],
+    x: s.center.x - (s.isCapital ? 2 : 1),
+    y: s.center.y - (s.isCapital ? 2 : 1),
+    tiles: s.isCapital ? 5 : 2,
+    tilesAltura: s.isCapital ? 4 : 2,
+    rotulo: s.name,
+    escala: 1,
+  };
+}
+
+// Todos os marcos, e não só o da cidade de agora: andando entre capitais o
+// jogador passa perto de satélites, e um deles aparecer do nada ao chegar seria
+// pior do que ele já estar lá no horizonte.
+const marcos = campanha.world.layout.settlements.map(marcoDaCidade);
 
 function prediosAgora(): readonly Predio[] {
-  return [marcoDaCidade, ...prediosDoTerreno(terreno)];
+  return [...marcos, ...prediosDoTerreno(terreno)];
 }
 
 const centro = centroDoTerreno(terreno);
@@ -331,8 +355,9 @@ const listaBolsa = document.querySelector<HTMLElement>('#lista-bolsa')!;
 let assinaturaFeira = '';
 
 function comprar(row: BuyRow): void {
-  const gov = campanha.governmentOf(cidade.id);
-  const mercado = campanha.marketOf(cidade.id, row.kind);
+  const aqui = cidadeAtual();
+  const gov = campanha.governmentOf(aqui.id);
+  const mercado = campanha.marketOf(aqui.id, row.kind);
   if (!mercado) return;
   const r = mercado.quickBuy({
     item: row.item,
@@ -376,7 +401,7 @@ function usar(id: string): void {
 }
 
 function pintarFeira(): void {
-  const ficha = describeCity(campanha, cidade.id);
+  const ficha = describeCity(campanha, cidadeAtual().id);
   const bolsa = [...personagem.inventory.stacks.entries()].filter(([, q]) => q > 0);
   const assinatura =
     (ficha?.buy ?? []).map((r) => `${r.item}:${r.unitPrice}:${r.supply}`).join('|') +
@@ -430,6 +455,127 @@ document.querySelector('#fechar-feira')?.addEventListener('click', () => {
   folhaFeira.hidden = true;
 });
 
+// ------------------------------------------------------------------- o mapa
+//
+// Sem ele o jogo tem uma cidade só. O domínio de viagem já existe e já é
+// testado — rota por Dijkstra, dias, perigo e o aviso de mantimentos —, e o que
+// faltava era a tela. Ela é canvas, e não SVG: o mapa do cliente 3D está preso
+// ao HTML dele, e o que importa reaproveitar não é a marcação, é a **decisão**
+// — `corDoBioma` e `enquadrar` são os mesmos nos dois, então os dois mapas
+// concordam sobre onde as cidades ficam e de que cor é cada pedaço do mundo.
+
+const folhaMapa = document.querySelector<HTMLElement>('#folha-mapa')!;
+const telaMapa = document.querySelector<HTMLCanvasElement>('#tela-mapa')!;
+const ctxMapa = telaMapa.getContext('2d')!;
+const fichaViagem = document.querySelector<HTMLElement>('#ficha-viagem')!;
+const mapa = criarMapa2D(campanha);
+let escolhida: Settlement | null = null;
+
+function desenharMapa(): void {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const w = telaMapa.clientWidth;
+  const h = telaMapa.clientHeight;
+  if (w === 0 || h === 0) return;
+  telaMapa.width = Math.floor(w * dpr);
+  telaMapa.height = Math.floor(h * dpr);
+  mapa.desenhar(ctxMapa, telaMapa.width, telaMapa.height, escolhida?.id ?? null);
+}
+
+function pintarFichaViagem(): void {
+  if (personagem.isTravelling) {
+    const destino = personagem.travellingTo
+      ? campanha.world.layout.byId(personagem.travellingTo)
+      : null;
+    fichaViagem.innerHTML =
+      `<strong>Na estrada para ${destino?.name ?? '—'}</strong>` +
+      `<small>Faltam ${personagem.travelDaysRemaining} dia(s). ` +
+      'Cada DORMIR anda um dia.</small>';
+    return;
+  }
+  if (!escolhida) {
+    fichaViagem.innerHTML = '<small>Toque numa cidade para ver a estrada.</small>';
+    return;
+  }
+
+  const plano = planJourney(campanha, escolhida.id);
+  if (!plano.ok) {
+    fichaViagem.innerHTML =
+      `<strong>${escolhida.name}</strong><small>${plano.reason}</small>`;
+    return;
+  }
+
+  // O custo aparece **antes** do toque. Um botão que só revela o preço depois
+  // é o mesmo que um botão sem preço — e aqui o preço pode ser a vida do
+  // personagem, porque não há mercado no meio do caminho.
+  const dias = plano.route.days;
+  const aguenta = daysOfSupplies(campanha);
+  const perigo = Math.round(plano.route.danger * 100);
+  const faltando = aguenta < dias;
+  fichaViagem.innerHTML =
+    `<strong>${escolhida.name} · ${escolhida.vocationDef.label}</strong>` +
+    `<small>${dias} dia(s) de estrada · perigo ${perigo}%</small>` +
+    `<small class="${faltando ? 'alerta' : ''}">` +
+    `Mantimentos para ${aguenta} dia(s)${faltando ? ' — você não chega vivo.' : '.'}</small>` +
+    '<button id="partir" class="ts-botao" type="button">PARTIR</button>';
+
+  fichaViagem.querySelector('#partir')?.addEventListener('click', () => {
+    const r = startJourney(campanha, escolhida!.id);
+    if (!r.ok) {
+      avisar(r.reason);
+      return;
+    }
+    folhaMapa.hidden = true;
+    avisar(`Na estrada para ${escolhida!.name}: ${personagem.travelDaysRemaining} dia(s).`);
+    atualizarHud();
+  });
+}
+
+telaMapa.addEventListener('click', (e) => {
+  const r = telaMapa.getBoundingClientRect();
+  const dpr = telaMapa.width / r.width;
+  escolhida = mapa.cidadeEm(
+    (e.clientX - r.left) * dpr,
+    (e.clientY - r.top) * dpr,
+    telaMapa.width,
+    telaMapa.height,
+  );
+  desenharMapa();
+  pintarFichaViagem();
+});
+
+document.querySelector('#abrir-mapa')?.addEventListener('click', () => {
+  const abrindo = folhaMapa.hidden;
+  folhaMapa.hidden = !abrindo;
+  if (!abrindo) return;
+  escolhida = null;
+  // O canvas só tem tamanho depois de aparecer: medir antes devolve zero, e o
+  // mapa sairia em branco no primeiro toque.
+  requestAnimationFrame(() => {
+    desenharMapa();
+    pintarFichaViagem();
+  });
+});
+document.querySelector('#fechar-mapa')?.addEventListener('click', () => {
+  folhaMapa.hidden = true;
+});
+
+/**
+ * Leva o peão para onde o personagem está.
+ *
+ * Quem move o personagem é o reset — é ele que conclui a viagem no último dia.
+ * A tela só precisa acompanhar, e comparar a posição é mais robusto do que
+ * checar `travellingTo`: pega qualquer outro caminho que venha a mudar o
+ * personagem de lugar.
+ */
+function acompanharPersonagem(): void {
+  const p = personagem.position;
+  if (Math.round(jogador.x) === p.x && Math.round(jogador.y) === p.y) return;
+  jogador.x = p.x;
+  jogador.y = p.y;
+  mundo.camera.x = p.x;
+  mundo.camera.y = p.y;
+}
+
 /**
  * Encerrar o dia.
  *
@@ -439,10 +585,29 @@ document.querySelector('#fechar-feira')?.addEventListener('click', () => {
  * jogo: é castigo. É a mesma decisão que o cliente 3D já tinha tomado.
  */
 document.querySelector('#dormir')?.addEventListener('click', () => {
+  const antes = campanha.currentSettlementId;
+  const acampou = acampar(campanha);
   const relatorio = runDailyTick(campanha);
-  const primeiro = relatorio.events[0];
-  avisar(`Dia ${relatorio.day} encerrado${primeiro ? ` · ${primeiro}` : ''}.`);
+  acompanharPersonagem();
+
+  // Chegar é notícia melhor que o primeiro evento do dia. O reset conclui a
+  // viagem no último dia, então é aqui que a chegada aparece.
+  const agora = campanha.currentSettlementId;
+  if (agora !== antes && !personagem.isTravelling) {
+    const chegou = cidadeAtual();
+    avisar(`Chegou em ${chegou.name} · ${chegou.vocationDef.label}.`);
+  } else if (acampou.length > 0) {
+    avisar(`Acampou na estrada · consumiu ${acampou.join(', ')}.`);
+  } else {
+    const primeiro = relatorio.events[0];
+    avisar(`Dia ${relatorio.day} encerrado${primeiro ? ` · ${primeiro}` : ''}.`);
+  }
   assinaturaObras = '';
+  assinaturaFeira = '';
+  if (!folhaMapa.hidden) {
+    desenharMapa();
+    pintarFichaViagem();
+  }
   atualizarHud();
 });
 
@@ -450,7 +615,10 @@ function atualizarHud(): void {
   const c = personagem;
   elCz.textContent = formatCz(c.credits);
   elDia.textContent = `Dia ${campanha.day}`;
-  elCidade.textContent = `${cidade.name} · ${cidade.vocationDef.label}`;
+  const aqui = cidadeAtual();
+  elCidade.textContent = personagem.isTravelling
+    ? `Estrada · ${personagem.travelDaysRemaining} dia(s)`
+    : `${aqui.name} · ${aqui.vocationDef.label}`;
 
   const obras = terreno.buildings.filter((b) => !b.isReady).length;
   elTerreno.textContent =
@@ -563,10 +731,10 @@ requestAnimationFrame(quadro);
 const diagnostico = document.querySelector<HTMLElement>('#diagnostico');
 if (diagnostico) {
   diagnostico.textContent =
-    `seed "${semente}" · ${cidade.name} · ${terreno.buildings.length} construções · tile 64px`;
+    `seed "${semente}" · ${cidadeAtual().name} · ${terreno.buildings.length} construções · tile 64px`;
   setInterval(() => {
     diagnostico.textContent =
-      `seed "${semente}" · ${cidade.name} · ${mundo.tilesDesenhados} tiles · ` +
+      `seed "${semente}" · ${cidadeAtual().name} · ${mundo.tilesDesenhados} tiles · ` +
       `${mundo.decoracoes} decorações · tile 64px`;
   }, 1000);
 }
