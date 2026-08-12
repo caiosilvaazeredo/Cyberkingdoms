@@ -1,0 +1,5 @@
+node_modules/
+dist/
+# A captura que o teste de fumaça gera — e a barra é obrigatória: sem ela o
+# padrão casaria também com `public/tiny/fx/fumaca.png`, que é arte do jogo.
+/fumaca.png

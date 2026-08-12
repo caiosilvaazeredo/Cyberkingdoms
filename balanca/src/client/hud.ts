@@ -1,0 +1,483 @@
+import { CLASSES_COM_CHAPEU, perfil } from '../shared/classes';
+import { princesaDe, type Estado, type Evento, type Unidade } from '../shared/estado';
+import {
+  PESO_TOTAL,
+  PONTOS_PARA_VENCER,
+  carregadoresPara,
+  outroTime,
+  type Time,
+} from '../shared/regras';
+import type { Entrada } from './entrada';
+import type { Rede } from './rede';
+
+/**
+ * A interface, e a barra que explica o jogo sem texto.
+ *
+ * ## A balança é o HUD
+ *
+ * Um jogo cujo diferencial é uma grandeza conservada precisa mostrar essa
+ * grandeza o tempo todo, e mostrar de um jeito que não peça leitura. Por isso a
+ * barra do alto é **uma só**, dividida: o pedaço azul é o quanto o reino azul
+ * engordou a refém que guarda, o vermelho é o mesmo do outro lado, e a soma dos
+ * dois é sempre a largura inteira.
+ *
+ * Quem olha entende três coisas de uma vez, sem número: quem está ganhando a
+ * balança, quanto falta para o talo, e — porque o número de carregadores está
+ * escrito em cada ponta — quantas pessoas o resgate vai custar.
+ *
+ * ## Por que o resto é discreto
+ *
+ * Tudo o mais (vida, carga, chapéus em estoque) é desenhado pequeno e no canto.
+ * A tela de um jogo de ação é disputada, e a atenção que o HUD toma é atenção
+ * que sai do campo. O que precisa de destaque tem destaque: o aviso de que o
+ * cortejo está travado por falta de escolta aparece no meio da tela, porque é
+ * um problema que o jogador tem de resolver **agora**.
+ */
+
+const COR: Record<Time, string> = { azul: '#3b7fe0', vermelho: '#e04b3b' };
+const COR_CLARA: Record<Time, string> = { azul: '#8fc0ff', vermelho: '#ff9c8f' };
+const NOME_DO_TIME: Record<Time, string> = { azul: 'Azul', vermelho: 'Vermelho' };
+
+export function desenharHud(
+  ctx: CanvasRenderingContext2D,
+  rede: Rede,
+  entrada: Entrada,
+  largura: number,
+  altura: number,
+  tempo: number,
+): void {
+  const estado = rede.estado;
+  const eu = rede.eu;
+  // Entre o "bem-vindo" e o primeiro retrato existe um punhado de quadros em
+  // que o estado existe mas está vazio. Desenhar a balança ali significaria
+  // procurar uma princesa que ainda não chegou.
+  if (!estado || estado.princesas.length < 2) return;
+
+  balanca(ctx, estado, largura, eu?.time ?? 'azul');
+  placar(ctx, estado, largura);
+  cabecalho(ctx, rede, largura);
+  if (eu) {
+    cartaoDaClasse(ctx, estado, eu, altura);
+    avisosDoCentro(ctx, estado, eu, largura, altura, tempo);
+  }
+  registro(ctx, rede, largura, altura);
+  faixaDeFase(ctx, estado, largura, altura, tempo);
+  if (entrada.placarAberto) tabela(ctx, estado, largura, altura);
+  botoesDeToque(ctx, entrada, largura, altura);
+}
+
+/** A barra que dá nome ao jogo. */
+function balanca(ctx: CanvasRenderingContext2D, estado: Estado, largura: number, meu: Time): void {
+  const azulTemNaMasmorra = princesaDe(estado, 'vermelho').peso;
+  const vermelhoTemNaMasmorra = princesaDe(estado, 'azul').peso;
+  const l = Math.min(560, largura - 80);
+  const x = (largura - l) / 2;
+  const y = 72;
+  const a = 22;
+  const fracaoAzul = azulTemNaMasmorra / PESO_TOTAL;
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(12, 14, 20, 0.72)';
+  arredondado(ctx, x - 8, y - 8, l + 16, a + 40, 10);
+  ctx.fill();
+
+  ctx.fillStyle = COR.azul;
+  ctx.fillRect(x, y, l * fracaoAzul, a);
+  ctx.fillStyle = COR.vermelho;
+  ctx.fillRect(x + l * fracaoAzul, y, l * (1 - fracaoAzul), a);
+
+  // O fiel da balança: onde estaria o equilíbrio perfeito.
+  ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x + l / 2, y - 6);
+  ctx.lineTo(x + l / 2, y + a + 6);
+  ctx.stroke();
+
+  ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x, y, l, a);
+
+  ctx.font = '600 12px "Trebuchet MS", system-ui, sans-serif';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'left';
+  ctx.fillText(
+    `refém do Azul: ${Math.round(azulTemNaMasmorra)} · ${carregadoresPara(azulTemNaMasmorra)} carregadores`,
+    x,
+    y + a + 14,
+  );
+  ctx.textAlign = 'right';
+  ctx.fillText(
+    `${carregadoresPara(vermelhoTemNaMasmorra)} carregadores · refém do Vermelho: ${Math.round(vermelhoTemNaMasmorra)}`,
+    x + l,
+    y + a + 14,
+  );
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = COR_CLARA[meu];
+  ctx.font = '700 12px "Trebuchet MS", system-ui, sans-serif';
+  ctx.fillText('A BALANÇA DO REINO', x + l / 2, y - 13);
+  ctx.restore();
+}
+
+function placar(ctx: CanvasRenderingContext2D, estado: Estado, largura: number): void {
+  const minutos = Math.floor(estado.relogio / 60);
+  const segundos = Math.floor(estado.relogio % 60);
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.font = '700 26px "Trebuchet MS", system-ui, sans-serif';
+  ctx.fillStyle = COR.azul;
+  ctx.fillText(String(estado.placar.azul), largura / 2 - 64, 8);
+  ctx.fillStyle = COR.vermelho;
+  ctx.fillText(String(estado.placar.vermelho), largura / 2 + 64, 8);
+  ctx.fillStyle = '#f2e6c9';
+  ctx.font = '600 18px "Trebuchet MS", system-ui, sans-serif';
+  ctx.fillText(`${minutos}:${String(segundos).padStart(2, '0')}`, largura / 2, 12);
+  ctx.font = '400 10px "Trebuchet MS", system-ui, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.65)';
+  ctx.fillText(`resgates até ${PONTOS_PARA_VENCER}`, largura / 2, 34);
+  ctx.restore();
+}
+
+function cabecalho(ctx: CanvasRenderingContext2D, rede: Rede, largura: number): void {
+  const humanos = [...rede.elenco.values()].filter((f) => !f.bot).length;
+  const bots = rede.elenco.size - humanos;
+  ctx.save();
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.font = '500 12px "Trebuchet MS", system-ui, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.fillText(`${rede.sala} · ${humanos} jogadores, ${bots} bots · ${rede.ping} ms`, 12, 10);
+  ctx.restore();
+  void largura;
+}
+
+function cartaoDaClasse(
+  ctx: CanvasRenderingContext2D,
+  estado: Estado,
+  eu: Unidade,
+  altura: number,
+): void {
+  const p = perfil(eu.classe);
+  const x = 12;
+  const y = altura - 92;
+  ctx.save();
+  ctx.fillStyle = 'rgba(12, 14, 20, 0.72)';
+  arredondado(ctx, x, y, 258, 80, 10);
+  ctx.fill();
+
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = COR_CLARA[eu.time];
+  ctx.font = '700 15px "Trebuchet MS", system-ui, sans-serif';
+  ctx.fillText(`${p.nome}${eu.carga !== 'nada' ? ` · ${eu.carga}` : ''}`, x + 12, y + 10);
+
+  const barra = 170;
+  ctx.fillStyle = 'rgba(255,255,255,0.18)';
+  ctx.fillRect(x + 12, y + 32, barra, 8);
+  ctx.fillStyle = eu.vida / p.vida > 0.35 ? '#6ac46a' : '#d9534f';
+  ctx.fillRect(x + 12, y + 32, (barra * Math.max(0, eu.vida)) / p.vida, 8);
+  ctx.font = '500 11px "Trebuchet MS", system-ui, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.75)';
+  ctx.fillText(`${Math.max(0, Math.round(eu.vida))}/${p.vida}`, x + 190, y + 30);
+
+  const estoque = estado.estoque[eu.time];
+  const chapeus = CLASSES_COM_CHAPEU.map((c) => `${c[0]!.toUpperCase()}${estoque[c]}`).join('  ');
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.fillText(`chapelaria: ${chapeus}`, x + 12, y + 50);
+  const forno = estado.cozinhas.find((c) => c.time === eu.time);
+  if (forno) {
+    ctx.fillText(
+      `cozinha: ${forno.bolos} bolo(s) · ${forno.trigo} trigo${forno.assando > 0 ? ' · assando' : ''}`,
+      x + 12,
+      y + 64,
+    );
+  }
+  ctx.restore();
+}
+
+/** Os avisos que não podem passar despercebidos. */
+function avisosDoCentro(
+  ctx: CanvasRenderingContext2D,
+  estado: Estado,
+  eu: Unidade,
+  largura: number,
+  altura: number,
+  tempo: number,
+): void {
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  if (!eu.vivo) {
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillRect(0, 0, largura, altura);
+    ctx.fillStyle = '#f2e6c9';
+    ctx.font = '700 34px "Trebuchet MS", system-ui, sans-serif';
+    ctx.fillText('caiu em combate', largura / 2, altura / 2 - 16);
+    ctx.font = '500 18px "Trebuchet MS", system-ui, sans-serif';
+    ctx.fillText(`volta em ${Math.ceil(eu.renasceEm)}s`, largura / 2, altura / 2 + 18);
+    ctx.restore();
+    return;
+  }
+
+  if (eu.carga === 'princesa') {
+    const p = estado.princesas.find((x) => x.portador === eu.id);
+    if (p) {
+      const precisa = carregadoresPara(p.peso);
+      const tem = p.ajudantes + 1;
+      const falta = precisa - tem;
+      ctx.font = '700 22px "Trebuchet MS", system-ui, sans-serif';
+      if (falta > 0) {
+        const pulso = 0.6 + Math.abs(Math.sin(tempo * 4)) * 0.4;
+        ctx.fillStyle = `rgba(255, 120, 90, ${pulso})`;
+        ctx.fillText(
+          `pesada demais — faltam ${falta} carregador${falta > 1 ? 'es' : ''}`,
+          largura / 2,
+          altura - 150,
+        );
+      } else {
+        ctx.fillStyle = 'rgba(150, 240, 160, 0.95)';
+        ctx.fillText(`levando a princesa (${tem}/${precisa})`, largura / 2, altura - 150);
+      }
+    }
+  }
+  ctx.restore();
+}
+
+export function desenharDica(
+  ctx: CanvasRenderingContext2D,
+  texto: string,
+  largura: number,
+  altura: number,
+  toque: boolean,
+): void {
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = '600 16px "Trebuchet MS", system-ui, sans-serif';
+  const rotulo = toque ? texto : `[E] ${texto}`;
+  const l = ctx.measureText(rotulo).width + 28;
+  ctx.fillStyle = 'rgba(12, 14, 20, 0.78)';
+  arredondado(ctx, (largura - l) / 2, altura - 120, l, 32, 8);
+  ctx.fill();
+  ctx.fillStyle = '#ffe9a8';
+  ctx.fillText(rotulo, largura / 2, altura - 104);
+  ctx.restore();
+}
+
+/** O registro do que acabou de acontecer, no canto direito. */
+function registro(
+  ctx: CanvasRenderingContext2D,
+  rede: Rede,
+  largura: number,
+  altura: number,
+): void {
+  const agora = performance.now();
+  ctx.save();
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
+  ctx.font = '500 13px "Trebuchet MS", system-ui, sans-serif';
+  let y = 110;
+  for (const aviso of rede.avisos) {
+    const idade = (agora - aviso.quando) / 1000;
+    if (idade > 8) continue;
+    ctx.globalAlpha = Math.max(0, Math.min(1, (8 - idade) / 2));
+    ctx.fillStyle = aviso.cor ?? 'rgba(255,255,255,0.9)';
+    ctx.fillText(aviso.texto, largura - 14, y);
+    y += 18;
+  }
+  ctx.restore();
+  void altura;
+}
+
+function faixaDeFase(
+  ctx: CanvasRenderingContext2D,
+  estado: Estado,
+  largura: number,
+  altura: number,
+  tempo: number,
+): void {
+  let texto: string | null = null;
+  let cor = '#f2e6c9';
+  if (estado.fase === 'aquecimento') texto = `preparar… ${Math.ceil(estado.faseEm)}`;
+  if (estado.fase === 'ponto') texto = 'princesa em casa!';
+  if (estado.fase === 'fim') {
+    texto = estado.vencedor ? `${NOME_DO_TIME[estado.vencedor]} vence` : 'empate';
+    cor = estado.vencedor ? COR_CLARA[estado.vencedor] : '#f2e6c9';
+  }
+  if (!texto) return;
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = '700 40px "Trebuchet MS", system-ui, sans-serif';
+  ctx.fillStyle = cor;
+  ctx.globalAlpha = 0.85 + Math.sin(tempo * 3) * 0.15;
+  ctx.fillText(texto, largura / 2, altura / 2 - 60);
+  if (estado.fase === 'fim') {
+    ctx.font = '500 16px "Trebuchet MS", system-ui, sans-serif';
+    ctx.globalAlpha = 0.9;
+    ctx.fillText('a próxima partida começa em instantes', largura / 2, altura / 2 - 20);
+  }
+  ctx.restore();
+}
+
+function tabela(
+  ctx: CanvasRenderingContext2D,
+  estado: Estado,
+  largura: number,
+  altura: number,
+): void {
+  const l = Math.min(680, largura - 60);
+  const a = Math.min(420, altura - 120);
+  const x = (largura - l) / 2;
+  const y = (altura - a) / 2;
+  ctx.save();
+  ctx.fillStyle = 'rgba(10, 12, 18, 0.9)';
+  arredondado(ctx, x, y, l, a, 12);
+  ctx.fill();
+  ctx.textBaseline = 'top';
+
+  for (const [coluna, time] of (['azul', 'vermelho'] as Time[]).entries()) {
+    const cx = x + 20 + coluna * (l / 2);
+    ctx.textAlign = 'left';
+    ctx.font = '700 16px "Trebuchet MS", system-ui, sans-serif';
+    ctx.fillStyle = COR_CLARA[time];
+    ctx.fillText(`${NOME_DO_TIME[time]} — ${estado.placar[time]}`, cx, y + 16);
+    ctx.font = '500 12px "Trebuchet MS", system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillText('jogador', cx, y + 42);
+    ctx.fillText('aba  mor  fat  res', cx + l / 2 - 150, y + 42);
+
+    const time_ = estado.unidades
+      .filter((u) => u.time === time)
+      .sort((a2, b) => b.fatias + b.resgates * 5 - (a2.fatias + a2.resgates * 5));
+    time_.forEach((u, i) => {
+      const ly = y + 62 + i * 20;
+      ctx.fillStyle = u.bot ? 'rgba(255,255,255,0.55)' : '#ffffff';
+      ctx.font = '500 13px "Trebuchet MS", system-ui, sans-serif';
+      ctx.fillText(`${u.nome}${u.bot ? ' ⚙' : ''} · ${perfil(u.classe).nome}`, cx, ly);
+      ctx.fillText(
+        `${pad(u.abates)}  ${pad(u.mortes)}  ${pad(u.fatias)}  ${pad(u.resgates)}`,
+        cx + l / 2 - 150,
+        ly,
+      );
+    });
+  }
+
+  ctx.textAlign = 'center';
+  ctx.font = '500 12px "Trebuchet MS", system-ui, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fillText('aba = abates · mor = mortes · fat = fatias entregues · res = resgates', largura / 2, y + a - 26);
+  ctx.restore();
+}
+
+const pad = (n: number): string => String(n).padStart(2, ' ');
+
+function botoesDeToque(
+  ctx: CanvasRenderingContext2D,
+  entrada: Entrada,
+  largura: number,
+  altura: number,
+): void {
+  const temToque = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  if (!temToque) {
+    entrada.botoes = {};
+    return;
+  }
+  const r = 46;
+  entrada.botoes = {
+    atacar: { x: largura - 150, y: altura - 130, largura: r * 2, altura: r * 2 },
+    usar: { x: largura - 240, y: altura - 80, largura: r * 2, altura: r * 2 },
+  };
+  ctx.save();
+  ctx.font = '600 14px "Trebuchet MS", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (const [nome, b] of Object.entries(entrada.botoes)) {
+    ctx.fillStyle = 'rgba(20, 22, 30, 0.55)';
+    ctx.beginPath();
+    ctx.arc(b.x + r, b.y + r, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = '#ffe9a8';
+    ctx.fillText(nome, b.x + r, b.y + r);
+  }
+  const manche = entrada.manche;
+  if (manche) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(manche.x, manche.y, 56, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.beginPath();
+    const t = Math.min(1, Math.hypot(manche.dx, manche.dy) / 56);
+    ctx.arc(manche.x + manche.dx * t, manche.y + manche.dy * t, 22, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function arredondado(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  l: number,
+  a: number,
+  r: number,
+): void {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + l, y, x + l, y + a, r);
+  ctx.arcTo(x + l, y + a, x, y + a, r);
+  ctx.arcTo(x, y + a, x, y, r);
+  ctx.arcTo(x, y, x + l, y, r);
+  ctx.closePath();
+}
+
+/** Traduz um evento do servidor para uma linha do registro. */
+export function narrar(
+  evento: Evento,
+  estado: Estado,
+  meuTime: Time | null,
+): { texto: string; cor?: string } | null {
+  const nome = (id: number): string => estado.unidades.find((u) => u.id === id)?.nome ?? 'alguém';
+  switch (evento.tipo) {
+    case 'abate':
+      return { texto: `${nome(evento.algoz)} derrubou ${nome(evento.vitima)}` };
+    case 'fatia': {
+      const quemGanhou = outroTime(evento.princesa);
+      return {
+        texto: `${nome(evento.unidade)} deu uma fatia — refém do ${NOME_DO_TIME[quemGanhou]} em ${Math.round(evento.peso)}`,
+        cor: COR_CLARA[quemGanhou],
+      };
+    }
+    case 'resgate':
+      return {
+        texto: `${nome(evento.unidade)} trouxe a princesa do ${NOME_DO_TIME[evento.time]} para casa!`,
+        cor: COR_CLARA[evento.time],
+      };
+    case 'chapeu':
+      return evento.roubado
+        ? { texto: `${nome(evento.unidade)} roubou um chapéu de ${evento.classe}`, cor: '#ffd479' }
+        : null;
+    case 'pegouPrincesa':
+      return {
+        texto: `${nome(evento.unidade)} pegou a princesa do ${NOME_DO_TIME[evento.princesa]}`,
+        cor: evento.princesa === meuTime ? COR_CLARA[evento.princesa] : undefined,
+      };
+    case 'largouPrincesa':
+      return { texto: `a princesa do ${NOME_DO_TIME[evento.princesa]} caiu no chão` };
+    case 'fim':
+      return {
+        texto: evento.vencedor ? `fim — ${NOME_DO_TIME[evento.vencedor]} vence` : 'fim — empate',
+      };
+    default:
+      return null;
+  }
+}

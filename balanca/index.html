@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <title>A Balança do Reino</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --papel: #f2e6c9;
+        --tinta: #1a1410;
+        --azul: #3b7fe0;
+        --vermelho: #e04b3b;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #10121a;
+        font-family: 'Trebuchet MS', system-ui, sans-serif;
+        color: var(--papel);
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      #tela {
+        display: block;
+        touch-action: none;
+        cursor: crosshair;
+      }
+      #menu {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background:
+          radial-gradient(circle at 50% 20%, rgba(90, 130, 200, 0.25), transparent 60%),
+          linear-gradient(160deg, #10121a, #1c1a26 60%, #241a1a);
+        overflow-y: auto;
+        z-index: 10;
+      }
+      #menu.escondido {
+        display: none;
+      }
+      .cartao {
+        width: min(640px, 100%);
+        background: rgba(16, 18, 26, 0.86);
+        border: 1px solid rgba(242, 230, 201, 0.18);
+        border-radius: 16px;
+        padding: 28px 30px 24px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+      }
+      h1 {
+        margin: 0;
+        font-size: clamp(28px, 6vw, 44px);
+        letter-spacing: 0.5px;
+      }
+      h1 small {
+        display: block;
+        font-size: 14px;
+        font-weight: 400;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        opacity: 0.55;
+        margin-bottom: 6px;
+      }
+      .linha {
+        display: flex;
+        gap: 10px;
+        margin: 22px 0 10px;
+        flex-wrap: wrap;
+      }
+      input {
+        flex: 1 1 220px;
+        min-width: 0;
+        padding: 14px 16px;
+        font: inherit;
+        font-size: 17px;
+        color: var(--papel);
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(242, 230, 201, 0.22);
+        border-radius: 10px;
+      }
+      button {
+        padding: 14px 26px;
+        font: inherit;
+        font-size: 17px;
+        font-weight: 700;
+        color: #1a1410;
+        background: linear-gradient(180deg, #ffd479, #e8a83c);
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.55;
+        cursor: progress;
+      }
+      #recado {
+        margin: 4px 0 20px;
+        min-height: 18px;
+        font-size: 14px;
+        opacity: 0.7;
+      }
+      .balanca {
+        display: flex;
+        height: 14px;
+        border-radius: 7px;
+        overflow: hidden;
+        margin: 6px 0 18px;
+        border: 1px solid rgba(0, 0, 0, 0.5);
+      }
+      .balanca i {
+        display: block;
+      }
+      .balanca i:first-child {
+        width: 62%;
+        background: var(--azul);
+      }
+      .balanca i:last-child {
+        width: 38%;
+        background: var(--vermelho);
+      }
+      p,
+      li {
+        line-height: 1.55;
+        font-size: 15px;
+      }
+      .regras {
+        margin: 0;
+        padding-left: 18px;
+        opacity: 0.85;
+      }
+      .regras b {
+        color: #ffd479;
+      }
+      .teclas {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-top: 18px;
+        font-size: 13px;
+        opacity: 0.7;
+      }
+      kbd {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 5px;
+        padding: 2px 7px;
+        font-family: inherit;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="tela"></canvas>
+
+    <div id="menu">
+      <div class="cartao">
+        <h1><small>Cyberkingdoms apresenta</small>A Balança do Reino</h1>
+
+        <div class="balanca"><i></i><i></i></div>
+
+        <p>
+          Duas princesas, uma balança só. A sua está presa na masmorra inimiga —
+          traga-a para o trono e o ponto é seu. O bolo é a arma:
+          <b>cada fatia dada à refém que você guarda engorda ela e alivia a sua</b>,
+          na mesma hora e na mesma medida. O peso do reino não aumenta, só muda de lado.
+        </p>
+
+        <ul class="regras">
+          <li>Princesa pesada precisa de até <b>três carregadores</b> e anda devagar.</li>
+          <li>Bolo não nasce do chão: <b>aldeão colhe trigo</b>, a cozinha assa.</li>
+          <li>A classe vem do chapéu, o chapéu <b>cai no chão</b> — e o inimigo pega.</li>
+          <li>Só multiplayer. Entrou sozinho? <b>Bots completam o time</b> e saem quando chega gente.</li>
+        </ul>
+
+        <div class="linha">
+          <input id="nome" maxlength="16" placeholder="seu apelido" autocomplete="off" />
+          <button id="jogar">entrar na batalha</button>
+        </div>
+        <p id="recado"></p>
+
+        <div class="teclas">
+          <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> andar</span>
+          <span><kbd>mouse</kbd> mirar · <kbd>clique</kbd> atacar</span>
+          <span><kbd>E</kbd> usar</span>
+          <span><kbd>Tab</kbd> placar</span>
+          <span>no celular: manche à esquerda, botões à direita</span>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/client/main.ts"></script>
+  </body>
+</html>
