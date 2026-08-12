@@ -7,7 +7,7 @@ import { corDoBioma, enquadrar } from '../ui/mapScreen';
  *
  * ## Por que não reaproveitar a tela de mapa que já existe
  *
- * A do cliente 3D é SVG amarrado ao HTML do `index.html`: cada cidade é um
+ * A do cliente 3D é SVG amarrado ao HTML do `classico.html`: cada cidade é um
  * `<g>`, cada estrada é um `<path>`, e o pano de fundo é um canvas por baixo.
  * Ela funciona bem lá e não se desprende de lá — os seletores, as classes e o
  * foco de teclado são todos daquele documento.

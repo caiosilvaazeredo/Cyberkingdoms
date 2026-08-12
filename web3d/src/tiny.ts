@@ -12,6 +12,7 @@ import {
 } from './render2d/predios';
 import { carregarAssets, criarMundo2D } from './render2d/world2d';
 import { criarMapa2D } from './render2d/mapa2d';
+import { Autosave } from './campaign/autosave';
 import { acampar } from './campaign/camp';
 import { daysOfSupplies, planJourney, startJourney } from './campaign/journey';
 import type { ContractJson } from './economy/contract';
@@ -50,11 +51,39 @@ const ctx = canvas.getContext('2d')!;
 const params = new URLSearchParams(location.search);
 const semente = params.get('seed') ?? 'verde';
 
-const campanha = Campaign.create({
-  id: 'tiny',
-  seedLabel: semente,
-  characterName: params.get('nome') ?? 'Peão',
-  now: Date.now(),
+/**
+ * A partida: a guardada, se houver, ou uma nova.
+ *
+ * Sem isto, atualizar a página apagava horas de jogo — e num jogo cujo relógio
+ * é o de parede, a aba **vai** ser fechada. `?novo=1` força começar de novo,
+ * que é a saída para quem quer outra partida no mesmo mundo.
+ */
+const autosave = new Autosave(semente);
+if (params.get('novo') === '1') {
+  autosave.apagar();
+  // E some da barra de endereço. Deixar `?novo=1` ali transforma cada F5 num
+  // recomeço: o jogador usa uma vez para zerar e perde a partida toda vez que
+  // atualiza a página depois disso.
+  params.delete('novo');
+  const busca = params.toString();
+  history.replaceState(null, '', busca ? `?${busca}` : location.pathname);
+}
+
+const guardada = autosave.carregar();
+const campanha =
+  guardada ??
+  Campaign.create({
+    id: 'tiny',
+    seedLabel: semente,
+    characterName: params.get('nome') ?? 'Peão',
+    now: Date.now(),
+  });
+
+// Fechar a aba é o caso comum, não a exceção: guardar o que estava pendente
+// aqui é o que faz a diferença entre perder um segundo e perder a sessão.
+window.addEventListener('pagehide', () => autosave.descarregar(campanha));
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') autosave.descarregar(campanha);
 });
 
 const personagem = campanha.character;
@@ -120,7 +149,10 @@ function prediosAgora(): readonly Predio[] {
   return [...marcos, ...prediosDoTerreno(terreno)];
 }
 
-const centro = centroDoTerreno(terreno);
+// Partida nova nasce no terreno; partida guardada retoma onde o personagem
+// parou. Reabrir o jogo na porta de casa depois de sete dias de estrada
+// desfaria a viagem que o jogador acabou de pagar.
+const centro = guardada ? personagem.position : centroDoTerreno(terreno);
 const jogador = { x: centro.x, y: centro.y, andando: false };
 
 /**
@@ -701,16 +733,18 @@ document.querySelector('#fechar-mapa')?.addEventListener('click', () => {
 });
 
 /**
- * Leva o peão para onde o personagem está.
+ * Leva o peão para onde o reset moveu o personagem.
  *
  * Quem move o personagem é o reset — é ele que conclui a viagem no último dia.
- * A tela só precisa acompanhar, e comparar a posição é mais robusto do que
- * checar `travellingTo`: pega qualquer outro caminho que venha a mudar o
- * personagem de lugar.
+ * A comparação é contra a posição de **antes do tique**, e não contra onde o
+ * peão está: o personagem fica no centro da capital enquanto o peão anda pelo
+ * terreno, cinco tiles a sudeste, e comparar com o peão fazia todo DORMIR
+ * arrancá-lo da própria terra — inclusive para fora da divisa, onde construir
+ * é recusado.
  */
-function acompanharPersonagem(): void {
+function acompanharPersonagem(antes: { x: number; y: number }): void {
   const p = personagem.position;
-  if (Math.round(jogador.x) === p.x && Math.round(jogador.y) === p.y) return;
+  if (antes.x === p.x && antes.y === p.y) return;
   jogador.x = p.x;
   jogador.y = p.y;
   mundo.camera.x = p.x;
@@ -727,9 +761,10 @@ function acompanharPersonagem(): void {
  */
 document.querySelector('#dormir')?.addEventListener('click', () => {
   const antes = campanha.currentSettlementId;
+  const ondeEstava = { x: personagem.position.x, y: personagem.position.y };
   const acampou = acampar(campanha);
   const relatorio = runDailyTick(campanha);
-  acompanharPersonagem();
+  acompanharPersonagem(ondeEstava);
 
   // Chegar é notícia melhor que o primeiro evento do dia. O reset conclui a
   // viagem no último dia, então é aqui que a chegada aparece.
@@ -777,6 +812,10 @@ function atualizarHud(): void {
   preencher(barras.fome, c.hunger);
   preencher(barras.sede, c.thirst);
   preencher(barras.energia, c.energy);
+
+  // Toda mudança de estado passa por aqui — compra, obra, fila, viagem —, o
+  // que faz deste o único lugar que precisa pedir gravação.
+  autosave.marcar(campanha);
 
   const estado = campanha.queue.progress(Date.now());
   elOcupacao.textContent = estado.current

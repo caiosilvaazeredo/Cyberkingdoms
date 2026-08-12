@@ -22,9 +22,12 @@ export default defineConfig({
     target: 'es2022',
     rollupOptions: {
       input: {
+        // `index.html` é o cliente 2D. O 3D continua publicado em
+        // `/classico.html` enquanto tiver quem o use: ele ainda é o único com
+        // menu, seleção de servidor, editor de mundos e Modo Dev.
         principal: resolve(__dirname, 'index.html'),
+        classico: resolve(__dirname, 'classico.html'),
         preview: resolve(__dirname, 'preview.html'),
-        tiny: resolve(__dirname, 'tiny.html'),
       },
     },
     // O `three` sozinho passa de 500 kB e o aviso do Rollup vira ruído em todo

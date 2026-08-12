@@ -28,8 +28,12 @@ services:
       # O jogo tem uma página só, mas o roteador de telas usa `history.pushState`
       # para o botão "voltar" do Android funcionar. Um recarregamento numa URL
       # empilhada bateria em 404 sem esta regra. Arquivo que existe continua
-      # sendo servido normalmente — `preview.html` e os modelos não passam por
-      # aqui.
+      # sendo servido normalmente — `classico.html`, `preview.html` e os
+      # modelos não passam por aqui.
+      #
+      # Efeito colateral bem-vindo: `/tiny.html`, que foi o endereço do cliente
+      # 2D enquanto ele era experimento, cai aqui e serve o jogo — que agora é
+      # ele. Link velho continua funcionando.
       - type: rewrite
         source: /*
         destination: /index.html

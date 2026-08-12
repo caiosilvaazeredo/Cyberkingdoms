@@ -1,0 +1,1169 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <!-- `viewport-fit=cover` deixa a cena ir até a borda; as áreas seguras
+         entram no CSS abaixo, para o painel não cair sob o notch. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#8fa6b8" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <title>CyberKingdoms — cliente 3D</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --painel: rgba(10, 16, 26, 0.86);
+        --borda: rgba(120, 200, 170, 0.3);
+        --texto: #d6e4dd;
+        --toque: 48px; /* alvo mínimo de toque */
+      }
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+      html, body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #0b1220;
+        /* Impede o "puxar para atualizar" e o quique elástico enquanto o dedo
+           arrasta a câmera. Sem isto, orbitar recarrega a página no Android. */
+        overscroll-behavior: none;
+        touch-action: none;
+      }
+
+      #viewport {
+        display: block;
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+      }
+
+      #painel {
+        position: fixed;
+        left: max(10px, env(safe-area-inset-left));
+        right: max(10px, env(safe-area-inset-right));
+        bottom: max(10px, env(safe-area-inset-bottom));
+        padding: 12px;
+        border: 1px solid var(--borda);
+        border-radius: 14px;
+        background: var(--painel);
+        backdrop-filter: blur(10px);
+        color: var(--texto);
+        font: 13px/1.4 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        transition: transform 0.18s ease;
+      }
+      /* Recolhido, sobra só a barra de cima — o mundo fica inteiro visível. */
+      #painel.recolhido #corpo { display: none; }
+
+      #cabecalho {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      #cabecalho h1 {
+        flex: 1;
+        margin: 0;
+        font-size: 12px;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+      }
+      #alternar-painel {
+        width: var(--toque);
+        height: var(--toque);
+        flex: 0 0 auto;
+        padding: 0;
+        border: 1px solid var(--borda);
+        border-radius: 10px;
+        background: rgba(0, 0, 0, 0.3);
+        color: var(--texto);
+        font: inherit;
+        font-size: 18px;
+        cursor: pointer;
+      }
+
+      #readout {
+        margin: 8px 0 0;
+        font-size: 12px;
+        opacity: 0.86;
+      }
+
+      #corpo { margin-top: 10px; }
+
+      label { display: block; margin-bottom: 4px; font-size: 11px; opacity: 0.7; }
+
+      input {
+        width: 100%;
+        min-height: var(--toque);
+        padding: 8px 10px;
+        border: 1px solid var(--borda);
+        border-radius: 10px;
+        background: rgba(0, 0, 0, 0.35);
+        color: var(--texto);
+        /* 16px evita o zoom automático do Safari ao focar um campo. */
+        font: 16px/1 ui-monospace, Menlo, Consolas, monospace;
+      }
+
+      #botoes {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      #botoes button, #regenerate {
+        min-height: var(--toque);
+        padding: 8px;
+        border: 1px solid var(--borda);
+        border-radius: 10px;
+        background: rgba(90, 200, 160, 0.16);
+        color: var(--texto);
+        font: 13px/1 ui-monospace, Menlo, Consolas, monospace;
+        letter-spacing: 0.04em;
+        cursor: pointer;
+      }
+      #regenerate { width: 100%; margin-top: 8px; }
+      button[aria-pressed="true"] {
+        background: rgba(90, 200, 160, 0.42);
+        border-color: rgba(140, 240, 200, 0.7);
+      }
+
+      #sair, #encerrar-dia, #abrir-mapa {
+        width: 100%;
+        min-height: var(--toque);
+        margin-top: 4px;
+        border: 1px solid var(--borda);
+        border-radius: 10px;
+        background: rgba(90, 200, 160, 0.16);
+        color: var(--texto);
+        font: 13px/1 ui-monospace, Menlo, Consolas, monospace;
+        cursor: pointer;
+      }
+      #encerrar-dia { background: rgba(255, 210, 130, 0.16); }
+      #abrir-mapa { background: rgba(140, 190, 255, 0.16); }
+
+      /* ------------------------------------------------------------ mapa */
+      /* O fundo de biomas e a camada vetorial ocupam a mesma caixa quadrada:
+         o canvas por baixo pintado pelo terreno da seed, o SVG por cima com o
+         que é interativo. Empilhar em vez de desenhar tudo num só é o que dá
+         toque, foco de teclado e leitor de tela nas cidades sem reimplementar
+         acerto de clique. */
+      /* O mapa ocupa o que a tela tem. Ele era uma caixinha com vinte cidades
+         em 380 px: um satélite virava cinco pixels e nenhum nome cabia. Numa
+         tela alta ele cresce até 66% da altura; numa larga, até a largura da
+         folha — e o resto se resolve aproximando. */
+      .mapa-alvo {
+        /* Quadrado, porque o quadro do mundo é quadrado: uma caixa mais alta
+           que larga esticaria o fundo de biomas e o mapa mentiria sobre
+           distância. Numa tela larga ele cresce até 66% da altura; num celular
+           ele toma a largura inteira, e o resto se resolve aproximando. */
+        position: relative; margin: 6px auto;
+        width: min(100%, 66vh);
+        aspect-ratio: 1 / 1;
+        border: 1px solid var(--borda); border-radius: 12px; overflow: hidden;
+        background: #0b1220;
+        touch-action: none;
+        cursor: grab;
+      }
+      .mapa-alvo:active { cursor: grabbing; }
+      .mapa-camada {
+        position: absolute; inset: 0;
+        transform-origin: 0 0;
+        will-change: transform;
+      }
+      .mapa-fundo {
+        position: absolute; inset: 0; width: 100%; height: 100%;
+        /* Sem alisamento: a amostra é o bioma daquele ponto, e interpolar
+           inventaria bioma que não existe entre dois vizinhos. */
+        image-rendering: pixelated;
+        opacity: 0.85;
+      }
+      .mapa {
+        position: absolute; inset: 0;
+        width: 100%; height: 100%; display: block;
+      }
+      .mapa-cidade { cursor: pointer; }
+      .mapa-cidade:focus { outline: none; }
+      .mapa-cidade:focus circle { stroke: #9ff0cf; stroke-width: 4; }
+      .mapa-nome {
+        fill: #f2fbf7; font-size: 17px;
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+        /* Contorno escuro: o nome cai sobre terreno de qualquer cor, e sem ele
+           some em cima da bio-fazenda clara. */
+        paint-order: stroke; stroke: #06100d; stroke-width: 4px; stroke-linejoin: round;
+      }
+      .mapa-nome.capital { font-size: 23px; }
+      .mapa-escala {
+        fill: #f2fbf7; font-size: 16px;
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+        paint-order: stroke; stroke: #06100d; stroke-width: 4px; stroke-linejoin: round;
+      }
+      /* Os nomes não recebem toque: eles cobrem os pontos vizinhos, e um
+         rótulo que rouba o toque de outra cidade é pior que rótulo nenhum. */
+      .mapa-rotulos { pointer-events: none; }
+      .mapa-eu { pointer-events: none; }
+      .mapa-eu line { paint-order: stroke; stroke-linecap: round; }
+      .mapa-transito {
+        margin: 4px 0; padding: 8px 10px;
+        border: 1px solid rgba(255, 190, 120, 0.45); border-radius: 10px;
+        background: rgba(80, 55, 25, 0.4);
+        color: #ffd28a; font-size: 11px; line-height: 1.45;
+      }
+      .mapa-transito:empty { display: none; }
+      .mapa-rota { color: #9ff0cf; opacity: 0.95 !important; margin-top: 4px; }
+      .mapa-mantimento { opacity: 0.8 !important; }
+      .mapa-mantimento.curto { color: #ff9d9d; opacity: 1 !important; }
+      .mapa-viajar {
+        min-height: var(--toque); margin-top: 8px;
+        border: 1px solid rgba(140, 240, 200, 0.6); border-radius: 10px;
+        background: rgba(90, 200, 160, 0.25); color: var(--texto);
+        font: 12px/1 ui-monospace, Menlo, Consolas, monospace;
+        letter-spacing: 0.06em; cursor: pointer;
+      }
+      .mapa-viajar:disabled { opacity: 0.4; cursor: not-allowed; }
+      .mapa-legenda { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
+      .mapa-chip {
+        display: inline-flex; align-items: center; gap: 5px;
+        padding: 3px 8px; border-radius: 999px;
+        background: rgba(255, 255, 255, 0.05);
+        font-size: 10px; opacity: 0.75;
+      }
+      .mapa-chip i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+      .mapa-ficha {
+        display: flex; flex-direction: column; gap: 2px;
+        padding: 9px 11px; margin-top: 6px;
+        border: 1px solid rgba(140, 240, 200, 0.35); border-radius: 10px;
+        background: rgba(90, 200, 160, 0.08); font-size: 11px; line-height: 1.45;
+      }
+      .mapa-ficha strong { color: #9ff0cf; font-size: 12px; }
+      .mapa-ficha span { opacity: 0.7; }
+      .mapa-vagas { color: #ffd28a; opacity: 0.85 !important; }
+
+      /* ------------------------------------------------- editor de mundo */
+      .editor { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+      .campo-linha { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+      .campo-linha span { flex: 0 0 84px; font-size: 10px; opacity: 0.6; }
+      .campo-linha input { flex: 1; min-height: 38px; font-size: 13px; }
+
+      /* ---------------------------------------------------------- telas */
+
+      /* `display: none` explícito para o atributo `hidden`.
+         A regra do navegador é `[hidden] { display: none }`, com a
+         especificidade de uma folha de estilo padrão. Qualquer regra de autor
+         com `display` — e `.tela { display: flex }` logo abaixo é uma — vence
+         essa disputa e faz o elemento reaparecer. O resultado foi o menu, a
+         nova campanha, os modos e as configurações empilhados numa página
+         rolável só.
+         Pior: um teste que pergunta `elemento.hidden` continua respondendo
+         `true`, porque a propriedade está certa. É o CSS que a ignora. Só
+         medir o que a tela mostra pega isto. */
+      [hidden] { display: none !important; }
+
+      #telas { position: fixed; inset: 0; overflow-y: auto; }
+      .tela {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-height: 100%;
+        padding: max(24px, env(safe-area-inset-top)) 20px
+                 max(24px, env(safe-area-inset-bottom));
+        background: linear-gradient(160deg, #0d1a18 0%, #0b1220 60%, #131018 100%);
+        color: var(--texto);
+        font: 13px/1.5 ui-monospace, Menlo, Consolas, monospace;
+      }
+      .menu { justify-content: center; }
+      .marca { margin-bottom: 18px; text-align: center; }
+      .marca h1 { margin: 0; font-size: 28px; letter-spacing: 0.16em; }
+      .subtitulo { margin: 6px 0 0; font-size: 11px; letter-spacing: 0.2em; opacity: 0.55; }
+      .tela h1 { margin: 0 0 4px; font-size: 18px; letter-spacing: 0.1em; }
+      .tela h2 { margin: 14px 0 4px; font-size: 12px; letter-spacing: 0.12em; opacity: 0.65; }
+      .acoes { display: flex; flex-direction: column; gap: 8px; }
+      .tela button {
+        min-height: var(--toque);
+        padding: 10px;
+        border: 1px solid var(--borda);
+        border-radius: 12px;
+        color: var(--texto);
+        font: 14px/1.2 ui-monospace, Menlo, Consolas, monospace;
+        letter-spacing: 0.08em;
+        cursor: pointer;
+      }
+      .tela button.principal { background: rgba(90, 200, 160, 0.34); font-size: 16px; }
+      .tela button.secundario { background: rgba(255, 255, 255, 0.05); }
+      .tela button:disabled { opacity: 0.35; cursor: not-allowed; }
+      .lista { margin-top: 18px; display: flex; flex-direction: column; gap: 6px; }
+      .save {
+        display: flex !important;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+        background: rgba(255, 255, 255, 0.04);
+        text-align: left;
+      }
+      .save span { font-size: 11px; opacity: 0.6; }
+      .vazio, .nota { margin: 4px 0; font-size: 11px; opacity: 0.55; }
+      .erro { min-height: 16px; margin: 4px 0; color: #ff9d9d; font-size: 11px; }
+      .rodape { margin-top: auto; padding-top: 20px; text-align: center; font-size: 10px; opacity: 0.35; }
+      .escolhas { display: flex; flex-direction: column; gap: 8px; }
+      .escolha {
+        display: flex !important;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+        background: rgba(255, 255, 255, 0.04);
+        text-align: left;
+      }
+      .escolha span { font-size: 11px; font-weight: normal; opacity: 0.6; letter-spacing: 0; }
+      .escolha[aria-pressed="true"] {
+        background: rgba(90, 200, 160, 0.26);
+        border-color: rgba(140, 240, 200, 0.6);
+      }
+      .tela label { display: block; margin: 8px 0 2px; font-size: 11px; opacity: 0.7; }
+      .tela input {
+        width: 100%;
+        min-height: var(--toque);
+        padding: 8px 10px;
+        border: 1px solid var(--borda);
+        border-radius: 10px;
+        background: rgba(0, 0, 0, 0.35);
+        color: var(--texto);
+        font: 16px/1 ui-monospace, Menlo, Consolas, monospace;
+      }
+      @media (min-width: 640px) {
+        .tela { max-width: 460px; margin: 0 auto; }
+      }
+
+      /* ------------------------------------------ modos, servidores, ajustes */
+
+      /* Selos do modo: o jogador precisa saber, antes de escolher, se aquele
+         modo pode falhar por motivo que não é dele — servidor fora, lotado,
+         sem rede. */
+      .selos { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+      .selo {
+        padding: 2px 7px;
+        border: 1px solid var(--borda);
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: normal;
+        letter-spacing: 0.04em;
+        opacity: 0.75;
+      }
+      .selo.ok { border-color: rgba(140, 240, 200, 0.55); color: #9ff0cf; }
+      .selo.rede { border-color: rgba(255, 200, 130, 0.55); color: #ffd28a; }
+
+      .aviso-simulado {
+        margin: 0 0 6px;
+        padding: 8px 10px;
+        border: 1px solid rgba(255, 200, 130, 0.4);
+        border-radius: 10px;
+        background: rgba(255, 200, 130, 0.08);
+        color: #ffd28a;
+        font-size: 11px;
+      }
+
+      .servidores { margin-top: 8px; }
+      .servidor {
+        display: flex !important;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 3px;
+        background: rgba(255, 255, 255, 0.04);
+        text-align: left;
+      }
+      .servidor-topo { display: flex; align-items: baseline; gap: 8px; }
+      .servidor-topo strong { flex: 1; }
+      .servidor span { font-size: 11px; font-weight: normal; opacity: 0.62; letter-spacing: 0; }
+      .servidor .ping { flex: 0 0 auto; opacity: 0.8; font-variant-numeric: tabular-nums; }
+      .servidor .ping.ruim { color: #ff9d9d; opacity: 0.9; }
+      .servidor .seed { opacity: 0.4; }
+      /* Indisponível continua na lista, e continua legível: sumir com ele faria
+         a lista dançar entre atualizações e o jogador perder a referência. */
+      .servidor.bloqueado { opacity: 0.42; }
+
+      /* O que já foi decidido antes de chegar na tela. */
+      .contexto {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        margin-bottom: 6px;
+        padding: 9px 11px;
+        border: 1px solid rgba(140, 240, 200, 0.35);
+        border-radius: 10px;
+        background: rgba(90, 200, 160, 0.1);
+      }
+      .contexto span { font-size: 11px; opacity: 0.68; }
+      .servidor-escolhido { color: #9ff0cf; opacity: 0.9 !important; }
+      /* Seed travada é do servidor: o campo mostra, não convida. */
+      .tela input[readonly] { opacity: 0.6; cursor: not-allowed; }
+
+      .linha-chips { flex-direction: row !important; flex-wrap: wrap; }
+      .chip {
+        flex: 1 1 auto;
+        min-width: 72px;
+        min-height: var(--toque);
+        padding: 8px 10px;
+        border: 1px solid var(--borda);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--texto);
+        font: 12px/1 ui-monospace, Menlo, Consolas, monospace;
+        cursor: pointer;
+      }
+      .chip[aria-pressed="true"] {
+        background: rgba(90, 200, 160, 0.3);
+        border-color: rgba(140, 240, 200, 0.65);
+      }
+
+      .faixa { display: flex; align-items: center; gap: 10px; }
+      .faixa input[type="range"] {
+        flex: 1;
+        min-height: 0;
+        padding: 0;
+        background: none;
+        border: none;
+        /* Sem isto o controle sai no azul do sistema, que é a única peça de
+           cromo do navegador visível numa tela que devia parecer jogo. */
+        accent-color: #63e6a4;
+      }
+      .valor-faixa { min-width: 40px; font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
+
+      .interruptor { position: relative; padding-right: 84px !important; }
+      .interruptor .estado {
+        position: absolute;
+        top: 50%;
+        right: 12px;
+        transform: translateY(-50%);
+        opacity: 0.75 !important;
+        font-size: 10px;
+        letter-spacing: 0.06em;
+      }
+      .interruptor[aria-checked="true"] {
+        background: rgba(90, 200, 160, 0.22);
+        border-color: rgba(140, 240, 200, 0.55);
+      }
+      .interruptor[aria-checked="true"] .estado { color: #9ff0cf; }
+
+      /* ------------------------------------------------ catálogo de obras */
+      /* Dentro do painel, e não solto no rodapé: os dois disputavam o mesmo
+         canto e o painel cobria o botão — clicar nele era impossível. */
+      #abrir-catalogo {
+        width: 100%;
+        min-height: var(--toque);
+        margin-bottom: 6px;
+        padding: 0 18px;
+        border: 1px solid var(--borda);
+        border-radius: 12px;
+        background: rgba(90, 200, 160, 0.28);
+        backdrop-filter: blur(8px);
+        color: var(--texto);
+        font: 13px/1 ui-monospace, Menlo, Consolas, monospace;
+        letter-spacing: 0.08em;
+        cursor: pointer;
+      }
+      #catalogo {
+        position: fixed;
+        left: max(10px, env(safe-area-inset-left));
+        right: max(10px, env(safe-area-inset-right));
+        bottom: calc(max(10px, env(safe-area-inset-bottom)) + 12px);
+        max-height: 42vh;
+        z-index: 2;
+        padding: 12px;
+        border: 1px solid var(--borda);
+        border-radius: 14px;
+        background: var(--painel);
+        backdrop-filter: blur(10px);
+        color: var(--texto);
+        font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace;
+        overflow-y: auto;
+        display: none;
+      }
+      #catalogo.aberto { display: block; }
+      #catalogo-cabecalho {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+      }
+      #catalogo h2 { flex: 1; margin: 0; font-size: 11px; letter-spacing: 0.12em; opacity: 0.7; }
+      #fechar-catalogo {
+        width: 36px;
+        height: 36px;
+        flex: 0 0 auto;
+        padding: 0;
+        border: 1px solid var(--borda);
+        border-radius: 10px;
+        background: rgba(0, 0, 0, 0.3);
+        color: var(--texto);
+        font: 14px/1 ui-monospace, Menlo, Consolas, monospace;
+        cursor: pointer;
+      }
+      #status-obra { min-height: 16px; margin: 0 0 8px; font-size: 11px; color: #9ff0cf; }
+      #lista-construcoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+      .item-constr {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+        min-height: var(--toque);
+        padding: 8px;
+        border: 1px solid var(--borda);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--texto);
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+      .item-constr span { font-size: 10px; opacity: 0.6; }
+      .item-constr em {
+        font-style: normal; font-size: 10px; line-height: 1.4; opacity: 0.42;
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      #ficha-construcao {
+        display: flex; flex-direction: column; gap: 2px;
+        margin: 0 0 8px; padding: 8px 10px;
+        border: 1px solid rgba(140, 240, 200, 0.35);
+        border-radius: 10px;
+        background: rgba(90, 200, 160, 0.08);
+        font-size: 10px; line-height: 1.45;
+      }
+      #ficha-construcao:empty { display: none; }
+      #ficha-construcao em { font-style: normal; opacity: 0.75; margin-bottom: 3px; }
+      #ficha-construcao strong {
+        margin-top: 4px; font-size: 10px; letter-spacing: 0.08em;
+        text-transform: uppercase; color: #9ff0cf;
+      }
+      #ficha-construcao span { opacity: 0.68; }
+
+      /* ------------------------------------------------------ modo Dev */
+      .dev-lista { gap: 10px; }
+      .dev-item {
+        display: flex; flex-direction: column; gap: 3px;
+        padding: 10px 12px;
+        border: 1px solid var(--borda); border-radius: 12px;
+        background: rgba(255, 255, 255, 0.03);
+        font-size: 11px; line-height: 1.45;
+      }
+      .dev-item.trocado { border-color: rgba(255, 210, 130, 0.6); }
+      .dev-item h2 { margin: 0 0 2px; font-size: 13px; letter-spacing: 0.06em; opacity: 1; }
+      .dev-resumo { margin: 0 0 4px; font-size: 11px; opacity: 0.7; }
+      .dev-bloco { display: flex; flex-direction: column; gap: 1px; margin-top: 5px; }
+      .dev-bloco strong {
+        font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+        color: #9ff0cf;
+      }
+      .dev-bloco span { font-size: 10px; opacity: 0.65; }
+      .dev-caminho { font-family: ui-monospace, Menlo, Consolas, monospace; color: #ffd28a; opacity: 0.8 !important; }
+      .dev-item input[type="file"] {
+        margin-top: 8px; min-height: auto; padding: 6px; font-size: 11px;
+      }
+      .dev-aviso { min-height: 14px; font-size: 10px; }
+      .dev-aviso.ok { color: #9ff0cf; }
+      .dev-aviso.ruim { color: #ff9d9d; }
+      .dev-restaurar { margin-top: 6px; min-height: 36px !important; font-size: 11px !important; }
+      .item-constr[aria-pressed="true"] {
+        background: rgba(90, 200, 160, 0.34);
+        border-color: rgba(140, 240, 200, 0.7);
+      }
+      @media (min-width: 640px) {
+        #catalogo { right: auto; width: 340px; }
+      }
+
+      /* ------------------------------------------- quests, trabalho, diário */
+
+      #quests {
+        position: fixed;
+        top: calc(max(8px, env(safe-area-inset-top)) + 52px);
+        right: max(8px, env(safe-area-inset-right));
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        max-width: min(300px, calc(100vw - 24px));
+        padding: 9px 11px;
+        border: 1px solid var(--borda);
+        border-radius: 10px;
+        background: var(--painel);
+        backdrop-filter: blur(10px);
+        color: var(--texto);
+        font: 11px/1.4 ui-monospace, Menlo, Consolas, monospace;
+        pointer-events: none;
+      }
+      #quests:empty { display: none; }
+      #quests strong { font-size: 12px; color: #9ff0cf; letter-spacing: 0.05em; }
+      #quests em { font-style: normal; opacity: 0.5; font-size: 10px; }
+      #quests span { opacity: 0.8; }
+      #quests span.feito { opacity: 0.45; text-decoration: line-through; }
+      #quests .progresso { margin-top: 3px; opacity: 0.4; font-size: 10px; }
+
+      #trabalho {
+        position: fixed;
+        left: max(10px, env(safe-area-inset-left));
+        right: max(10px, env(safe-area-inset-right));
+        bottom: calc(max(10px, env(safe-area-inset-bottom)) + 12px);
+        max-height: 46vh;
+        z-index: 2;
+        padding: 12px;
+        border: 1px solid var(--borda);
+        border-radius: 14px;
+        background: var(--painel);
+        backdrop-filter: blur(10px);
+        color: var(--texto);
+        font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace;
+        overflow-y: auto;
+        display: none;
+      }
+      #trabalho.aberto { display: block; }
+      #trabalho-cabecalho { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+      #trabalho h2 { flex: 1; margin: 0; font-size: 11px; letter-spacing: 0.12em; opacity: 0.7; }
+      #fechar-trabalho {
+        width: 36px; height: 36px; flex: 0 0 auto; padding: 0;
+        border: 1px solid var(--borda); border-radius: 10px;
+        background: rgba(0, 0, 0, 0.3); color: var(--texto);
+        font: 14px/1 ui-monospace, Menlo, Consolas, monospace; cursor: pointer;
+      }
+      #status-trabalho { min-height: 16px; margin: 0 0 8px; font-size: 11px; color: #ffd28a; }
+      #lista-trabalho { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 6px; }
+      .item-trabalho {
+        display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+        min-height: var(--toque); padding: 8px;
+        border: 1px solid var(--borda); border-radius: 10px;
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--texto); font: inherit; text-align: left; cursor: pointer;
+      }
+      .item-trabalho span, .item-curso span { font-size: 10px; opacity: 0.6; }
+      .item-trabalho em, .item-curso em {
+        font-style: normal; font-size: 10px; line-height: 1.4; opacity: 0.42;
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .item-trabalho.bloqueado { opacity: 0.4; cursor: not-allowed; }
+      .item-trabalho.bloqueado em { color: #ffb0b0; opacity: 0.75; }
+
+      #trabalho h3 {
+        margin: 12px 0 6px; font-size: 11px; letter-spacing: 0.12em; opacity: 0.7;
+      }
+      #lista-cursos { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 6px; }
+      .item-curso {
+        display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+        min-height: var(--toque); padding: 8px;
+        border: 1px solid var(--borda); border-radius: 10px;
+        background: rgba(140, 190, 255, 0.08);
+        color: var(--texto); font: inherit; text-align: left; cursor: pointer;
+      }
+      .item-curso:disabled { cursor: not-allowed; opacity: 0.45; }
+      .item-curso.concluido {
+        background: rgba(90, 200, 160, 0.2);
+        border-color: rgba(140, 240, 200, 0.6);
+        opacity: 0.8;
+      }
+      .curso-andamento { margin: 0; font-size: 11px; color: #9ff0cf; }
+      .item-trabalho[aria-pressed="true"] {
+        background: rgba(255, 210, 130, 0.28);
+        border-color: rgba(255, 210, 130, 0.7);
+      }
+
+      /* A mochila reaproveita a caixa e as linhas do painel da cidade: mesma
+         posição, mesmo fechar, mesmas linhas com botão à direita. Aprender uma
+         interface e reencontrá-la vale mais que um visual próprio. */
+      #mochila {
+        position: fixed;
+        left: max(10px, env(safe-area-inset-left));
+        right: max(10px, env(safe-area-inset-right));
+        bottom: calc(max(10px, env(safe-area-inset-bottom)) + 12px);
+        max-height: 52vh;
+        z-index: 3;
+        padding: 12px;
+        border: 1px solid rgba(255, 210, 130, 0.35);
+        border-radius: 14px;
+        background: var(--painel);
+        backdrop-filter: blur(10px);
+        color: var(--texto);
+        font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace;
+        overflow-y: auto;
+        display: none;
+      }
+      #mochila.aberto { display: block; }
+      #mochila-cabecalho { display: flex; align-items: center; gap: 8px; }
+      #mochila h2 { flex: 1; margin: 0; font-size: 12px; letter-spacing: 0.12em; color: #ffd28a; }
+      #fechar-mochila {
+        width: 36px; height: 36px; flex: 0 0 auto; padding: 0;
+        border: 1px solid var(--borda); border-radius: 10px;
+        background: rgba(0, 0, 0, 0.3); color: var(--texto);
+        font: 14px/1 ui-monospace, Menlo, Consolas, monospace; cursor: pointer;
+      }
+      #mochila-recado { min-height: 16px; margin: 6px 0; font-size: 11px; color: #9ff0cf; }
+      #mochila-recado:empty { display: none; }
+      /* O chip de vitais virou botão; sem isto ele herdaria a aparência de
+         botão do navegador e destoaria dos vizinhos. */
+      button.recurso {
+        font: inherit; color: inherit; cursor: pointer;
+        appearance: none; -webkit-appearance: none;
+      }
+      /* Mesma caixa dos outros painéis de rodapé: aprender a interface uma vez
+         e reencontrá-la vale mais que um visual próprio para cada um. */
+      #ocupacao {
+        position: fixed;
+        left: max(10px, env(safe-area-inset-left));
+        right: max(10px, env(safe-area-inset-right));
+        bottom: calc(max(10px, env(safe-area-inset-bottom)) + 12px);
+        max-height: 58vh;
+        z-index: 3;
+        padding: 12px;
+        border: 1px solid rgba(140, 190, 255, 0.4);
+        border-radius: 14px;
+        background: var(--painel);
+        backdrop-filter: blur(10px);
+        color: var(--texto);
+        font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace;
+        overflow-y: auto;
+        display: none;
+      }
+      #ocupacao.aberto { display: block; }
+      #ocupacao-cabecalho { display: flex; align-items: center; gap: 8px; }
+      #ocupacao h2 { flex: 1; margin: 0; font-size: 12px; letter-spacing: 0.12em; color: #a9ccff; }
+      #ocupacao h3 { margin: 12px 0 6px; font-size: 11px; letter-spacing: 0.12em; opacity: 0.7; }
+      #fechar-ocupacao {
+        width: 36px; height: 36px; flex: 0 0 auto; padding: 0;
+        border: 1px solid var(--borda); border-radius: 10px;
+        background: rgba(0, 0, 0, 0.3); color: var(--texto);
+        font: 14px/1 ui-monospace, Menlo, Consolas, monospace; cursor: pointer;
+      }
+      /* A barra é o relógio da ação: sem ela o jogador não tem como saber se
+         faltam dois minutos ou duas horas, e o tempo real vira espera cega. */
+      .ocup-barra {
+        position: relative; height: 8px; margin-top: 6px;
+        border-radius: 999px; overflow: hidden;
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .ocup-barra i {
+        position: absolute; inset: 0 auto 0 0;
+        background: linear-gradient(90deg, #6aa9ff, #9ff0cf);
+      }
+      .ocup-vazio { margin: 4px 0 0; font-size: 10px; line-height: 1.5; opacity: 0.5; }
+      .ocup-custo { font-size: 10px; opacity: 0.6; }
+      .ocup-risco { color: #ffb0b0; }
+      #abrir-ocupacao {
+        width: 100%; min-height: var(--toque); margin-bottom: 6px;
+        border: 1px solid var(--borda); border-radius: 12px;
+        background: rgba(140, 190, 255, 0.2); color: var(--texto);
+        font: 13px/1 ui-monospace, Menlo, Consolas, monospace;
+        letter-spacing: 0.08em; cursor: pointer;
+      }
+      #abrir-mochila {
+        width: 100%; min-height: var(--toque); margin-bottom: 6px;
+        border: 1px solid var(--borda); border-radius: 12px;
+        background: rgba(255, 255, 255, 0.06); color: var(--texto);
+        font: 13px/1 ui-monospace, Menlo, Consolas, monospace;
+        letter-spacing: 0.08em; cursor: pointer;
+      }
+
+      #abrir-trabalho, #abrir-cidade {
+        width: 100%; min-height: var(--toque); margin-bottom: 6px;
+        border: 1px solid var(--borda); border-radius: 12px;
+        background: rgba(255, 210, 130, 0.2); color: var(--texto);
+        font: 13px/1 ui-monospace, Menlo, Consolas, monospace;
+        letter-spacing: 0.08em; cursor: pointer;
+      }
+      #abrir-cidade { background: rgba(140, 240, 200, 0.18); }
+      #abrir-cidade:disabled { opacity: 0.35; cursor: not-allowed; }
+
+      /* O painel da cidade divide o rodapé com o de trabalho e o catálogo:
+         mesma caixa, mesma altura máxima, mesmo jeito de fechar. Um layout
+         próprio faria o jogador reaprender a interface a cada painel. */
+      #cidade {
+        position: fixed;
+        left: max(10px, env(safe-area-inset-left));
+        right: max(10px, env(safe-area-inset-right));
+        bottom: calc(max(10px, env(safe-area-inset-bottom)) + 12px);
+        max-height: 56vh;
+        z-index: 3;
+        padding: 12px;
+        border: 1px solid rgba(140, 240, 200, 0.35);
+        border-radius: 14px;
+        background: var(--painel);
+        backdrop-filter: blur(10px);
+        color: var(--texto);
+        font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace;
+        overflow-y: auto;
+        display: none;
+      }
+      #cidade.aberto { display: block; }
+      #cidade-cabecalho { display: flex; align-items: center; gap: 8px; }
+      #cidade h2 { flex: 1; margin: 0; font-size: 12px; letter-spacing: 0.12em; color: #9ff0cf; }
+      #fechar-cidade {
+        width: 36px; height: 36px; flex: 0 0 auto; padding: 0;
+        border: 1px solid var(--borda); border-radius: 10px;
+        background: rgba(0, 0, 0, 0.3); color: var(--texto);
+        font: 14px/1 ui-monospace, Menlo, Consolas, monospace; cursor: pointer;
+      }
+      #cidade-resumo { margin: 2px 0 8px; font-size: 11px; opacity: 0.6; }
+      #cidade-abas { display: flex; gap: 6px; margin-bottom: 8px; }
+      #cidade-abas button {
+        flex: 1; min-height: var(--toque);
+        border: 1px solid var(--borda); border-radius: 10px;
+        background: rgba(255, 255, 255, 0.04); color: var(--texto);
+        font: 11px/1 ui-monospace, Menlo, Consolas, monospace;
+        letter-spacing: 0.08em; cursor: pointer;
+      }
+      #cidade-abas button[aria-pressed="true"] {
+        background: rgba(140, 240, 200, 0.22);
+        border-color: rgba(140, 240, 200, 0.6);
+      }
+      #cidade-recado { min-height: 16px; margin: 0 0 8px; font-size: 11px; color: #ffd28a; }
+      #cidade-recado:empty { display: none; }
+      #cidade h3 { margin: 12px 0 6px; font-size: 11px; letter-spacing: 0.12em; opacity: 0.7; }
+      .cidade-linha {
+        display: flex; align-items: center; gap: 8px;
+        padding: 6px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      }
+      .cidade-info { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+      .cidade-info strong { font-size: 12px; }
+      .cidade-info em {
+        font-style: normal; font-size: 10px; opacity: 0.5;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      }
+      .cidade-preco {
+        flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end;
+        font-size: 12px; opacity: 0.8;
+      }
+      .cidade-preco em { font-style: normal; font-size: 9px; opacity: 0.45; }
+      .cidade-preco.pechincha { color: #9ff0cf; opacity: 1; }
+      .cidade-linha button {
+        flex: 0 0 auto; min-width: 48px; min-height: var(--toque);
+        border: 1px solid var(--borda); border-radius: 10px;
+        background: rgba(255, 255, 255, 0.06); color: var(--texto);
+        font: 11px/1 ui-monospace, Menlo, Consolas, monospace; cursor: pointer;
+      }
+      .cidade-linha button:disabled { opacity: 0.3; cursor: not-allowed; }
+      .cidade-ficha { display: flex; flex-direction: column; gap: 4px; font-size: 11px; }
+      .cidade-vazio { margin: 8px 0 0; font-size: 10px; line-height: 1.5; opacity: 0.5; }
+
+      /* O diário do dia que acabou de fechar. Some quando não há o que dizer. */
+      #diario {
+        display: flex; flex-direction: column; gap: 2px;
+        margin: 8px 0 0; max-height: 22vh; overflow-y: auto;
+        font-size: 10px; line-height: 1.5; opacity: 0.72;
+      }
+      #diario:empty { display: none; }
+
+      #ajuda { margin: 10px 0 0; font-size: 11px; line-height: 1.6; opacity: 0.62; }
+      #ajuda kbd {
+        display: inline-block;
+        min-width: 16px;
+        padding: 1px 4px;
+        border: 1px solid var(--borda);
+        border-radius: 3px;
+        text-align: center;
+      }
+
+      /* Aviso do limite da vila. Aparece por cima da cena, sem roubar o toque:
+         o jogador continua arrastando enquanto lê. */
+      #aviso {
+        position: fixed;
+        top: max(16px, env(safe-area-inset-top));
+        left: 50%;
+        transform: translate(-50%, -12px);
+        max-width: min(420px, calc(100vw - 32px));
+        padding: 12px 16px;
+        border: 1px solid rgba(255, 190, 120, 0.45);
+        border-radius: 12px;
+        background: rgba(28, 20, 12, 0.9);
+        backdrop-filter: blur(8px);
+        color: #f2dfc4;
+        font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace;
+        text-align: center;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.16s ease, transform 0.16s ease;
+      }
+      #aviso.visivel { opacity: 1; transform: translate(-50%, 0); }
+      #aviso strong { display: block; margin-bottom: 4px; font-size: 13px; letter-spacing: 0.06em; }
+
+      /* Numa tela larga o painel volta para o canto, sem esticar. */
+      @media (min-width: 640px) {
+        #painel {
+          left: auto;
+          top: max(12px, env(safe-area-inset-top));
+          bottom: auto;
+          right: max(12px, env(safe-area-inset-right));
+          width: 300px;
+        }
+      }
+      /* Celular deitado: a altura é o recurso escasso, some com a ajuda. */
+      @media (max-height: 460px) {
+        #ajuda { display: none; }
+      }
+
+      /* ---------------------------------------------- barra de recursos */
+
+      #recursos {
+        position: fixed;
+        top: max(8px, env(safe-area-inset-top));
+        left: max(8px, env(safe-area-inset-left));
+        right: max(8px, env(safe-area-inset-right));
+        display: flex;
+        /* Cinco indicadores não cabem numa linha de 412 px sem truncar cada um
+           deles. Quebrar é melhor que abreviar: "dia…" e "100…" não informam
+           nada, e Energia entrou como vital de primeira classe justamente para
+           ser lida. */
+        flex-wrap: wrap;
+        gap: 4px;
+        justify-content: space-between;
+        padding: 5px;
+        border: 1px solid var(--borda);
+        border-radius: 12px;
+        background: var(--painel);
+        backdrop-filter: blur(10px);
+        color: var(--texto);
+        font: 11px/1 ui-monospace, Menlo, Consolas, monospace;
+        pointer-events: none;
+      }
+      .recurso {
+        display: flex;
+        flex: 1 1 0;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        min-width: 0;
+        padding: 5px 2px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.04);
+      }
+      /* Os ícones da Kenney são chapa clara com o desenho escuro — feitos para
+         caixa de jogo de tabuleiro, impressa em branco. Invertidos viram
+         desenho claro sobre fundo escuro, que é o que este HUD é. */
+      .recurso img { filter: invert(1); opacity: 0.85; flex: 0 0 auto; }
+      .recurso .valor {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+      }
+      .recurso .moeda { font-size: 15px; opacity: 0.8; }
+      /* Crédito é o número que o jogador procura primeiro: ganha o dobro de
+         espaço e o destaque de cor. */
+      #rec-creditos { flex: 1.6 1 0; color: #ffe3a1; }
+      /* Prazo vencendo. A cor só entra quando há motivo — um HUD sempre
+         vermelho é um HUD que ninguém lê. */
+      #rec-vitais.urgente .valor { color: #ffb0b0; }
+
+      /* -------------------------------------------------- inspetor (hover) */
+
+      #inspetor {
+        position: fixed;
+        top: calc(max(8px, env(safe-area-inset-top)) + 52px);
+        left: max(8px, env(safe-area-inset-left));
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        max-width: min(260px, calc(100vw - 24px));
+        padding: 8px 10px;
+        border: 1px solid var(--borda);
+        border-radius: 10px;
+        background: var(--painel);
+        backdrop-filter: blur(10px);
+        color: var(--texto);
+        font: 11px/1.35 ui-monospace, Menlo, Consolas, monospace;
+        pointer-events: none;
+      }
+      /* Numa tela larga o painel sobe para o canto superior direito — bem onde
+         a barra terminava —, e o último indicador ficava escondido atrás dele.
+         A barra recua os 300 px do painel mais a folga.
+         Esta regra mora **depois** da definição base de propósito: ela tem a
+         mesma especificidade, então quem vem por último vence. Escrita junto
+         com o `@media` do painel, lá em cima, ela perdia em silêncio — a barra
+         continuava colada na borda e o indicador de obras seguia coberto. */
+      @media (min-width: 640px) {
+        #recursos { right: calc(max(12px, env(safe-area-inset-right)) + 312px); }
+        #inspetor { top: calc(max(8px, env(safe-area-inset-top)) + 56px); }
+      }
+
+      #inspetor strong { font-size: 12px; letter-spacing: 0.06em; }
+      #inspetor span { opacity: 0.7; }
+      #inspetor-prazo { color: #9ff0cf; }
+      #inspetor-prazo:empty { display: none; }
+
+      /* ------------------------------------------------------- ponteiros */
+      /*
+         Cursor do pacote da Kenney no lugar da seta do sistema. Num jogo em
+         tela cheia a seta do SO entrega que aquilo é uma página; a mão aberta
+         diz "isto se arrasta" antes de o jogador tentar.
+         O ponto quente vai no dedo, e não no canto: com 0 0 o cursor mira
+         16 px acima e à esquerda de onde parece mirar.
+      */
+      #viewport { cursor: url('ui/cursor/hand_open.png') 10 6, grab; }
+      body.arrastando #viewport { cursor: url('ui/cursor/hand_closed.png') 10 8, grabbing; }
+      body.construindo #viewport { cursor: url('ui/cursor/tool_hammer.png') 6 6, crosshair; }
+      body.construindo.invalido #viewport { cursor: url('ui/cursor/cursor_disabled.png') 10 10, not-allowed; }
+      body.sobre-construcao #viewport { cursor: url('ui/cursor/hand_point.png') 10 4, pointer; }
+    </style>
+  </head>
+  <body>
+    <canvas id="viewport"></canvas>
+    <div id="telas"></div>
+
+    <div id="hud" hidden>
+    <!-- Barra de recursos. Fica no topo e nunca recolhe: dinheiro e prazo são
+         o que decide toda jogada, e um número que só aparece depois de abrir
+         um menu não é informação, é consulta. -->
+    <div id="recursos" role="status" aria-live="polite">
+      <div class="recurso" id="rec-creditos" title="Créditos disponíveis">
+        <span class="moeda" aria-hidden="true">¤</span>
+        <span class="valor">—</span>
+      </div>
+      <div class="recurso" id="rec-dia" title="Dia da campanha">
+        <img src="ui/info/hourglass.png" alt="" width="20" height="20" />
+        <span class="valor">—</span>
+      </div>
+      <!-- O indicador de vitais também abre a mochila: é aqui que o jogador
+           percebe a fome, e mandá-lo procurar o botão no painel no pior momento
+           é atrito puro. -->
+      <button class="recurso" id="rec-vitais" type="button"
+              title="Fome / Sede — toque para abrir a mochila">
+        <img src="ui/info/stopwatch.png" alt="" width="20" height="20" />
+        <span class="valor">—</span>
+      </button>
+      <!-- Energia entrou como vital de primeira classe na Rev 4.1: é ela que
+           esgota primeiro em quem trabalha sem dormir. -->
+      <div class="recurso" id="rec-energia" title="Energia">
+        <img src="ui/info/duration.png" alt="" width="20" height="20" />
+        <span class="valor">—</span>
+      </div>
+      <div class="recurso" id="rec-obras" title="Construções em obra">
+        <img src="ui/info/duration.png" alt="" width="20" height="20" />
+        <span class="valor">—</span>
+      </div>
+    </div>
+
+    <!-- O que está sob o ponteiro. Aparece só quando há algo, e some sozinho:
+         uma caixa vazia permanente rouba tela num celular. -->
+    <div id="inspetor" hidden>
+      <strong id="inspetor-titulo"></strong>
+      <span id="inspetor-linha"></span>
+      <span id="inspetor-prazo"></span>
+    </div>
+
+    <!-- A caixa nasce vazia: o texto que ficava aqui era o "Acesso bloqueado"
+         do muro da vila, que deixou de existir quando o mapa virou andável. -->
+    <div id="aviso" role="status" aria-live="polite">
+      <strong id="aviso-titulo"></strong>
+      <span id="aviso-texto"></span>
+    </div>
+
+    <!-- A meta atual da campanha. Uma só: dezessete num painel de celular
+         viram parede de texto que ninguém lê. -->
+    <div id="quests"></div>
+
+    <aside id="trabalho">
+      <div id="trabalho-cabecalho">
+        <h2>O QUE FAZER HOJE</h2>
+        <button id="fechar-trabalho" type="button" aria-label="Fechar">✕</button>
+      </div>
+      <p id="status-trabalho"></p>
+      <div id="lista-trabalho"></div>
+      <!-- Os cursos ficam junto das vagas: a decisão é a mesma — abrir mão de
+           dias de salário agora para ganhar mais depois. -->
+      <h3>QUALIFICAÇÃO</h3>
+      <div id="lista-cursos"></div>
+    </aside>
+
+    <!-- A ocupação atual e a fila. É o relógio do jogo depois da Rev 4.1: uma
+         hora real é uma hora de mundo, e o cidadão enfileira até dez
+         ocupações futuras em vez de "virar o dia". -->
+    <aside id="ocupacao">
+      <div id="ocupacao-cabecalho">
+        <h2>OCUPAÇÃO</h2>
+        <button id="fechar-ocupacao" type="button" aria-label="Fechar">✕</button>
+      </div>
+      <div id="ocupacao-atual"></div>
+      <h3>NA FILA</h3>
+      <div id="ocupacao-fila"></div>
+      <h3>O QUE FAZER</h3>
+      <div id="ocupacao-opcoes"></div>
+    </aside>
+
+    <!-- A mochila. Existe porque comer e beber não tinham porta de entrada
+         nenhuma na interface: o domínio sabia consumir item desde sempre, mas
+         nada chamava, então Fome e Sede só desciam. Numa viagem de dez dias
+         isso não é dificuldade, é morte marcada. -->
+    <aside id="mochila">
+      <div id="mochila-cabecalho">
+        <h2>MOCHILA</h2>
+        <button id="fechar-mochila" type="button" aria-label="Fechar">✕</button>
+      </div>
+      <p id="mochila-recado"></p>
+      <div id="mochila-lista"></div>
+    </aside>
+
+    <!-- O painel da cidade. Abre ao chegar numa delas e é a razão de a viagem
+         existir: comprar onde é barato, vender onde falta, assumir uma vaga. -->
+    <aside id="cidade">
+      <div id="cidade-cabecalho">
+        <h2 id="cidade-titulo">CIDADE</h2>
+        <button id="fechar-cidade" type="button" aria-label="Fechar">✕</button>
+      </div>
+      <p id="cidade-resumo"></p>
+      <div id="cidade-abas" role="group" aria-label="Seções da cidade">
+        <button type="button" data-aba="mercado" aria-pressed="true">MERCADO</button>
+        <button type="button" data-aba="governo" aria-pressed="false">GOVERNO</button>
+        <button type="button" data-aba="trabalho" aria-pressed="false">VAGAS</button>
+      </div>
+      <p id="cidade-recado"></p>
+      <div id="cidade-conteudo"></div>
+    </aside>
+
+    <aside id="catalogo">
+      <!-- O catálogo tem o próprio fechar. Ele é `position: fixed` no rodapé
+           com z-index acima do painel, então enquanto estava aberto ele cobria
+           o botão CONSTRUIR que o abriu — e não havia como voltar a não ser
+           escolhendo uma construção. -->
+      <div id="catalogo-cabecalho">
+        <h2>CONSTRUÇÕES</h2>
+        <button id="fechar-catalogo" type="button" aria-label="Fechar catálogo">✕</button>
+      </div>
+      <p id="status-obra"></p>
+      <!-- A ficha da construção escolhida: o que faz, o que custa, o que exige
+           e como evolui. Fica aqui porque é aqui que a decisão acontece. -->
+      <div id="ficha-construcao"></div>
+      <div id="lista-construcoes"></div>
+    </aside>
+
+    <aside id="painel">
+      <div id="cabecalho">
+        <h1>CyberKingdoms</h1>
+        <button id="alternar-painel" type="button" aria-label="Mostrar ou esconder o painel">≡</button>
+      </div>
+      <p id="readout">carregando…</p>
+
+      <div id="corpo">
+        <button id="abrir-catalogo" type="button">CONSTRUIR</button>
+        <button id="abrir-trabalho" type="button">TRABALHAR</button>
+        <button id="abrir-ocupacao" type="button">OCUPAÇÃO</button>
+        <button id="abrir-mochila" type="button">MOCHILA</button>
+        <!-- Fica desabilitado em campo aberto: mercado e governo são da cidade,
+             e um botão que abre um painel vazio na estrada ensina errado. -->
+        <button id="abrir-cidade" type="button" disabled>ENTRAR NA CIDADE</button>
+        <div id="diario"></div>
+        <!-- O dia vira sozinho a cada 24 h. Este botão adianta a virada, que é
+             mecânica de sobrevivência conhecida — dormir — e a única forma de
+             o jogador ver uma obra de três dias terminar sem esperar três
+             dias de verdade. -->
+        <button id="abrir-mapa" type="button">MAPA DO MUNDO</button>
+        <button id="encerrar-dia" type="button">ENCERRAR O DIA</button>
+        <button id="sair" type="button">SAIR PARA O MENU</button>
+
+        <p id="ajuda">
+          <strong>Celular:</strong> um dedo arrasta o terreno, dois dedos
+          aproximam, giram e inclinam.<br />
+          <strong>PC:</strong> <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>
+          movem · <kbd>Q</kbd><kbd>E</kbd> giram · <kbd>R</kbd><kbd>F</kbd>
+          aproximam · roda do mouse também.
+        </p>
+      </div>
+    </aside>
+    </div>
+
+    <script type="module" src="/src/app.ts"></script>
+  </body>
+</html>

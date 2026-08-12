@@ -223,7 +223,7 @@ describe('Ficha da cidade', () => {
 });
 
 describe('Marcação do painel', () => {
-  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const html = readFileSync(new URL('../classico.html', import.meta.url), 'utf8');
 
   it('o painel tem as três seções e um jeito de fechar', () => {
     expect(html).toContain('id="cidade"');

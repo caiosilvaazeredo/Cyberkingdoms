@@ -334,7 +334,7 @@ describe('Regras de visibilidade das telas', () => {
     // empilhadas numa página rolável. O atributo estava certo o tempo todo —
     // um teste que perguntasse `elemento.hidden` teria passado.
     const css = readFileSync(
-      new URL('../index.html', import.meta.url),
+      new URL('../classico.html', import.meta.url),
       'utf8',
     );
     expect(css).toMatch(/\[hidden\]\s*\{\s*display:\s*none\s*!important/);
@@ -343,7 +343,7 @@ describe('Regras de visibilidade das telas', () => {
   it('nenhuma regra de .tela declara display sem cobrir o hidden', () => {
     // Guarda contra a mesma pegadinha voltando por outro seletor.
     const css = readFileSync(
-      new URL('../index.html', import.meta.url),
+      new URL('../classico.html', import.meta.url),
       'utf8',
     );
     const importante = css.indexOf('[hidden]');
@@ -355,7 +355,7 @@ describe('Regras de visibilidade das telas', () => {
 
 describe('Barra de recursos e ponteiro', () => {
   const html = (): string =>
-    readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    readFileSync(new URL('../classico.html', import.meta.url), 'utf8');
 
   it('dinheiro, dia, vitais e obras têm lugar fixo no HUD', () => {
     // Nenhum dos quatro aparecia em lugar nenhum: o jogador escolhia uma
@@ -414,7 +414,7 @@ describe('Barra de recursos e ponteiro', () => {
 
 describe('Mapa, mundos e carreira no HUD', () => {
   const html = (): string =>
-    readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    readFileSync(new URL('../classico.html', import.meta.url), 'utf8');
 
   it('o mapa e a qualificação têm porta de entrada', () => {
     const css = html();

@@ -329,7 +329,7 @@ describe('Enquadramento do mapa', () => {
 });
 
 describe('Marcação da viagem e da mochila', () => {
-  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const html = readFileSync(new URL('../classico.html', import.meta.url), 'utf8');
 
   it('a mochila existe e tem como fechar', () => {
     // Comer e beber não tinham porta de entrada nenhuma: `consume` existia no
