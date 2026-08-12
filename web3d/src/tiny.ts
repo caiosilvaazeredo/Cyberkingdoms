@@ -1,5 +1,5 @@
 import { acoesDisponiveis, enfileiravel, liquidar } from './campaign/actions';
-import { formatarDuracao } from './campaign/actionQueue';
+import { formatarDuracao, novaAcao } from './campaign/actionQueue';
 import { Campaign } from './campaign/campaign';
 import { runDailyTick } from './campaign/dailyTick';
 import { buildingsAvailableAt } from './building/buildingType';
@@ -14,6 +14,7 @@ import { carregarAssets, criarMundo2D } from './render2d/world2d';
 import { criarMapa2D } from './render2d/mapa2d';
 import { acampar } from './campaign/camp';
 import { daysOfSupplies, planJourney, startJourney } from './campaign/journey';
+import type { ContractJson } from './economy/contract';
 import { itemDef } from './economy/item';
 import { describeCity, type BuyRow } from './ui/cityView';
 import { formatCz } from './rules/eb';
@@ -455,6 +456,146 @@ document.querySelector('#fechar-feira')?.addEventListener('click', () => {
   folhaFeira.hidden = true;
 });
 
+// ------------------------------------------------------------------- vagas
+//
+// O escrow do EB 1.1 §22 estava implementado e inalcançável: regra correta sem
+// nenhum lugar onde encontrar uma vaga. Aqui ela aparece com o pagamento já
+// lastreado — aceitar reserva 100% no caixa do contratante, então o que está
+// na lista é obrigação, e não anúncio.
+
+const folhaVagas = document.querySelector<HTMLElement>('#folha-vagas')!;
+const listaVagas = document.querySelector<HTMLElement>('#lista-vagas')!;
+const contratoAtual = document.querySelector<HTMLElement>('#contrato-atual')!;
+let assinaturaVagas = '';
+
+function aceitarVaga(contrato: ContractJson): void {
+  const r = campanha.contracts.aceitar({
+    contract: contrato,
+    worker: personagem,
+    workerCertificates: personagem.certificates,
+    now: Date.now(),
+  });
+  if (!r.ok) {
+    avisar(r.reason);
+    return;
+  }
+
+  // O contrato é **executado**, não comprado: entra na fila como jornada, e a
+  // entrega acontece quando as horas passam. Ver o caso `contract` em
+  // `campaign/actions.ts`.
+  campanha.queue.enqueue(
+    novaAcao({
+      kind: 'contract',
+      label: contrato.title,
+      hours: contrato.durationHours,
+      payload: { contractId: contrato.id },
+    }),
+    Date.now(),
+  );
+  avisar(
+    `Aceito: ${contrato.title} · ${contrato.durationHours} h por ${formatCz(contrato.payment)}.`,
+  );
+  assinaturaVagas = '';
+  assinaturaAcoes = '';
+  atualizarHud();
+}
+
+function romperVaga(contrato: ContractJson): void {
+  const r = campanha.contracts.romper({
+    contract: contrato,
+    worker: personagem,
+    culpado: 'worker',
+  });
+  if (!r.ok) {
+    avisar(r.reason);
+    return;
+  }
+  // A jornada some da fila junto: manter a ação de um contrato rompido faria
+  // a entrega ser tentada num vínculo que já não existe.
+  const naFila = campanha.queue.items.find((a) => a.kind === 'contract');
+  if (naFila) campanha.queue.cancel(naFila.id);
+  avisar(
+    r.multa > 0
+      ? `Contrato rompido. Multa de ${formatCz(r.multa)} e −2 de credibilidade.`
+      : 'Contrato rompido. −2 de credibilidade.',
+  );
+  assinaturaVagas = '';
+  assinaturaAcoes = '';
+  atualizarHud();
+}
+
+function pintarVagas(): void {
+  const aqui = cidadeAtual();
+  const emExecucao = campanha.contracts.emExecucao(personagem.id);
+  const vagas = emExecucao
+    ? []
+    : campanha.contracts.abertasEm(aqui, campanha.seed, campanha.day, Date.now());
+
+  const assinatura =
+    `${aqui.id}#${campanha.day}#${emExecucao?.id ?? ''}#` +
+    vagas.map((v) => v.id).join('|') + `#${personagem.credibility}`;
+  if (assinatura === assinaturaVagas) return;
+  assinaturaVagas = assinatura;
+
+  contratoAtual.textContent = '';
+  if (emExecucao) {
+    const casa = campanha.contracts.contratanteDe(emExecucao);
+    const estado = campanha.queue.progress(Date.now());
+    const restante = estado.current?.kind === 'contract'
+      ? `Faltam ${formatarDuracao(estado.remainingMs)}.`
+      : 'Na fila.';
+    contratoAtual.innerHTML =
+      `<strong>${emExecucao.title}</strong>` +
+      `<small>${casa?.name ?? '—'} · ${formatCz(emExecucao.payment)} por ` +
+      `${emExecucao.durationHours} h · ${restante}</small>` +
+      `<small>Romper custa ${formatCz(Math.round(emExecucao.payment * emExecucao.penaltyRate))} ` +
+      'e −2 de credibilidade.</small>' +
+      '<button id="romper" class="ts-botao vermelho" type="button">ROMPER</button>';
+    contratoAtual
+      .querySelector('#romper')
+      ?.addEventListener('click', () => romperVaga(emExecucao));
+  }
+
+  listaVagas.textContent = '';
+  if (!emExecucao && vagas.length === 0) {
+    const vazio = document.createElement('p');
+    vazio.className = 'ts-dica';
+    vazio.textContent = 'Nenhuma vaga aberta hoje. Volte amanhã.';
+    listaVagas.appendChild(vazio);
+  }
+  for (const vaga of vagas) {
+    const casa = campanha.contracts.contratanteDe(vaga);
+    const linha = document.createElement('button');
+    linha.type = 'button';
+    linha.className = 'ts-linha';
+    const extras: string[] = [];
+    if (vaga.bonusRate > 0) {
+      extras.push(`bônus até ${formatCz(Math.round(vaga.payment * vaga.bonusRate))}`);
+    }
+    if (vaga.penaltyRate > 0) {
+      extras.push(`multa ${Math.round(vaga.penaltyRate * 100)}%`);
+    }
+    linha.innerHTML =
+      `<span class="ts-linha-texto"><strong>${vaga.title}</strong>` +
+      `<small>${casa?.name ?? '—'} · ${formatCz(vaga.payment)} por ${vaga.durationHours} h` +
+      `${extras.length > 0 ? ` · ${extras.join(' · ')}` : ''}</small></span>`;
+    linha.addEventListener('click', () => aceitarVaga(vaga));
+    listaVagas.appendChild(linha);
+  }
+}
+
+document.querySelector('#abrir-vagas')?.addEventListener('click', () => {
+  const abrindo = folhaVagas.hidden;
+  folhaVagas.hidden = !abrindo;
+  if (abrindo) {
+    assinaturaVagas = '';
+    pintarVagas();
+  }
+});
+document.querySelector('#fechar-vagas')?.addEventListener('click', () => {
+  folhaVagas.hidden = true;
+});
+
 // ------------------------------------------------------------------- o mapa
 //
 // Sem ele o jogo tem uma cidade só. O domínio de viagem já existe e já é
@@ -626,6 +767,7 @@ function atualizarHud(): void {
     (obras > 0 ? ` · ${obras} em obra` : '');
   if (!folhaObras.hidden) pintarObras();
   if (!folhaFeira.hidden) pintarFeira();
+  if (!folhaVagas.hidden) pintarVagas();
 
   // O preenchimento mede o miolo da barra, e não a caixa inteira: as duas
   // tampas de madeira ocupam borda e não podem ser cobertas.

@@ -68,13 +68,24 @@ export type ContractResult<T> =
   | ({ readonly ok: true } & T)
   | { readonly ok: false; readonly reason: string };
 
-/** Quem participa de um contrato, do ponto de vista do dinheiro. */
-export interface Parte {
+/**
+ * O lado que **executa** o contrato.
+ *
+ * Não tem retido: só quem paga precisa separar dinheiro. Estreitar o tipo aqui
+ * é o que permite ao personagem do jogador ser trabalhador sem carregar um
+ * campo que, do lado dele, seria sempre zero — e um campo sempre zero é um
+ * convite a alguém, um dia, tentar usá-lo.
+ */
+export interface Trabalhador {
   readonly id: string;
   credits: number;
+  credibility: number;
+}
+
+/** O lado que **paga**: precisa reservar, então tem retido. */
+export interface Parte extends Trabalhador {
   /** O que está retido em contratos aceitos. Nunca gastável. */
   held: number;
-  credibility: number;
 }
 
 export function publicar(options: {
@@ -133,7 +144,7 @@ export function publicar(options: {
 export function aceitar(options: {
   contract: ContractJson;
   employer: Parte;
-  worker: Parte;
+  worker: Trabalhador;
   workerCertificates: ReadonlySet<string>;
   now: number;
 }): ContractResult<{ contract: ContractJson }> {
@@ -195,7 +206,7 @@ export interface Liquidacao {
 export function entregar(options: {
   contract: ContractJson;
   employer: Parte;
-  worker: Parte;
+  worker: Trabalhador;
   now: number;
 }): ContractResult<Liquidacao> {
   const { contract, employer, worker, now } = options;
@@ -242,7 +253,7 @@ export interface Quebra {
 export function romper(options: {
   contract: ContractJson;
   employer: Parte;
-  worker: Parte;
+  worker: Trabalhador;
   culpado: 'employer' | 'worker';
 }): ContractResult<Quebra> {
   const { contract, employer, worker, culpado } = options;

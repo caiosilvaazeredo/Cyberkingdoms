@@ -1,5 +1,6 @@
 import { ActionQueue, type ActionQueueJson } from './actionQueue';
 import { Despensa, type DespensaJson } from '../economy/perishable';
+import { QuadroDeContratos, type QuadroJson } from '../economy/contractBoard';
 import { Plot, plotSizeForLevel, type PlotJson } from '../building/plot';
 import { VillageIdentity } from '../building/villageIdentity';
 import { AttributeSet, type CitizenLevel } from '../character/attributes';
@@ -50,6 +51,7 @@ export interface CampaignJson {
   knowledge?: Record<string, number>;
   /** Lotes perecíveis com validade. Ausente em save anterior à Rev 4.1. */
   pantry?: DespensaJson;
+  contracts?: QuadroJson;
 }
 
 export interface CampaignSummary {
@@ -111,6 +113,8 @@ export class Campaign {
    * despensa só guarda o prazo. Ao vencer, ela manda o inventário baixar.
    */
   readonly pantry: Despensa;
+  /** Vagas aceitas e as casas que as publicaram. Ver `economy/contractBoard`. */
+  readonly contracts: QuadroDeContratos;
 
   constructor(
     readonly id: string,
@@ -132,6 +136,7 @@ export class Campaign {
       queue?: ActionQueue;
       knowledge?: Iterable<[string, number]>;
       pantry?: Despensa;
+      contracts?: QuadroDeContratos;
     } = {},
   ) {
     this.day = options.day ?? 1;
@@ -142,6 +147,7 @@ export class Campaign {
     this.queue = options.queue ?? new ActionQueue();
     this.knowledgeMap = new Map(options.knowledge ?? []);
     this.pantry = options.pantry ?? new Despensa();
+    this.contracts = options.contracts ?? new QuadroDeContratos();
   }
 
   get knowledge(): ReadonlyMap<string, number> {
@@ -345,6 +351,7 @@ export class Campaign {
       queue: this.queue.toJson(),
       knowledge: Object.fromEntries(this.knowledgeMap),
       pantry: this.pantry.toJson(),
+      contracts: this.contracts.toJson(),
     };
   }
 
@@ -388,6 +395,7 @@ export class Campaign {
         visitedSettlements: json.visitedSettlements ?? [],
         queue: ActionQueue.fromJson(json.queue),
         pantry: Despensa.fromJson(json.pantry),
+        contracts: QuadroDeContratos.fromJson(json.contracts),
         knowledge: Object.entries(json.knowledge ?? {}).map(
           ([area, valor]) => [area, Number(valor) || 0] as [string, number],
         ),

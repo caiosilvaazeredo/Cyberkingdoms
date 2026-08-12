@@ -185,7 +185,7 @@
       }
       #aviso:empty { display: none; }
 
-      #folha-obras, #folha-feira {
+      #folha-obras, #folha-feira, #folha-vagas {
         position: fixed; z-index: 5;
         top: max(60px, env(safe-area-inset-top));
         left: 50%; transform: translateX(-50%);
@@ -193,12 +193,13 @@
         max-height: 70vh; overflow: auto; overscroll-behavior: contain;
         padding: 0 10px 12px;
       }
-      #folha-obras[hidden], #folha-feira[hidden] { display: none; }
-      #folha-obras header, #folha-feira header, #folha-mapa header {
+      #folha-obras[hidden], #folha-feira[hidden], #folha-vagas[hidden] { display: none; }
+      #folha-obras header, #folha-feira header, #folha-mapa header,
+      #folha-vagas header {
         display: flex; align-items: center; justify-content: space-between;
         position: sticky; top: 0;
       }
-      #folha-obras h2, #folha-feira h2, #folha-mapa h2 {
+      #folha-obras h2, #folha-feira h2, #folha-mapa h2, #folha-vagas h2 {
         margin: 0; font-size: 13px; letter-spacing: 0.1em;
       }
       .ts-secao { margin: 12px 0 4px; opacity: 0.8; }
@@ -212,9 +213,20 @@
       .ts-fechar:active {
         background-image: url('/tiny/ui/SmallRedSquareButton_Pressed.png');
       }
-      #lista-obras, #lista-feira, #lista-bolsa {
+      #lista-obras, #lista-feira, #lista-bolsa, #lista-vagas {
         display: flex; flex-direction: column; gap: 4px;
       }
+
+      /* O contrato em execução fica no topo, destacado: é a obrigação que o
+         jogador assumiu, e ela precisa estar visível antes das outras vagas. */
+      #contrato-atual:not(:empty) {
+        margin-bottom: 8px; padding: 6px 8px;
+        border: 2px solid rgba(58, 36, 21, 0.45); border-radius: 4px;
+        background: rgba(255, 217, 138, 0.35);
+        display: flex; flex-direction: column; gap: 3px;
+      }
+      #contrato-atual small { font-size: 10px; opacity: 0.85; }
+      #contrato-atual .ts-botao { border-width: 14px; font-size: 11px; }
       .ts-linha {
         display: flex; align-items: center; gap: 8px; text-align: left;
         min-height: var(--toque); padding: 4px 8px; cursor: pointer;
@@ -279,6 +291,18 @@
       <div id="lista-bolsa"></div>
     </aside>
 
+    <!-- As vagas da cidade. O pagamento fica reservado no aceite, então o que
+         está aqui é promessa com lastro, e não anúncio. -->
+    <aside id="folha-vagas" class="ts-papel" hidden>
+      <header>
+        <h2>VAGAS</h2>
+        <button id="fechar-vagas" class="ts-fechar" type="button" aria-label="Fechar">×</button>
+      </header>
+      <p class="ts-dica">Aceitar reserva o pagamento no caixa do contratante.</p>
+      <div id="contrato-atual"></div>
+      <div id="lista-vagas"></div>
+    </aside>
+
     <!-- O mapa ocupa a tela toda: escolher para onde ir é a decisão mais cara
          do jogo, e ela não cabe numa caixinha de canto. -->
     <aside id="folha-mapa" class="ts-papel" hidden>
@@ -304,6 +328,7 @@
         <button id="abrir-feira" class="ts-botao" type="button">MERCADO</button>
         <button id="abrir-obras" class="ts-botao" type="button">CONSTRUIR</button>
         <button id="abrir-mapa" class="ts-botao" type="button">MAPA</button>
+        <button id="abrir-vagas" class="ts-botao" type="button">VAGAS</button>
         <button id="dormir" class="ts-botao vermelho" type="button">DORMIR</button>
       </div>
     </aside>

@@ -52,7 +52,9 @@ export type ActionKind =
   | 'study'
   | 'travel'
   | 'produce'
-  | 'rest';
+  | 'rest'
+  /** Jornada de um contrato aceito. Ver `economy/contractBoard`. */
+  | 'contract';
 
 export interface QueuedActionJson {
   id: string;

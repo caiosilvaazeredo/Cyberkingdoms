@@ -48,6 +48,7 @@ export interface CharacterOptions {
   readonly travellingTo?: string | null;
   readonly travelDaysRemaining?: number;
   readonly statusOffset?: number;
+  readonly credibility?: number;
   readonly certificates?: Iterable<Certificate>;
   readonly studyingCertificate?: Certificate | null;
   readonly studyDaysRemaining?: number;
@@ -91,6 +92,15 @@ export class Character {
   statusOffset: number;
 
   /**
+   * Credibilidade como contraparte de contrato.
+   *
+   * Sobe a cada entrega e cai a cada quebra. É o que, no multiplayer, decide
+   * quem consegue vaga boa — e é do **personagem**, como os certificados:
+   * morrer leva a reputação junto.
+   */
+  credibility: number;
+
+  /**
    * Certificados conquistados.
    *
    * São do **personagem**, não da conta: morrer permanentemente leva tudo
@@ -126,6 +136,7 @@ export class Character {
     this.travellingTo = options.travellingTo ?? null;
     this.travelDaysRemaining = options.travelDaysRemaining ?? 0;
     this.statusOffset = options.statusOffset ?? 0;
+    this.credibility = options.credibility ?? 0;
     this.certificates = new Set(options.certificates ?? []);
     this.studyingCertificate = options.studyingCertificate ?? null;
     this.studyDaysRemaining = options.studyDaysRemaining ?? 0;
@@ -280,6 +291,7 @@ export class Character {
       travellingTo: this.travellingTo,
       travelDaysRemaining: this.travelDaysRemaining,
       statusOffset: this.statusOffset,
+      credibility: this.credibility,
       certificates: [...this.certificates],
       studyingCertificate: this.studyingCertificate,
       studyDaysRemaining: this.studyDaysRemaining,
@@ -317,6 +329,7 @@ export class Character {
       travellingTo: (json.travellingTo as string | null) ?? null,
       travelDaysRemaining: inteiro(json.travelDaysRemaining, 0),
       statusOffset: inteiro(json.statusOffset, 0),
+      credibility: inteiro(json.credibility, 0),
       // Certificado desconhecido é descartado em vez de derrubar o save: um
       // curso removido numa versão futura não pode matar a campanha.
       certificates: (Array.isArray(json.certificates) ? json.certificates : [])

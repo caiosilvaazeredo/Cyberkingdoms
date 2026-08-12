@@ -234,6 +234,33 @@ export function liquidar(campaign: Campaign, feita: CompletedAction): ResultadoD
       break;
     }
 
+    case 'contract': {
+      // A entrega acontece quando a jornada termina, e não no toque do
+      // aceite: o contrato é executado, não comprado. É a fila que diz que as
+      // horas passaram, e é por isso que a liquidação mora aqui e não na tela.
+      cobrarVitais(campaign, custo, linhas);
+      const contrato = campaign.contracts.emExecucao(character.id);
+      if (!contrato) {
+        linhas.push('A jornada terminou, mas o contrato não estava mais em execução.');
+        break;
+      }
+      const r = campaign.contracts.entregar({
+        contract: contrato,
+        worker: character,
+        now: finishedAt,
+      });
+      if (!r.ok) {
+        linhas.push(`Entrega recusada: ${r.reason}`);
+        break;
+      }
+      linhas.push(
+        `Contrato entregue: ${contrato.title} — ${formatCz(r.pago)}` +
+          (r.bonus > 0 ? ` (bônus de ${formatCz(r.bonus)})` : '') +
+          `. Credibilidade em ${character.credibility}.`,
+      );
+      break;
+    }
+
     default:
       cobrarVitais(campaign, custo, linhas);
       break;
