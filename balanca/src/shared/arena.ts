@@ -271,8 +271,7 @@ export function criarArena(seed: number): Arena {
     return tiles[ty * largura + tx]!;
   };
 
-  let arena: Arena;
-  arena = {
+  const arena: Arena = {
     seed,
     largura,
     altura,

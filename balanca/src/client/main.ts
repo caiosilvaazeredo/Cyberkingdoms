@@ -130,9 +130,6 @@ function laco(agora: number): void {
 
   const eu = rede.eu;
   const estado = rede.estado;
-  // A unidade local roda no relógio do monitor. A rede continua recebendo
-  // comandos em passo fixo, mas nunca mais congela o desenho entre pacotes.
-  if (eu) rede.atualizarVisual(agora);
 
   // Espectador: a câmera fica no meio do mapa e a tela de escolha aparece por
   // cima da partida em curso.
@@ -152,12 +149,7 @@ function laco(agora: number): void {
   const centroDoMapa = rede.arena
     ? { x: (rede.arena.largura * TILE) / 2, y: (rede.arena.altura * TILE) / 2 }
     : { x: 0, y: 0 };
-  // A câmera acompanha a cópia visual local, não a última posição confirmada
-  // em rede. Isso remove o segundo ponto de engasgo: o personagem já andava
-  // suavemente, mas a câmera ainda saltava a cada retrato.
-  const alvoDaCamera = eu
-    ? rede.posicaoDe(eu, agora)
-    : centroDoMapa;
+  const alvoDaCamera = eu ?? centroDoMapa;
   if (rede.arena) seguir(camera, rede.arena, alvoDaCamera, largura, altura, ajustes);
   const vista = vistaDe(camera, largura, altura);
   const centroNaTela = { x: vista.paraTelaX(alvoDaCamera.x), y: vista.paraTelaY(alvoDaCamera.y) };
