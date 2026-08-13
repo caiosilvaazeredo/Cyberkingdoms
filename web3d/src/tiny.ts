@@ -120,7 +120,7 @@ function prediosAgora(): readonly Predio[] {
 }
 
 const centro = centroDoTerreno(terreno);
-const jogador = { x: centro.x, y: centro.y, andando: false };
+const jogador = { x: centro.x, y: centro.y, andando: false, espelhado: false };
 
 /**
  * Procura a costa mais próxima, em espiral.
@@ -701,6 +701,10 @@ function quadro(agora: number): void {
 
   jogador.andando = dx !== 0 || dy !== 0;
   if (jogador.andando) {
+    // O pacote traz o peÃ£o voltado para a direita. Espelhar a arte quando ele
+    // anda para a esquerda evita que pareÃ§a deslizar de costas; em movimentos
+    // verticais preservamos a Ãºltima direÃ§Ã£o horizontal escolhida.
+    if (dx !== 0) jogador.espelhado = dx < 0;
     const norma = Math.hypot(dx, dy) || 1;
     const nx = jogador.x + (dx / norma) * velocidade * delta;
     const ny = jogador.y + (dy / norma) * velocidade * delta;

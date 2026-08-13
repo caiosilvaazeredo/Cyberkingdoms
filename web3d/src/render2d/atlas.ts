@@ -19,16 +19,26 @@ export async function carregarImagem(url: string): Promise<HTMLImageElement> {
 
 export interface Animacao {
   readonly imagem: HTMLImageElement;
-  /** Lado do quadro, em pixels. */
-  readonly lado: number;
+  /** Largura e altura de cada quadro, em pixels. */
+  readonly larguraQuadro: number;
+  readonly alturaQuadro: number;
   readonly quadros: number;
   /** Quadros por segundo. */
   readonly fps: number;
 }
 
-export function animacao(imagem: HTMLImageElement, fps = 10): Animacao {
-  const lado = imagem.height;
-  return { imagem, lado, quadros: Math.max(1, Math.round(imagem.width / lado)), fps };
+export function animacao(
+  imagem: HTMLImageElement,
+  fps = 10,
+  larguraQuadro = imagem.height,
+): Animacao {
+  return {
+    imagem,
+    larguraQuadro,
+    alturaQuadro: imagem.height,
+    quadros: Math.max(1, Math.floor(imagem.width / larguraQuadro)),
+    fps,
+  };
 }
 
 /**
@@ -45,21 +55,30 @@ export function desenharQuadro(
   x: number,
   y: number,
   escala = 1,
+  espelhar = false,
 ): void {
   const q = ((indice % anim.quadros) + anim.quadros) % anim.quadros;
-  const largura = anim.lado * escala;
-  const altura = anim.lado * escala;
+  const largura = anim.larguraQuadro * escala;
+  const altura = anim.alturaQuadro * escala;
+  const destinoX = Math.round(x - largura / 2);
+  const destinoY = Math.round(y - altura);
+  if (espelhar) {
+    ctx.save();
+    ctx.translate(Math.round(x * 2), 0);
+    ctx.scale(-1, 1);
+  }
   ctx.drawImage(
     anim.imagem,
-    q * anim.lado,
+    q * anim.larguraQuadro,
     0,
-    anim.lado,
-    anim.lado,
-    Math.round(x - largura / 2),
-    Math.round(y - altura),
+    anim.larguraQuadro,
+    anim.alturaQuadro,
+    destinoX,
+    destinoY,
     Math.round(largura),
     Math.round(altura),
   );
+  if (espelhar) ctx.restore();
 }
 
 /** Índice do quadro para um instante, com deslocamento por instância. */
