@@ -4,6 +4,7 @@ import {
   CASTELO,
   PONTES_Y,
   criarArena,
+  decoracaoEm,
   espelhar,
   resolverColisao,
   type TipoDeEstrutura,
@@ -105,6 +106,21 @@ describe('a arena', () => {
     }
     expect(x).toBeGreaterThan(10 * TILE + 60);
     expect(arena2.bloqueado(Math.floor(x / TILE), Math.floor(y / TILE))).toBe(false);
+  });
+
+  it('árvores, arbustos e pedras decorativas bloqueiam a passagem', () => {
+    let encontrada: { x: number; y: number } | null = null;
+    for (let y = 0; y < arena.altura && !encontrada; y++) {
+      for (let x = 0; x < arena.largura; x++) {
+        if (decoracaoEm(arena, x, y)) {
+          encontrada = { x, y };
+          break;
+        }
+      }
+    }
+
+    expect(encontrada).not.toBeNull();
+    expect(arena.bloqueado(encontrada!.x, encontrada!.y)).toBe(true);
   });
 });
 

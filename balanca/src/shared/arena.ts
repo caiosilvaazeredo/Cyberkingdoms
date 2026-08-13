@@ -271,7 +271,7 @@ export function criarArena(seed: number): Arena {
     return tiles[ty * largura + tx]!;
   };
 
-  return {
+  const arena: Arena = {
     seed,
     largura,
     altura,
@@ -281,13 +281,16 @@ export function criarArena(seed: number): Arena {
     pastos,
     tile,
     ehChao: (tx, ty) => tile(tx, ty) !== AGUA,
-    bloqueado: (tx, ty) => tile(tx, ty) === AGUA,
+    // A decoração é derivada da seed da arena. Assim, servidor e cliente
+    // chegam aos mesmos obstáculos sem carregar uma lista extra pela rede.
+    bloqueado: (tx, ty) => tile(tx, ty) === AGUA || decoracaoEm(arena, tx, ty) !== null,
     estrutura(tipo, time) {
       const achada = estruturas.find((e) => e.tipo === tipo && e.time === time);
       if (!achada) throw new Error(`estrutura ausente: ${tipo}/${time}`);
       return achada;
     },
   };
+  return arena;
 }
 
 /**

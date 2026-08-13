@@ -78,6 +78,10 @@ export class Rede {
   private recebidoEm = 0;
   private pendentes: Comando[] = [];
   private previsao: Unidade | null = null;
+  /** Posição visual suavizada entre os passos fixos da previsão. */
+  private visualAnterior: Retratada | null = null;
+  private visualAlvo: Retratada | null = null;
+  private visualDesde = 0;
   private seq = 0;
   private ultimoAceno = 0;
 
@@ -149,6 +153,8 @@ export class Rede {
         this.arena = criarArena(msg.seed);
         this.estado = estadoVazio();
         this.previsao = null;
+        this.visualAnterior = null;
+        this.visualAlvo = null;
         this.pendentes = [];
         return;
       }
@@ -156,6 +162,8 @@ export class Rede {
         this.meuId = msg.voce;
         this.meuTime = msg.time;
         this.previsao = null;
+        this.visualAnterior = null;
+        this.visualAlvo = null;
         this.pendentes = [];
         return;
       }
@@ -238,6 +246,11 @@ export class Rede {
     const servidor = this.euNoServidor;
     if (!servidor) return;
     this.previsao ??= { ...servidor };
+    if (!this.visualAlvo) {
+      this.visualAnterior = { x: this.previsao.x, y: this.previsao.y };
+      this.visualAlvo = { x: this.previsao.x, y: this.previsao.y };
+      this.visualDesde = performance.now();
+    }
 
     const c: Comando = { ...comando, seq: ++this.seq };
     this.pendentes.push(c);
@@ -247,6 +260,7 @@ export class Rede {
     if (this.pendentes.length > TICKS_POR_SEGUNDO / 2) this.pendentes.shift();
 
     if (this.previsao.vivo) moverUnidade(this.arena, this.estado, this.previsao, c, DT);
+    this.atualizarPosicaoVisual();
     this.enviar(c);
   }
 
@@ -264,7 +278,36 @@ export class Rede {
     if (copia.vivo) {
       for (const c of this.pendentes) moverUnidade(this.arena, this.estado, copia, c, DT);
     }
+    const antes = this.previsao;
     this.previsao = copia;
+    // Em condições normais, reaplicar os comandos produz a mesma posição que
+    // já estava na tela. Só reiniciamos a transição quando o servidor corrigiu
+    // algo perceptível; fazê-lo a cada retrato era a pequena "queda de FPS"
+    // sentida ao andar, embora o desenho continuasse rodando a 60 Hz.
+    if (!antes || Math.hypot(antes.x - copia.x, antes.y - copia.y) > 1.5) {
+      this.atualizarPosicaoVisual();
+    }
+  }
+
+  /** Leva o desenho até o próximo passo previsto durante um único tick. */
+  private atualizarPosicaoVisual(): void {
+    if (!this.previsao) return;
+    const agora = performance.now();
+    const atual = this.posicaoVisual(agora);
+    this.visualAnterior = atual;
+    this.visualAlvo = { x: this.previsao.x, y: this.previsao.y };
+    this.visualDesde = agora;
+  }
+
+  private posicaoVisual(agora: number): Retratada {
+    if (!this.previsao) return { x: 0, y: 0 };
+    const alvo = this.visualAlvo ?? { x: this.previsao.x, y: this.previsao.y };
+    const anterior = this.visualAnterior ?? alvo;
+    const alfa = Math.max(0, Math.min(1, (agora - this.visualDesde) / (DT * 1000)));
+    return {
+      x: anterior.x + (alvo.x - anterior.x) * alfa,
+      y: anterior.y + (alvo.y - anterior.y) * alfa,
+    };
   }
 
   /**
@@ -276,7 +319,7 @@ export class Rede {
    * parado no meio da corrida chama mais atenção que um que adianta 20 px.
    */
   posicaoDe(u: Unidade, agora: number): { x: number; y: number } {
-    if (u.id === this.meuId && this.previsao) return { x: this.previsao.x, y: this.previsao.y };
+    if (u.id === this.meuId && this.previsao) return this.posicaoVisual(agora);
     const b = this.atual.get(u.id);
     if (!b) return { x: u.x, y: u.y };
     const a = this.anterior.get(u.id) ?? b;
