@@ -109,10 +109,7 @@ export async function carregarAssets(): Promise<Assets> {
     // pulsa junto e o mar parece um único bicho respirando.
     espuma: animacao(espuma, 8),
     sombra,
-    // Tree1 e Tree2 tÃªm oito quadros de 192Ã—256; os demais sÃ£o quadrados.
-    // Usar a altura como largura nesses dois invadia o quadro vizinho e
-    // desenhava as faixas verticais vistas entre as Ã¡rvores.
-    arvores: [animacao(t1, 8, 192), animacao(t2, 8, 192), animacao(t3, 8), animacao(t4, 8)],
+    arvores: [t1, t2, t3, t4].map((i) => animacao(i, 8)),
     arbustos: [b1, b2, b3, b4].map((i) => animacao(i, 6)),
     pedras: [r1, r2, r3, r4],
     construcoes,
@@ -153,7 +150,7 @@ export function criarMundo2D(options: {
   terreno?: RetanguloTerreno;
   camera?: Partial<Camera>;
   /** Onde o peão está, em tiles. */
-  jogador: () => { x: number; y: number; andando: boolean; espelhado: boolean };
+  jogador: () => { x: number; y: number; andando: boolean };
 }): Mundo2D {
   const { world, assets, terreno } = options;
   const camera: Camera = { x: 0, y: 0, zoom: 1, ...options.camera };
@@ -223,10 +220,10 @@ export function criarMundo2D(options: {
           assets.espuma.quadros;
         const anim = assets.espuma;
         const q = ((quadroEm(anim, tempo, deslocamento) % anim.quadros) + anim.quadros) % anim.quadros;
-        const lado = anim.alturaQuadro * escala * (TILE / anim.alturaQuadro) * 3;
+        const lado = anim.lado * escala * (TILE / anim.lado) * 3;
         ctx.drawImage(
           anim.imagem,
-          q * anim.larguraQuadro, 0, anim.larguraQuadro, anim.alturaQuadro,
+          q * anim.lado, 0, anim.lado, anim.lado,
           Math.round(paraTelaX(tx) - (lado - tilePx) / 2),
           Math.round(paraTelaY(ty) - (lado - tilePx) / 2),
           Math.ceil(lado), Math.ceil(lado),
@@ -517,7 +514,6 @@ export function criarMundo2D(options: {
           paraTelaX(jogador.x) + tilePx / 2,
           paraTelaY(jogador.y) + tilePx,
           escala * 0.9,
-          jogador.espelhado,
         ),
     });
 
