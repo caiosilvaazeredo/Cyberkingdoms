@@ -408,15 +408,32 @@ export function desenharMundo(
   // --- unidades -----------------------------------------------------------
   for (const u of estado.unidades) {
     if (!u.vivo) continue;
-    const pos = rede.posicaoDe(u, agora);
+    // A posição local já vinha da previsão, mas a animação ainda lia o retrato
+    // do servidor. Na janela entre pacotes, o boneco andava sem virar. Usar a
+    // mesma unidade prevista aplica a direção selecionada no mesmo quadro.
+    const visivel = u.id === rede.meuId ? rede.eu ?? u : u;
+    const pos = rede.posicaoDe(visivel, agora);
     const px = v.paraTelaX(pos.x);
     const py = v.paraTelaY(pos.y);
-    const andando = u.id === rede.meuId ? andandoAgora(rede, u, agora) : moveu(rede, u, agora);
-    const escolha = folhaDaUnidade(arte, estado, u, andando);
+    const andando = visivel.id === rede.meuId
+      ? andandoAgora(rede, visivel, agora)
+      : moveu(rede, visivel, agora);
+    const escolha = folhaDaUnidade(arte, estado, visivel, andando);
     pinturas.push({
       y: pos.y,
       pintar: () =>
-        desenharUnidade(ctx, estado, u, escolha, px, py, escala, tempo, rede.meuId === u.id, ajustes),
+        desenharUnidade(
+          ctx,
+          estado,
+          visivel,
+          escolha,
+          px,
+          py,
+          escala,
+          tempo,
+          rede.meuId === visivel.id,
+          ajustes,
+        ),
     });
   }
 

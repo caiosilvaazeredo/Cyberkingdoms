@@ -32,6 +32,8 @@ import { TIMES, type Time } from '../shared/regras';
 
 export interface Animacao {
   readonly imagem: CanvasImageSource;
+  /** Largura de cada quadro; difere da altura nas árvores altas. */
+  readonly larguraQuadro: number;
   readonly lado: number;
   readonly quadros: number;
   readonly fps: number;
@@ -89,9 +91,19 @@ function tingir(img: HTMLImageElement, cor: string, forca: number): HTMLCanvasEl
   return tela;
 }
 
-export function animacao(imagem: HTMLImageElement, fps = FPS_DO_PACOTE): Animacao {
+export function animacao(
+  imagem: HTMLImageElement,
+  fps = FPS_DO_PACOTE,
+  larguraQuadro = imagem.height,
+): Animacao {
   const lado = imagem.height;
-  return { imagem, lado, quadros: Math.max(1, Math.round(imagem.width / lado)), fps };
+  return {
+    imagem,
+    larguraQuadro,
+    lado,
+    quadros: Math.max(1, Math.floor(imagem.width / larguraQuadro)),
+    fps,
+  };
 }
 
 /** As folhas que cada classe pede, além das comuns a todas. */
@@ -227,7 +239,15 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
     agua: img('agua'),
     espuma: animacao(img('espuma'), 8),
     sombra: img('sombra'),
-    arvores: [1, 2, 3, 4].map((i) => animacao(img(`arvore${i}`), 8)),
+    // Tree1 e Tree2 são oito quadros de 192×256; Tree3 e Tree4 são quadradas.
+    // Recortar as duas primeiras em 256×256 avançava 64 px no quadro vizinho e
+    // deixava as faixas verticais visíveis entre as árvores.
+    arvores: [
+      animacao(img('arvore1'), 8, 192),
+      animacao(img('arvore2'), 8, 192),
+      animacao(img('arvore3'), 8),
+      animacao(img('arvore4'), 8),
+    ],
     tocos: [1, 2, 3, 4].map((i) => img(`toco${i}`)),
     arbustos: [1, 2, 3, 4].map((i) => animacao(img(`arbusto${i}`), 6)),
     pedras: [1, 2, 3, 4].map((i) => img(`pedra${i}`)),
@@ -270,17 +290,18 @@ export function quadro(
   ancora: 'pe' | 'centro' = 'pe',
 ): void {
   const q = ((indice % anim.quadros) + anim.quadros) % anim.quadros;
-  const lado = anim.lado * escala;
+  const largura = anim.larguraQuadro * escala;
+  const altura = anim.lado * escala;
   ctx.drawImage(
     anim.imagem,
-    q * anim.lado,
+    q * anim.larguraQuadro,
     0,
+    anim.larguraQuadro,
     anim.lado,
-    anim.lado,
-    Math.round(x - lado / 2),
-    Math.round(ancora === 'pe' ? y - lado : y - lado / 2),
-    Math.ceil(lado),
-    Math.ceil(lado),
+    Math.round(x - largura / 2),
+    Math.round(ancora === 'pe' ? y - altura : y - altura / 2),
+    Math.ceil(largura),
+    Math.ceil(altura),
   );
 }
 
