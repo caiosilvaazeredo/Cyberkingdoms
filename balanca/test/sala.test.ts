@@ -22,6 +22,7 @@ function clienteFalso(nome: string): Cliente & { recebidas: DoServidor[] } {
     nome,
     unidade: null,
     time: null,
+    assistindo: false,
     silencio: 0,
     recebidas,
     enviar(msg) {
@@ -159,6 +160,51 @@ describe('a lotação da sala', () => {
     rodar(sala, 2);
     expect(sala.estado.unidades).toHaveLength(4);
     expect(sala.estado.unidades.filter((u) => u.bot)).toHaveLength(3);
+  });
+});
+
+describe('a plateia', () => {
+  it('quem chega assistindo não ocupa vaga', () => {
+    const sala = new Sala({ nome: 'p1', seed: 61, porTime: 1, esperaPorJogadores: 0 });
+    jogarPor(sala, 'Ana', 'azul');
+    jogarPor(sala, 'Bruno', 'vermelho');
+    // Sala cheia de gente. Uma aba aberta no menu ainda assim entra: ela só
+    // quer ver a partida rodando atrás do título.
+    const olheiro = clienteFalso('Olheiro');
+    expect(sala.entrar(olheiro, true)).toBe(true);
+    expect(sala.assistindo).toBe(1);
+    expect(sala.vagas).toBe(0);
+    expect(olheiro.recebidas.some((m) => m.t === 'bemvindo')).toBe(true);
+  });
+
+  it('quem assiste vira jogador ao escolher um lado', () => {
+    const sala = new Sala({ nome: 'p2', seed: 62, porTime: 2, esperaPorJogadores: 0 });
+    const olheiro = clienteFalso('Olheiro');
+    sala.entrar(olheiro, true);
+    expect(sala.vagas).toBe(4);
+    expect(sala.escolher(olheiro.chave, 'azul')).toBe(true);
+    expect(sala.assistindo).toBe(0);
+    expect(sala.vagas).toBe(3);
+  });
+
+  it('e volta a ser plateia se o lado escolhido estiver cheio', () => {
+    const sala = new Sala({ nome: 'p3', seed: 63, porTime: 1, esperaPorJogadores: 0 });
+    jogarPor(sala, 'Ana', 'azul');
+    const olheiro = clienteFalso('Olheiro');
+    sala.entrar(olheiro, true);
+    expect(sala.escolher(olheiro.chave, 'azul')).toBe(false);
+    // Recusado, ele continua assistindo — e continua sem ocupar vaga, para não
+    // travar a sala por causa de um clique no lado errado.
+    expect(sala.assistindo).toBe(1);
+  });
+
+  it('espectador segura a sala de pé enquanto ninguém joga', () => {
+    const lobby = new Lobby({ porTime: 2, esperaPorJogadores: 0, seed: () => 11 });
+    const olheiro = clienteFalso('Olheiro');
+    expect(lobby.acolher(olheiro, true)).not.toBeNull();
+    lobby.passo();
+    // A sala não é recolhida: é ela que o menu está mostrando.
+    expect(lobby.quantidade).toBe(1);
   });
 });
 

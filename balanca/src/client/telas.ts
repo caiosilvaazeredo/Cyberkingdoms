@@ -10,23 +10,23 @@ import {
 } from './ajustes';
 
 /**
- * As telas fora do jogo: menu, ajustes, espera e escolha de lado.
+ * As telas fora do jogo: menu, painéis, espera e escolha de lado.
+ *
+ * ## O menu não tem fundo — o fundo é o jogo
+ *
+ * A marca fica no alto à esquerda e a barra de ações embaixo, e entre as duas
+ * não há ilustração nenhuma: o `canvas` continua desenhando **uma partida de
+ * verdade**, ao vivo, com os bots que estariam jogando de qualquer jeito. É o
+ * modo atração do fliperama, e responde antes de a pessoa perguntar as duas
+ * coisas que ela quer saber ao abrir um jogo em rede: como ele é, e se tem
+ * alguém jogando.
  *
  * ## Por que em HTML, e não no `canvas`
  *
- * O campo de batalha é desenhado à mão porque precisa ser: são doze bonecos e
- * uma câmera. Um menu não precisa. Em HTML ele ganha de graça o que no `canvas`
- * custaria semanas — foco de teclado, rolagem, leitor de tela, seleção de texto,
- * caixa de texto que funciona no teclado do celular — e o CSS faz o
- * enquadramento responsivo sozinho.
- *
- * ## A escolha de lado é jogada por cima da partida
- *
- * Ela não é um menu antes do jogo: é uma camada translúcida **sobre** a partida
- * já rodando, no estilo do Super Smash Bros. e do Overcooked. Enquanto decide,
- * a pessoa vê o campo, o placar e a balança correndo atrás do painel — e assim a
- * decisão é informada em vez de cega: dá para ver de que lado está faltando
- * gente antes de escolher.
+ * O campo de batalha é desenhado à mão porque precisa ser. Um menu não precisa.
+ * Em HTML ele ganha de graça o que no `canvas` custaria semanas — foco de
+ * teclado, rolagem, leitor de tela, caixa de texto que funciona no teclado do
+ * celular — e o CSS faz o enquadramento responsivo sozinho.
  *
  * ## Um lugar só para os ajustes
  *
@@ -35,11 +35,13 @@ import {
  * antes de confirmar é um jogo que ensinou o jogador a desconfiar do menu.
  */
 
-export type NomeDaTela = 'menu' | 'carregando' | 'escolha' | 'jogo';
+export type NomeDaTela = 'menu' | 'carregando' | 'escolha' | 'jogo' | 'plateia';
 
 export interface AcoesDasTelas {
-  /** O jogador apertou "entrar na batalha". */
+  /** O jogador quer entrar na batalha. */
   jogar(nome: string): void;
+  /** O jogador quer só assistir, sem o menu por cima. */
+  assistir(): void;
   /** O jogador confirmou o lado. */
   escolher(time: Time): void;
   /** Um ajuste mudou. Chamada a cada clique, já com o valor novo. */
@@ -54,6 +56,16 @@ export interface DadosDaEscolha {
   relogio: number;
 }
 
+export interface EstadoDoServidor {
+  ligado: boolean;
+  sala: string;
+  jogadores: number;
+  bots: number;
+  ping: number;
+  /** Mensagem que substitui o resto quando algo deu errado. */
+  aviso?: string;
+}
+
 /** Conselhos que giram na tela de espera. */
 const CONSELHOS: readonly string[] = [
   'Cada fatia que você dá à refém alivia a sua princesa do outro lado do mapa. O peso do reino não muda: muda de prato.',
@@ -64,12 +76,14 @@ const CONSELHOS: readonly string[] = [
   'O bolo longe da masmorra é comida: cura quarenta e cinco.',
   'Empate no tempo? Ganha o reino cuja princesa está mais leve. A balança é o desempate.',
   'Trabalhar na jazida cancela se você andar. Ofício é o momento em que se está indefeso.',
+  'No aquecimento a chapelaria já está aberta. É para isso que ele existe.',
 ];
 
 export class Telas {
   private readonly menu = pegar<HTMLElement>('#menu');
   private readonly carregando = pegar<HTMLElement>('#carregando');
   private readonly escolha = pegar<HTMLElement>('#escolha');
+  private readonly plateia = pegar<HTMLElement>('#plateia');
   private readonly campoNome = pegar<HTMLInputElement>('#nome');
   private readonly botaoJogar = pegar<HTMLButtonElement>('#jogar');
   private readonly recado = pegar<HTMLElement>('#recado');
@@ -78,6 +92,8 @@ export class Telas {
   private readonly conselho = pegar<HTMLElement>('#conselho');
   private readonly status = pegar<HTMLElement>('#escolha-status');
   private readonly confirmar = pegar<HTMLButtonElement>('#confirmar');
+  private readonly estadoServidor = pegar<HTMLElement>('#estado-servidor');
+  private readonly pulso = pegar<HTMLElement>('#pulso');
 
   private tela: NomeDaTela = 'menu';
   private ladoEscolhido: Time = 'azul';
@@ -88,10 +104,9 @@ export class Telas {
     this.ajustes = carregarAjustes();
     this.campoNome.value = this.ajustes.nome;
 
-    this.ligarAbas();
+    this.ligarBarra();
     this.montarAjustes();
 
-    this.botaoJogar.addEventListener('click', () => this.pedirParaJogar());
     this.campoNome.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') this.pedirParaJogar();
     });
@@ -109,20 +124,29 @@ export class Telas {
     }
     this.confirmar.addEventListener('click', () => this.confirmarLado());
 
-    // O teclado da escolha só escuta quando a escolha está na tela: senão o
-    // `A` de andar viraria "trocar de lado" no meio de uma partida.
     window.addEventListener('keydown', (e) => {
-      if (this.tela !== 'escolha') return;
-      if (e.code === 'KeyA' || e.code === 'ArrowLeft') {
-        this.ladoEscolhido = 'azul';
-        this.pintarEscolha();
-      } else if (e.code === 'KeyD' || e.code === 'ArrowRight') {
-        this.ladoEscolhido = 'vermelho';
-        this.pintarEscolha();
-      } else if (e.code === 'Enter' || e.code === 'Space') {
-        e.preventDefault();
-        this.confirmarLado();
+      // O teclado das telas só escuta quando elas estão à frente: senão o `A`
+      // de andar viraria "trocar de lado" no meio de uma partida.
+      if (this.tela === 'escolha') {
+        if (e.code === 'KeyA' || e.code === 'ArrowLeft') {
+          this.ladoEscolhido = 'azul';
+          this.pintarEscolha();
+        } else if (e.code === 'KeyD' || e.code === 'ArrowRight') {
+          this.ladoEscolhido = 'vermelho';
+          this.pintarEscolha();
+        } else if (e.code === 'Enter' || e.code === 'Space') {
+          e.preventDefault();
+          this.confirmarLado();
+        } else if (e.code === 'Escape') {
+          this.mostrar('menu');
+        }
+        return;
       }
+      if (this.tela === 'plateia' && e.code === 'Escape') {
+        this.mostrar('menu');
+        return;
+      }
+      if (this.tela === 'menu' && e.code === 'Escape') this.fecharFolhas();
     });
   }
 
@@ -139,6 +163,7 @@ export class Telas {
     alternar(this.menu, nome === 'menu');
     alternar(this.carregando, nome === 'carregando');
     alternar(this.escolha, nome === 'escolha');
+    this.plateia.hidden = nome !== 'plateia';
     if (nome === 'menu') this.botaoJogar.disabled = false;
     if (nome === 'carregando') {
       this.conselho.textContent =
@@ -147,9 +172,20 @@ export class Telas {
     if (nome === 'escolha') this.pintarEscolha();
   }
 
-  /** Mensagem do menu — inclui o motivo de uma conexão recusada ou caída. */
+  /** Mensagem do painel de apelido — recusa, queda de conexão, o que for. */
   avisar(texto: string): void {
     this.recado.textContent = texto;
+    if (texto) this.abrirFolha('apelido');
+  }
+
+  /** A linha da direita na barra: se há servidor, e quanta gente tem lá. */
+  atualizarEstado(e: EstadoDoServidor): void {
+    this.pulso.classList.toggle('vivo', e.ligado);
+    this.estadoServidor.textContent = e.aviso
+      ? e.aviso
+      : e.ligado
+        ? `${e.sala} · ${e.jogadores} jogando, ${e.bots} bots · ${e.ping} ms`
+        : 'procurando o servidor…';
   }
 
   /** Progresso do carregamento da arte, de 0 a 1, com o rótulo da etapa. */
@@ -169,11 +205,61 @@ export class Telas {
     this.ajustes = { ...this.ajustes, nome };
     salvarAjustes(this.ajustes);
     this.botaoJogar.disabled = true;
+    this.recado.textContent = '';
     this.acoes.jogar(nome);
   }
 
   private confirmarLado(): void {
     this.acoes.escolher(this.ladoEscolhido);
+  }
+
+  private ligarBarra(): void {
+    this.botaoJogar.addEventListener('click', () => {
+      // Sem apelido guardado, o primeiro clique abre a folha para escrever um;
+      // com apelido, ele entra direto. É o "Jogar / Continuar" do protótipo.
+      if (!this.ajustes.nome.trim()) {
+        this.abrirFolha('apelido');
+        this.campoNome.focus();
+        return;
+      }
+      this.pedirParaJogar();
+    });
+
+    pegar<HTMLButtonElement>('#assistir').addEventListener('click', () => {
+      this.fecharFolhas();
+      this.acoes.assistir();
+    });
+
+    for (const botao of Array.from(
+      document.querySelectorAll<HTMLButtonElement>('.barra button[data-folha]'),
+    )) {
+      botao.addEventListener('click', () => {
+        const aberta = botao.getAttribute('aria-expanded') === 'true';
+        this.fecharFolhas();
+        if (!aberta) this.abrirFolha(botao.dataset.folha!);
+      });
+    }
+
+    for (const acao of Array.from(document.querySelectorAll<HTMLElement>('[data-acao="jogar"]'))) {
+      acao.addEventListener('click', () => this.pedirParaJogar());
+    }
+  }
+
+  private abrirFolha(nome: string): void {
+    this.fecharFolhas();
+    const folha = document.querySelector<HTMLElement>(`.folha[data-folha="${nome}"]`);
+    if (folha) folha.hidden = false;
+    const botao = document.querySelector<HTMLButtonElement>(`.barra button[data-folha="${nome}"]`);
+    botao?.setAttribute('aria-expanded', 'true');
+  }
+
+  private fecharFolhas(): void {
+    for (const f of Array.from(document.querySelectorAll<HTMLElement>('.folha'))) f.hidden = true;
+    for (const b of Array.from(
+      document.querySelectorAll<HTMLButtonElement>('.barra button[data-folha]'),
+    )) {
+      b.setAttribute('aria-expanded', 'false');
+    }
   }
 
   private pintarEscolha(): void {
@@ -225,29 +311,18 @@ export class Telas {
     }
   }
 
-  private ligarAbas(): void {
-    const abas = Array.from(document.querySelectorAll<HTMLButtonElement>('.abas button'));
-    for (const aba of abas) {
-      aba.addEventListener('click', () => {
-        for (const outra of abas) {
-          const escolhida = outra === aba;
-          outra.setAttribute('aria-selected', String(escolhida));
-          const painel = document.querySelector<HTMLElement>(
-            `.painel[data-painel="${outra.dataset.aba}"]`,
-          );
-          if (painel) painel.hidden = !escolhida;
-        }
-      });
-    }
+  /** Mensagem na tela de escolha, quando o servidor recusa o lado. */
+  avisarNaEscolha(texto: string): void {
+    this.status.textContent = texto;
   }
 
   /**
    * Monta a lista de ajustes a partir de uma tabela.
    *
-   * Escrever os oito controles à mão no HTML seria mais curto de ler e mais
-   * fácil de esquecer: bastaria alguém acrescentar um ajuste no tipo e não no
-   * HTML para o jogo passar a ter uma preferência que ninguém consegue mudar.
-   * Aqui a tabela é a única fonte, e o formulário nasce dela.
+   * Escrever os controles à mão no HTML seria mais curto de ler e mais fácil de
+   * esquecer: bastaria alguém acrescentar um ajuste no tipo e não no HTML para o
+   * jogo passar a ter uma preferência que ninguém consegue mudar. Aqui a tabela
+   * é a única fonte, e o formulário nasce dela.
    */
   private montarAjustes(): void {
     const caixa = pegar<HTMLElement>('#ajustes');
@@ -306,9 +381,16 @@ export class Telas {
     ];
 
     const pintar = (): void => {
-      for (const botao of Array.from(caixa.querySelectorAll<HTMLButtonElement>('button[data-chave]'))) {
+      for (const botao of Array.from(
+        caixa.querySelectorAll<HTMLButtonElement>('button[data-chave]'),
+      )) {
         const chave = botao.dataset.chave as keyof Ajustes;
-        const valor = botao.dataset.valor === 'true' ? true : botao.dataset.valor === 'false' ? false : botao.dataset.valor;
+        const valor =
+          botao.dataset.valor === 'true'
+            ? true
+            : botao.dataset.valor === 'false'
+              ? false
+              : botao.dataset.valor;
         botao.setAttribute('aria-pressed', String(this.ajustes[chave] === valor));
       }
     };

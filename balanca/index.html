@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
-    <title>A Balança do Reino</title>
+    <title>Reino de Migalhas</title>
     <!--
       Ícone embutido como SVG: uma balança de dois pratos, um cheio e um vazio.
       Vai por `data:` para não custar um pedido — e para o navegador parar de
@@ -18,12 +18,23 @@
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2310121a'/%3E%3Crect x='4' y='13' width='11' height='7' fill='%233b7fe0'/%3E%3Crect x='17' y='13' width='11' height='7' fill='%23e04b3b'/%3E%3Crect x='15' y='8' width='2' height='17' fill='%23ffd479'/%3E%3C/svg%3E"
     />
     <style>
+      /*
+        Duas peles, e elas não se misturam.
+
+        O jogo é colorido e escuro, porque é pixel art sobre grama. A moldura —
+        menu, painéis, escolha de lado — é papel branco com vermelho, no traço
+        do protótipo: preto sobre branco, um único acento, tipografia grande e
+        seca. É a diferença entre a interface e o mundo, e é ela que faz o menu
+        parecer capa de livro em vez de mais um retângulo em cima do jogo.
+      */
       :root {
         color-scheme: dark;
-        --papel: #f2e6c9;
-        --azul: #3b7fe0;
+        --papel: #f4f2ee;
+        --tinta: #14110f;
+        --acento: #e4002b;
+        --azul: #2f6fd0;
         --azul-claro: #8fc0ff;
-        --vermelho: #e04b3b;
+        --vermelho: #cf3b2f;
         --vermelho-claro: #ff9c8f;
         --ouro: #ffd479;
       }
@@ -50,172 +61,209 @@
       .tela {
         position: fixed;
         inset: 0;
-        display: grid;
-        place-items: center;
-        padding: 20px;
-        overflow-y: auto;
         z-index: 10;
       }
-      .tela.oculta {
+      /*
+        Esconder precisa vencer o `display` que cada tela define para si.
+        `.tela.oculta` tem peso 20 e `#menu` tem peso 100: sem repetir os ids
+        aqui, a tela "escondida" continuava desenhada por cima do jogo,
+        engolindo todo clique do menu. Foi assim que a primeira versão quebrou.
+      */
+      #menu.oculta,
+      #carregando.oculta,
+      #escolha.oculta {
         display: none;
       }
-      #menu,
-      #carregando {
-        background:
-          radial-gradient(circle at 50% 18%, rgba(90, 130, 200, 0.28), transparent 60%),
-          linear-gradient(160deg, #10121a, #1c1a26 55%, #2a1a1a);
+
+      /* ------------------------------------------------------ menu inicial */
+      /*
+        O menu não tem fundo próprio: o fundo é a partida, desenhada no `canvas`
+        que fica atrás. Só uma sombra de baixo para cima, para o texto da barra
+        continuar legível quando a briga passar por ali.
+      */
+      #menu {
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        padding: 0;
+        background: linear-gradient(
+          to bottom,
+          rgba(10, 12, 18, 0.55) 0%,
+          rgba(10, 12, 18, 0.12) 22%,
+          rgba(10, 12, 18, 0.12) 70%,
+          rgba(10, 12, 18, 0.6) 100%
+        );
+        pointer-events: none;
       }
-      /* A escolha de time é jogada por cima da partida: dá para ver o campo. */
-      #escolha {
-        background: rgba(8, 10, 16, 0.72);
-        backdrop-filter: blur(2px);
+      #menu > * {
+        pointer-events: auto;
       }
-      .cartao {
-        width: min(660px, 100%);
-        background: rgba(16, 18, 26, 0.9);
-        border: 1px solid rgba(242, 230, 201, 0.18);
-        border-radius: 16px;
-        padding: 26px 30px 22px;
-        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+      .marca {
+        display: flex;
+        align-items: stretch;
+        gap: 0;
+        margin: clamp(14px, 3vw, 34px);
+        width: fit-content;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
       }
-      h1 {
+      .marca .kicker {
+        display: flex;
+        align-items: center;
+        background: var(--acento);
+        color: #fff;
+        font-size: clamp(9px, 1.4vw, 13px);
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        padding: 0 clamp(8px, 1.4vw, 14px);
+      }
+      .marca h1 {
         margin: 0;
-        font-size: clamp(26px, 6vw, 42px);
-        letter-spacing: 0.5px;
+        background: var(--papel);
+        color: var(--tinta);
+        font-size: clamp(30px, 7vw, 62px);
+        line-height: 1.05;
+        letter-spacing: -0.02em;
+        padding: clamp(2px, 0.6vw, 8px) clamp(10px, 2vw, 22px);
       }
-      h1 small {
-        display: block;
-        font-size: 13px;
-        font-weight: 400;
-        letter-spacing: 2px;
+      .assinatura {
+        align-self: end;
+        justify-self: start;
+        margin: 0 clamp(14px, 3vw, 34px) 10px;
+        font-size: 12px;
+        letter-spacing: 0.12em;
         text-transform: uppercase;
-        opacity: 0.55;
-        margin-bottom: 4px;
+        color: rgba(255, 255, 255, 0.75);
+        text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
       }
-      .balanca-enfeite {
+
+      /* A barra de baixo: papel, itens em linha, o primeiro em vermelho. */
+      .barra {
         display: flex;
-        height: 12px;
-        border-radius: 6px;
-        overflow: hidden;
-        margin: 14px 0 16px;
-        border: 1px solid rgba(0, 0, 0, 0.5);
-      }
-      .balanca-enfeite i {
-        display: block;
-      }
-      .balanca-enfeite i:first-child {
-        width: 62%;
-        background: var(--azul);
-      }
-      .balanca-enfeite i:last-child {
-        width: 38%;
-        background: var(--vermelho);
-      }
-      .abas {
-        display: flex;
-        gap: 6px;
-        margin: 0 0 14px;
-        border-bottom: 1px solid rgba(242, 230, 201, 0.15);
-      }
-      .abas button {
-        background: transparent;
-        color: var(--papel);
-        border: none;
-        border-bottom: 2px solid transparent;
-        border-radius: 0;
-        padding: 8px 12px;
-        font: inherit;
-        font-size: 14px;
-        opacity: 0.6;
-        cursor: pointer;
-      }
-      .abas button[aria-selected='true'] {
-        opacity: 1;
-        color: var(--ouro);
-        border-bottom-color: var(--ouro);
-      }
-      .painel[hidden] {
-        display: none;
-      }
-      .linha {
-        display: flex;
-        gap: 10px;
-        margin: 16px 0 8px;
+        align-items: stretch;
+        gap: 0;
+        background: var(--papel);
+        color: var(--tinta);
+        border-top: 1px solid rgba(0, 0, 0, 0.12);
         flex-wrap: wrap;
       }
-      input[type='text'] {
-        flex: 1 1 220px;
-        min-width: 0;
-        padding: 13px 15px;
-        font: inherit;
-        font-size: 17px;
-        color: var(--papel);
-        background: rgba(255, 255, 255, 0.06);
-        border: 1px solid rgba(242, 230, 201, 0.22);
-        border-radius: 10px;
-      }
-      button.grande {
-        padding: 13px 24px;
-        font: inherit;
-        font-size: 17px;
-        font-weight: 700;
-        color: #1a1410;
-        background: linear-gradient(180deg, #ffd479, #e8a83c);
+      .barra button {
+        appearance: none;
         border: none;
-        border-radius: 10px;
+        background: transparent;
+        color: var(--acento);
+        font: inherit;
+        font-size: clamp(13px, 1.5vw, 15px);
+        font-weight: 700;
+        padding: 14px clamp(10px, 1.6vw, 18px);
         cursor: pointer;
+        border-right: 1px solid rgba(0, 0, 0, 0.1);
       }
-      button.grande:disabled {
-        opacity: 0.55;
-        cursor: progress;
+      .barra button:hover {
+        background: rgba(228, 0, 43, 0.08);
       }
-      .recado {
-        margin: 6px 0 0;
-        min-height: 18px;
+      .barra button.primario {
+        background: var(--acento);
+        color: #fff;
+        padding-inline: clamp(16px, 2.4vw, 30px);
+      }
+      .barra button.primario:hover {
+        background: #c40025;
+      }
+      .barra button[aria-expanded='true'] {
+        background: rgba(0, 0, 0, 0.07);
+        color: var(--tinta);
+      }
+      .barra .estado {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 clamp(12px, 2vw, 20px);
+        font-size: 12px;
+        color: rgba(20, 17, 15, 0.62);
+        border-left: 1px solid rgba(0, 0, 0, 0.1);
+      }
+      .pulso {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #b9b6b0;
+      }
+      .pulso.vivo {
+        background: #35a35a;
+        box-shadow: 0 0 0 0 rgba(53, 163, 90, 0.6);
+        animation: bater 2s infinite;
+      }
+      @keyframes bater {
+        70% {
+          box-shadow: 0 0 0 7px rgba(53, 163, 90, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(53, 163, 90, 0);
+        }
+      }
+
+      /* Painéis de papel, abertos por cima da barra. */
+      .folha {
+        position: absolute;
+        left: clamp(14px, 3vw, 34px);
+        right: clamp(14px, 3vw, 34px);
+        bottom: 64px;
+        max-height: min(66vh, 560px);
+        overflow-y: auto;
+        background: var(--papel);
+        color: var(--tinta);
+        padding: clamp(16px, 2.4vw, 28px);
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+      }
+      .folha[hidden] {
+        display: none;
+      }
+      .folha h2 {
+        margin: 0 0 10px;
+        font-size: clamp(18px, 2.4vw, 24px);
+      }
+      .folha p,
+      .folha li {
+        line-height: 1.5;
         font-size: 14px;
-        opacity: 0.75;
       }
-      p,
-      li {
-        line-height: 1.55;
-        font-size: 15px;
+      .folha a {
+        color: var(--acento);
       }
-      .regras {
+      .folha .regras {
         margin: 0;
         padding-left: 18px;
-        opacity: 0.88;
       }
-      .regras b {
-        color: var(--ouro);
+      .folha .regras b {
+        color: var(--acento);
       }
       .classes {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 8px;
         margin-top: 12px;
       }
       .classes div {
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.05);
         padding: 8px 10px;
         font-size: 13px;
       }
       .classes b {
         display: block;
-        color: var(--ouro);
+        color: var(--acento);
       }
       .teclas {
         display: flex;
         gap: 14px;
         flex-wrap: wrap;
-        margin-top: 16px;
+        margin-top: 14px;
         font-size: 13px;
-        opacity: 0.7;
+        color: rgba(20, 17, 15, 0.7);
       }
       kbd {
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 5px;
+        background: rgba(0, 0, 0, 0.07);
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        border-radius: 4px;
         padding: 2px 7px;
         font-family: inherit;
       }
@@ -226,7 +274,7 @@
         justify-content: space-between;
         gap: 12px;
         padding: 9px 0;
-        border-bottom: 1px solid rgba(242, 230, 201, 0.08);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
         font-size: 15px;
       }
       .ajuste span small {
@@ -239,61 +287,123 @@
         gap: 4px;
         flex: 0 0 auto;
       }
-      .opcoes button {
-        background: rgba(255, 255, 255, 0.07);
-        color: var(--papel);
-        border: 1px solid rgba(242, 230, 201, 0.18);
-        border-radius: 7px;
+      .opcoes button,
+      .folha button.pequeno {
+        background: transparent;
+        color: var(--tinta);
+        border: 1px solid rgba(0, 0, 0, 0.25);
         padding: 6px 11px;
         font: inherit;
         font-size: 13px;
         cursor: pointer;
       }
       .opcoes button[aria-pressed='true'] {
-        background: var(--ouro);
-        color: #1a1410;
-        border-color: transparent;
+        background: var(--acento);
+        border-color: var(--acento);
+        color: #fff;
         font-weight: 700;
       }
-      /* --- carregando --- */
-      .barra {
-        width: min(420px, 90vw);
-        height: 14px;
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(242, 230, 201, 0.2);
-        border-radius: 8px;
-        overflow: hidden;
-        margin: 18px 0 10px;
+      .linha {
+        display: flex;
+        gap: 10px;
+        margin: 14px 0 4px;
+        flex-wrap: wrap;
       }
-      .barra i {
-        display: block;
-        height: 100%;
-        width: 0;
-        background: linear-gradient(90deg, #ffd479, #e8a83c);
-        transition: width 0.15s linear;
+      input[type='text'] {
+        flex: 1 1 220px;
+        min-width: 0;
+        padding: 12px 14px;
+        font: inherit;
+        font-size: 16px;
+        color: var(--tinta);
+        background: #fff;
+        border: 1px solid rgba(0, 0, 0, 0.25);
+      }
+      button.grande {
+        padding: 12px 22px;
+        font: inherit;
+        font-size: 16px;
+        font-weight: 700;
+        color: #fff;
+        background: var(--acento);
+        border: none;
+        cursor: pointer;
+      }
+      button.grande:disabled {
+        opacity: 0.5;
+        cursor: progress;
+      }
+      .recado {
+        margin: 8px 0 0;
+        min-height: 18px;
+        font-size: 13px;
+        color: rgba(20, 17, 15, 0.7);
+      }
+
+      /* ----------------------------------------------------- tela de espera */
+      #carregando {
+        display: grid;
+        place-items: center;
+        background:
+          radial-gradient(circle at 50% 20%, rgba(90, 130, 200, 0.25), transparent 60%),
+          linear-gradient(160deg, #10121a, #1c1a26 55%, #2a1a1a);
       }
       .centro {
         text-align: center;
-        max-width: 520px;
+        max-width: 540px;
+        padding: 20px;
+      }
+      .barra-progresso {
+        width: min(420px, 80vw);
+        height: 12px;
+        background: rgba(255, 255, 255, 0.12);
+        overflow: hidden;
+        margin: 18px auto 10px;
+      }
+      .barra-progresso i {
+        display: block;
+        height: 100%;
+        width: 0;
+        background: var(--acento);
+        transition: width 0.15s linear;
       }
       .conselho {
         font-size: 14px;
-        opacity: 0.7;
-        min-height: 44px;
+        opacity: 0.72;
+        min-height: 46px;
       }
-      /* --- escolha de time --- */
+
+      /* --------------------------------------------------- escolha de lado */
+      #escolha {
+        display: grid;
+        place-items: center;
+        padding: 20px;
+        background: rgba(8, 10, 16, 0.72);
+        backdrop-filter: blur(2px);
+        overflow-y: auto;
+      }
       .escolha-caixa {
-        width: min(900px, 100%);
+        width: min(920px, 100%);
+        background: var(--papel);
+        color: var(--tinta);
+        padding: clamp(16px, 2.4vw, 26px);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
       }
       .escolha-topo {
         display: flex;
         justify-content: space-between;
         align-items: baseline;
-        margin-bottom: 10px;
+        gap: 12px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
       }
       .escolha-topo h2 {
         margin: 0;
-        font-size: clamp(20px, 4vw, 30px);
+        font-size: clamp(19px, 3vw, 28px);
+      }
+      .escolha-topo .dica {
+        font-size: 13px;
+        color: rgba(20, 17, 15, 0.65);
       }
       .lados {
         display: grid;
@@ -306,73 +416,61 @@
         }
       }
       .lado {
-        border: 3px solid transparent;
-        border-radius: 14px;
-        padding: 14px;
-        background: rgba(16, 18, 26, 0.86);
+        border: 3px solid rgba(0, 0, 0, 0.12);
+        padding: 12px;
+        background: #fff;
         cursor: pointer;
         transition:
           transform 0.12s ease,
           border-color 0.12s ease;
       }
-      .lado[data-time='azul'] {
-        box-shadow: inset 0 0 0 1px rgba(59, 127, 224, 0.5);
-      }
-      .lado[data-time='vermelho'] {
-        box-shadow: inset 0 0 0 1px rgba(224, 75, 59, 0.5);
-      }
       .lado[aria-selected='true'] {
-        transform: translateY(-4px) scale(1.015);
+        transform: translateY(-4px);
       }
       .lado[data-time='azul'][aria-selected='true'] {
-        border-color: var(--azul-claro);
+        border-color: var(--azul);
       }
       .lado[data-time='vermelho'][aria-selected='true'] {
-        border-color: var(--vermelho-claro);
+        border-color: var(--vermelho);
       }
       .lado h3 {
         margin: 0 0 2px;
-        font-size: 20px;
+        font-size: 19px;
       }
       .lado[data-time='azul'] h3 {
-        color: var(--azul-claro);
+        color: var(--azul);
       }
       .lado[data-time='vermelho'] h3 {
-        color: var(--vermelho-claro);
+        color: var(--vermelho);
       }
       .lado .sub {
         font-size: 12px;
-        opacity: 0.6;
+        color: rgba(20, 17, 15, 0.6);
         margin-bottom: 10px;
       }
       .vagas {
         display: grid;
-        gap: 5px;
+        gap: 4px;
       }
       .vaga {
         display: flex;
         align-items: center;
         gap: 8px;
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 7px;
+        background: rgba(0, 0, 0, 0.05);
         padding: 6px 9px;
         font-size: 14px;
-        min-height: 34px;
+        min-height: 32px;
       }
       .vaga.livre {
-        opacity: 0.4;
+        opacity: 0.45;
         font-style: italic;
       }
       .vaga.bot {
-        opacity: 0.72;
-      }
-      .vaga.eu {
-        background: rgba(255, 212, 121, 0.18);
-        font-weight: 700;
+        opacity: 0.7;
       }
       .ficha {
-        width: 10px;
-        height: 10px;
+        width: 9px;
+        height: 9px;
         border-radius: 50%;
         flex: 0 0 auto;
       }
@@ -392,86 +490,141 @@
       }
       .escolha-rodape .dica {
         font-size: 13px;
-        opacity: 0.7;
+        color: rgba(20, 17, 15, 0.65);
+      }
+
+      /* ------------------------------------------------- crachá de plateia */
+      #plateia {
+        position: fixed;
+        top: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 9;
+        background: var(--papel);
+        color: var(--tinta);
+        font-size: 13px;
+        font-weight: 700;
+        padding: 7px 14px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+      }
+      #plateia[hidden] {
+        display: none;
       }
     </style>
   </head>
   <body>
     <canvas id="tela"></canvas>
 
+    <div id="plateia" hidden>assistindo · <kbd>Esc</kbd> volta ao menu</div>
+
     <!-- ------------------------------------------------------- menu inicial -->
     <section id="menu" class="tela">
-      <div class="cartao">
-        <h1><small>Cyberkingdoms apresenta</small>A Balança do Reino</h1>
-        <div class="balanca-enfeite"><i></i><i></i></div>
+      <div class="marca">
+        <span class="kicker">REINO DE</span>
+        <h1>Migalhas</h1>
+      </div>
 
-        <div class="abas" role="tablist">
-          <button role="tab" data-aba="jogar" aria-selected="true">Jogar</button>
-          <button role="tab" data-aba="regras" aria-selected="false">Como se joga</button>
-          <button role="tab" data-aba="ajustes" aria-selected="false">Ajustes</button>
-        </div>
+      <p class="assinatura">um cerco a bolo · duas princesas · uma balança só</p>
 
-        <div class="painel" data-painel="jogar">
-          <p>
-            Duas princesas, uma balança só. A sua está presa na masmorra inimiga —
-            traga-a ao trono e o ponto é seu. O bolo é a arma:
-            <b>cada fatia dada à refém que você guarda engorda ela e alivia a sua</b>,
-            na mesma hora e na mesma medida. O peso do reino não aumenta, só muda de lado.
-          </p>
-          <div class="linha">
-            <input id="nome" type="text" maxlength="16" placeholder="seu apelido" autocomplete="off" />
-            <button id="jogar" class="grande">entrar na batalha</button>
-          </div>
-          <p class="recado" id="recado"></p>
-        </div>
+      <div class="barra">
+        <button id="jogar" class="primario">Jogar</button>
+        <button data-folha="apelido" aria-expanded="false">Apelido</button>
+        <button data-folha="regras" aria-expanded="false">Como se joga</button>
+        <button data-folha="ajustes" aria-expanded="false">Ajustes</button>
+        <button data-folha="creditos" aria-expanded="false">Créditos</button>
+        <button id="assistir">Assistir</button>
+        <span class="estado"><i class="pulso" id="pulso"></i><span id="estado-servidor">ligando…</span></span>
+      </div>
 
-        <div class="painel" data-painel="regras" hidden>
-          <ul class="regras">
-            <li>Princesa pesada precisa de até <b>três carregadores</b> e anda devagar.</li>
-            <li>Bolo sai de <b>carne</b>, e carne sai de <b>bicho caçado</b> no meio do mapa.</li>
-            <li><b>Madeira e ouro</b> entregues na chapelaria sobem a obra — mais vida e mais dano para o time.</li>
-            <li>A classe vem do chapéu, o chapéu <b>cai no chão</b> — e o inimigo pega.</li>
-            <li>Só multiplayer. Entrou sozinho? <b>Bots completam o time</b> e saem quando chega gente.</li>
-          </ul>
-          <div class="classes">
-            <div><b>Guerreiro</b>espada em arco, acerta tudo à frente</div>
-            <div><b>Lanceiro</b>estocada que fura a fila</div>
-            <div><b>Arqueiro</b>flecha de longe, frágil de perto</div>
-            <div><b>Clérigo</b>cura quem carrega a princesa</div>
-            <div><b>Minerador</b>picareta: ouro para a obra</div>
-            <div><b>Lenhador</b>machado: madeira para a obra</div>
-            <div><b>Caçador</b>abate o bicho e leva a carne</div>
-            <div><b>Aldeão</b>sem chapéu: faz de tudo, devagar</div>
-          </div>
-          <div class="teclas">
-            <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> andar</span>
-            <span><kbd>mouse</kbd> mirar · <kbd>clique</kbd> atacar</span>
-            <span><kbd>E</kbd> usar</span>
-            <span><kbd>Tab</kbd> placar</span>
-            <span>no celular: manche à esquerda, botões à direita</span>
-          </div>
+      <!-- painéis de papel -->
+      <div class="folha" data-folha="apelido" hidden>
+        <h2>Como querem te chamar?</h2>
+        <div class="linha">
+          <input id="nome" type="text" maxlength="16" placeholder="seu apelido" autocomplete="off" />
+          <button class="grande" data-acao="jogar">entrar na batalha</button>
         </div>
+        <p class="recado" id="recado"></p>
+      </div>
 
-        <div class="painel" data-painel="ajustes" hidden>
-          <div id="ajustes"></div>
-          <div class="linha">
-            <button id="padroes" class="grande">restaurar padrões</button>
-          </div>
+      <div class="folha" data-folha="regras" hidden>
+        <h2>Como se joga</h2>
+        <ul class="regras">
+          <li>
+            A <b>sua</b> princesa está presa na masmorra inimiga. Traga-a ao trono: três resgates
+            vencem.
+          </li>
+          <li>
+            Cada fatia de bolo dada à refém que você guarda <b>engorda ela e alivia a sua</b>, na
+            mesma hora e na mesma medida — o peso do reino não aumenta, só muda de lado.
+          </li>
+          <li>Princesa pesada precisa de até <b>três carregadores</b> e anda devagar.</li>
+          <li>Bolo sai de <b>carne</b>, e carne sai de <b>bicho caçado</b> no meio do mapa.</li>
+          <li>
+            <b>Madeira e ouro</b> entregues na chapelaria sobem a obra: mais vida e mais dano para o
+            time inteiro.
+          </li>
+          <li>A classe vem do chapéu, e o chapéu <b>cai no chão</b> quando o dono morre.</li>
+          <li>Só multiplayer. Entrou sozinho? <b>Bots completam o time</b> e saem quando chega gente.</li>
+        </ul>
+        <div class="classes">
+          <div><b>Guerreiro</b>espada em arco, acerta tudo à frente</div>
+          <div><b>Lanceiro</b>estocada que fura a fila</div>
+          <div><b>Arqueiro</b>flecha de longe, frágil de perto</div>
+          <div><b>Clérigo</b>cura quem carrega a princesa</div>
+          <div><b>Minerador</b>picareta: ouro para a obra</div>
+          <div><b>Lenhador</b>machado: madeira para a obra</div>
+          <div><b>Caçador</b>abate o bicho e leva a carne</div>
+          <div><b>Aldeão</b>sem chapéu: faz de tudo, devagar</div>
         </div>
+        <div class="teclas">
+          <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> andar</span>
+          <span><kbd>mouse</kbd> mirar · <kbd>clique</kbd> atacar</span>
+          <span><kbd>E</kbd> usar</span>
+          <span><kbd>Tab</kbd> placar</span>
+          <span>no celular: manche de um lado, botões do outro</span>
+        </div>
+      </div>
+
+      <div class="folha" data-folha="ajustes" hidden>
+        <h2>Ajustes</h2>
+        <div id="ajustes"></div>
+        <div class="linha"><button id="padroes" class="pequeno">restaurar padrões</button></div>
+      </div>
+
+      <div class="folha" data-folha="creditos" hidden>
+        <h2>Créditos</h2>
+        <p>
+          <b>Reino de Migalhas</b> nasceu dentro do CyberKingdoms, e reaproveita a base dele: o
+          gerador determinístico, o jeito de escrever e a arte.
+        </p>
+        <p>
+          Arte: <b>Tiny Swords</b>, de
+          <a href="https://pixelfrog-assets.itch.io/tiny-swords" target="_blank" rel="noreferrer">
+            Pixel Frog</a
+          >. Unidades, prédios, terreno e bichos são do pacote; o bolo, os chapéus no chão e a coroa
+          da princesa são desenhados no próprio jogo.
+        </p>
+        <p>
+          Inspiração declarada: <b>Fat Princess</b> (Titan Studios, 2009) — o esqueleto do resgate
+          por times. A balança conservada, os ofícios e o chapéu que se rouba são deste jogo.
+        </p>
       </div>
     </section>
 
     <!-- ---------------------------------------------------- tela de espera -->
     <section id="carregando" class="tela oculta">
       <div class="centro">
-        <h1><small>preparando o reino</small>A Balança do Reino</h1>
-        <div class="barra"><i id="progresso"></i></div>
-        <p class="recado" id="etapa">carregando a arte…</p>
+        <div class="marca" style="margin: 0 auto 10px">
+          <span class="kicker">REINO DE</span>
+          <h1>Migalhas</h1>
+        </div>
+        <div class="barra-progresso"><i id="progresso"></i></div>
+        <p class="recado" id="etapa" style="color: rgba(244, 242, 238, 0.8)">carregando a arte…</p>
         <p class="conselho" id="conselho"></p>
       </div>
     </section>
 
-    <!-- -------------------------------------------------- escolha de time -->
+    <!-- -------------------------------------------------- escolha de lado -->
     <section id="escolha" class="tela oculta">
       <div class="escolha-caixa">
         <div class="escolha-topo">
@@ -492,7 +645,8 @@
         </div>
         <div class="escolha-rodape">
           <span class="dica">
-            <kbd>A</kbd> <kbd>D</kbd> ou clique para trocar de lado · <kbd>Enter</kbd> para entrar
+            <kbd>A</kbd> <kbd>D</kbd> ou clique para trocar de lado · <kbd>Enter</kbd> para entrar ·
+            <kbd>Esc</kbd> volta ao menu
           </span>
           <button id="confirmar" class="grande">entrar no Reino Azul</button>
         </div>

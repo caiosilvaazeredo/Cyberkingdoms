@@ -20,6 +20,7 @@ function clienteMudo(nome: string): Cliente {
     nome,
     unidade: null,
     time: null,
+    assistindo: false,
     silencio: 0,
     enviar() {},
     fechar() {},

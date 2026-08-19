@@ -1,10 +1,14 @@
-# A Balança do Reino
+# Reino de Migalhas
 
 Um jogo de resgate por times, jogado só em rede, feito com a base do
 CyberKingdoms: a mesma arte Tiny Swords, o mesmo gerador determinístico, o mesmo
 jeito de escrever TypeScript. É o esqueleto do **Fat Princess** do PS3 — dois
 castelos, duas princesas, chapéus que dão classe — com uma regra nova no meio,
 que muda a conta do jogo inteiro.
+
+> A pasta continua se chamando `balanca/`, e o serviço publicado também: renomear
+> os dois quebraria o `rootDir` do deploy que já está no ar por nada. **Balança**
+> é o nome da mecânica; **Reino de Migalhas** é o nome do jogo.
 
 ---
 
@@ -85,13 +89,28 @@ Na chapelaria ele **roda a lista** de chapéus: aperte até chegar no que quer.
 Durante o aquecimento é a única ação liberada — é para isso que o aquecimento
 existe.
 
-### As quatro telas
+### As telas
 
 Menu → espera → escolha de lado → jogo.
 
-O menu tem abas (jogar, como se joga, ajustes) e os ajustes gravam no navegador
-a cada clique, sem botão de salvar: campo de visão, nomes na tela, mato ligado ou
-desligado, registro de eventos e o lado do manche.
+**O menu não tem fundo: o fundo é o jogo.** A página conecta ao servidor assim
+que abre, entra como plateia numa sala que já está rodando e desenha a partida
+atrás do título, com uma câmera que persegue o que decide o jogo — o cortejo da
+princesa primeiro, a princesa caída depois, o maior amontoado com os dois times
+em seguida, e o centro do mapa se o campo estiver morno. É o modo atração do
+fliperama, e num jogo só multiplayer ele responde sem texto a pergunta que todo
+mundo faz ao abrir: *tem alguém jogando aí?*
+
+Quem assiste **não ocupa vaga** — uma aba esquecida no menu não pode tirar o
+lugar de quem quer jogar. Só ao escolher um lado é que a pessoa senta à mesa. O
+botão **Assistir** esconde o menu e deixa só a partida; `Esc` volta.
+
+A marca fica no alto à esquerda e as ações numa barra de papel embaixo, no traço
+do protótipo: preto sobre branco, um acento vermelho, tipografia grande e seca.
+Os painéis (apelido, como se joga, ajustes, créditos) abrem como folhas de papel
+sobre a barra, e os ajustes gravam no navegador a cada clique, sem botão de
+salvar: campo de visão, nomes na tela, mato ligado ou desligado, registro de
+eventos e o lado do manche.
 
 A **escolha de lado** é uma camada por cima da partida já rodando, como no Super
 Smash Bros. e no Overcooked: os dois reinos aparecem com as vagas preenchidas ao
@@ -166,7 +185,7 @@ npm start            # http://localhost:8787
 ### Testes
 
 ```sh
-npm test             # 60 testes de regra, rede e comportamento dos bots
+npm test             # 71 testes de regra, rede, câmera e comportamento dos bots
 npm run check        # TypeScript, sem emitir
 node tools/fumaca.mjs  # sobe um Chromium, entra numa partida e confere
 ```
@@ -197,6 +216,7 @@ src/
     index.ts      HTTP + WebSocket, no mesmo processo
   client/
     telas.ts      menu, ajustes, espera e escolha de lado (em HTML)
+    atracao.ts    para onde a câmera olha quando ninguém está jogando
     ajustes.ts    preferências, saneadas na leitura
     arte.ts       as folhas do pacote, por classe e por time
     rede.ts       previsão local e interpolação

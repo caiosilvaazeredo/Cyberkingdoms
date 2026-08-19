@@ -56,7 +56,10 @@ services:
         value: public, max-age=3600
 
   # ---------------------------------------------------------------------------
-  # A Balança do Reino: jogo multiplayer de resgate, em `balanca/`.
+  # Reino de Migalhas: jogo multiplayer de resgate, em `balanca/`. (O nome do
+  # serviço e da pasta são anteriores ao nome do jogo, e ficam: trocar o
+  # `rootDir` ou o `name` de um serviço já publicado é derrubar o que está no ar
+  # para arrumar uma etiqueta.)
   #
   # Aqui o tipo é `web`, e não `static`, porque existe simulação rodando: a
   # partida acontece no servidor, a trinta ticks por segundo, e o mesmo processo

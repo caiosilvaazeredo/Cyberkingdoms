@@ -1,5 +1,5 @@
 /**
- * A Balança do Reino — os números do jogo, num arquivo só.
+ * Reino de Migalhas — os números do jogo, num arquivo só.
  *
  * ## O jogo
  *

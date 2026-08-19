@@ -66,7 +66,12 @@ export interface Comando {
 }
 
 export type DoCliente =
-  | { t: 'entrar'; nome: string; versao: number }
+  /**
+   * `assistindo` marca quem chegou só para ver — o menu do jogo mostra uma
+   * partida de verdade correndo atrás do título, e quem está lendo o menu não
+   * pode ocupar a vaga de quem quer jogar.
+   */
+  | { t: 'entrar'; nome: string; versao: number; assistindo?: boolean }
   /**
    * Escolher o lado é uma mensagem separada de entrar, e não um campo dela.
    *
@@ -74,7 +79,7 @@ export type DoCliente =
    * times para escolher, e para ver precisa já estar conectado. Então entrar dá
    * um espectador, e é esta mensagem que transforma o espectador em jogador.
    */
-  | { t: 'escolherTime'; time: Time }
+  | { t: 'escolherTime'; time: Time; nome?: string }
   | { t: 'comando'; c: Comando }
   | { t: 'ping'; tempo: number }
   | { t: 'sair' };

@@ -1,3 +1,4 @@
+import { alvoDaAtracao, aproximar } from './atracao';
 import { carregarArte, type Arte } from './arte';
 import { dicaDeUso } from './contexto';
 import { bussola, criarCamera, desenharMundo, realce, seguir, vistaDe } from './desenho';
@@ -6,10 +7,22 @@ import { desenharDica, desenharHud, narrar } from './hud';
 import { Rede } from './rede';
 import { Telas } from './telas';
 import { princesaDe } from '../shared/estado';
-import { DT, TILE } from '../shared/regras';
+import { DT } from '../shared/regras';
 
 /**
  * A montagem do cliente: telas, laço de quadro e a ponte entre eles.
+ *
+ * ## O jogo começa antes de o jogador começar
+ *
+ * A página conecta ao servidor assim que abre, como **plateia**: carrega a arte,
+ * entra numa sala que já está rodando e desenha a partida atrás do menu, com uma
+ * câmera que persegue o que interessa. É o modo atração do fliperama — e num
+ * jogo só multiplayer ele responde, sem texto, a pergunta que todo mundo faz ao
+ * abrir: "tem alguém jogando aí?".
+ *
+ * Quem assiste **não ocupa vaga**: uma aba esquecida aberta no menu não pode
+ * tirar o lugar de quem quer jogar. Só ao escolher um lado é que a pessoa senta
+ * à mesa.
  *
  * ## Dois relógios, de propósito
  *
@@ -19,18 +32,11 @@ import { DT, TILE } from '../shared/regras';
  * jogador de 144 Hz mandar cinco vezes mais comandos que o de 30 Hz e andar mais
  * rápido que ele, o que é um bug de justiça, não de desempenho.
  *
- * ## Quatro telas, uma partida
- *
- * Menu → espera → escolha de lado → jogo. A escolha de lado não interrompe nada:
- * o `canvas` continua desenhando a partida por baixo dela, com a câmera no meio
- * do mapa, porque quem está escolhendo precisa ver onde vai entrar.
- *
  * ## Não existe modo de um jogador
  *
  * Sem tela de partida solo, sem treino contra bots — o servidor é o jogo. Se
  * você entrar sozinho, ele arruma companhia; se chegar gente, os bots cedem o
- * lugar. É a mesma partida em todos os casos, e é isso que faz o "multiplayer"
- * não ser um modo entre outros.
+ * lugar.
  */
 
 const tela = document.querySelector<HTMLCanvasElement>('#tela')!;
@@ -38,16 +44,20 @@ const ctx = tela.getContext('2d')!;
 
 const entrada = new Entrada(tela);
 const camera = criarCamera();
+/** Alvo suavizado da câmera do modo atração. */
+let olhar = { x: 0, y: 0 };
 
 let arte: Arte | null = null;
 let rede: Rede | null = null;
 let acumulado = 0;
 let anterior = performance.now();
-let carregandoArte = false;
+/** Verdadeiro entre apertar "Jogar" e a tela de escolha aparecer. */
+let querendoJogar = false;
 
 const telas = new Telas({
   jogar: (nome) => void entrarNaBatalha(nome),
-  escolher: (time) => rede?.escolherTime(time),
+  assistir: () => telas.mostrar('plateia'),
+  escolher: (time) => rede?.escolherTime(time, telas.preferencias.nome || 'Anônimo'),
   ajustou: () => {
     // Nada a fazer além de guardar: o laço de quadro lê `telas.preferencias`
     // toda vez que desenha, então o ajuste vale no quadro seguinte.
@@ -73,26 +83,43 @@ function ajustarTela(): void {
 window.addEventListener('resize', ajustarTela);
 ajustarTela();
 
-async function entrarNaBatalha(nome: string): Promise<void> {
-  telas.mostrar('carregando');
-  if (!arte && !carregandoArte) {
-    carregandoArte = true;
-    telas.carregou(0, 'carregando a arte…');
-    arte = await carregarArte((feitos, total) => {
+/**
+ * Abre a conexão de plateia e carrega a arte.
+ *
+ * Roda ao abrir a página, sem que ninguém peça: é o que faz o menu ter uma
+ * partida atrás em vez de um fundo. Falhar aqui não impede nada — o menu
+ * continua de pé e a barra diz que o servidor não respondeu.
+ */
+async function comecarAAssistir(): Promise<void> {
+  rede = new Rede(enderecoDoServidor());
+  rede.conectar(telas.preferencias.nome || 'Anônimo', true);
+  arte = await carregarArte((feitos, total) => {
+    if (telas.atual === 'carregando') {
       telas.carregou((feitos / total) * 0.9, `carregando a arte… ${feitos}/${total}`);
-    });
-    carregandoArte = false;
+    }
+  });
+}
+
+async function entrarNaBatalha(nome: string): Promise<void> {
+  querendoJogar = true;
+  if (!arte || !rede || rede.fechado) {
+    telas.mostrar('carregando');
+    telas.carregou(0.05, 'preparando o reino…');
+    if (!arte) arte = await carregarArte();
+    if (!rede || rede.fechado) {
+      rede = new Rede(enderecoDoServidor());
+      rede.conectar(nome, true);
+    }
   }
   telas.carregou(0.95, 'procurando uma partida…');
-  rede = new Rede(enderecoDoServidor());
-  rede.conectar(nome);
+  // Daqui em diante o laço de quadro assume: quando a arena chegar, ele abre a
+  // tela de escolha de lado.
 }
 
 function voltarAoMenu(motivo: string): void {
-  rede?.desconectar();
-  rede = null;
+  querendoJogar = false;
   telas.mostrar('menu');
-  telas.avisar(motivo);
+  if (motivo) telas.avisar(motivo);
 }
 
 /**
@@ -122,45 +149,77 @@ function laco(agora: number): void {
   const ajustes = telas.preferencias;
   entrada.ladoDoManche = ajustes.manche;
 
-  if (!rede || !arte) return;
-  if (rede.fechado) {
+  const eu = rede?.eu ?? null;
+  const estado = rede?.estado ?? null;
+
+  telas.atualizarEstado({
+    ligado: rede !== null && !rede.fechado && rede.arena !== null,
+    sala: rede?.sala ?? '',
+    jogadores: [...(rede?.elenco.values() ?? [])].filter((f) => !f.bot).length,
+    bots: [...(rede?.elenco.values() ?? [])].filter((f) => f.bot).length,
+    ping: rede?.ping ?? 0,
+    ...(rede?.fechado ? { aviso: rede.motivo ?? 'servidor fora do ar' } : {}),
+  });
+
+  // A conexão caiu: quem estava jogando volta ao menu com o motivo; quem só
+  // assistia continua no menu, e a barra já está dizendo o que houve.
+  if (rede?.fechado && (eu || querendoJogar)) {
     voltarAoMenu(rede.motivo ?? 'a conexão caiu — tente de novo');
-    return;
+    rede = null;
   }
 
-  const eu = rede.eu;
-  const estado = rede.estado;
-
-  // Espectador: a câmera fica no meio do mapa e a tela de escolha aparece por
-  // cima da partida em curso.
-  if (rede.arena && rede.espectador) {
-    if (telas.atual !== 'escolha') telas.mostrar('escolha');
+  // Quem apertou "Jogar" e já tem arena vai para a escolha de lado.
+  if (querendoJogar && rede?.arena && !eu && telas.atual !== 'escolha') {
+    telas.mostrar('escolha');
+  }
+  if (eu && telas.atual !== 'jogo') {
+    querendoJogar = false;
+    telas.mostrar('jogo');
+  }
+  if (rede?.espectador && telas.atual === 'escolha') {
     telas.atualizarEscolha({
       porTime: rede.porTime,
       elenco: [...rede.elenco.values()],
       placar: estado?.placar ?? { azul: 0, vermelho: 0 },
       relogio: estado?.relogio ?? 0,
     });
-    if (rede.motivo) telas.avisar(rede.motivo);
-  } else if (rede.arena && eu && telas.atual !== 'jogo') {
-    telas.mostrar('jogo');
+    if (rede.motivo) telas.avisarNaEscolha(rede.motivo);
   }
 
-  const centroDoMapa = rede.arena
-    ? { x: (rede.arena.largura * TILE) / 2, y: (rede.arena.altura * TILE) / 2 }
-    : { x: 0, y: 0 };
-  const alvoDaCamera = eu ?? centroDoMapa;
-  if (rede.arena) seguir(camera, rede.arena, alvoDaCamera, largura, altura, ajustes);
+  if (!arte || !rede?.arena) {
+    ctx.fillStyle = '#14161f';
+    ctx.fillRect(0, 0, largura, altura);
+    return;
+  }
+
+  // --- câmera ------------------------------------------------------------
+  //
+  // Jogando, ela segue o seu personagem. Sem personagem — menu, plateia,
+  // escolha de lado —, ela persegue o que decide a partida, com atraso, como a
+  // câmera de um replay de esporte.
+  let alvoDaCamera: { x: number; y: number };
+  if (eu) {
+    alvoDaCamera = eu;
+  } else {
+    const alvo = alvoDaAtracao(estado, rede.arena.largura, rede.arena.altura);
+    if (olhar.x === 0 && olhar.y === 0) olhar = { x: alvo.x, y: alvo.y };
+    olhar = aproximar(olhar, alvo, dt);
+    alvoDaCamera = olhar;
+  }
+  seguir(camera, rede.arena, alvoDaCamera, largura, altura, ajustes);
+  // Na atração a vista abre um pouco: quem está lendo o menu quer ver a briga
+  // inteira, não o cotovelo de um guerreiro.
+  if (!eu) camera.zoom *= 0.9;
   const vista = vistaDe(camera, largura, altura);
   const centroNaTela = { x: vista.paraTelaX(alvoDaCamera.x), y: vista.paraTelaY(alvoDaCamera.y) };
 
   // Passo fixo: um comando por `DT`, nem mais nem menos, independentemente da
-  // taxa de quadros. Espectador não manda comando de movimento — mas manda o
-  // pacote, que é o que diz ao servidor que a conexão está viva.
+  // taxa de quadros. Plateia não manda comando de movimento — manda só o aceno
+  // que diz ao servidor que a conexão está viva.
   acumulado += dt;
   let passos = 0;
   while (acumulado >= DT && passos < 5) {
-    if (eu) {
+    if (eu && telas.atual === 'jogo') {
       rede.passar(entrada.ler(centroNaTela));
       espia.comandos++;
     }
@@ -171,11 +230,6 @@ function laco(agora: number): void {
   if (!eu) rede.manterVivo();
 
   const tempo = agora / 1000;
-  if (!rede.arena) {
-    ctx.fillStyle = '#14161f';
-    ctx.fillRect(0, 0, largura, altura);
-    return;
-  }
   desenharMundo(ctx, arte, rede.arena, rede, camera, largura, altura, tempo, ajustes);
 
   if (estado && eu && estado.princesas.length === 2) {
@@ -198,4 +252,5 @@ function laco(agora: number): void {
   if (eu) desenharHud(ctx, rede, entrada, largura, altura, tempo, ajustes);
 }
 
+void comecarAAssistir();
 requestAnimationFrame(laco);

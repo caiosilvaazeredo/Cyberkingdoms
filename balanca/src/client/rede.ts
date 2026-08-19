@@ -89,12 +89,18 @@ export class Rede {
     this.url = url;
   }
 
-  conectar(nome: string): void {
+  /**
+   * @param assistindo quem chega pelo menu entra como plateia e **não ocupa
+   * vaga** — a partida atrás do título não pode custar o lugar de um jogador.
+   */
+  conectar(nome: string, assistindo = false): void {
     this.nome = nome;
     const ws = new WebSocket(this.url);
     this.ws = ws;
     ws.onopen = () => {
-      ws.send(JSON.stringify({ t: 'entrar', nome: this.nome, versao: VERSAO_DO_PROTOCOLO }));
+      ws.send(
+        JSON.stringify({ t: 'entrar', nome: this.nome, versao: VERSAO_DO_PROTOCOLO, assistindo }),
+      );
       this.pingar();
     };
     ws.onmessage = (ev) => this.receber(JSON.parse(String(ev.data)) as DoServidor);
@@ -121,11 +127,17 @@ export class Rede {
     this.ws.send(JSON.stringify({ t: 'ping', tempo: agora }));
   }
 
-  /** Pede o lado. O servidor responde com `nasceu`, ou recusa com o motivo. */
-  escolherTime(time: Time): void {
+  /**
+   * Pede o lado. O servidor responde com `nasceu`, ou recusa com o motivo.
+   *
+   * O apelido viaja junto porque a conexão foi aberta como plateia, quando o
+   * jogador ainda não tinha dito como quer ser chamado.
+   */
+  escolherTime(time: Time, nome?: string): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
     this.motivo = null;
-    this.ws.send(JSON.stringify({ t: 'escolherTime', time }));
+    if (nome) this.nome = nome;
+    this.ws.send(JSON.stringify({ t: 'escolherTime', time, nome: this.nome }));
   }
 
   desconectar(): void {

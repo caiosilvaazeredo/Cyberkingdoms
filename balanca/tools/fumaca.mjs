@@ -40,9 +40,15 @@ pagina.on('console', (m) => {
 pagina.on('pageerror', (e) => erros.push(String(e)));
 
 await pagina.goto(endereco, { waitUntil: 'networkidle' });
+
+// O menu já mostra uma partida ao vivo atrás do título: espere-a aparecer antes
+// de julgar qualquer coisa, senão a captura sai preta e o erro é do teste.
+await pagina.waitForFunction(() => window.balanca?.relogio() !== null, { timeout: 30000 });
 await pagina.screenshot({ path: 'fumaca-menu.png' });
+
+await pagina.click('button[data-folha="apelido"]');
 await pagina.fill('#nome', 'Fumaça');
-await pagina.click('#jogar');
+await pagina.click('[data-acao="jogar"]');
 
 // A escolha de lado aparece por cima da partida; entrar é uma tecla.
 await pagina.waitForFunction(() => window.balanca?.tela() === 'escolha', { timeout: 30000 });

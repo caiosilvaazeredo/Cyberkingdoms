@@ -54,11 +54,20 @@ export interface Cliente {
   unidade: number | null;
   /** O lado escolhido. Sobrevive ao fim da partida e vale na próxima. */
   time: Time | null;
+  /**
+   * Está só olhando: chegou pelo menu, que mostra a partida ao vivo atrás do
+   * título. Quem assiste **não ocupa vaga** — uma aba esquecida aberta não pode
+   * tirar o lugar de quem quer jogar. Deixa de assistir ao escolher um lado.
+   */
+  assistindo: boolean;
   /** Segundos desde a última mensagem recebida. */
   silencio: number;
   enviar(msg: DoServidor): void;
   fechar(): void;
 }
+
+/** Espectadores por sala. Plateia também custa banda: um retrato cada. */
+const TETO_DE_ESPECTADORES = 24;
 
 export interface OpcoesDaSala {
   nome: string;
@@ -111,8 +120,15 @@ export class Sala {
    */
   get vagas(): number {
     const emCampo = this.partida.estado.unidades.filter((u) => !u.bot).length;
-    const escolhendo = [...this.clientes.values()].filter((c) => c.unidade === null).length;
+    const escolhendo = [...this.clientes.values()].filter(
+      (c) => c.unidade === null && !c.assistindo,
+    ).length;
     return this.porTime * 2 - emCampo - escolhendo;
+  }
+
+  /** Quantos estão só olhando o menu. Diagnóstico e o teto de espectadores. */
+  get assistindo(): number {
+    return [...this.clientes.values()].filter((c) => c.assistindo).length;
   }
 
   get cheiaDeGente(): boolean {
@@ -126,14 +142,26 @@ export class Sala {
 
   // --- entrada e saída ----------------------------------------------------
 
-  /** Aceita a conexão como espectador. A unidade só nasce em `escolher`. */
-  entrar(cliente: Cliente): boolean {
-    if (this.cheiaDeGente) {
+  /**
+   * Aceita a conexão como espectador. A unidade só nasce em `escolher`.
+   *
+   * Quem chega assistindo entra mesmo com a sala cheia de jogadores — é o menu
+   * mostrando a partida, e recusar isso deixaria um fundo cinza no lugar do
+   * jogo. O teto de espectadores existe porque simular para plateia custa banda:
+   * cada um recebe quinze retratos por segundo como qualquer jogador.
+   */
+  entrar(cliente: Cliente, assistindo = false): boolean {
+    if (assistindo && this.assistindo >= TETO_DE_ESPECTADORES) {
+      cliente.enviar({ t: 'recusado', motivo: 'plateia cheia' });
+      return false;
+    }
+    if (!assistindo && this.cheiaDeGente) {
       cliente.enviar({ t: 'recusado', motivo: 'sala cheia' });
       return false;
     }
     cliente.unidade = null;
     cliente.time = null;
+    cliente.assistindo = assistindo;
     cliente.silencio = 0;
     this.clientes.set(cliente.chave, cliente);
     cliente.enviar({
@@ -159,7 +187,10 @@ export class Sala {
     const cliente = this.clientes.get(chave);
     if (!cliente) return false;
     if (cliente.unidade !== null) return false;
+    // Escolher um lado é parar de assistir: a partir daqui a pessoa ocupa vaga.
+    cliente.assistindo = false;
     if (this.contarHumanos(time) >= this.porTime) {
+      cliente.assistindo = true;
       cliente.enviar({ t: 'recusado', motivo: 'esse lado está cheio de gente' });
       return false;
     }

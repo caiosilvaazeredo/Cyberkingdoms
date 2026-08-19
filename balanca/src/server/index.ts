@@ -129,6 +129,7 @@ wss.on('connection', (ws: WebSocket) => {
     nome: 'Anônimo',
     unidade: null,
     time: null,
+    assistindo: false,
     silencio: 0,
     enviar(msg: DoServidor) {
       if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(msg));
@@ -156,7 +157,7 @@ wss.on('connection', (ws: WebSocket) => {
           return;
         }
         cliente.nome = apelido(msg.nome);
-        sala = lobby.acolher(cliente);
+        sala = lobby.acolher(cliente, msg.assistindo === true);
         if (!sala) ws.close();
         return;
       }
@@ -164,6 +165,9 @@ wss.on('connection', (ws: WebSocket) => {
         if (!sala) return;
         sala.tocar(chave);
         if (msg.time !== 'azul' && msg.time !== 'vermelho') return;
+        // O apelido chega aqui, e não no `entrar`: a conexão foi aberta pelo
+        // menu, como plateia, antes de a pessoa dizer como quer ser chamada.
+        if (msg.nome !== undefined) cliente.nome = apelido(msg.nome);
         sala.escolher(chave, msg.time);
         return;
       }
@@ -207,7 +211,7 @@ function apelido(bruto: unknown): string {
 }
 
 servidor.listen(PORTA, () => {
-  console.log(`A Balança do Reino ouvindo em http://localhost:${PORTA}`);
+  console.log(`Reino de Migalhas ouvindo em http://localhost:${PORTA}`);
   // O caminho vai para o log de propósito: quando a arte some em produção, a
   // primeira pergunta é sempre "de onde este processo está servindo?".
   console.log(existsSync(RAIZ) ? `servindo ${RAIZ}` : `SEM cliente compilado em ${RAIZ}`);

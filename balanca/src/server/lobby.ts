@@ -56,17 +56,23 @@ export class Lobby {
     return this.salas.map((s) => ({ nome: s.nome, humanos: s.humanos, vagas: s.vagas }));
   }
 
-  /** Coloca o cliente na sala mais cheia de gente que ainda tem vaga. */
-  acolher(cliente: Cliente): Sala | null {
+  /**
+   * Coloca o cliente na sala mais cheia de gente que ainda tem vaga.
+   *
+   * Quem chega **assistindo** vai para a sala mais movimentada, cheia ou não: o
+   * menu quer mostrar a partida com mais gente, que é a mais interessante de
+   * ver, e plateia não tira o lugar de ninguém.
+   */
+  acolher(cliente: Cliente, assistindo = false): Sala | null {
     const candidatas = this.salas
-      .filter((s) => !s.cheiaDeGente)
+      .filter((s) => assistindo || !s.cheiaDeGente)
       .sort((a, b) => b.humanos - a.humanos);
     const escolhida = candidatas[0] ?? this.abrirSala();
     if (!escolhida) {
       cliente.enviar({ t: 'recusado', motivo: 'todas as salas cheias' });
       return null;
     }
-    if (!escolhida.entrar(cliente)) return null;
+    if (!escolhida.entrar(cliente, assistindo)) return null;
     return escolhida;
   }
 

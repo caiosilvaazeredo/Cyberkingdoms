@@ -33,7 +33,7 @@ test.
 
 ---
 
-## Outro jogo na mesma base: A Balança do Reino
+## Outro jogo na mesma base: Reino de Migalhas
 
 Em `balanca/` vive um segundo jogo, feito com as peças deste repositório — a
 arte Tiny Swords, o gerador determinístico, o mesmo estilo de TypeScript. É um
@@ -47,9 +47,10 @@ lado.
 
 Sete classes com as animações do pacote Tiny Swords (guerreiro, lanceiro,
 arqueiro e clérigo brigam; minerador, lenhador e caçador sustentam), servidor
-autoritativo em Node a 30 ticks por segundo, escolha de lado no estilo do Smash
-sobre a partida em curso, bots que completam os times quando falta gente e cedem
-o lugar assim que alguém chega, e 60 testes. Detalhes, regras e como rodar:
+autoritativo em Node a 30 ticks por segundo, menu com a partida rodando ao vivo
+atrás do título, escolha de lado no estilo do Smash sobre o jogo em curso, bots
+que completam os times quando falta gente e cedem o lugar assim que alguém
+chega, e 71 testes. Detalhes, regras e como rodar:
 [`balanca/README.md`](balanca/README.md).
 
 ---
