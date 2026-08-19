@@ -88,6 +88,8 @@ export interface Arena {
   tile(tx: number, ty: number): number;
   ehChao(tx: number, ty: number): boolean;
   bloqueado(tx: number, ty: number): boolean;
+  /** O mato deste tile, já resolvido na criação da arena. Ver `decoracaoEm`. */
+  decoracao(tx: number, ty: number): DecoracaoNoChao | null;
   estrutura(tipo: TipoDeEstrutura, time: Time): Estrutura;
 }
 
@@ -271,6 +273,17 @@ export function criarArena(seed: number): Arena {
     return tiles[ty * largura + tx]!;
   };
 
+  // A decoração é derivada da seed, e desde que ela passou a **barrar
+  // passagem** virou consulta de caminho: a busca em largura do navegador
+  // pergunta `bloqueado` por tile do mapa, e a colisão pergunta quatro vezes
+  // por unidade por tick. Calculada na hora, cada pergunta varria estruturas,
+  // jazidas e pastos e ainda montava um gerador — mil vezes mais caro do que
+  // ler um índice. Por isso o mato é resolvido uma vez, aqui, e guardado: são
+  // 2040 tiles, o custo é de milissegundos na criação da sala, e depois disso
+  // `bloqueado` é um acesso a array.
+  const decoracoes: (DecoracaoNoChao | null)[] = new Array(largura * altura).fill(null);
+  const bloqueados = new Uint8Array(largura * altura);
+
   const arena: Arena = {
     seed,
     largura,
@@ -281,15 +294,28 @@ export function criarArena(seed: number): Arena {
     pastos,
     tile,
     ehChao: (tx, ty) => tile(tx, ty) !== AGUA,
-    // A decoração é derivada da seed da arena. Assim, servidor e cliente
-    // chegam aos mesmos obstáculos sem carregar uma lista extra pela rede.
-    bloqueado: (tx, ty) => tile(tx, ty) === AGUA || decoracaoEm(arena, tx, ty) !== null,
+    decoracao: (tx, ty) =>
+      tx < 0 || ty < 0 || tx >= largura || ty >= altura ? null : decoracoes[ty * largura + tx]!,
+    // Fora do mapa é água, e água barra: quem sai do quadro é empurrado de
+    // volta em vez de cair no vazio.
+    bloqueado: (tx, ty) =>
+      tx < 0 || ty < 0 || tx >= largura || ty >= altura
+        ? true
+        : bloqueados[ty * largura + tx] === 1,
     estrutura(tipo, time) {
       const achada = estruturas.find((e) => e.tipo === tipo && e.time === time);
       if (!achada) throw new Error(`estrutura ausente: ${tipo}/${time}`);
       return achada;
     },
   };
+
+  for (let ty = 0; ty < altura; ty++) {
+    for (let tx = 0; tx < largura; tx++) {
+      const deco = calcularDecoracao(arena, tx, ty);
+      decoracoes[ty * largura + tx] = deco;
+      bloqueados[ty * largura + tx] = tile(tx, ty) === AGUA || deco !== null ? 1 : 0;
+    }
+  }
   return arena;
 }
 
@@ -371,19 +397,37 @@ export function linhaLivre(
 
 export type Decoracao = 'arvore' | 'arbusto' | 'pedra';
 
+export interface DecoracaoNoChao {
+  tipo: Decoracao;
+  variante: number;
+  deslocamento: number;
+}
+
 /**
- * O mato, decidido por seed e coordenada.
+ * O mato deste tile.
  *
- * Só o cliente chama. Decoração não colide com nada — se colidisse, seria
- * estado do jogo e teria de vir do servidor. Um arbusto que empata a corrida do
- * carregador precisa estar no mesmo lugar para os doze jogadores; um arbusto
- * que só enfeita não precisa, e não paga banda por isso.
+ * Ele é **derivado da seed e da coordenada**, e é isso que permite que ele
+ * atrapalhe a corrida: a árvore que empata o carregador precisa estar no mesmo
+ * lugar para os doze jogadores, e derivá-la dá esse acordo de graça, sem
+ * mandar uma lista de obstáculos pela rede.
+ *
+ * A conta em si está em `calcularDecoracao` e roda uma vez por tile, na criação
+ * da arena; aqui só se lê a tabela. Continua sendo uma função para quem tem uma
+ * arena na mão e quer o mato de um ponto — o desenho, e os testes.
  */
-export function decoracaoEm(
-  arena: Arena,
-  tx: number,
-  ty: number,
-): { tipo: Decoracao; variante: number; deslocamento: number } | null {
+export function decoracaoEm(arena: Arena, tx: number, ty: number): DecoracaoNoChao | null {
+  return arena.decoracao(tx, ty);
+}
+
+/**
+ * A conta do mato: onde ele pode nascer, e o que nasce.
+ *
+ * Chamada só por `criarArena`, uma vez por tile. As exclusões são de jogo, não
+ * de estética: pátio de castelo é limpo para não entulhar a saída, e o entorno
+ * de jazida e pasto é limpo para que ninguém precise contornar uma pedra para
+ * chegar ao ouro que o mapa prometeu.
+ */
+function calcularDecoracao(arena: Arena, tx: number, ty: number): DecoracaoNoChao | null {
   if (!arena.ehChao(tx, ty) || arena.tile(tx, ty) === PONTE) return null;
   // Perto de qualquer estrutura o chão é limpo: é pátio de castelo, não mata.
   for (const e of arena.estruturas) {
