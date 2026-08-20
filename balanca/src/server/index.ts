@@ -219,7 +219,7 @@ function apelido(bruto: unknown): string {
 }
 
 servidor.listen(PORTA, () => {
-  console.log(`Reino de Migalhas ouvindo em http://localhost:${PORTA}`);
+  console.log(`Meu Querido Rei ouvindo em http://localhost:${PORTA}`);
   // O caminho vai para o log de propósito: quando a arte some em produção, a
   // primeira pergunta é sempre "de onde este processo está servindo?".
   console.log(existsSync(RAIZ) ? `servindo ${RAIZ}` : `SEM cliente compilado em ${RAIZ}`);

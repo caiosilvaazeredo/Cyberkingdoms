@@ -1,4 +1,4 @@
-# Reino de Migalhas
+# Meu Querido Rei
 
 Um jogo de resgate por times, jogado só em rede, feito com a base do
 CyberKingdoms: a mesma arte Tiny Swords, o mesmo gerador determinístico, o mesmo
@@ -8,7 +8,7 @@ que muda a conta do jogo inteiro.
 
 > A pasta continua se chamando `balanca/`, e o serviço publicado também: renomear
 > os dois quebraria o `rootDir` do deploy que já está no ar por nada. **Balança**
-> é o nome da mecânica; **Reino de Migalhas** é o nome do jogo.
+> é o nome da mecânica; **Meu Querido Rei** é o nome do jogo.
 
 ---
 
@@ -160,7 +160,33 @@ Smash Bros. e no Overcooked: os dois reinos aparecem com as vagas preenchidas ao
 vivo — quem é gente, quem é bot, quanto está o placar — e você decide vendo o
 campo atrás do painel. `A`/`D` ou clique troca de lado, `Enter` entra. Escolher o
 lado mais cheio é permitido; só o que está cheio de **gente** é recusado, e com o
-motivo escrito.
+motivo escrito. A lista de vagas rola por dentro da caixa e o botão de entrar
+fica fixo no rodapé: a ação principal de uma tela nunca pode exigir rolagem para
+aparecer.
+
+### A tipografia: a gótica é do nome
+
+O título usa a **BlackFlag**, e ela para aí. É uma gótica: bonita num nome de
+três letras a setenta pixels, e ilegível em tudo o mais — "Assistir" escrito nela
+num botão de dezoito pixels vira mancha, e um menu que exige esforço para ser
+lido é um menu que atrasa quem quer jogar. O resto da interface usa a mesma
+sem-serifa do jogo, em peso alto, que é como um jogo de sofá escreve os seus
+botões.
+
+### Caber em qualquer tela
+
+O menu vira uma coluna só abaixo de 700 px de largura, e o gradiente passa a
+descer em vez de atravessar, para o texto ter contraste no alto e no rodapé.
+Abaixo de 520 px de **altura** — celular deitado, que é onde o sofá acontece —
+somem os subtítulos dos botões e a assinatura: explicação é a primeira coisa a
+ceder quando não cabe o que se clica. As vagas da cabine e os dois reinos da
+escolha se acomodam com `auto-fit`, sem uma escada de breakpoints que sempre
+erra o tamanho de alguém, e todo alvo de toque tem piso de 40 px.
+
+No `canvas` a mesma ideia, à mão: a legenda da balança encurta, o cabeçalho da
+sala vira `2+10 · 12 ms` quando encostaria no relógio, e os cartões do sofá
+perdem o nome e a classe quando ficam estreitos demais para eles — o que sobra é
+a cor da vaga e a barra de vida, que é o que não pode faltar.
 
 ### As sete classes: quatro que brigam, três que sustentam
 
@@ -228,15 +254,26 @@ npm start            # http://localhost:8787
 ### Testes
 
 ```sh
-npm test             # 71 testes de regra, rede, câmera e comportamento dos bots
-npm run check        # TypeScript, sem emitir
-node tools/fumaca.mjs  # sobe um Chromium, entra numa partida e confere
+npm test                 # 95 testes de regra, rede, controle, câmera e bots
+npm run check            # TypeScript, sem emitir
+node tools/fumaca.mjs    # sobe um Chromium e joga com duas pessoas no sofá
+node tools/tamanhos.mjs  # abre cada tela em cinco tamanhos e mede o que vazou
 ```
 
-O teste de fumaça precisa do servidor no ar (`npm start`) e do Chromium do
-Playwright. Ele entra no jogo como uma pessoa entraria, anda, ataca, e reprova se
-alguma coisa escrever no console de erro, se o relógio da partida não andar ou se
-o cliente parar de mandar comando.
+Os dois roteiros de navegador precisam do servidor no ar (`npm start`) e do
+Chromium do Playwright.
+
+O **teste de fumaça** entra no jogo como duas pessoas entrariam — uma no WASD,
+outra nas setas —, anda, ataca, e reprova se alguma coisa escrever no console de
+erro, se o relógio da partida não andar, se o cliente parar de mandar comando ou
+se o sofá se dividir entre os dois reinos.
+
+O **roteiro de tamanhos** abre o menu, a cabine e a escolha de lado em monitor,
+notebook, tablet, celular em pé e celular deitado. Ele não julga beleza: mede
+três coisas mecânicas — algo mais largo que a janela, um botão fora da tela ou
+com menos de 40 px de altura, e conteúdo cortado pela própria caixa. É o tipo de
+defeito que só aparece no tamanho em que ninguém abriu, e que passa despercebido
+justamente porque quem programa olha no monitor em que tudo cabe.
 
 ---
 
@@ -272,6 +309,7 @@ src/
 tools/
   importar-arte.mjs  traz do pacote Tiny Swords só a arte que o jogo desenha
   fumaca.mjs         teste de fumaça num Chromium de verdade
+  tamanhos.mjs       as telas em cinco tamanhos, medindo o que vazou
 ```
 
 ## A arte

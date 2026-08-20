@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
-    <title>Reino de Migalhas</title>
+    <title>Meu Querido Rei</title>
     <!--
       Ícone embutido como SVG: uma balança de dois pratos, um cheio e um vazio.
       Vai por `data:` para não custar um pedido — e para o navegador parar de
@@ -27,8 +27,14 @@
         importante é o mais alto e o mais quente, e a partida ao vivo continua
         correndo atrás de tudo.
 
-        A fonte é a BlackFlag, e ela é só da moldura: dentro do jogo, texto
-        pequeno com serifa de fantasia vira mancha ilegível na hora da briga.
+        ## A gótica é do nome, e de mais nada
+
+        A BlackFlag desenha **o título** e para por aí. Ela é uma gótica: bonita
+        num nome de três letras a setenta pixels, e ilegível em tudo o mais.
+        "Assistir" escrito nela num botão de dezoito pixels vira mancha, e um
+        menu que exige esforço para ser lido é um menu que atrasa quem quer
+        jogar. O resto da interface usa a mesma sem-serifa do jogo, em peso
+        alto — que é como um jogo de sofá escreve os seus botões.
       */
       @font-face {
         font-family: 'BlackFlag';
@@ -45,7 +51,9 @@
         --vermelho: #cf3b2f;
         --vermelho-claro: #ff9c8f;
         --ouro: #ffd479;
+        /* Só o nome do jogo. Ver o comentário acima antes de reaproveitar. */
         --titulo: 'BlackFlag', 'Trebuchet MS', system-ui, sans-serif;
+        --texto: 'Trebuchet MS', system-ui, sans-serif;
       }
       * {
         box-sizing: border-box;
@@ -53,10 +61,16 @@
       html,
       body {
         margin: 0;
+        /*
+          `dvh` porque no celular a barra do navegador aparece e some, e `100vh`
+          é a altura **sem** ela: com a barra à mostra, a última linha do menu
+          fica embaixo dela e o botão de jogar não recebe o toque.
+        */
         height: 100%;
+        height: 100dvh;
         overflow: hidden;
         background: #10121a;
-        font-family: 'Trebuchet MS', system-ui, sans-serif;
+        font-family: var(--texto);
         color: var(--papel);
         -webkit-user-select: none;
         user-select: none;
@@ -93,7 +107,13 @@
       */
       #menu {
         display: grid;
-        grid-template-columns: minmax(260px, 27vw) 1fr;
+        /*
+          A coluna cresce com a tela até um teto e nunca abaixo de um piso: com
+          `27vw` puro, um monitor ultralargo dava uma coluna de meio metro e um
+          notebook de 1024 dava uma coluna estreita demais para "Como se joga"
+          caber numa linha.
+        */
+        grid-template-columns: clamp(232px, 26vw, 340px) 1fr;
         pointer-events: none;
         background: linear-gradient(
           to right,
@@ -106,8 +126,9 @@
         pointer-events: auto;
         display: flex;
         flex-direction: column;
-        gap: clamp(6px, 1vh, 10px);
-        padding: clamp(12px, 2vw, 24px);
+        gap: clamp(5px, 1vh, 10px);
+        padding: clamp(10px, 2vw, 24px);
+        min-height: 0;
         overflow-y: auto;
       }
       .marca {
@@ -126,17 +147,21 @@
         font-size: clamp(9px, 1.1vw, 12px);
         font-weight: 700;
         letter-spacing: 0.22em;
-        padding: 3px clamp(8px, 1.2vw, 12px);
+        /* Sem uma entrelinha explícita, a caixa vermelha se cola às maiúsculas
+           e o topo das letras encosta na borda. */
+        line-height: 1.5;
+        padding: 2px clamp(8px, 1.2vw, 12px);
       }
       .marca h1 {
         margin: 2px 0 0;
         font-family: var(--titulo);
         /*
-          O tamanho é limitado pela **coluna**, e não pela tela: a primeira
-          versão usava 5vw e cortava o "as" de Migalhas fora do quadro, porque a
-          coluna tem um quarto da largura e a gótica é uma letra larga.
+          O tamanho é limitado pela **coluna**, e não pela tela: com `vw` puro a
+          gótica, que é larga, saía do quadro e o fim do nome era cortado. A
+          altura entra na conta por causa do celular deitado, em que sobra
+          largura e não sobra altura nenhuma.
         */
-        font-size: clamp(26px, 3.4vw, 44px);
+        font-size: clamp(34px, min(6vw, 9vh), 68px);
         line-height: 0.95;
         letter-spacing: 0.01em;
         color: #fff;
@@ -159,20 +184,26 @@
         border-bottom-width: 6px;
         border-radius: 10px;
         color: #fff;
-        font-family: var(--titulo);
-        font-size: clamp(15px, 1.55vw, 20px);
-        letter-spacing: 0.06em;
+        font-family: var(--texto);
+        font-weight: 800;
+        font-size: clamp(14px, 1.5vw, 19px);
+        letter-spacing: 0.04em;
         text-align: center;
+        /*
+          O alvo de toque tem um piso: dedo não acerta botão de vinte pixels, e
+          é justamente no celular que a coluna fica mais apertada.
+        */
+        min-height: 44px;
         padding: clamp(8px, 1.4vh, 12px) 10px clamp(6px, 1.1vh, 10px);
         cursor: pointer;
-        text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.45);
+        text-shadow: 1px 2px 0 rgba(0, 0, 0, 0.4);
         box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
         transition: transform 0.08s ease;
       }
       .coluna button.item small {
         display: block;
-        font-family: 'Trebuchet MS', system-ui, sans-serif;
-        font-size: 11px;
+        font-weight: 400;
+        font-size: clamp(10px, 1vw, 12px);
         letter-spacing: 0.02em;
         opacity: 0.86;
         text-shadow: none;
@@ -201,14 +232,33 @@
       .item.rubro {
         background: linear-gradient(#e2564b, #bf3128);
       }
+      /*
+        `minmax(0, 1fr)` e não `1fr`.
+
+        `1fr` é `minmax(auto, 1fr)`, e esse `auto` é o **mínimo de conteúdo**:
+        três botões com palavras que não quebram se recusam a encolher, a
+        fileira fica mais larga que a coluna e o último — "Créditos" — é cortado
+        pela borda. Com o mínimo zerado, as colunas cedem e a palavra é que
+        precisa caber; daí a fonte menor e a quebra de emergência.
+      */
       .miudos {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 8px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
       }
+      /*
+        `nowrap` de propósito, e não `overflow-wrap: anywhere`.
+
+        Quebrar a palavra faz o defeito virar "Crédit / os" — feio, e invisível
+        para qualquer teste, porque texto quebrado não é transbordo. Proibindo a
+        quebra, um rótulo que não couber **sai da caixa**, e aí o roteiro de
+        tamanhos acusa em vez de a feiura chegar ao jogador.
+      */
       .miudos button.item {
-        font-size: clamp(11px, 1.2vw, 14px);
-        padding: 9px 4px 7px;
+        font-size: clamp(10px, 1.1vw, 13px);
+        letter-spacing: 0;
+        padding: 9px 2px 7px;
+        white-space: nowrap;
       }
       .coluna button.item[aria-expanded='true'] {
         filter: brightness(1.25);
@@ -278,14 +328,68 @@
         padding: clamp(16px, 2.4vw, 28px);
         box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
       }
-      @media (max-width: 760px) {
+      /*
+        Estreito: a coluna vira a tela inteira e o painel ocupa o mesmo lugar.
+
+        Não dá para insistir na coluna aqui — ela ficaria com metade de um
+        celular em pé, e "até 4 no mesmo aparelho · sem estranhos" quebraria em
+        cinco linhas. O jogo continua atrás; o gradiente é que passa a descer em
+        vez de atravessar, para o texto ter contraste no alto e no rodapé.
+      */
+      @media (max-width: 700px) {
         #menu {
           grid-template-columns: 1fr;
+          background: linear-gradient(
+            to bottom,
+            rgba(10, 12, 18, 0.78) 0%,
+            rgba(10, 12, 18, 0.35) 55%,
+            rgba(10, 12, 18, 0.78) 100%
+          );
+        }
+        .coluna {
+          /* Numa tela larga de tablet, a coluna esticada daria botões de um
+             palmo. Ela para de crescer e fica encostada à esquerda. */
+          max-width: 460px;
         }
         .folha {
           grid-column: 1;
           grid-row: 1;
           justify-self: stretch;
+          margin: 10px;
+          width: auto;
+          max-height: calc(100dvh - 20px);
+        }
+      }
+
+      /*
+        Baixo: celular deitado, e é aí que o sofá acontece de verdade.
+
+        Sobra largura e não sobra altura nenhuma. O que sai são os subtítulos
+        dos botões e a assinatura — texto que explica, e explicação é a primeira
+        coisa a ceder quando não cabe o que se clica.
+      */
+      @media (max-height: 520px) {
+        .coluna button.item small,
+        .assinatura {
+          display: none;
+        }
+        .coluna button.item {
+          /* Encolhe, mas não abaixo do que um dedo acerta: quarenta pixels é o
+             piso, e um botão que não recebe o toque é pior que um botão feio. */
+          min-height: 40px;
+          padding: 6px 10px 5px;
+        }
+        /* Os miúdos ficam com a margem lateral deles: com os dez pixels da
+           regra acima sobram trinta e sete de texto, e "Créditos" quebra ao
+           meio. Vem depois de propósito — a regra genérica é que é a exceção. */
+        .miudos button.item {
+          padding: 6px 2px 5px;
+        }
+        .marca {
+          margin-bottom: 2px;
+        }
+        .estado {
+          padding: 6px 10px;
         }
       }
       .folha[hidden] {
@@ -395,8 +499,9 @@
       button.grande {
         padding: 12px 22px;
         font: inherit;
-        font-size: 16px;
+        font-size: clamp(14px, 1.5vw, 16px);
         font-weight: 700;
+        min-height: 44px;
         color: #fff;
         background: var(--acento);
         border: none;
@@ -450,16 +555,28 @@
       #escolha {
         display: grid;
         place-items: center;
-        padding: 20px;
+        padding: clamp(10px, 2vw, 20px);
         background: rgba(8, 10, 16, 0.72);
         backdrop-filter: blur(2px);
         overflow-y: auto;
       }
+      /*
+        A caixa não rola: **a lista de vagas** é que rola dentro dela.
+
+        Rolar a caixa inteira empurra o botão de entrar para baixo da dobra num
+        celular deitado — e a ação principal de uma tela nunca pode exigir
+        rolagem para aparecer. Assim o título fica no alto, o botão no rodapé, e
+        o que cede é o elenco, que é o que a pessoa lê e não o que ela aperta.
+      */
       .escolha-caixa {
         width: min(920px, 100%);
+        max-height: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
         background: var(--papel);
         color: var(--tinta);
-        padding: clamp(16px, 2.4vw, 26px);
+        padding: clamp(14px, 2.4vw, 26px);
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
       }
       .escolha-topo {
@@ -480,13 +597,12 @@
       }
       .lados {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 14px;
-      }
-      @media (max-width: 640px) {
-        .lados {
-          grid-template-columns: 1fr;
-        }
+        grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+        gap: clamp(8px, 1.4vw, 14px);
+        min-height: 0;
+        overflow-y: auto;
+        /* Espaço para o realce de "lado escolhido", que sobe quatro pixels. */
+        padding: 4px 2px;
       }
       .lado {
         border: 3px solid rgba(0, 0, 0, 0.12);
@@ -578,75 +694,82 @@
       */
       #cabine {
         display: grid;
-        grid-template-rows: auto 1fr auto;
-        gap: 14px;
-        padding: clamp(14px, 3vw, 30px);
+        /* `minmax(0, 1fr)` no meio: sem isso a fileira de vagas se recusa a
+           encolher e empurra o rodapé — com o botão de continuar — para fora
+           da tela num celular deitado. */
+        grid-template-rows: auto minmax(0, 1fr) auto;
+        gap: clamp(8px, 1.6vh, 14px);
+        padding: clamp(10px, 3vw, 30px);
         background: rgba(8, 10, 16, 0.78);
         backdrop-filter: blur(2px);
       }
       #cabine h2 {
         margin: 0;
-        font-family: var(--titulo);
-        font-size: clamp(20px, 3.4vw, 34px);
-        letter-spacing: 0.05em;
+        font-size: clamp(17px, 2.6vw, 28px);
+        font-weight: 800;
+        letter-spacing: 0.02em;
         text-align: center;
         color: #fff;
-        text-shadow: 3px 3px 0 var(--tinta);
+        text-shadow: 2px 2px 0 var(--tinta);
       }
       #cabine .dica {
         display: block;
-        font-family: 'Trebuchet MS', system-ui, sans-serif;
-        font-size: 13px;
+        font-size: clamp(11px, 1.2vw, 13px);
+        font-weight: 400;
         letter-spacing: 0;
         text-shadow: none;
         color: rgba(255, 255, 255, 0.7);
-        margin-top: 6px;
+        margin-top: 5px;
       }
+      /*
+        As vagas se acomodam sozinhas: quatro numa tela de computador, duas num
+        celular em pé, uma num aparelho muito estreito. `auto-fit` faz isso sem
+        uma escada de breakpoints que sempre erra o tamanho de alguém.
+      */
       .vagas-sofa {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: clamp(8px, 1.4vw, 16px);
+        grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
+        gap: clamp(6px, 1.4vw, 16px);
         align-content: center;
-      }
-      @media (max-width: 700px) {
-        .vagas-sofa {
-          grid-template-columns: repeat(2, 1fr);
-        }
+        min-height: 0;
+        overflow-y: auto;
       }
       .vaga-sofa {
         border: 4px solid rgba(255, 255, 255, 0.18);
         border-radius: 12px;
         background: rgba(0, 0, 0, 0.4);
-        min-height: min(46vh, 340px);
+        min-height: clamp(110px, 34vh, 300px);
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 8px;
-        padding: 14px;
+        gap: 6px;
+        padding: 10px;
         text-align: center;
       }
       .vaga-sofa[data-cheia='true'] {
         background: rgba(0, 0, 0, 0.62);
       }
       .vaga-sofa .numero {
-        font-family: var(--titulo);
-        font-size: clamp(30px, 4.6vw, 54px);
+        font-weight: 800;
+        font-size: clamp(26px, 4vw, 46px);
+        letter-spacing: 0.02em;
         line-height: 1;
-        text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.6);
+        text-shadow: 2px 3px 0 rgba(0, 0, 0, 0.6);
       }
       .vaga-sofa .quem {
         font-weight: 700;
-        font-size: 15px;
+        font-size: clamp(13px, 1.3vw, 15px);
+        overflow-wrap: anywhere;
       }
       .vaga-sofa .fonte {
-        font-size: 12px;
+        font-size: clamp(11px, 1.1vw, 12px);
         color: rgba(255, 255, 255, 0.66);
       }
       .vaga-sofa .convite {
-        font-size: 13px;
+        font-size: clamp(11px, 1.2vw, 13px);
         color: rgba(255, 255, 255, 0.6);
-        line-height: 1.6;
+        line-height: 1.55;
       }
       .vaga-sofa .convite b {
         display: inline-block;
@@ -660,21 +783,26 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
         flex-wrap: wrap;
       }
       .cabine-rodape .dica {
         margin: 0;
-        font-size: 13px;
+        flex: 1 1 200px;
+        font-size: clamp(11px, 1.2vw, 13px);
         color: rgba(255, 255, 255, 0.7);
+      }
+      #cabine .linha {
+        flex: 0 0 auto;
       }
       #cabine button.pequeno {
         background: transparent;
         color: rgba(255, 255, 255, 0.8);
         border: 1px solid rgba(255, 255, 255, 0.3);
-        padding: 12px 16px;
+        padding: 11px 14px;
         font: inherit;
         font-size: 14px;
+        min-height: 44px;
         cursor: pointer;
       }
       #cabine button.grande:disabled {
@@ -710,17 +838,17 @@
     <section id="menu" class="tela">
       <div class="coluna">
         <div class="marca">
-          <span class="kicker">REINO DE</span>
-          <h1>Migalhas</h1>
+          <span class="kicker">MEU QUERIDO</span>
+          <h1>Rei</h1>
         </div>
 
         <button id="jogar-local" class="item laranja">
           Jogo Local
-          <small>até 4 no mesmo aparelho · sem estranhos</small>
+          <small>até 4 aqui · ninguém de fora</small>
         </button>
         <button id="jogar-online" class="item azul">
           Jogo Online
-          <small>até 4 daqui + gente do mundo</small>
+          <small>até 4 aqui + gente da rede</small>
         </button>
         <button class="item verde" data-folha="regras" aria-expanded="false">Como se joga</button>
         <button id="assistir" class="item roxo">Assistir</button>
@@ -813,7 +941,7 @@
       <div class="folha" data-folha="creditos" hidden>
         <h2>Créditos</h2>
         <p>
-          <b>Reino de Migalhas</b> nasceu dentro do CyberKingdoms, e reaproveita a base dele: o
+          <b>Meu Querido Rei</b> nasceu dentro do CyberKingdoms, e reaproveita a base dele: o
           gerador determinístico, o jeito de escrever e a arte.
         </p>
         <p>
@@ -855,8 +983,8 @@
     <section id="carregando" class="tela oculta">
       <div class="centro">
         <div class="marca" style="margin: 0 auto 10px">
-          <span class="kicker">REINO DE</span>
-          <h1>Migalhas</h1>
+          <span class="kicker">MEU QUERIDO</span>
+          <h1>Rei</h1>
         </div>
         <div class="barra-progresso"><i id="progresso"></i></div>
         <p class="recado" id="etapa" style="color: rgba(244, 242, 238, 0.8)">carregando a arte…</p>

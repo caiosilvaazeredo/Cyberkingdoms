@@ -70,7 +70,7 @@ export function desenharHud(
   if (locais.length > 1) {
     cartoesDoSofa(ctx, estado, locais, largura, altura);
   } else if (eu) {
-    cartaoDaClasse(ctx, estado, eu, altura);
+    cartaoDaClasse(ctx, estado, eu, largura, altura);
   }
   // O aviso do meio da tela é do dono do aparelho: quatro avisos empilhados no
   // centro tapariam a briga que eles mandam resolver.
@@ -95,16 +95,21 @@ function cartoesDoSofa(
   largura: number,
   altura: number,
 ): void {
-  const espaco = 8;
+  const espaco = largura < 560 ? 4 : 8;
   const l = Math.min(210, (largura - espaco * (locais.length + 1)) / locais.length);
-  const a = 58;
-  const y = altura - a - 12;
+  // Estreito demais para o nome e a classe caberem, o cartão encolhe para o que
+  // não pode faltar: a cor da vaga e a barra de vida. Escrever "Lenhador · ouro"
+  // em setenta pixels não informa nada — só suja a beira da tela.
+  const apertado = l < 116;
+  const a = apertado ? 34 : 58;
+  const y = altura - a - 10;
   const total = l * locais.length + espaco * (locais.length - 1);
   let x = (largura - total) / 2;
 
   for (const { vaga, unidade: u } of locais) {
     const cor = COR_DA_VAGA[vaga % COR_DA_VAGA.length]!;
     const max = vidaMaxima(u.classe, nivelDe(estado, u.time));
+    const margem = apertado ? 8 : 12;
     ctx.save();
     ctx.fillStyle = 'rgba(12, 14, 20, 0.75)';
     arredondado(ctx, x, y, l, a, 8);
@@ -116,23 +121,29 @@ function cartoesDoSofa(
     ctx.textBaseline = 'top';
     ctx.fillStyle = cor;
     ctx.font = '700 12px "Trebuchet MS", system-ui, sans-serif';
-    ctx.fillText(`P${vaga + 1} · ${u.nome}`.slice(0, 22), x + 12, y + 7);
-
-    ctx.fillStyle = 'rgba(255,255,255,0.72)';
-    ctx.font = '500 11px "Trebuchet MS", system-ui, sans-serif';
     ctx.fillText(
-      `${perfil(u.classe).nome}${u.carga !== 'nada' ? ` · ${u.carga}` : ''}`,
-      x + 12,
-      y + 23,
+      apertado ? `P${vaga + 1}` : `P${vaga + 1} · ${u.nome}`.slice(0, 22),
+      x + margem,
+      y + 7,
     );
 
-    const barra = l - 24;
+    if (!apertado) {
+      ctx.fillStyle = 'rgba(255,255,255,0.72)';
+      ctx.font = '500 11px "Trebuchet MS", system-ui, sans-serif';
+      ctx.fillText(
+        `${perfil(u.classe).nome}${u.carga !== 'nada' ? ` · ${u.carga}` : ''}`,
+        x + margem,
+        y + 23,
+      );
+    }
+
+    const barra = l - margem * 2;
     ctx.fillStyle = 'rgba(255,255,255,0.18)';
-    ctx.fillRect(x + 12, y + a - 16, barra, 7);
+    ctx.fillRect(x + margem, y + a - 14, barra, 7);
     // Morto continua na tira, com a barra vazia: sumir o cartão faria a pessoa
     // achar que perdeu a vaga em vez de estar esperando o renascimento.
     ctx.fillStyle = !u.vivo ? '#555' : u.vida / max > 0.35 ? '#6ac46a' : '#d9534f';
-    ctx.fillRect(x + 12, y + a - 16, (barra * Math.max(0, u.vida)) / max, 7);
+    ctx.fillRect(x + margem, y + a - 14, (barra * Math.max(0, u.vida)) / max, 7);
     ctx.restore();
     x += l + espaco;
   }
@@ -170,18 +181,26 @@ function balanca(ctx: CanvasRenderingContext2D, estado: Estado, largura: number,
   ctx.lineWidth = 2;
   ctx.strokeRect(x, y, l, a);
 
-  ctx.font = '600 12px "Trebuchet MS", system-ui, sans-serif';
+  // Estreito, as duas legendas se encontrariam no meio e virariam uma linha
+  // ilegível. Aí a palavra "carregadores" some e fica o número, que é a
+  // informação — quem está jogando já sabe o que aquele número conta.
+  const curto = largura < 640;
+  ctx.font = `600 ${curto ? 11 : 12}px "Trebuchet MS", system-ui, sans-serif`;
   ctx.textBaseline = 'middle';
   ctx.fillStyle = '#ffffff';
   ctx.textAlign = 'left';
   ctx.fillText(
-    `refém do Azul: ${Math.round(azulTemNaMasmorra)} · ${carregadoresPara(azulTemNaMasmorra)} carregadores`,
+    curto
+      ? `Azul: ${Math.round(azulTemNaMasmorra)} · ${carregadoresPara(azulTemNaMasmorra)}↑`
+      : `refém do Azul: ${Math.round(azulTemNaMasmorra)} · ${carregadoresPara(azulTemNaMasmorra)} carregadores`,
     x,
     y + a + 14,
   );
   ctx.textAlign = 'right';
   ctx.fillText(
-    `${carregadoresPara(vermelhoTemNaMasmorra)} carregadores · refém do Vermelho: ${Math.round(vermelhoTemNaMasmorra)}`,
+    curto
+      ? `${carregadoresPara(vermelhoTemNaMasmorra)}↑ · Vermelho: ${Math.round(vermelhoTemNaMasmorra)}`
+      : `${carregadoresPara(vermelhoTemNaMasmorra)} carregadores · refém do Vermelho: ${Math.round(vermelhoTemNaMasmorra)}`,
     x + l,
     y + a + 14,
   );
@@ -221,15 +240,21 @@ function cabecalho(ctx: CanvasRenderingContext2D, rede: Rede, largura: number): 
   ctx.textBaseline = 'top';
   ctx.font = '500 12px "Trebuchet MS", system-ui, sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.fillText(`${rede.sala} · ${humanos} jogadores, ${bots} bots · ${rede.ping} ms`, 12, 10);
+  // A linha vai até onde o relógio começa. Num celular em pé a versão inteira
+  // atravessava o meio da tela e escrevia por cima do placar — duas informações
+  // no mesmo pixel viram nenhuma.
+  const cabe = largura / 2 - 80;
+  const inteira = `${rede.sala} · ${humanos} jogadores, ${bots} bots · ${rede.ping} ms`;
+  const curta = `${humanos}+${bots} · ${rede.ping} ms`;
+  ctx.fillText(ctx.measureText(inteira).width <= cabe ? inteira : curta, 12, 10);
   ctx.restore();
-  void largura;
 }
 
 function cartaoDaClasse(
   ctx: CanvasRenderingContext2D,
   estado: Estado,
   eu: Unidade,
+  largura: number,
   altura: number,
 ): void {
   const p = perfil(eu.classe);
@@ -237,9 +262,12 @@ function cartaoDaClasse(
   const max = vidaMaxima(eu.classe, nivel);
   const x = 12;
   const y = altura - 108;
+  // Num celular estreito o cartão não pode ser mais largo que a tela: 272 fixos
+  // deixavam a linha da obra saindo pela direita.
+  const l = Math.min(272, largura - 24);
   ctx.save();
   ctx.fillStyle = 'rgba(12, 14, 20, 0.72)';
-  arredondado(ctx, x, y, 272, 96, 10);
+  arredondado(ctx, x, y, l, 96, 10);
   ctx.fill();
 
   ctx.textAlign = 'left';
@@ -248,14 +276,14 @@ function cartaoDaClasse(
   ctx.font = '700 15px "Trebuchet MS", system-ui, sans-serif';
   ctx.fillText(`${p.nome}${eu.carga !== 'nada' ? ` · ${eu.carga}` : ''}`, x + 12, y + 10);
 
-  const barra = 170;
+  const barra = l - 102;
   ctx.fillStyle = 'rgba(255,255,255,0.18)';
   ctx.fillRect(x + 12, y + 32, barra, 8);
   ctx.fillStyle = eu.vida / max > 0.35 ? '#6ac46a' : '#d9534f';
   ctx.fillRect(x + 12, y + 32, (barra * Math.max(0, eu.vida)) / max, 8);
   ctx.font = '500 11px "Trebuchet MS", system-ui, sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.75)';
-  ctx.fillText(`${Math.max(0, Math.round(eu.vida))}/${max}`, x + 190, y + 30);
+  ctx.fillText(`${Math.max(0, Math.round(eu.vida))}/${max}`, x + barra + 20, y + 30);
 
   const estoque = estado.estoque[eu.time];
   const chapeus = CLASSES_COM_CHAPEU.filter((c) => estoque[c] > 0)
