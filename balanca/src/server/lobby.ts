@@ -11,6 +11,18 @@ import { DT, TICKS_POR_SEGUNDO } from '../shared/regras';
  * de bot — que é exatamente o jogo que este não quer ser. Sala nova só nasce
  * quando todas as que existem estão cheias de gente.
  *
+ * ## As duas exceções, e por que existem
+ *
+ * **Sala pedida pelo nome.** Quatro pessoas no mesmo sofá abrem quatro
+ * conexões, e "a sala mais cheia de gente" não promete colocá-las juntas — o
+ * primeiro jogador pode ser justamente quem lotou a sala. Então quem chega
+ * depois pede a sala do anfitrião pelo nome. Ela ainda pode recusar por estar
+ * cheia, mas aí a recusa é a verdade, e não um sorteio que separou a turma.
+ *
+ * **Sala privada.** É o "jogo local": nasce reservada e o lobby nunca manda
+ * um estranho para ela. O time se completa com bot, como em qualquer sala com
+ * vaga sobrando — a diferença é só quem *não* entra.
+ *
  * ## Por que um relógio só para todas as salas
  *
  * Cada sala com o próprio `setInterval` significa N temporizadores disputando o
@@ -19,6 +31,15 @@ import { DT, TICKS_POR_SEGUNDO } from '../shared/regras';
  * de um tick visível num lugar só: se o servidor atrasar, dá para dizer em que
  * sala foi.
  */
+
+export interface PedidoDeEntrada {
+  /** Chegou pelo menu, só para ver. Não ocupa vaga. */
+  assistindo?: boolean;
+  /** Entrar nesta sala pelo nome — é assim que o sofá inteiro cai junto. */
+  sala?: string;
+  /** Abrir uma sala reservada a este aparelho. Ignorado se `sala` foi pedida. */
+  privada?: boolean;
+}
 
 export interface OpcoesDoLobby {
   /** Quantas salas no máximo. Protege a máquina de um pico de entradas. */
@@ -52,8 +73,11 @@ export class Lobby {
     return this.salas.length;
   }
 
+  /** O que o `/salas` mostra. Sala privada é de quem a abriu e não vai na lista. */
   get lista(): { nome: string; humanos: number; vagas: number }[] {
-    return this.salas.map((s) => ({ nome: s.nome, humanos: s.humanos, vagas: s.vagas }));
+    return this.salas
+      .filter((s) => !s.privada)
+      .map((s) => ({ nome: s.nome, humanos: s.humanos, vagas: s.vagas }));
   }
 
   /**
@@ -62,11 +86,37 @@ export class Lobby {
    * Quem chega **assistindo** vai para a sala mais movimentada, cheia ou não: o
    * menu quer mostrar a partida com mais gente, que é a mais interessante de
    * ver, e plateia não tira o lugar de ninguém.
+   *
+   * O segundo parâmetro aceita `true` como atalho para "só assistindo", que é
+   * de longe o caso mais comum e o que o menu usa.
    */
-  acolher(cliente: Cliente, assistindo = false): Sala | null {
-    const candidatas = this.salas
-      .filter((s) => assistindo || !s.cheiaDeGente)
-      .sort((a, b) => b.humanos - a.humanos);
+  acolher(cliente: Cliente, pedido: PedidoDeEntrada | boolean = {}): Sala | null {
+    const p: PedidoDeEntrada = typeof pedido === 'boolean' ? { assistindo: pedido } : pedido;
+    const assistindo = p.assistindo === true;
+
+    if (p.sala !== undefined) {
+      const pedida = this.salas.find((s) => s.nome === p.sala);
+      if (!pedida) {
+        // Acontece de verdade: a sala do anfitrião pode ter acabado enquanto o
+        // segundo jogador do sofá abria a conexão. Dizer isso é melhor do que
+        // espalhar a turma por salas diferentes sem avisar.
+        cliente.enviar({ t: 'recusado', motivo: 'a sala do anfitrião não existe mais' });
+        return null;
+      }
+      if (!pedida.entrar(cliente, assistindo)) return null;
+      return pedida;
+    }
+
+    const nova = p.privada === true ? this.abrirSala(true) : null;
+    if (p.privada === true && !nova) {
+      cliente.enviar({ t: 'recusado', motivo: 'o servidor está cheio — tente o jogo online' });
+      return null;
+    }
+    const candidatas = nova
+      ? [nova]
+      : this.salas
+          .filter((s) => !s.privada && (assistindo || !s.cheiaDeGente))
+          .sort((a, b) => b.humanos - a.humanos);
     const escolhida = candidatas[0] ?? this.abrirSala();
     if (!escolhida) {
       cliente.enviar({ t: 'recusado', motivo: 'todas as salas cheias' });
@@ -76,13 +126,22 @@ export class Lobby {
     return escolhida;
   }
 
-  private abrirSala(): Sala | null {
+  private abrirSala(privada = false): Sala | null {
     if (this.salas.length >= this.maxSalas) return null;
     const sala = new Sala({
-      nome: `reino-${++this.contador}`,
+      nome: `${privada ? 'sofá' : 'reino'}-${++this.contador}`,
       seed: this.seed(),
+      privada,
       ...(this.porTime !== undefined ? { porTime: this.porTime } : {}),
-      ...(this.espera !== undefined ? { esperaPorJogadores: this.espera } : {}),
+      // A espera existe para dar tempo de os amigos de alguém chegarem pela
+      // rede. Na sala do sofá não vem ninguém pela rede: os amigos já estão na
+      // sala, e segurar doze segundos de tela parada seria esperar por
+      // ninguém.
+      ...(privada
+        ? { esperaPorJogadores: 0 }
+        : this.espera !== undefined
+          ? { esperaPorJogadores: this.espera }
+          : {}),
     });
     this.salas.push(sala);
     return sala;

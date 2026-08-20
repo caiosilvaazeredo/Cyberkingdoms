@@ -72,6 +72,14 @@ const TETO_DE_ESPECTADORES = 24;
 export interface OpcoesDaSala {
   nome: string;
   seed: number;
+  /**
+   * Sala do sofá: o lobby não manda estranhos para cá.
+   *
+   * A sala não muda de comportamento por ser privada — os bots completam os
+   * times do mesmo jeito. O que muda é só quem o lobby deixa entrar, e por isso
+   * a marca vive aqui em vez de virar um segundo tipo de sala.
+   */
+  privada?: boolean;
   porTime?: number;
   /** Segundos antes de completar com bots. Os testes usam zero. */
   esperaPorJogadores?: number;
@@ -81,6 +89,7 @@ export interface OpcoesDaSala {
 
 export class Sala {
   readonly nome: string;
+  readonly privada: boolean;
   private partida: Partida;
   private navegador: Navegador;
   private bots: Bots;
@@ -95,6 +104,7 @@ export class Sala {
 
   constructor(opcoes: OpcoesDaSala) {
     this.nome = opcoes.nome;
+    this.privada = opcoes.privada ?? false;
     this.seed = opcoes.seed;
     this.porTime = opcoes.porTime ?? POR_TIME;
     this.espera = opcoes.esperaPorJogadores ?? ESPERA_POR_JOGADORES;

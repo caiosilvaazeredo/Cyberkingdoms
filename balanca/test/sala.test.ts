@@ -272,3 +272,71 @@ describe('o lobby', () => {
     expect(lobby.quantidade).toBe(0);
   });
 });
+
+/**
+ * O sofá: quatro conexões do mesmo aparelho têm de cair na mesma sala.
+ *
+ * É a promessa mais fácil de quebrar sem ninguém perceber. "A sala mais cheia
+ * de gente" é uma heurística, e heurística não promete nada: basta o primeiro
+ * jogador ser justamente quem lotou a sala para os outros três acabarem noutra
+ * partida, cada um vendo um mapa diferente da mesma tela.
+ */
+describe('o lobby e o sofá', () => {
+  it('põe na sala pedida pelo nome, mesmo quando o lobby mandaria para outra', () => {
+    const lobby = new Lobby({ porTime: 1, esperaPorJogadores: 0, seed: () => 11 });
+    const anfitria = clienteFalso('P1');
+    const sala = lobby.acolher(anfitria)!;
+    // A sala do anfitrião lota de gente enquanto o sofá se organiza. Este é o
+    // caso que separa a turma: pela porta comum, o segundo jogador do mesmo
+    // aparelho iria parar noutra sala, vendo outro mapa na mesma tela.
+    sala.escolher(anfitria.chave, 'azul');
+    const outro = clienteFalso('estranho');
+    lobby.acolher(outro);
+    sala.escolher(outro.chave, 'vermelho');
+    expect(lobby.acolher(clienteFalso('mais um'))?.nome).not.toBe(sala.nome);
+
+    // Pelo nome, e como plateia — que é como o sofá entra —, cai no lugar
+    // certo. A vaga de jogador só é pedida depois, ao escolher o lado.
+    for (const nome of ['P2', 'P3', 'P4']) {
+      const vizinho = lobby.acolher(clienteFalso(nome), { sala: sala.nome, assistindo: true });
+      expect(vizinho?.nome).toBe(sala.nome);
+    }
+  });
+
+  it('recusa com o motivo quando a sala pedida sumiu', () => {
+    const lobby = new Lobby({ seed: () => 12 });
+    const atrasado = clienteFalso('P2');
+    expect(lobby.acolher(atrasado, { sala: 'reino-que-nao-existe' })).toBeNull();
+    expect(atrasado.recebidas.at(-1)).toEqual({
+      t: 'recusado',
+      motivo: 'a sala do anfitrião não existe mais',
+    });
+  });
+
+  it('abre a sala reservada e não manda estranhos para ela', () => {
+    const lobby = new Lobby({ porTime: 4, esperaPorJogadores: 0, seed: () => 13 });
+    const sofa = lobby.acolher(clienteFalso('P1'), { privada: true });
+    expect(sofa?.privada).toBe(true);
+    // Quem entra pela porta comum abre outra sala em vez de sentar no sofá dos
+    // outros — mesmo havendo vaga de sobra lá dentro.
+    const estranho = lobby.acolher(clienteFalso('estranho'));
+    expect(estranho?.nome).not.toBe(sofa!.nome);
+    // E ela não aparece na lista pública de salas.
+    expect(lobby.lista.map((s) => s.nome)).not.toContain(sofa!.nome);
+  });
+
+  it('deixa o sofá inteiro entrar no mesmo time', () => {
+    const lobby = new Lobby({ porTime: 4, esperaPorJogadores: 0, seed: () => 14 });
+    const anfitria = clienteFalso('P1');
+    const sala = lobby.acolher(anfitria, { privada: true })!;
+    const turma = [anfitria];
+    for (const nome of ['P2', 'P3', 'P4']) {
+      const c = clienteFalso(nome);
+      lobby.acolher(c, { sala: sala.nome, assistindo: true });
+      turma.push(c);
+    }
+    for (const c of turma) expect(sala.escolher(c.chave, 'azul')).toBe(true);
+    expect(contar(sala, 'azul', false)).toBe(4);
+    expect(contar(sala, 'vermelho', false)).toBe(0);
+  });
+});

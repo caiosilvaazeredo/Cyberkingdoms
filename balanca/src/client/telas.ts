@@ -8,18 +8,28 @@ import {
   type Lado,
   type Visao,
 } from './ajustes';
+import { MAXIMO_LOCAL, rotuloDaFonte, type IdDeFonte } from './controles';
+import { COR_DA_VAGA } from './desenho';
+import type { Modo } from './sofa';
 
 /**
- * As telas fora do jogo: menu, painéis, espera e escolha de lado.
+ * As telas fora do jogo: menu, cabine do sofá, espera e escolha de lado.
  *
  * ## O menu não tem fundo — o fundo é o jogo
  *
- * A marca fica no alto à esquerda e a barra de ações embaixo, e entre as duas
- * não há ilustração nenhuma: o `canvas` continua desenhando **uma partida de
- * verdade**, ao vivo, com os bots que estariam jogando de qualquer jeito. É o
- * modo atração do fliperama, e responde antes de a pessoa perguntar as duas
- * coisas que ela quer saber ao abrir um jogo em rede: como ele é, e se tem
- * alguém jogando.
+ * Os botões ocupam uma coluna à esquerda e mais nada: o resto da tela é o
+ * `canvas` desenhando **uma partida de verdade**, ao vivo, com os bots que
+ * estariam jogando de qualquer jeito. É o modo atração do fliperama, e responde
+ * antes de a pessoa perguntar as duas coisas que ela quer saber ao abrir um
+ * jogo em rede: como ele é, e se tem alguém jogando.
+ *
+ * ## Por que a coluna, e não a barra
+ *
+ * Uma coluna de botões gordos, cada um da sua cor, ordena as intenções de cima
+ * para baixo — jogar no sofá, jogar com o mundo, aprender, ver — e deixa o
+ * campo de batalha inteiro visível ao lado. Uma barra no rodapé faz o oposto:
+ * espalha os itens em fila, dá o mesmo peso a todos e ainda corta a parte de
+ * baixo do jogo.
  *
  * ## Por que em HTML, e não no `canvas`
  *
@@ -35,17 +45,32 @@ import {
  * antes de confirmar é um jogo que ensinou o jogador a desconfiar do menu.
  */
 
-export type NomeDaTela = 'menu' | 'carregando' | 'escolha' | 'jogo' | 'plateia';
+export type NomeDaTela = 'menu' | 'cabine' | 'carregando' | 'escolha' | 'jogo' | 'plateia';
 
 export interface AcoesDasTelas {
-  /** O jogador quer entrar na batalha. */
-  jogar(nome: string): void;
+  /**
+   * Abrir a cabine para montar o sofá.
+   *
+   * @param modo `local` abre uma sala reservada ao aparelho; `online` entra na
+   * sala mais movimentada, junto com quem estiver na rede. Nos dois, cabem até
+   * quatro pessoas aqui.
+   */
+  jogar(modo: Modo): void;
   /** O jogador quer só assistir, sem o menu por cima. */
   assistir(): void;
-  /** O jogador confirmou o lado. */
+  /** O jogador confirmou o lado, e o sofá inteiro vai para ele. */
   escolher(time: Time): void;
+  /** Desistiu da cabine e voltou ao menu: as conexões extras podem fechar. */
+  desistir(): void;
   /** Um ajuste mudou. Chamada a cada clique, já com o valor novo. */
   ajustou(ajustes: Ajustes): void;
+}
+
+/** O que a cabine mostra: quem já sentou e o que ainda está livre. */
+export interface DadosDaCabine {
+  sentados: { vaga: number; nome: string; fonte: IdDeFonte }[];
+  /** Fontes ligadas e ainda livres, com o que apertar para entrar. */
+  livres: { fonte: IdDeFonte; rotulo: string; comoEntrar: string }[];
 }
 
 export interface DadosDaEscolha {
@@ -54,6 +79,8 @@ export interface DadosDaEscolha {
   placar: Record<Time, number>;
   /** Segundos restantes da partida em curso. */
   relogio: number;
+  /** Quantas pessoas do sofá vão entrar juntas neste lado. */
+  quantosLocais: number;
 }
 
 export interface EstadoDoServidor {
@@ -81,11 +108,14 @@ const CONSELHOS: readonly string[] = [
 
 export class Telas {
   private readonly menu = pegar<HTMLElement>('#menu');
+  private readonly cabine = pegar<HTMLElement>('#cabine');
   private readonly carregando = pegar<HTMLElement>('#carregando');
   private readonly escolha = pegar<HTMLElement>('#escolha');
   private readonly plateia = pegar<HTMLElement>('#plateia');
   private readonly campoNome = pegar<HTMLInputElement>('#nome');
-  private readonly botaoJogar = pegar<HTMLButtonElement>('#jogar');
+  private readonly vagasDoSofa = pegar<HTMLElement>('#vagas-sofa');
+  private readonly recadoDaCabine = pegar<HTMLElement>('#cabine-recado');
+  private readonly seguirDaCabine = pegar<HTMLButtonElement>('#cabine-seguir');
   private readonly recado = pegar<HTMLElement>('#recado');
   private readonly progresso = pegar<HTMLElement>('#progresso');
   private readonly etapa = pegar<HTMLElement>('#etapa');
@@ -99,16 +129,19 @@ export class Telas {
   private ladoEscolhido: Time = 'azul';
   private ajustes: Ajustes;
   private ultimosDados: DadosDaEscolha | null = null;
+  /** Qual botão do menu abriu a cabine. Decide a sala lá na hora de conectar. */
+  private modo: Modo = 'online';
 
   constructor(private readonly acoes: AcoesDasTelas) {
     this.ajustes = carregarAjustes();
     this.campoNome.value = this.ajustes.nome;
 
     this.ligarBarra();
+    this.ligarCabine();
     this.montarAjustes();
 
     this.campoNome.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') this.pedirParaJogar();
+      if (e.key === 'Enter') this.pedirParaJogar('online');
     });
     this.campoNome.addEventListener('input', () => {
       this.ajustes = { ...this.ajustes, nome: this.campoNome.value.slice(0, 16) };
@@ -127,6 +160,12 @@ export class Telas {
     window.addEventListener('keydown', (e) => {
       // O teclado das telas só escuta quando elas estão à frente: senão o `A`
       // de andar viraria "trocar de lado" no meio de uma partida.
+      if (this.tela === 'cabine') {
+        // Nada de Enter aqui: `Enter` é o botão de entrar do segundo teclado, e
+        // o laço de quadro é quem escuta as fontes. Escuta-se só a desistência.
+        if (e.code === 'Escape') this.sairDaCabine();
+        return;
+      }
       if (this.tela === 'escolha') {
         if (e.code === 'KeyA' || e.code === 'ArrowLeft') {
           this.ladoEscolhido = 'azul';
@@ -158,13 +197,23 @@ export class Telas {
     return this.ajustes;
   }
 
+  /** Se a cabine está na frente. O laço de quadro só escuta as fontes aí. */
+  get montandoOSofa(): boolean {
+    return this.tela === 'cabine';
+  }
+
+  /** O botão que abriu a cabine: decide se a sala é reservada ou pública. */
+  get modoEscolhido(): Modo {
+    return this.modo;
+  }
+
   mostrar(nome: NomeDaTela): void {
     this.tela = nome;
     alternar(this.menu, nome === 'menu');
+    alternar(this.cabine, nome === 'cabine');
     alternar(this.carregando, nome === 'carregando');
     alternar(this.escolha, nome === 'escolha');
     this.plateia.hidden = nome !== 'plateia';
-    if (nome === 'menu') this.botaoJogar.disabled = false;
     if (nome === 'carregando') {
       this.conselho.textContent =
         CONSELHOS[Math.floor(Math.random() * CONSELHOS.length)] ?? CONSELHOS[0]!;
@@ -200,13 +249,14 @@ export class Telas {
     if (this.tela === 'escolha') this.pintarEscolha();
   }
 
-  private pedirParaJogar(): void {
+  private pedirParaJogar(modo: Modo): void {
     const nome = this.campoNome.value.trim() || 'Anônimo';
     this.ajustes = { ...this.ajustes, nome };
     salvarAjustes(this.ajustes);
-    this.botaoJogar.disabled = true;
     this.recado.textContent = '';
-    this.acoes.jogar(nome);
+    this.fecharFolhas();
+    this.modo = modo;
+    this.acoes.jogar(modo);
   }
 
   private confirmarLado(): void {
@@ -214,16 +264,19 @@ export class Telas {
   }
 
   private ligarBarra(): void {
-    this.botaoJogar.addEventListener('click', () => {
+    const entrar = (modo: Modo) => () => {
       // Sem apelido guardado, o primeiro clique abre a folha para escrever um;
-      // com apelido, ele entra direto. É o "Jogar / Continuar" do protótipo.
+      // com apelido, vai direto para a cabine.
       if (!this.ajustes.nome.trim()) {
+        this.modo = modo;
         this.abrirFolha('apelido');
         this.campoNome.focus();
         return;
       }
-      this.pedirParaJogar();
-    });
+      this.pedirParaJogar(modo);
+    };
+    pegar<HTMLButtonElement>('#jogar-local').addEventListener('click', entrar('local'));
+    pegar<HTMLButtonElement>('#jogar-online').addEventListener('click', entrar('online'));
 
     pegar<HTMLButtonElement>('#assistir').addEventListener('click', () => {
       this.fecharFolhas();
@@ -231,7 +284,7 @@ export class Telas {
     });
 
     for (const botao of Array.from(
-      document.querySelectorAll<HTMLButtonElement>('.barra button[data-folha]'),
+      document.querySelectorAll<HTMLButtonElement>('.coluna button[data-folha]'),
     )) {
       botao.addEventListener('click', () => {
         const aberta = botao.getAttribute('aria-expanded') === 'true';
@@ -240,9 +293,95 @@ export class Telas {
       });
     }
 
+    // O botão dentro da folha do apelido continua a mesma porta de entrada, e
+    // respeita o botão do menu que a abriu.
     for (const acao of Array.from(document.querySelectorAll<HTMLElement>('[data-acao="jogar"]'))) {
-      acao.addEventListener('click', () => this.pedirParaJogar());
+      acao.addEventListener('click', () => this.pedirParaJogar(this.modo));
     }
+  }
+
+  // --- a cabine ------------------------------------------------------------
+
+  private ligarCabine(): void {
+    this.seguirDaCabine.addEventListener('click', () => this.mostrar('escolha'));
+    pegar<HTMLButtonElement>('#cabine-voltar').addEventListener('click', () => this.sairDaCabine());
+  }
+
+  private sairDaCabine(): void {
+    this.acoes.desistir();
+    this.mostrar('menu');
+  }
+
+  /**
+   * Pinta as quatro vagas.
+   *
+   * Chamada a cada quadro enquanto a cabine está aberta, porque um controle
+   * pode ser ligado ou desligado a qualquer momento e a vaga tem de responder
+   * na hora — quem acabou de plugar o controle está olhando para a tela
+   * esperando que ela mude.
+   */
+  atualizarCabine(dados: DadosDaCabine): void {
+    if (this.tela !== 'cabine') return;
+    const filhos: HTMLElement[] = [];
+    for (let i = 0; i < MAXIMO_LOCAL; i++) {
+      const sentado = dados.sentados.find((s) => s.vaga === i);
+      const caixa = document.createElement('div');
+      caixa.className = 'vaga-sofa';
+      caixa.dataset.cheia = String(sentado !== undefined);
+      const cor = COR_DA_VAGA[i % COR_DA_VAGA.length]!;
+      if (sentado) caixa.style.borderColor = cor;
+
+      const numero = document.createElement('div');
+      numero.className = 'numero';
+      numero.textContent = `P${i + 1}`;
+      numero.style.color = sentado ? cor : 'rgba(255,255,255,0.3)';
+      caixa.append(numero);
+
+      if (sentado) {
+        const quem = document.createElement('div');
+        quem.className = 'quem';
+        quem.textContent = sentado.nome;
+        const fonte = document.createElement('div');
+        fonte.className = 'fonte';
+        fonte.textContent = rotuloDaFonte(sentado.fonte);
+        caixa.append(quem, fonte);
+      } else {
+        const convite = document.createElement('div');
+        convite.className = 'convite';
+        if (dados.livres.length === 0) {
+          convite.textContent = 'ligue um controle para abrir esta vaga';
+        } else {
+          // Só a primeira vaga vazia recebe o convite completo. Repetir a lista
+          // de teclas em três molduras vazias faria a tela parecer um manual.
+          const primeiraVazia = dados.sentados.length === i;
+          if (primeiraVazia) {
+            for (const livre of dados.livres) {
+              const linha = document.createElement('div');
+              linha.append(document.createTextNode(`${livre.rotulo}: `));
+              const tecla = document.createElement('b');
+              tecla.textContent = livre.comoEntrar;
+              linha.append(tecla);
+              convite.append(linha);
+            }
+          } else {
+            convite.textContent = 'vaga livre';
+          }
+        }
+        caixa.append(convite);
+      }
+      filhos.push(caixa);
+    }
+    this.vagasDoSofa.replaceChildren(...filhos);
+
+    this.seguirDaCabine.disabled = dados.sentados.length === 0;
+    this.recadoDaCabine.textContent =
+      dados.sentados.length === 0
+        ? 'aperte o botão de entrar para ocupar a primeira vaga'
+        : `${dados.sentados.length} de ${MAXIMO_LOCAL} · ${
+            this.modo === 'local'
+              ? 'sala só de vocês, o resto do time vem de bot'
+              : 'vocês entram na partida pública, junto de quem estiver na rede'
+          }`;
   }
 
   private abrirFolha(nome: string): void {
@@ -299,15 +438,21 @@ export class Telas {
     }
 
     const nome = this.ladoEscolhido === 'azul' ? 'Reino Azul' : 'Reino Vermelho';
-    this.confirmar.textContent = `entrar no ${nome}`;
+    const quantos = dados?.quantosLocais ?? 1;
+    // Com o sofá cheio, o botão diz **quantos** vão entrar: é o momento de
+    // descobrir que o lado escolhido pode não ter quatro vagas, e não depois.
+    this.confirmar.textContent =
+      quantos > 1 ? `entrar no ${nome} · ${quantos} jogadores` : `entrar no ${nome}`;
     if (dados) {
       const minutos = Math.floor(dados.relogio / 60);
       const segundos = Math.floor(dados.relogio % 60);
-      const cheio =
-        dados.elenco.filter((f) => f.time === this.ladoEscolhido && !f.bot).length >= dados.porTime;
-      this.status.textContent = cheio
-        ? 'esse lado está cheio de gente — escolha o outro'
-        : `partida em curso · ${minutos}:${String(segundos).padStart(2, '0')} no relógio`;
+      const livres =
+        dados.porTime -
+        dados.elenco.filter((f) => f.time === this.ladoEscolhido && !f.bot).length;
+      this.status.textContent =
+        livres < quantos
+          ? `esse lado só tem ${Math.max(0, livres)} vaga(s) de gente — escolha o outro`
+          : `partida em curso · ${minutos}:${String(segundos).padStart(2, '0')} no relógio`;
     }
   }
 

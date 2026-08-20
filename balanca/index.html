@@ -22,11 +22,19 @@
         Duas peles, e elas não se misturam.
 
         O jogo é colorido e escuro, porque é pixel art sobre grama. A moldura —
-        menu, painéis, escolha de lado — é papel branco com vermelho, no traço
-        do protótipo: preto sobre branco, um único acento, tipografia grande e
-        seca. É a diferença entre a interface e o mundo, e é ela que faz o menu
-        parecer capa de livro em vez de mais um retângulo em cima do jogo.
+        menu, painéis, escolha de lado — é a coluna de botões gordos do lado
+        esquerdo, cada um da sua cor, no traço dos jogos de sofá: o item mais
+        importante é o mais alto e o mais quente, e a partida ao vivo continua
+        correndo atrás de tudo.
+
+        A fonte é a BlackFlag, e ela é só da moldura: dentro do jogo, texto
+        pequeno com serifa de fantasia vira mancha ilegível na hora da briga.
       */
+      @font-face {
+        font-family: 'BlackFlag';
+        src: url('/fontes/blackflag.ttf') format('truetype');
+        font-display: swap;
+      }
       :root {
         color-scheme: dark;
         --papel: #f4f2ee;
@@ -37,6 +45,7 @@
         --vermelho: #cf3b2f;
         --vermelho-claro: #ff9c8f;
         --ouro: #ffd479;
+        --titulo: 'BlackFlag', 'Trebuchet MS', system-ui, sans-serif;
       }
       * {
         box-sizing: border-box;
@@ -71,116 +80,164 @@
       */
       #menu.oculta,
       #carregando.oculta,
-      #escolha.oculta {
+      #escolha.oculta,
+      #cabine.oculta {
         display: none;
       }
 
       /* ------------------------------------------------------ menu inicial */
       /*
-        O menu não tem fundo próprio: o fundo é a partida, desenhada no `canvas`
-        que fica atrás. Só uma sombra de baixo para cima, para o texto da barra
-        continuar legível quando a briga passar por ali.
+        O menu ocupa uma coluna da esquerda e mais nada: o resto da tela é a
+        partida ao vivo, e é ela que vende o jogo. A sombra existe só para o
+        texto continuar legível quando a briga passar por trás dos botões.
       */
       #menu {
         display: grid;
-        grid-template-rows: auto 1fr auto;
-        padding: 0;
-        background: linear-gradient(
-          to bottom,
-          rgba(10, 12, 18, 0.55) 0%,
-          rgba(10, 12, 18, 0.12) 22%,
-          rgba(10, 12, 18, 0.12) 70%,
-          rgba(10, 12, 18, 0.6) 100%
-        );
+        grid-template-columns: minmax(260px, 27vw) 1fr;
         pointer-events: none;
+        background: linear-gradient(
+          to right,
+          rgba(10, 12, 18, 0.72) 0%,
+          rgba(10, 12, 18, 0.45) 60%,
+          rgba(10, 12, 18, 0) 100%
+        );
       }
-      #menu > * {
+      .coluna {
         pointer-events: auto;
+        display: flex;
+        flex-direction: column;
+        gap: clamp(6px, 1vh, 10px);
+        padding: clamp(12px, 2vw, 24px);
+        overflow-y: auto;
       }
       .marca {
-        display: flex;
-        align-items: stretch;
-        gap: 0;
-        margin: clamp(14px, 3vw, 34px);
         width: fit-content;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+        margin-bottom: 6px;
       }
+      /*
+        O rótulo continua em fonte de texto: a BlackFlag é gótica, e gótica em
+        maiúsculas de dez pixels não se lê — vira textura. Ela fica onde presta,
+        que é o nome grande.
+      */
       .marca .kicker {
-        display: flex;
-        align-items: center;
+        display: inline-block;
         background: var(--acento);
         color: #fff;
-        font-size: clamp(9px, 1.4vw, 13px);
+        font-size: clamp(9px, 1.1vw, 12px);
         font-weight: 700;
-        letter-spacing: 0.18em;
-        padding: 0 clamp(8px, 1.4vw, 14px);
+        letter-spacing: 0.22em;
+        padding: 3px clamp(8px, 1.2vw, 12px);
       }
       .marca h1 {
-        margin: 0;
-        background: var(--papel);
-        color: var(--tinta);
-        font-size: clamp(30px, 7vw, 62px);
-        line-height: 1.05;
-        letter-spacing: -0.02em;
-        padding: clamp(2px, 0.6vw, 8px) clamp(10px, 2vw, 22px);
-      }
-      .assinatura {
-        align-self: end;
-        justify-self: start;
-        margin: 0 clamp(14px, 3vw, 34px) 10px;
-        font-size: 12px;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        color: rgba(255, 255, 255, 0.75);
-        text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+        margin: 2px 0 0;
+        font-family: var(--titulo);
+        /*
+          O tamanho é limitado pela **coluna**, e não pela tela: a primeira
+          versão usava 5vw e cortava o "as" de Migalhas fora do quadro, porque a
+          coluna tem um quarto da largura e a gótica é uma letra larga.
+        */
+        font-size: clamp(26px, 3.4vw, 44px);
+        line-height: 0.95;
+        letter-spacing: 0.01em;
+        color: #fff;
+        text-shadow:
+          3px 3px 0 var(--tinta),
+          0 8px 26px rgba(0, 0, 0, 0.8);
       }
 
-      /* A barra de baixo: papel, itens em linha, o primeiro em vermelho. */
-      .barra {
-        display: flex;
-        align-items: stretch;
-        gap: 0;
-        background: var(--papel);
-        color: var(--tinta);
-        border-top: 1px solid rgba(0, 0, 0, 0.12);
-        flex-wrap: wrap;
-      }
-      .barra button {
+      /*
+        Os botões gordos.
+
+        Cada item tem a sua cor e o seu peso, e a ordem é a das intenções: o
+        que a maioria quer fazer fica no alto e é o mais quente. A borda de
+        baixo mais escura é o que dá o volume de botão de fliperama sem
+        depender de imagem nenhuma.
+      */
+      .coluna button.item {
         appearance: none;
-        border: none;
-        background: transparent;
-        color: var(--acento);
-        font: inherit;
-        font-size: clamp(13px, 1.5vw, 15px);
-        font-weight: 700;
-        padding: 14px clamp(10px, 1.6vw, 18px);
-        cursor: pointer;
-        border-right: 1px solid rgba(0, 0, 0, 0.1);
-      }
-      .barra button:hover {
-        background: rgba(228, 0, 43, 0.08);
-      }
-      .barra button.primario {
-        background: var(--acento);
+        border: 3px solid rgba(0, 0, 0, 0.55);
+        border-bottom-width: 6px;
+        border-radius: 10px;
         color: #fff;
-        padding-inline: clamp(16px, 2.4vw, 30px);
+        font-family: var(--titulo);
+        font-size: clamp(15px, 1.55vw, 20px);
+        letter-spacing: 0.06em;
+        text-align: center;
+        padding: clamp(8px, 1.4vh, 12px) 10px clamp(6px, 1.1vh, 10px);
+        cursor: pointer;
+        text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.45);
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+        transition: transform 0.08s ease;
       }
-      .barra button.primario:hover {
-        background: #c40025;
+      .coluna button.item small {
+        display: block;
+        font-family: 'Trebuchet MS', system-ui, sans-serif;
+        font-size: 11px;
+        letter-spacing: 0.02em;
+        opacity: 0.86;
+        text-shadow: none;
+        margin-top: 3px;
       }
-      .barra button[aria-expanded='true'] {
-        background: rgba(0, 0, 0, 0.07);
-        color: var(--tinta);
+      .coluna button.item:hover {
+        transform: translateX(4px);
+        filter: brightness(1.1);
       }
-      .barra .estado {
-        margin-left: auto;
+      .coluna button.item:active {
+        transform: translateY(3px);
+        border-bottom-width: 3px;
+      }
+      .item.laranja {
+        background: linear-gradient(#f7a733, #e2842a);
+      }
+      .item.azul {
+        background: linear-gradient(#5b9bf0, #3b6fd0);
+      }
+      .item.verde {
+        background: linear-gradient(#6fc46a, #4c9a49);
+      }
+      .item.roxo {
+        background: linear-gradient(#a97ee0, #7f52bd);
+      }
+      .item.rubro {
+        background: linear-gradient(#e2564b, #bf3128);
+      }
+      .miudos {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+      .miudos button.item {
+        font-size: clamp(11px, 1.2vw, 14px);
+        padding: 9px 4px 7px;
+      }
+      .coluna button.item[aria-expanded='true'] {
+        filter: brightness(1.25);
+        transform: translateX(4px);
+      }
+      .assinatura {
+        margin: 4px 0 0;
+        font-size: 11px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.7);
+        text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+      }
+
+      /*
+        A caixa de estado, no lugar do letreiro de notícias da referência.
+        Num jogo só multiplayer, "tem gente jogando agora?" é a notícia.
+      */
+      .estado {
+        margin-top: auto;
         display: flex;
         align-items: center;
         gap: 8px;
-        padding: 0 clamp(12px, 2vw, 20px);
+        background: rgba(0, 0, 0, 0.55);
+        border: 2px solid rgba(255, 255, 255, 0.16);
+        border-radius: 8px;
+        padding: 9px 11px;
         font-size: 12px;
-        color: rgba(20, 17, 15, 0.62);
-        border-left: 1px solid rgba(0, 0, 0, 0.1);
+        color: rgba(255, 255, 255, 0.82);
       }
       .pulso {
         width: 8px;
@@ -202,18 +259,34 @@
         }
       }
 
-      /* Painéis de papel, abertos por cima da barra. */
+      /*
+        Painéis de papel, abertos ao lado da coluna — nunca por cima dela.
+        Ler as regras não pode esconder o botão de jogar.
+      */
       .folha {
-        position: absolute;
-        left: clamp(14px, 3vw, 34px);
-        right: clamp(14px, 3vw, 34px);
-        bottom: 64px;
-        max-height: min(66vh, 560px);
+        grid-column: 2;
+        grid-row: 1;
+        align-self: center;
+        justify-self: start;
+        pointer-events: auto;
+        width: min(620px, calc(100% - 2 * clamp(14px, 3vw, 34px)));
+        margin: clamp(14px, 3vw, 34px);
+        max-height: min(78vh, 620px);
         overflow-y: auto;
         background: var(--papel);
         color: var(--tinta);
         padding: clamp(16px, 2.4vw, 28px);
         box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+      }
+      @media (max-width: 760px) {
+        #menu {
+          grid-template-columns: 1fr;
+        }
+        .folha {
+          grid-column: 1;
+          grid-row: 1;
+          justify-self: stretch;
+        }
       }
       .folha[hidden] {
         display: none;
@@ -493,6 +566,122 @@
         color: rgba(20, 17, 15, 0.65);
       }
 
+      /* ------------------------------------------------------------ cabine */
+      /*
+        Quem está no sofá.
+
+        Quatro molduras lado a lado, como nos jogos de quatro: vaga vazia diz
+        qual tecla ou botão apertar para entrar, vaga ocupada mostra quem é e
+        com o que está jogando. A cor de cada moldura é a mesma da seta que vai
+        aparecer sobre a cabeça do boneco — é esse par que faz alguém achar o
+        próprio personagem numa tela dividida por quatro.
+      */
+      #cabine {
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        gap: 14px;
+        padding: clamp(14px, 3vw, 30px);
+        background: rgba(8, 10, 16, 0.78);
+        backdrop-filter: blur(2px);
+      }
+      #cabine h2 {
+        margin: 0;
+        font-family: var(--titulo);
+        font-size: clamp(20px, 3.4vw, 34px);
+        letter-spacing: 0.05em;
+        text-align: center;
+        color: #fff;
+        text-shadow: 3px 3px 0 var(--tinta);
+      }
+      #cabine .dica {
+        display: block;
+        font-family: 'Trebuchet MS', system-ui, sans-serif;
+        font-size: 13px;
+        letter-spacing: 0;
+        text-shadow: none;
+        color: rgba(255, 255, 255, 0.7);
+        margin-top: 6px;
+      }
+      .vagas-sofa {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: clamp(8px, 1.4vw, 16px);
+        align-content: center;
+      }
+      @media (max-width: 700px) {
+        .vagas-sofa {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      .vaga-sofa {
+        border: 4px solid rgba(255, 255, 255, 0.18);
+        border-radius: 12px;
+        background: rgba(0, 0, 0, 0.4);
+        min-height: min(46vh, 340px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 14px;
+        text-align: center;
+      }
+      .vaga-sofa[data-cheia='true'] {
+        background: rgba(0, 0, 0, 0.62);
+      }
+      .vaga-sofa .numero {
+        font-family: var(--titulo);
+        font-size: clamp(30px, 4.6vw, 54px);
+        line-height: 1;
+        text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.6);
+      }
+      .vaga-sofa .quem {
+        font-weight: 700;
+        font-size: 15px;
+      }
+      .vaga-sofa .fonte {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.66);
+      }
+      .vaga-sofa .convite {
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.6);
+        line-height: 1.6;
+      }
+      .vaga-sofa .convite b {
+        display: inline-block;
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 4px;
+        padding: 1px 7px;
+        color: #fff;
+      }
+      .cabine-rodape {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .cabine-rodape .dica {
+        margin: 0;
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.7);
+      }
+      #cabine button.pequeno {
+        background: transparent;
+        color: rgba(255, 255, 255, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        padding: 12px 16px;
+        font: inherit;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      #cabine button.grande:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
       /* ------------------------------------------------- crachá de plateia */
       #plateia {
         position: fixed;
@@ -519,21 +708,34 @@
 
     <!-- ------------------------------------------------------- menu inicial -->
     <section id="menu" class="tela">
-      <div class="marca">
-        <span class="kicker">REINO DE</span>
-        <h1>Migalhas</h1>
-      </div>
+      <div class="coluna">
+        <div class="marca">
+          <span class="kicker">REINO DE</span>
+          <h1>Migalhas</h1>
+        </div>
 
-      <p class="assinatura">um cerco a bolo · duas princesas · uma balança só</p>
+        <button id="jogar-local" class="item laranja">
+          Jogo Local
+          <small>até 4 no mesmo aparelho · sem estranhos</small>
+        </button>
+        <button id="jogar-online" class="item azul">
+          Jogo Online
+          <small>até 4 daqui + gente do mundo</small>
+        </button>
+        <button class="item verde" data-folha="regras" aria-expanded="false">Como se joga</button>
+        <button id="assistir" class="item roxo">Assistir</button>
 
-      <div class="barra">
-        <button id="jogar" class="primario">Jogar</button>
-        <button data-folha="apelido" aria-expanded="false">Apelido</button>
-        <button data-folha="regras" aria-expanded="false">Como se joga</button>
-        <button data-folha="ajustes" aria-expanded="false">Ajustes</button>
-        <button data-folha="creditos" aria-expanded="false">Créditos</button>
-        <button id="assistir">Assistir</button>
-        <span class="estado"><i class="pulso" id="pulso"></i><span id="estado-servidor">ligando…</span></span>
+        <div class="miudos">
+          <button class="item rubro" data-folha="apelido" aria-expanded="false">Apelido</button>
+          <button class="item rubro" data-folha="ajustes" aria-expanded="false">Ajustes</button>
+          <button class="item rubro" data-folha="creditos" aria-expanded="false">Créditos</button>
+        </div>
+
+        <p class="assinatura">um cerco a bolo · duas princesas · uma balança só</p>
+
+        <span class="estado"
+          ><i class="pulso" id="pulso"></i><span id="estado-servidor">ligando…</span></span
+        >
       </div>
 
       <!-- painéis de papel -->
@@ -576,12 +778,29 @@
           <div><b>Caçador</b>abate o bicho e leva a carne</div>
           <div><b>Aldeão</b>sem chapéu: faz de tudo, devagar</div>
         </div>
+        <h2 style="margin-top: 18px">Controles</h2>
+        <div class="classes">
+          <div>
+            <b>Jogador 1 · teclado</b>
+            <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> andar · <kbd>mouse</kbd> mirar ·
+            <kbd>clique</kbd> ou <kbd>F</kbd> atacar · <kbd>E</kbd> usar
+          </div>
+          <div>
+            <b>Jogador 2 · teclado</b>
+            <kbd>setas</kbd> andar e mirar · <kbd>.</kbd> atacar · <kbd>,</kbd> usar
+          </div>
+          <div>
+            <b>Jogadores 1 a 4 · controle</b>
+            analógico esquerdo anda, direito mira · <kbd>A</kbd> usar ·
+            <kbd>X</kbd> ou <kbd>RT</kbd> atacar
+          </div>
+          <div><b>Celular</b> manche de um lado, botões do outro · uma pessoa por aparelho</div>
+        </div>
         <div class="teclas">
-          <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> andar</span>
-          <span><kbd>mouse</kbd> mirar · <kbd>clique</kbd> atacar</span>
-          <span><kbd>E</kbd> usar</span>
           <span><kbd>Tab</kbd> placar</span>
-          <span>no celular: manche de um lado, botões do outro</span>
+          <span
+            >sem mouse nem analógico direito, o golpe sai <b>para onde você está indo</b></span
+          >
         </div>
       </div>
 
@@ -604,10 +823,31 @@
           >. Unidades, prédios, terreno e bichos são do pacote; o bolo, os chapéus no chão e a coroa
           da princesa são desenhados no próprio jogo.
         </p>
+        <p>Tipografia do menu: <b>BlackFlag</b>, usada só na moldura.</p>
         <p>
           Inspiração declarada: <b>Fat Princess</b> (Titan Studios, 2009) — o esqueleto do resgate
-          por times. A balança conservada, os ofícios e o chapéu que se rouba são deste jogo.
+          por times. A balança conservada, os ofícios e o chapéu que se rouba são deste jogo. O
+          menu em coluna e a cabine de quatro vagas vêm do <b>Castle Crashers</b> (The Behemoth,
+          2008), que é como um jogo de sofá se apresenta.
         </p>
+      </div>
+    </section>
+
+    <!-- --------------------------------------------------------- a cabine -->
+    <section id="cabine" class="tela oculta">
+      <h2>
+        Quem está jogando?
+        <span class="dica">
+          até quatro pessoas neste aparelho · todo mundo entra no mesmo reino
+        </span>
+      </h2>
+      <div class="vagas-sofa" id="vagas-sofa"></div>
+      <div class="cabine-rodape">
+        <p class="dica" id="cabine-recado"></p>
+        <div class="linha" style="margin: 0">
+          <button id="cabine-voltar" class="pequeno">voltar ao menu</button>
+          <button id="cabine-seguir" class="grande">escolher o lado</button>
+        </div>
       </div>
     </section>
 

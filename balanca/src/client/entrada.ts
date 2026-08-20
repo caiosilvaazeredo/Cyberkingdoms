@@ -15,7 +15,19 @@
  * personagem até ele. No celular, o polegar direito faz o mesmo com um toque.
  * É o que permite recuar atirando — a coisa que separa um arqueiro de um
  * guerreiro devagar.
+ *
+ * ## Esta classe é o aparelho, não o jogador
+ *
+ * Desde que quatro pessoas cabem no mesmo aparelho, quem sabe *ler um jogador*
+ * é `controles.ts`, com uma função pura por fonte. O que sobrou aqui é o que
+ * pertence à página inteira e não a ninguém em particular: as teclas que estão
+ * apertadas neste instante, onde está o cursor, os dedos na tela e os
+ * retângulos dos botões do HUD. A leitura do primeiro jogador continua saindo
+ * daqui por conveniência — é ela que junta teclado, mouse e toque no mesmo
+ * comando.
  */
+
+import { ESQUEMAS, lerTeclado } from './controles';
 
 export interface Retangulo {
   x: number;
@@ -32,13 +44,6 @@ export interface LeituraDeEntrada {
   atacar: boolean;
   usar: boolean;
 }
-
-const TECLAS_ESQUERDA = ['KeyA', 'ArrowLeft'];
-const TECLAS_DIREITA = ['KeyD', 'ArrowRight'];
-const TECLAS_CIMA = ['KeyW', 'ArrowUp'];
-const TECLAS_BAIXO = ['KeyS', 'ArrowDown'];
-const TECLAS_USAR = ['KeyE', 'Space'];
-const TECLAS_ATACAR = ['KeyJ', 'KeyF'];
 
 /** Raio do manche virtual, em pixels de tela. */
 const RAIO_DO_MANCHE = 70;
@@ -149,23 +154,40 @@ export class Entrada {
     return this.ladoDoManche === 'esquerda' ? x < largura / 2 : x >= largura / 2;
   }
 
-  private algum(codigos: readonly string[]): boolean {
-    return codigos.some((c) => this.teclas.has(c));
+  /** As teclas apertadas agora. É daqui que cada esquema tira a sua leitura. */
+  get teclasApertadas(): ReadonlySet<string> {
+    return this.teclas;
+  }
+
+  /** Onde está o cursor, em pixels de tela. */
+  get cursor(): { x: number; y: number } {
+    return { x: this.mouseX, y: this.mouseY };
+  }
+
+  get botaoDoMouse(): boolean {
+    return this.mousePressionado;
   }
 
   /**
-   * Lê a intenção do jogador.
+   * Lê a intenção do primeiro jogador: teclado, mouse **e** toque juntos.
+   *
+   * O esquema do WASD sai da tabela compartilhada; o que se acrescenta aqui é a
+   * camada do dedo — manche, toque de mira e botões de tela —, que não existe
+   * para os outros jogadores porque uma tela de celular não comporta quatro
+   * pares de polegares.
    *
    * @param centro onde o personagem está na tela, em pixels — a mira é a
    * direção dele até o cursor, e não a posição do cursor.
    */
   ler(centro: { x: number; y: number }): LeituraDeEntrada {
-    let mx = 0;
-    let my = 0;
-    if (this.algum(TECLAS_ESQUERDA)) mx -= 1;
-    if (this.algum(TECLAS_DIREITA)) mx += 1;
-    if (this.algum(TECLAS_CIMA)) my -= 1;
-    if (this.algum(TECLAS_BAIXO)) my += 1;
+    const base = lerTeclado(
+      ESQUEMAS[0]!,
+      this.teclas,
+      { x: 0, y: 0 },
+      { cursor: this.cursor, centro },
+      this.mousePressionado,
+    );
+    let { mx, my, ax, ay } = base;
 
     const manche = this.manche;
     if (manche) {
@@ -177,15 +199,14 @@ export class Entrada {
       }
     }
 
-    let ax = 0;
-    let ay = 0;
-    const alvo = this.toqueDeMirar ?? { x: this.mouseX, y: this.mouseY };
-    const dx = alvo.x - centro.x;
-    const dy = alvo.y - centro.y;
-    const d = Math.hypot(dx, dy);
-    if (d > 12) {
-      ax = dx / d;
-      ay = dy / d;
+    if (this.toqueDeMirar) {
+      const dx = this.toqueDeMirar.x - centro.x;
+      const dy = this.toqueDeMirar.y - centro.y;
+      const d = Math.hypot(dx, dy);
+      if (d > 12) {
+        ax = dx / d;
+        ay = dy / d;
+      }
     }
 
     const botaoApertado = (nome: string): boolean =>
@@ -196,12 +217,11 @@ export class Entrada {
       my,
       ax,
       ay,
-      atacar:
-        this.mousePressionado ||
-        this.algum(TECLAS_ATACAR) ||
-        this.toqueDeMirar !== null ||
-        botaoApertado('atacar'),
-      usar: this.algum(TECLAS_USAR) || botaoApertado('usar'),
+      atacar: base.atacar || this.toqueDeMirar !== null || botaoApertado('atacar'),
+      // `Espaço` é o botão de entrar da cabine e também o "usar" de sempre: a
+      // tecla mais óbvia do teclado merece as duas funções, e elas nunca
+      // acontecem na mesma tela.
+      usar: base.usar || this.teclas.has('Space') || botaoApertado('usar'),
     };
   }
 }

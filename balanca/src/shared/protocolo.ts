@@ -40,7 +40,7 @@ import { TIMES, type Time } from './regras';
  * O mapa não viaja: o cliente monta a arena a partir da seed.
  */
 
-export const VERSAO_DO_PROTOCOLO = 2;
+export const VERSAO_DO_PROTOCOLO = 3;
 
 // --- cliente → servidor ----------------------------------------------------
 
@@ -70,8 +70,26 @@ export type DoCliente =
    * `assistindo` marca quem chegou só para ver — o menu do jogo mostra uma
    * partida de verdade correndo atrás do título, e quem está lendo o menu não
    * pode ocupar a vaga de quem quer jogar.
+   *
+   * `sala` e `privada` existem por causa do sofá. Quatro pessoas no mesmo
+   * aparelho abrem **quatro conexões** — é o que dá a cada uma a sua previsão,
+   * a sua vida e o seu chapéu, sem inventar um segundo formato de comando. Só
+   * que o lobby joga cada conexão na sala mais cheia de gente, e nada garante
+   * que as quatro caiam na mesma. Então a primeira entra normalmente e diz o
+   * nome da sala em que caiu; as outras três pedem **aquela** sala.
+   *
+   * `privada` é o "jogo local": abre uma sala em que o lobby não coloca
+   * estranhos. O resto do time vem de bot, e quem está no sofá joga sem
+   * companhia de fora.
    */
-  | { t: 'entrar'; nome: string; versao: number; assistindo?: boolean }
+  | {
+      t: 'entrar';
+      nome: string;
+      versao: number;
+      assistindo?: boolean;
+      sala?: string;
+      privada?: boolean;
+    }
   /**
    * Escolher o lado é uma mensagem separada de entrar, e não um campo dela.
    *

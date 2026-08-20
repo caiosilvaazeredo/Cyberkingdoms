@@ -1,12 +1,28 @@
 import { alvoDaAtracao, aproximar } from './atracao';
 import { carregarArte, type Arte } from './arte';
 import { dicaDeUso } from './contexto';
-import { bussola, criarCamera, desenharMundo, realce, seguir, vistaDe } from './desenho';
+import {
+  Porteiro,
+  controlesLigados,
+  fontesLivres,
+  type IdDeFonte,
+} from './controles';
+import {
+  bussola,
+  criarCamera,
+  desenharMundo,
+  enquadrarGrupo,
+  realce,
+  seguir,
+  vistaDe,
+  COR_DA_VAGA,
+} from './desenho';
 import { Entrada } from './entrada';
 import { desenharDica, desenharHud, narrar } from './hud';
 import { Rede } from './rede';
+import { Sofa, type Modo } from './sofa';
 import { Telas } from './telas';
-import { princesaDe } from '../shared/estado';
+import { princesaDe, type Unidade } from '../shared/estado';
 import { DT } from '../shared/regras';
 
 /**
@@ -24,6 +40,14 @@ import { DT } from '../shared/regras';
  * tirar o lugar de quem quer jogar. Só ao escolher um lado é que a pessoa senta
  * à mesa.
  *
+ * ## Uma página, até quatro pessoas
+ *
+ * O jogo é de sofá além de ser de rede: cabem quatro num aparelho, cada uma com
+ * o seu controle ou o seu canto do teclado, todas no mesmo time. Quem cuida
+ * disso é o `Sofa`, e o que este arquivo faz é ligar as pontas — ouvir os
+ * botões na cabine, mandar um comando por pessoa por passo, e enquadrar a
+ * câmera de modo que os quatro caibam na tela.
+ *
  * ## Dois relógios, de propósito
  *
  * O desenho corre no relógio da tela (`requestAnimationFrame`), que é o que o
@@ -34,7 +58,8 @@ import { DT } from '../shared/regras';
  *
  * ## Não existe modo de um jogador
  *
- * Sem tela de partida solo, sem treino contra bots — o servidor é o jogo. Se
+ * Sem tela de partida solo, sem treino contra bots — o servidor é o jogo. O
+ * "jogo local" é uma sala reservada ao aparelho, não uma simulação à parte: se
  * você entrar sozinho, ele arruma companhia; se chegar gente, os bots cedem o
  * lugar.
  */
@@ -43,21 +68,26 @@ const tela = document.querySelector<HTMLCanvasElement>('#tela')!;
 const ctx = tela.getContext('2d')!;
 
 const entrada = new Entrada(tela);
+const porteiro = new Porteiro();
 const camera = criarCamera();
 /** Alvo suavizado da câmera do modo atração. */
 let olhar = { x: 0, y: 0 };
 
 let arte: Arte | null = null;
 let rede: Rede | null = null;
+let sofa: Sofa | null = null;
 let acumulado = 0;
 let anterior = performance.now();
-/** Verdadeiro entre apertar "Jogar" e a tela de escolha aparecer. */
+/** Verdadeiro entre apertar "Jogar" e a partida começar. */
 let querendoJogar = false;
+/** A conexão de plateia está numa sala reservada, aberta para um jogo local. */
+let salaReservada = false;
 
 const telas = new Telas({
-  jogar: (nome) => void entrarNaBatalha(nome),
+  jogar: (modo) => void montarOSofa(modo),
   assistir: () => telas.mostrar('plateia'),
-  escolher: (time) => rede?.escolherTime(time, telas.preferencias.nome || 'Anônimo'),
+  escolher: (time) => sofa?.escolherTime(time),
+  desistir: () => desfazerOSofa(),
   ajustou: () => {
     // Nada a fazer além de guardar: o laço de quadro lê `telas.preferencias`
     // toda vez que desenha, então o ajuste vale no quadro seguinte.
@@ -100,26 +130,65 @@ async function comecarAAssistir(): Promise<void> {
   });
 }
 
-async function entrarNaBatalha(nome: string): Promise<void> {
+/**
+ * Prepara a cabine: garante arte, garante a sala certa, e abre o sofá.
+ *
+ * O jogo online reaproveita a conexão de plateia — ela já está numa sala cheia
+ * de gente, que é exatamente onde se quer entrar. O jogo local não pode
+ * reaproveitá-la: a sala dela é pública, e o pedido foi por uma sala em que
+ * ninguém de fora entre. Aí a conexão é trocada por uma nova, privada.
+ */
+async function montarOSofa(modo: Modo): Promise<void> {
   querendoJogar = true;
-  if (!arte || !rede || rede.fechado) {
+  if (!arte) {
     telas.mostrar('carregando');
     telas.carregou(0.05, 'preparando o reino…');
-    if (!arte) arte = await carregarArte();
-    if (!rede || rede.fechado) {
-      rede = new Rede(enderecoDoServidor());
-      rede.conectar(nome, true);
-    }
+    arte = await carregarArte();
   }
-  telas.carregou(0.95, 'procurando uma partida…');
-  // Daqui em diante o laço de quadro assume: quando a arena chegar, ele abre a
-  // tela de escolha de lado.
+
+  const precisaDeSalaNova = modo === 'local' || !rede || rede.fechado;
+  if (precisaDeSalaNova) {
+    telas.mostrar('carregando');
+    telas.carregou(0.5, modo === 'local' ? 'abrindo a sala de vocês…' : 'procurando uma partida…');
+    rede?.desconectar();
+    rede = new Rede(enderecoDoServidor());
+    rede.conectar(telas.preferencias.nome || 'Anônimo', true, { privada: modo === 'local' });
+    salaReservada = modo === 'local';
+  }
+
+  sofa = new Sofa(enderecoDoServidor(), rede!);
+  porteiro.armar(entrada.teclasApertadas, controlesLigados());
+  // A cabine só abre com a arena na mão: sem ela não há sala para as outras
+  // conexões pedirem pelo nome, e sentar cedo demais espalharia a turma.
+  if (rede!.arena) telas.mostrar('cabine');
+}
+
+function desfazerOSofa(): void {
+  querendoJogar = false;
+  sofa?.levantar();
+  sofa = null;
+  // Desistir de um jogo local devolve o menu à sala pública. A sala reservada
+  // que ficou para trás tem bot jogando para ninguém, e o menu voltaria a
+  // mostrar exatamente aquilo que a atração existe para não mostrar: um jogo
+  // sem gente.
+  if (salaReservada) {
+    salaReservada = false;
+    rede?.desconectar();
+    rede = new Rede(enderecoDoServidor());
+    rede.conectar(telas.preferencias.nome || 'Anônimo', true);
+  }
 }
 
 function voltarAoMenu(motivo: string): void {
-  querendoJogar = false;
+  desfazerOSofa();
   telas.mostrar('menu');
   if (motivo) telas.avisar(motivo);
+}
+
+/** O nome de cada vaga. A primeira é de quem configurou o apelido. */
+function nomeDaVaga(vaga: number): string {
+  const base = telas.preferencias.nome.trim() || 'Anônimo';
+  return vaga === 0 ? base : `Jogador ${vaga + 1}`;
 }
 
 /**
@@ -136,6 +205,15 @@ const espia = { quadros: 0, comandos: 0 };
   tela: () => telas.atual,
   relogio: () => rede?.estado?.relogio ?? null,
   ping: () => rede?.ping ?? null,
+  sala: () => rede?.sala ?? null,
+  sofa: () =>
+    sofa?.jogadores.map((j) => ({
+      vaga: j.vaga,
+      fonte: j.fonte,
+      nome: j.nome,
+      id: j.rede.meuId,
+      time: j.rede.eu?.time ?? null,
+    })) ?? [],
 };
 
 function laco(agora: number): void {
@@ -149,8 +227,15 @@ function laco(agora: number): void {
   const ajustes = telas.preferencias;
   entrada.ladoDoManche = ajustes.manche;
 
-  const eu = rede?.eu ?? null;
   const estado = rede?.estado ?? null;
+  // Quem está em campo, deste aparelho, em ordem de vaga. É a lista que decide
+  // câmera, HUD e se a partida já começou para o sofá. O par carrega a vaga
+  // junto porque um jogador morto e outro que ainda não nasceu deixam buracos:
+  // usar a posição na lista como número da vaga trocaria a cor de todo mundo.
+  const emCampo: { vaga: number; unidade: Unidade }[] = [];
+  for (const j of sofa?.jogadores ?? []) {
+    if (j.rede.eu) emCampo.push({ vaga: j.vaga, unidade: j.rede.eu });
+  }
 
   telas.atualizarEstado({
     ligado: rede !== null && !rede.fechado && rede.arena !== null,
@@ -163,27 +248,38 @@ function laco(agora: number): void {
 
   // A conexão caiu: quem estava jogando volta ao menu com o motivo; quem só
   // assistia continua no menu, e a barra já está dizendo o que houve.
-  if (rede?.fechado && (eu || querendoJogar)) {
+  if (rede?.fechado && (emCampo.length > 0 || querendoJogar)) {
     voltarAoMenu(rede.motivo ?? 'a conexão caiu — tente de novo');
     rede = null;
   }
 
-  // Quem apertou "Jogar" e já tem arena vai para a escolha de lado.
-  if (querendoJogar && rede?.arena && !eu && telas.atual !== 'escolha') {
-    telas.mostrar('escolha');
+  // A cabine estava esperando a arena da sala nova para poder abrir.
+  if (querendoJogar && sofa && rede?.arena && telas.atual === 'carregando') {
+    telas.mostrar('cabine');
   }
-  if (eu && telas.atual !== 'jogo') {
-    querendoJogar = false;
-    telas.mostrar('jogo');
-  }
-  if (rede?.espectador && telas.atual === 'escolha') {
+  if (telas.montandoOSofa && sofa) atenderACabine(sofa);
+
+  if (telas.atual === 'escolha' && sofa) {
     telas.atualizarEscolha({
-      porTime: rede.porTime,
-      elenco: [...rede.elenco.values()],
+      porTime: rede?.porTime ?? 0,
+      elenco: [...(rede?.elenco.values() ?? [])],
       placar: estado?.placar ?? { azul: 0, vermelho: 0 },
       relogio: estado?.relogio ?? 0,
+      quantosLocais: sofa.quantosLocais,
     });
-    if (rede.motivo) telas.avisarNaEscolha(rede.motivo);
+    const recusa = sofa.recusa;
+    if (recusa) {
+      // Sofá partido: uns entraram, outros não. Quem ficou de fora desce, e o
+      // jogo começa com quem coube — travar a tela para todos seria pior.
+      const deixados = sofa.dispensarRecusados();
+      telas.avisarNaEscolha(
+        deixados > 0 ? `${deixados} de vocês não coube neste lado: ${recusa}` : recusa,
+      );
+    }
+  }
+  if (sofa?.todosEmCampo && telas.atual !== 'jogo') {
+    querendoJogar = false;
+    telas.mostrar('jogo');
   }
 
   if (!arte || !rede?.arena) {
@@ -194,44 +290,55 @@ function laco(agora: number): void {
 
   // --- câmera ------------------------------------------------------------
   //
-  // Jogando, ela segue o seu personagem. Sem personagem — menu, plateia,
-  // escolha de lado —, ela persegue o que decide a partida, com atraso, como a
-  // câmera de um replay de esporte.
-  let alvoDaCamera: { x: number; y: number };
-  if (eu) {
-    alvoDaCamera = eu;
+  // Jogando, ela enquadra **todo mundo do sofá** e abre o quanto for preciso
+  // para caber. Sem ninguém em campo — menu, plateia, cabine, escolha de lado
+  // —, ela persegue o que decide a partida, com atraso, como a câmera de um
+  // replay de esporte.
+  const posicoes = emCampo.map((p) => sofa!.posicaoDe(p.unidade, agora));
+  let foraDeQuadro: number[] = [];
+  if (emCampo.length > 0) {
+    foraDeQuadro = enquadrarGrupo(camera, rede.arena, posicoes, largura, altura, ajustes);
   } else {
     const alvo = alvoDaAtracao(estado, rede.arena.largura, rede.arena.altura);
     if (olhar.x === 0 && olhar.y === 0) olhar = { x: alvo.x, y: alvo.y };
     olhar = aproximar(olhar, alvo, dt);
-    alvoDaCamera = olhar;
+    seguir(camera, rede.arena, olhar, largura, altura, ajustes);
+    // Na atração a vista abre um pouco: quem está lendo o menu quer ver a briga
+    // inteira, não o cotovelo de um guerreiro.
+    camera.zoom *= 0.9;
   }
-  seguir(camera, rede.arena, alvoDaCamera, largura, altura, ajustes);
-  // Na atração a vista abre um pouco: quem está lendo o menu quer ver a briga
-  // inteira, não o cotovelo de um guerreiro.
-  if (!eu) camera.zoom *= 0.9;
   const vista = vistaDe(camera, largura, altura);
-  const centroNaTela = { x: vista.paraTelaX(alvoDaCamera.x), y: vista.paraTelaY(alvoDaCamera.y) };
 
   // Passo fixo: um comando por `DT`, nem mais nem menos, independentemente da
   // taxa de quadros. Plateia não manda comando de movimento — manda só o aceno
   // que diz ao servidor que a conexão está viva.
   acumulado += dt;
   let passos = 0;
+  const centros = new Map<number, { x: number; y: number }>();
+  for (const [i, p] of emCampo.entries()) {
+    const pos = posicoes[i]!;
+    centros.set(p.vaga, { x: vista.paraTelaX(pos.x), y: vista.paraTelaY(pos.y) });
+  }
   while (acumulado >= DT && passos < 5) {
-    if (eu && telas.atual === 'jogo') {
-      rede.passar(entrada.ler(centroNaTela));
+    if (sofa && telas.atual === 'jogo') {
+      sofa.passar(entrada, centros);
       espia.comandos++;
     }
     acumulado -= DT;
     passos++;
   }
   if (passos === 5) acumulado = 0;
-  if (!eu) rede.manterVivo();
+  // Fora da partida, todas as conexões precisam acenar para não serem
+  // derrubadas enquanto alguém lê a tela de escolha.
+  if (telas.atual !== 'jogo') {
+    rede.manterVivo();
+    for (const j of sofa?.jogadores ?? []) j.rede.manterVivo();
+  }
 
   const tempo = agora / 1000;
-  desenharMundo(ctx, arte, rede.arena, rede, camera, largura, altura, tempo, ajustes);
+  desenharMundo(ctx, arte, rede.arena, sofa ?? rede, camera, largura, altura, tempo, ajustes);
 
+  const eu = emCampo[0]?.unidade ?? null;
   if (estado && eu && estado.princesas.length === 2) {
     const dica = dicaDeUso(rede.arena, estado, eu);
     if (dica?.alvo) realce(ctx, vista, dica.alvo, tempo);
@@ -242,6 +349,13 @@ function laco(agora: number): void {
     const minha = princesaDe(estado, eu.time);
     if (minha.onde !== 'salva') bussola(ctx, vista, largura, altura, minha, '#ffd479');
   }
+  // Quem do sofá saiu de quadro ganha uma seta na cor da sua vaga: a câmera já
+  // abriu o que podia, e daqui em diante é mais honesto apontar do que
+  // encolher o jogo até ninguém enxergar nada.
+  for (const i of foraDeQuadro) {
+    const vaga = emCampo[i]!.vaga;
+    bussola(ctx, vista, largura, altura, posicoes[i]!, COR_DA_VAGA[vaga % COR_DA_VAGA.length]!);
+  }
 
   if (estado) {
     for (const evento of rede.eventosNovos.splice(0)) {
@@ -249,7 +363,29 @@ function laco(agora: number): void {
       if (linha && ajustes.registro) rede.avisar(linha.texto, linha.cor);
     }
   }
-  if (eu) desenharHud(ctx, rede, entrada, largura, altura, tempo, ajustes);
+  if (emCampo.length > 0) {
+    desenharHud(ctx, rede, emCampo, entrada, largura, altura, tempo, ajustes);
+  }
+}
+
+/**
+ * Ouve os controles enquanto a cabine está aberta.
+ *
+ * Roda por quadro porque a lista de controles muda por fora: quem chega com o
+ * controle na mão e o pluga no meio da tela precisa ver a vaga abrir na hora.
+ */
+function atenderACabine(sofa: Sofa): void {
+  const pads = controlesLigados();
+  const ocupadas = new Set<IdDeFonte>(sofa.jogadores.map((j) => j.fonte));
+  const novo = porteiro.quemEntrou(entrada.teclasApertadas, pads, ocupadas);
+  if (novo) {
+    const jogador = sofa.sentar(novo, nomeDaVaga(sofa.quantosLocais));
+    if (jogador) ocupadas.add(jogador.fonte);
+  }
+  telas.atualizarCabine({
+    sentados: sofa.jogadores.map((j) => ({ vaga: j.vaga, nome: j.nome, fonte: j.fonte })),
+    livres: fontesLivres(pads, ocupadas),
+  });
 }
 
 void comecarAAssistir();

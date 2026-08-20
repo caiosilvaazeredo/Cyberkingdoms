@@ -1,5 +1,6 @@
 /**
- * Teste de fumaça: sobe um navegador de verdade, entra numa partida e olha.
+ * Teste de fumaça: sobe um navegador de verdade, senta duas pessoas no sofá e
+ * entra numa partida.
  *
  * ## O que ele pega que o `vitest` não pega
  *
@@ -9,6 +10,17 @@
  * errado, um `getContext` nulo, um erro de tipo que só aparece no navegador.
  * Este roteiro entra no jogo como uma pessoa entraria e reclama se algo
  * escrever no console de erro.
+ *
+ * ## Por que dois jogadores, e não um
+ *
+ * O caminho de duas pessoas no mesmo aparelho passa por tudo o que o caminho de
+ * uma passa, **e mais**: duas conexões, uma sala pedida pelo nome, dois times
+ * que precisam ser o mesmo e dois comandos por passo. Testar com um só deixaria
+ * de fora justamente a parte nova.
+ *
+ * As teclas são seguradas por um instante em vez de tocadas: o laço de quadro
+ * lê o teclado a 60 Hz, e um toque instantâneo — que só um roteiro consegue
+ * fazer — pode nascer e morrer entre dois quadros.
  *
  * ## Por que ele cutuca a página a cada poucos segundos
  *
@@ -48,23 +60,60 @@ await pagina.screenshot({ path: 'fumaca-menu.png' });
 
 await pagina.click('button[data-folha="apelido"]');
 await pagina.fill('#nome', 'Fumaça');
-await pagina.click('[data-acao="jogar"]');
+// Jogo local: sala reservada a este aparelho, sem estranhos entrando no meio do
+// teste e mudando o que se está medindo.
+await pagina.click('#jogar-local');
 
-// A escolha de lado aparece por cima da partida; entrar é uma tecla.
+await pagina.waitForFunction(() => window.balanca?.tela() === 'cabine', { timeout: 30000 });
+
+/** Segura a tecla o bastante para o laço de quadro enxergar. */
+async function apertar(tecla) {
+  await pagina.keyboard.down(tecla);
+  await pagina.waitForTimeout(140);
+  await pagina.keyboard.up(tecla);
+  await pagina.waitForTimeout(140);
+}
+
+await apertar('Space'); // jogador 1: WASD
+await apertar('Enter'); // jogador 2: setas
+await pagina.waitForFunction(() => window.balanca?.sofa().length === 2, { timeout: 10000 });
+await pagina.screenshot({ path: 'fumaca-cabine.png' });
+
+await pagina.click('#cabine-seguir');
+// A escolha de lado aparece por cima da partida; o sofá inteiro entra junto.
 await pagina.waitForFunction(() => window.balanca?.tela() === 'escolha', { timeout: 30000 });
 await pagina.screenshot({ path: 'fumaca-escolha.png' });
 await pagina.click('#confirmar');
 await pagina.waitForFunction(() => window.balanca?.tela() === 'jogo', { timeout: 15000 });
 
+// A promessa do sofá: os dois nasceram, e no mesmo reino.
+const sofa = await pagina.evaluate(() => window.balanca.sofa());
+const sala = await pagina.evaluate(() => window.balanca.sala());
+if (sofa.length !== 2 || sofa.some((j) => j.id === null)) {
+  console.error('o sofá não entrou inteiro em campo:', sofa);
+  process.exit(1);
+}
+if (new Set(sofa.map((j) => j.time)).size !== 1) {
+  console.error('o sofá se dividiu entre os reinos:', sofa);
+  process.exit(1);
+}
+
 const medidas = [];
 for (let volta = 0; volta < 6; volta++) {
   await pagina.waitForTimeout(4000);
-  // Anda e ataca de vez em quando, para exercitar previsão, colisão e combate.
-  await pagina.keyboard.down(volta % 2 === 0 ? 'KeyD' : 'KeyS');
+  // Os dois andam ao mesmo tempo, cada um no seu canto do teclado: é o que
+  // exercita duas previsões, duas reconciliações e a câmera que tem de caber os
+  // dois. Se os esquemas se cruzassem, os bonecos andariam grudados.
+  const doUm = volta % 2 === 0 ? 'KeyD' : 'KeyS';
+  const doDois = volta % 2 === 0 ? 'ArrowLeft' : 'ArrowUp';
+  await pagina.keyboard.down(doUm);
+  await pagina.keyboard.down(doDois);
   await pagina.waitForTimeout(700);
-  await pagina.keyboard.up(volta % 2 === 0 ? 'KeyD' : 'KeyS');
+  await pagina.keyboard.up(doUm);
+  await pagina.keyboard.up(doDois);
   await pagina.mouse.click(900, 380);
   await pagina.keyboard.press('KeyE');
+  await pagina.keyboard.press('Period');
 
   medidas.push(
     await pagina.evaluate(() => {
@@ -85,7 +134,13 @@ const relogioAndou = primeira.relogio - ultima.relogio;
 const quadrosPorVolta = medidas.slice(1).reduce((s, m) => s + m.quadros, 0) / (medidas.length - 1);
 const comandosPorVolta = medidas.slice(1).reduce((s, m) => s + m.comandos, 0) / (medidas.length - 1);
 
-console.log(JSON.stringify({ relogioAndou, quadrosPorVolta, comandosPorVolta, erros }, null, 2));
+console.log(
+  JSON.stringify(
+    { sala, sofa, relogioAndou, quadrosPorVolta, comandosPorVolta, erros },
+    null,
+    2,
+  ),
+);
 console.log('captura em fumaca.png');
 
 await navegador.close();

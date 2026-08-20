@@ -157,7 +157,15 @@ wss.on('connection', (ws: WebSocket) => {
           return;
         }
         cliente.nome = apelido(msg.nome);
-        sala = lobby.acolher(cliente, msg.assistindo === true);
+        sala = lobby.acolher(cliente, {
+          assistindo: msg.assistindo === true,
+          // O nome da sala vem de fora e é usado para **procurar** uma sala que
+          // já existe, nunca para criar uma: no pior caso o pedido não acha
+          // nada e é recusado. O corte de tamanho é só para o log não virar
+          // despejo de texto de quem estiver brincando com o protocolo.
+          ...(typeof msg.sala === 'string' ? { sala: msg.sala.slice(0, 40) } : {}),
+          privada: msg.privada === true,
+        });
         if (!sala) ws.close();
         return;
       }

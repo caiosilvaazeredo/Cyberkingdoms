@@ -92,14 +92,28 @@ export class Rede {
   /**
    * @param assistindo quem chega pelo menu entra como plateia e **não ocupa
    * vaga** — a partida atrás do título não pode custar o lugar de um jogador.
+   * @param onde para onde ir: uma sala pelo nome (é assim que o segundo, o
+   * terceiro e o quarto jogador do mesmo aparelho caem junto do primeiro) ou
+   * uma sala privada (o jogo local, em que ninguém de fora entra).
    */
-  conectar(nome: string, assistindo = false): void {
+  conectar(
+    nome: string,
+    assistindo = false,
+    onde: { sala?: string; privada?: boolean } = {},
+  ): void {
     this.nome = nome;
     const ws = new WebSocket(this.url);
     this.ws = ws;
     ws.onopen = () => {
       ws.send(
-        JSON.stringify({ t: 'entrar', nome: this.nome, versao: VERSAO_DO_PROTOCOLO, assistindo }),
+        JSON.stringify({
+          t: 'entrar',
+          nome: this.nome,
+          versao: VERSAO_DO_PROTOCOLO,
+          assistindo,
+          ...(onde.sala !== undefined ? { sala: onde.sala } : {}),
+          ...(onde.privada ? { privada: true } : {}),
+        }),
       );
       this.pingar();
     };
@@ -236,6 +250,24 @@ export class Rede {
   /** A unidade do jogador, já com a previsão local aplicada. */
   get eu(): Unidade | null {
     return this.previsao;
+  }
+
+  // --- o que o desenho pergunta (a interface `OlharLocal`) ------------------
+  //
+  // Uma conexão sozinha é um sofá de uma pessoa. Implementar isto aqui é o que
+  // deixa o menu, o jogo solo e o sofá de quatro passarem pelo mesmo desenho.
+
+  /** Sempre a vaga zero: uma conexão só conhece o próprio jogador. */
+  vagaDe(id: number): number | null {
+    return id === this.meuId ? 0 : null;
+  }
+
+  get quantosLocais(): number {
+    return this.meuId === null ? 0 : 1;
+  }
+
+  previsaoDe(u: Unidade): Unidade {
+    return u.id === this.meuId ? (this.previsao ?? u) : u;
   }
 
   /** A unidade do jogador como o servidor a viu pela última vez. */

@@ -8,6 +8,7 @@ import {
   type Time,
 } from '../shared/regras';
 import type { Ajustes } from './ajustes';
+import { COR_DA_VAGA } from './desenho';
 import type { Entrada } from './entrada';
 import type { Rede } from './rede';
 
@@ -39,9 +40,17 @@ const COR: Record<Time, string> = { azul: '#3b7fe0', vermelho: '#e04b3b' };
 const COR_CLARA: Record<Time, string> = { azul: '#8fc0ff', vermelho: '#ff9c8f' };
 const NOME_DO_TIME: Record<Time, string> = { azul: 'Azul', vermelho: 'Vermelho' };
 
+/**
+ * @param locais as unidades de quem está neste aparelho, em ordem de vaga.
+ * Uma pessoa ganha o cartão grande de sempre; de duas em diante, cada uma ganha
+ * um cartão estreito com a cor da sua vaga — porque numa tela dividida por
+ * quatro o problema é saber **qual boneco é o seu**, e não ler o estoque da
+ * chapelaria com letra grande.
+ */
 export function desenharHud(
   ctx: CanvasRenderingContext2D,
   rede: Rede,
+  locais: readonly { vaga: number; unidade: Unidade }[],
   entrada: Entrada,
   largura: number,
   altura: number,
@@ -49,7 +58,7 @@ export function desenharHud(
   ajustes: Ajustes,
 ): void {
   const estado = rede.estado;
-  const eu = rede.eu;
+  const eu = locais[0]?.unidade ?? null;
   // Entre o "bem-vindo" e o primeiro retrato existe um punhado de quadros em
   // que o estado existe mas está vazio. Desenhar a balança ali significaria
   // procurar uma princesa que ainda não chegou.
@@ -58,14 +67,75 @@ export function desenharHud(
   balanca(ctx, estado, largura, eu?.time ?? 'azul');
   placar(ctx, estado, largura);
   cabecalho(ctx, rede, largura);
-  if (eu) {
+  if (locais.length > 1) {
+    cartoesDoSofa(ctx, estado, locais, largura, altura);
+  } else if (eu) {
     cartaoDaClasse(ctx, estado, eu, altura);
-    avisosDoCentro(ctx, estado, eu, largura, altura, tempo);
   }
+  // O aviso do meio da tela é do dono do aparelho: quatro avisos empilhados no
+  // centro tapariam a briga que eles mandam resolver.
+  if (eu) avisosDoCentro(ctx, estado, eu, largura, altura, tempo);
   if (ajustes.registro) registro(ctx, rede, largura, altura);
   faixaDeFase(ctx, estado, largura, altura, tempo);
   if (entrada.placarAberto) tabela(ctx, estado, largura, altura);
   botoesDeToque(ctx, entrada, largura, altura);
+}
+
+/**
+ * Uma tira de cartões no rodapé, um por pessoa do sofá.
+ *
+ * Cada um leva a cor da vaga — a mesma da seta sobre a cabeça do boneco. É esse
+ * par de cores que responde, sem texto, "cadê o meu?" e "quanta vida eu tenho?"
+ * na única tela que os quatro dividem.
+ */
+function cartoesDoSofa(
+  ctx: CanvasRenderingContext2D,
+  estado: Estado,
+  locais: readonly { vaga: number; unidade: Unidade }[],
+  largura: number,
+  altura: number,
+): void {
+  const espaco = 8;
+  const l = Math.min(210, (largura - espaco * (locais.length + 1)) / locais.length);
+  const a = 58;
+  const y = altura - a - 12;
+  const total = l * locais.length + espaco * (locais.length - 1);
+  let x = (largura - total) / 2;
+
+  for (const { vaga, unidade: u } of locais) {
+    const cor = COR_DA_VAGA[vaga % COR_DA_VAGA.length]!;
+    const max = vidaMaxima(u.classe, nivelDe(estado, u.time));
+    ctx.save();
+    ctx.fillStyle = 'rgba(12, 14, 20, 0.75)';
+    arredondado(ctx, x, y, l, a, 8);
+    ctx.fill();
+    ctx.fillStyle = cor;
+    ctx.fillRect(x, y, 4, a);
+
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = cor;
+    ctx.font = '700 12px "Trebuchet MS", system-ui, sans-serif';
+    ctx.fillText(`P${vaga + 1} · ${u.nome}`.slice(0, 22), x + 12, y + 7);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.72)';
+    ctx.font = '500 11px "Trebuchet MS", system-ui, sans-serif';
+    ctx.fillText(
+      `${perfil(u.classe).nome}${u.carga !== 'nada' ? ` · ${u.carga}` : ''}`,
+      x + 12,
+      y + 23,
+    );
+
+    const barra = l - 24;
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    ctx.fillRect(x + 12, y + a - 16, barra, 7);
+    // Morto continua na tira, com a barra vazia: sumir o cartão faria a pessoa
+    // achar que perdeu a vaga em vez de estar esperando o renascimento.
+    ctx.fillStyle = !u.vivo ? '#555' : u.vida / max > 0.35 ? '#6ac46a' : '#d9534f';
+    ctx.fillRect(x + 12, y + a - 16, (barra * Math.max(0, u.vida)) / max, 7);
+    ctx.restore();
+    x += l + espaco;
+  }
 }
 
 /** A barra que dá nome ao jogo. */

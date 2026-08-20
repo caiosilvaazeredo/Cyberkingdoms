@@ -4,7 +4,6 @@ import { nivelDe, type Animal, type Estado, type Unidade } from '../shared/estad
 import { DT, PESO_MAXIMO, PESO_MINIMO, RAIO_UNIDADE, type Time } from '../shared/regras';
 import { ZOOM_DA_VISAO, type Ajustes } from './ajustes';
 import { quadro, quadroDaVez, quadroEm, type Animacao, type Arte } from './arte';
-import type { Rede } from './rede';
 import { TILE, chaoPara, encostaNaAgua, mascaraDe } from './tileset';
 
 /**
@@ -38,6 +37,49 @@ export interface Camera {
   zoom: number;
 }
 
+/**
+ * O que o desenho precisa saber sobre quem está jogando **aqui**.
+ *
+ * Enquanto havia um jogador por página, o desenho podia perguntar tudo à
+ * conexão: "esta unidade é minha?" era `u.id === rede.meuId`. Com quatro
+ * pessoas no mesmo aparelho existem quatro conexões, cada uma com a sua
+ * previsão, e a pergunta certa passou a ser *de quem* é esta unidade — porque a
+ * posição do jogador 3 tem de sair da previsão do jogador 3, e não do retrato
+ * atrasado que a conexão do jogador 1 recebeu.
+ *
+ * Uma conexão sozinha satisfaz esta interface (é o caso de quem joga sozinho e
+ * o do menu, que não tem ninguém em campo), e o sofá também. O desenho não
+ * sabe a diferença.
+ */
+export interface OlharLocal {
+  readonly estado: Estado | null;
+  readonly brilhos: readonly { alvo: number; quando: number }[];
+  /** Em que vaga do sofá esta unidade está, ou `null` se não é de ninguém daqui. */
+  vagaDe(id: number): number | null;
+  /** Quantas pessoas jogam neste aparelho. Muda o rótulo do próprio boneco. */
+  readonly quantosLocais: number;
+  /**
+   * A unidade como o dono dela a prevê.
+   *
+   * Sem isto a animação lia o retrato do servidor: na janela entre pacotes o
+   * boneco andava sem virar.
+   */
+  previsaoDe(u: Unidade): Unidade;
+  posicaoDe(u: Unidade, agora: number): { x: number; y: number };
+  alfa(agora: number): number;
+  desdeORetrato(agora: number): number;
+}
+
+/**
+ * A cor de cada vaga do sofá.
+ *
+ * Numa tela compartilhada, o problema nº 1 é **achar o próprio boneco**. Cor
+ * fixa por vaga, na setinha sobre a cabeça e no cartão do canto, resolve isso
+ * sem depender do time — os quatro estão do mesmo lado, então a cor do reino
+ * não distingue ninguém.
+ */
+export const COR_DA_VAGA: readonly string[] = ['#ffd479', '#7ee081', '#7ec8ff', '#ff9ad5'];
+
 const SPRITE_DA_ESTRUTURA: Record<Estrutura['tipo'], string> = {
   trono: 'Castle',
   jaula: 'Tower',
@@ -60,6 +102,67 @@ export function criarCamera(): Camera {
   return { x: 0, y: 0, zoom: 1 };
 }
 
+/**
+ * Enquadra um grupo de pessoas na mesma tela.
+ *
+ * É o que um beat-'em-up de sofá faz: a câmera vai para o meio do grupo e
+ * **abre** o quanto for preciso para caber todo mundo. O limite existe porque
+ * sem ele dois teimosos em cantos opostos do mapa reduziriam o jogo a formigas;
+ * passado o limite, a câmera para de abrir e quem ficou de fora é apontado pela
+ * bússola da borda.
+ *
+ * Devolve os índices de quem não coube, para o desenho saber por quem apontar
+ * a seta de borda — e em que cor, já que a cor é a da vaga.
+ */
+export function enquadrarGrupo(
+  camera: Camera,
+  arena: Arena,
+  alvos: readonly { x: number; y: number }[],
+  largura: number,
+  altura: number,
+  ajustes: Ajustes,
+): number[] {
+  if (alvos.length === 0) return [];
+  const xs = alvos.map((a) => a.x);
+  const ys = alvos.map((a) => a.y);
+  const centro = {
+    x: (Math.min(...xs) + Math.max(...xs)) / 2,
+    y: (Math.min(...ys) + Math.max(...ys)) / 2,
+  };
+  seguir(camera, arena, centro, largura, altura, ajustes);
+
+  if (alvos.length > 1) {
+    // Margem para o boneco não ficar colado na borda: ele tem meio corpo acima
+    // do pé e um nome escrito em cima.
+    const larguraPedida = Math.max(...xs) - Math.min(...xs) + 6 * TILE;
+    const alturaPedida = Math.max(...ys) - Math.min(...ys) + 6 * TILE;
+    const cabe = Math.min(largura / larguraPedida, altura / alturaPedida);
+    if (cabe < camera.zoom) camera.zoom = Math.max(ZOOM_MINIMO_DO_SOFA, cabe);
+    // Reabrir o zoom mudou o quanto de mundo cabe, e portanto até onde a
+    // câmera pode chegar sem mostrar o lado de fora do mapa. Prender de novo.
+    prender(camera, arena, centro, largura, altura);
+  }
+
+  const meioX = largura / 2 / camera.zoom;
+  const meioY = altura / 2 / camera.zoom;
+  const fora: number[] = [];
+  for (const [i, a] of alvos.entries()) {
+    if (Math.abs(a.x - camera.x) > meioX - TILE || Math.abs(a.y - camera.y) > meioY - TILE) {
+      fora.push(i);
+    }
+  }
+  return fora;
+}
+
+/**
+ * O quanto a câmera pode abrir para caber o sofá inteiro.
+ *
+ * Abaixo disto o guerreiro fica do tamanho de um grão de arroz e ninguém acha o
+ * próprio boneco — a partir daí é melhor deixar alguém sair de quadro e apontar
+ * onde ele está.
+ */
+const ZOOM_MINIMO_DO_SOFA = 0.3;
+
 /** Ajusta a câmera ao tamanho da tela e a prende dentro da arena. */
 export function seguir(
   camera: Camera,
@@ -74,6 +177,17 @@ export function seguir(
   // leitura de quem está chegando pelos flancos.
   const base = altura / (13 * TILE);
   camera.zoom = Math.max(0.42, Math.min(1.3, base * ZOOM_DA_VISAO[ajustes.visao]));
+  prender(camera, arena, alvo, largura, altura);
+}
+
+/** Centra no alvo sem deixar a vista escorregar para fora do mapa. */
+function prender(
+  camera: Camera,
+  arena: Arena,
+  alvo: { x: number; y: number },
+  largura: number,
+  altura: number,
+): void {
   const meioX = largura / 2 / camera.zoom;
   const meioY = altura / 2 / camera.zoom;
   const mundoLargura = arena.largura * TILE;
@@ -111,14 +225,14 @@ export function desenharMundo(
   ctx: CanvasRenderingContext2D,
   arte: Arte,
   arena: Arena,
-  rede: Rede,
+  olhar: OlharLocal,
   camera: Camera,
   largura: number,
   altura: number,
   tempo: number,
   ajustes: Ajustes,
 ): void {
-  const estado = rede.estado;
+  const estado = olhar.estado;
   const v = vistaDe(camera, largura, altura);
   const escala = v.escala;
   const passo = TILE * escala;
@@ -363,7 +477,7 @@ export function desenharMundo(
   }
 
   // --- bichos -------------------------------------------------------------
-  const alfa = rede.alfa(agora);
+  const alfa = olhar.alfa(agora);
   for (const a of estado.animais) {
     if (!a.vivo) continue;
     const pos = posicaoDoAnimal(a, alfa);
@@ -387,7 +501,7 @@ export function desenharMundo(
     if (p.onde === 'salva') continue;
     const carregada = p.onde === 'carregada';
     const portador = carregada ? estado.unidades.find((u) => u.id === p.portador) : undefined;
-    const base = portador ? rede.posicaoDe(portador, agora) : { x: p.x, y: p.y };
+    const base = portador ? olhar.posicaoDe(portador, agora) : { x: p.x, y: p.y };
     const px = v.paraTelaX(base.x);
     // Presa, ela fica **na base** da torre, e não no centro dela: a masmorra é
     // um sprite alto, e desenhar a princesa no ponto da estrutura a deixaria
@@ -411,14 +525,13 @@ export function desenharMundo(
     // A posição local já vinha da previsão, mas a animação ainda lia o retrato
     // do servidor. Na janela entre pacotes, o boneco andava sem virar. Usar a
     // mesma unidade prevista aplica a direção selecionada no mesmo quadro.
-    const visivel = u.id === rede.meuId ? rede.eu ?? u : u;
-    const pos = rede.posicaoDe(visivel, agora);
+    const visivel = olhar.previsaoDe(u);
+    const pos = olhar.posicaoDe(visivel, agora);
     const px = v.paraTelaX(pos.x);
     const py = v.paraTelaY(pos.y);
-    const andando = visivel.id === rede.meuId
-      ? andandoAgora(rede, visivel, agora)
-      : moveu(rede, visivel, agora);
+    const andando = moveu(olhar, visivel, agora);
     const escolha = folhaDaUnidade(arte, estado, visivel, andando);
+    const vaga = olhar.vagaDe(visivel.id);
     pinturas.push({
       y: pos.y,
       pintar: () =>
@@ -431,7 +544,8 @@ export function desenharMundo(
           py,
           escala,
           tempo,
-          rede.meuId === visivel.id,
+          vaga,
+          olhar.quantosLocais,
           ajustes,
         ),
     });
@@ -440,10 +554,10 @@ export function desenharMundo(
   for (const p of pinturas.sort((a, b) => a.y - b.y)) p.pintar();
 
   // --- efeito da bênção do clérigo ---------------------------------------
-  for (const brilho of rede.brilhos) {
+  for (const brilho of olhar.brilhos) {
     const alvo = estado.unidades.find((u) => u.id === brilho.alvo);
     if (!alvo) continue;
-    const pos = rede.posicaoDe(alvo, agora);
+    const pos = olhar.posicaoDe(alvo, agora);
     const anim = arte.unidades[alvo.time]['clerigo_bencao'];
     if (!anim) continue;
     const idade = (agora - brilho.quando) / 1000;
@@ -460,7 +574,7 @@ export function desenharMundo(
   }
 
   // --- projéteis ----------------------------------------------------------
-  const adianta = rede.desdeORetrato(agora);
+  const adianta = olhar.desdeORetrato(agora);
   for (const pj of estado.projeteis) {
     const px = v.paraTelaX(pj.x + pj.vx * adianta);
     const py = v.paraTelaY(pj.y + pj.vy * adianta);
@@ -590,13 +704,9 @@ function espelhado(
   ctx.restore();
 }
 
-function andandoAgora(rede: Rede, u: Unidade, agora: number): boolean {
-  return moveu(rede, u, agora);
-}
-
-function moveu(rede: Rede, u: Unidade, agora: number): boolean {
-  const a = rede.posicaoDe(u, agora);
-  const b = rede.posicaoDe(u, agora - 90);
+function moveu(olhar: OlharLocal, u: Unidade, agora: number): boolean {
+  const a = olhar.posicaoDe(u, agora);
+  const b = olhar.posicaoDe(u, agora - 90);
   return Math.hypot(a.x - b.x, a.y - b.y) > 0.8;
 }
 
@@ -609,9 +719,11 @@ function desenharUnidade(
   py: number,
   escala: number,
   tempo: number,
-  souEu: boolean,
+  vaga: number | null,
+  quantosLocais: number,
   ajustes: Ajustes,
 ): void {
+  const souEu = vaga !== null;
   // As folhas do pacote põem o boneco no centro de uma caixa grande o bastante
   // para a arma. Ancorar no centro e empurrar um pouco para cima planta o pé no
   // chão sem que o lanceiro (caixa de 320) flutue acima do guerreiro (192).
@@ -640,20 +752,46 @@ function desenharUnidade(
     ctx.fillRect(px - larguraBarra / 2, py + 10 * escala, larguraBarra * u.colheita, 4 * escala);
   }
 
+  // A seta sobre a cabeça é o que torna a tela compartilhada jogável: com
+  // quatro bonecos do mesmo time no mesmo quadro, ninguém acha o seu pelo
+  // sprite. Ela pula devagar para não sumir no meio da briga.
+  //
+  // O tamanho tem um piso **em pixels de tela**, e não em escala do mundo: é
+  // justamente quando o sofá se espalha e a câmera abre que achar o próprio
+  // boneco fica difícil — e era aí que a seta encolhia até virar um ponto.
+  const cor = vaga !== null ? COR_DA_VAGA[vaga % COR_DA_VAGA.length]! : '#ffe9a8';
+  if (vaga !== null) {
+    const tamanho = Math.max(7, 7 * escala);
+    const pulo = Math.sin(tempo * 3.2 + vaga) * tamanho * 0.35;
+    seta(ctx, px, py - Math.max(46, 60 * escala) + pulo, tamanho, cor);
+  }
+
   if (ajustes.nomes || souEu) {
-    const nome = souEu ? `${u.nome} (você)` : u.nome;
+    // Com gente demais no sofá, "(você)" no boneco de todo mundo não diz nada;
+    // aí o número da vaga é que identifica, e ele casa com a cor da seta e com
+    // a do cartão no canto da tela.
+    const marca = vaga === null ? '' : quantosLocais > 1 ? ` (P${vaga + 1})` : ' (você)';
+    const nome = `${u.nome}${marca}`;
     if (nome.trim()) {
-      rotulo(
-        ctx,
-        u.bot ? `${nome} ⚙` : nome,
-        px,
-        topo - 12 * escala,
-        escala,
-        souEu ? '#ffe9a8' : '#ffffff',
-      );
+      rotulo(ctx, u.bot ? `${nome} ⚙` : nome, px, topo - 12 * escala, escala, cor);
     }
   }
-  void tempo;
+}
+
+/** A setinha de "este é o seu", apontando para baixo. */
+function seta(ctx: CanvasRenderingContext2D, x: number, y: number, l: number, cor: string): void {
+  ctx.save();
+  ctx.fillStyle = cor;
+  ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(x, y + l);
+  ctx.lineTo(x - l, y - l);
+  ctx.lineTo(x + l, y - l);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
 }
 
 function rotulo(

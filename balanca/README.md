@@ -77,7 +77,7 @@ vencem; doze minutos no relógio.
 |---|---|
 | `W` `A` `S` `D` | andar |
 | mouse | mirar (dá para recuar atirando) |
-| clique / `J` | atacar — e caçar, que é atacar bicho |
+| clique / `F` | atacar — e caçar, que é atacar bicho |
 | `E` / botão direito | usar: pegar, entregar, alimentar, vestir, trabalhar |
 | `Tab` | placar |
 
@@ -89,9 +89,49 @@ Na chapelaria ele **roda a lista** de chapéus: aperte até chegar no que quer.
 Durante o aquecimento é a única ação liberada — é para isso que o aquecimento
 existe.
 
+### Quatro pessoas, um aparelho
+
+O jogo é de sofá além de ser de rede. Cabem **até quatro** numa tela só, e os
+dois botões do menu — *Jogo Local* e *Jogo Online* — abrem a mesma cabine: quatro
+molduras, uma por pessoa, e cada uma entra apertando o botão do seu controle.
+
+| vaga | controle | andar | mirar | atacar | usar | entrar |
+|---|---|---|---|---|---|---|
+| qualquer | controle | analógico esq. / direcional | analógico dir. | `X` ou `RT` | `A` | `A` |
+| teclado | WASD | `W` `A` `S` `D` | mouse | clique ou `F` | `E` | `Espaço` |
+| teclado | setas | `↑` `←` `↓` `→` | *rumo* | `.` | `,` | `Enter` |
+
+Quem não tem mouse nem analógico direito mira **para onde está indo**. É de
+propósito: recuar atirando fica sendo uma vantagem de quem tem controle, como em
+qualquer jogo de quatro — melhor do que fingir que dá para mirar com o teclado
+numérico.
+
+Três regras seguram o resto:
+
+- **todo mundo no mesmo time.** A tela é uma só e a câmera não segue dois grupos
+  correndo para lados opostos. O lado é escolhido uma vez e vale para os quatro.
+- **a câmera enquadra o grupo.** Ela vai para o meio de quem está em campo e abre
+  o quanto for preciso para caber todo mundo. Passado o limite ela para de abrir
+  e aponta com uma seta na borda quem ficou fora — encolher o jogo até o boneco
+  virar um pixel não ajuda ninguém.
+- **cada um acha o seu.** Uma seta pulando sobre a cabeça, na cor da vaga, e um
+  cartão de vida no rodapé com a mesma cor. Sem isso, quatro bonecos do mesmo
+  reino na mesma tela são quatro bonecos iguais.
+
+Por dentro, **cada pessoa abre a sua conexão**. Para o servidor são quatro
+jogadores como quaisquer outros; nada lá sabe que estão no mesmo sofá. É o que
+faz previsão local, reconciliação, vida e chapéu valerem para os quatro sem
+existirem duas vezes no código. A única coisa que o servidor precisou aprender
+foi entrar numa sala **pelo nome** — senão o lobby espalharia a turma por salas
+diferentes, cada uma vendo uma partida na mesma tela.
+
+*Jogo Local* abre ainda uma **sala reservada**: o lobby não manda estranhos para
+ela e o resto do time vem de bot. *Jogo Online* usa a sala pública mais
+movimentada, e aí o sofá entra junto de quem estiver na rede.
+
 ### As telas
 
-Menu → espera → escolha de lado → jogo.
+Menu → cabine → escolha de lado → jogo.
 
 **O menu não tem fundo: o fundo é o jogo.** A página conecta ao servidor assim
 que abre, entra como plateia numa sala que já está rodando e desenha a partida
@@ -105,12 +145,15 @@ Quem assiste **não ocupa vaga** — uma aba esquecida no menu não pode tirar o
 lugar de quem quer jogar. Só ao escolher um lado é que a pessoa senta à mesa. O
 botão **Assistir** esconde o menu e deixa só a partida; `Esc` volta.
 
-A marca fica no alto à esquerda e as ações numa barra de papel embaixo, no traço
-do protótipo: preto sobre branco, um acento vermelho, tipografia grande e seca.
-Os painéis (apelido, como se joga, ajustes, créditos) abrem como folhas de papel
-sobre a barra, e os ajustes gravam no navegador a cada clique, sem botão de
-salvar: campo de visão, nomes na tela, mato ligado ou desligado, registro de
-eventos e o lado do manche.
+As ações ficam numa **coluna à esquerda**, botões gordos e coloridos no traço dos
+jogos de sofá: as duas portas de entrada no alto e nas cores mais quentes, o
+resto embaixo e menor. Uma coluna ordena as intenções de cima para baixo e deixa
+o campo de batalha inteiro visível ao lado; uma barra no rodapé faria o oposto —
+daria o mesmo peso a todos os itens e cortaria a parte de baixo do jogo. Os
+painéis (apelido, como se joga, ajustes, créditos) abrem **ao lado** da coluna,
+nunca por cima: ler as regras não pode esconder o botão de jogar. Os ajustes
+gravam no navegador a cada clique, sem botão de salvar: campo de visão, nomes na
+tela, mato ligado ou desligado, registro de eventos e o lado do manche.
 
 A **escolha de lado** é uma camada por cima da partida já rodando, como no Super
 Smash Bros. e no Overcooked: os dois reinos aparecem com as vagas preenchidas ao
@@ -203,7 +246,7 @@ o cliente parar de mandar comando.
 src/
   shared/       a simulação, e ela é a mesma dos dois lados
     regras.ts     todos os números do jogo, num arquivo só
-    classes.ts    as sete classes, o estoque de chapéus e os ofícios
+    classes.ts    as oito classes, o estoque de chapéus e os ofícios
     arena.ts      o mapa como função pura da seed
     estado.ts     os tipos da partida, sem nenhuma regra
     partida.ts    o tick autoritativo
@@ -215,11 +258,13 @@ src/
     lobby.ts      quantas salas existem e quem cai em qual
     index.ts      HTTP + WebSocket, no mesmo processo
   client/
-    telas.ts      menu, ajustes, espera e escolha de lado (em HTML)
+    telas.ts      menu, cabine, ajustes e escolha de lado (em HTML)
     atracao.ts    para onde a câmera olha quando ninguém está jogando
     ajustes.ts    preferências, saneadas na leitura
     arte.ts       as folhas do pacote, por classe e por time
     rede.ts       previsão local e interpolação
+    sofa.ts       até quatro pessoas num aparelho, uma conexão cada
+    controles.ts  os dois teclados e os controles, em funções puras
     desenho.ts    o mundo em canvas 2D, e qual folha cada unidade usa
     hud.ts        a balança, o placar, o registro
     contexto.ts   o que o botão de contexto vai fazer, em português
