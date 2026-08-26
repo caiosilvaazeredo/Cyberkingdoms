@@ -136,10 +136,17 @@ Menu → cabine → escolha de lado → jogo.
 **O menu não tem fundo: o fundo é o jogo.** A página conecta ao servidor assim
 que abre, entra como plateia numa sala que já está rodando e desenha a partida
 atrás do título, com uma câmera que persegue o que decide o jogo — o cortejo da
-princesa primeiro, a princesa caída depois, o maior amontoado com os dois times
-em seguida, e o centro do mapa se o campo estiver morno. É o modo atração do
-fliperama, e num jogo só multiplayer ele responde sem texto a pergunta que todo
-mundo faz ao abrir: *tem alguém jogando aí?*
+princesa primeiro, a princesa caída depois, o maior amontoado **com os dois
+times** em seguida e, se ninguém estiver se esbarrando, o maior grupo de gente
+que houver. É o modo atração do fliperama, e num jogo só multiplayer ele responde
+sem texto a pergunta que todo mundo faz ao abrir: *tem alguém jogando aí?*
+
+O último degrau dessa lista já foi o centro de massa de todo mundo, o que parece
+razoável e é o pior alvo possível: com os dois times cada um no seu canto, a
+média dos dois é o meio do mapa — grama vazia. O menu passava minutos filmando
+um lago sem ninguém. Filmar a fila do chapéu é pior que filmar a briga e muito
+melhor que filmar o vazio, então o desempate final virou o amontoado mais cheio,
+misturado ou não.
 
 Quem assiste **não ocupa vaga** — uma aba esquecida no menu não pode tirar o
 lugar de quem quer jogar. Só ao escolher um lado é que a pessoa senta à mesa. O
@@ -254,7 +261,7 @@ npm start            # http://localhost:8787
 ### Testes
 
 ```sh
-npm test                 # 95 testes de regra, rede, controle, câmera e bots
+npm test                 # 96 testes de regra, rede, controle, câmera e bots
 npm run check            # TypeScript, sem emitir
 node tools/fumaca.mjs    # sobe um Chromium e joga com duas pessoas no sofá
 node tools/tamanhos.mjs  # abre cada tela em cinco tamanhos e mede o que vazou
@@ -268,10 +275,11 @@ outra nas setas —, anda, ataca, e reprova se alguma coisa escrever no console 
 erro, se o relógio da partida não andar, se o cliente parar de mandar comando ou
 se o sofá se dividir entre os dois reinos.
 
-O **roteiro de tamanhos** abre o menu, a cabine e a escolha de lado em monitor,
-notebook, tablet, celular em pé e celular deitado. Ele não julga beleza: mede
-três coisas mecânicas — algo mais largo que a janela, um botão fora da tela ou
-com menos de 40 px de altura, e conteúdo cortado pela própria caixa. É o tipo de
+O **roteiro de tamanhos** abre o menu, os quatro painéis, a cabine e a escolha de
+lado em monitor, notebook, tablet, celular em pé e celular deitado. Ele não julga
+beleza: mede três coisas mecânicas — algo mais largo que a janela, uma **ação
+principal** fora da tela e um alvo de toque com menos de 40 px de altura. Painel
+de conteúdo pode rolar; o botão que a pessoa veio apertar, não. É o tipo de
 defeito que só aparece no tamanho em que ninguém abriu, e que passa despercebido
 justamente porque quem programa olha no monitor em que tudo cabe.
 

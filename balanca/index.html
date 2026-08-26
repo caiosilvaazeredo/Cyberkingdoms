@@ -209,8 +209,16 @@
         text-shadow: none;
         margin-top: 3px;
       }
+      /*
+        O realce sobe, não anda para o lado.
+
+        `translateX(4px)` empurrava o botão 4 px além da coluna, e como a coluna
+        rola (`overflow-y: auto` liga a rolagem nos dois eixos), o hover passava
+        a criar rolagem lateral e a cortar a beira do botão. Subir não custa
+        largura nenhuma, e ainda combina com o `:active`, que afunda.
+      */
       .coluna button.item:hover {
-        transform: translateX(4px);
+        transform: translateY(-2px);
         filter: brightness(1.1);
       }
       .coluna button.item:active {
@@ -260,9 +268,18 @@
         padding: 9px 2px 7px;
         white-space: nowrap;
       }
+      /*
+        Painel aberto: brilho e um anel **por dentro**.
+
+        O anel é `inset` de propósito. Contorno por fora e deslocamento saem da
+        coluna e são cortados — foi o que acontecia com "Créditos", o último da
+        fileira de três, que encostava na borda.
+      */
       .coluna button.item[aria-expanded='true'] {
         filter: brightness(1.25);
-        transform: translateX(4px);
+        box-shadow:
+          inset 0 0 0 2px rgba(255, 255, 255, 0.85),
+          0 6px 18px rgba(0, 0, 0, 0.45);
       }
       .assinatura {
         margin: 4px 0 0;
@@ -464,12 +481,22 @@
         gap: 4px;
         flex: 0 0 auto;
       }
+      /*
+        Os botões dos ajustes também são alvo de dedo.
+
+        Eles nasceram com 29 px de altura, que é a altura natural de um botão de
+        formulário — e um alvo que o polegar erra. Quarenta é o piso, aqui como
+        no menu: a tela de ajustes é onde a pessoa vai justamente porque alguma
+        coisa está incomodando, e errar o toque três vezes ali é o caminho mais
+        curto para ela desistir.
+      */
       .opcoes button,
       .folha button.pequeno {
         background: transparent;
         color: var(--tinta);
         border: 1px solid rgba(0, 0, 0, 0.25);
-        padding: 6px 11px;
+        padding: 6px 12px;
+        min-height: 40px;
         font: inherit;
         font-size: 13px;
         cursor: pointer;

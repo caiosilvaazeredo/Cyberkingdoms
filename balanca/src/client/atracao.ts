@@ -19,10 +19,22 @@ import { TILE, type Time } from '../shared/regras';
  *
  * A câmera persegue **o que decide a partida**, nesta ordem: a princesa sendo
  * carregada, a princesa caída no chão, o maior encontro entre os dois times e,
- * se ninguém estiver se esbarrando, o centro de massa de quem está de pé. É a
- * mesma ordem de importância que um comentarista usaria — e o encontro exige os
- * dois times de propósito: cinco do mesmo lado juntos é fila para o chapéu, e
- * filmar a fila faz um jogo cheio parecer parado.
+ * se ninguém estiver se esbarrando, o maior grupo de gente que houver. É a mesma
+ * ordem de importância que um comentarista usaria — e o encontro entre times
+ * pesa mais de propósito: cinco do mesmo lado juntos é fila para o chapéu, e
+ * briga é melhor cena que fila.
+ *
+ * ## Por que o último recurso é um grupo, e não o centro de massa
+ *
+ * A primeira versão caía no **centroide de todo mundo** quando não havia briga.
+ * Parece razoável e é o pior alvo possível: com os dois times cada um no seu
+ * lado do mapa, a média dos dois é o meio — grama vazia. O menu passava minutos
+ * filmando um lago sem ninguém, que é exatamente o que este arquivo existe para
+ * evitar.
+ *
+ * Filmar a fila do chapéu é pior que filmar a briga e muito melhor que filmar o
+ * vazio: pelo menos há gente andando na tela. Por isso o desempate final é o
+ * amontoado mais cheio, misturado ou não.
  *
  * ## Por que isto é uma função pura
  *
@@ -77,22 +89,16 @@ export function alvoDaAtracao(
       melhor = { x, y, quantas, times };
     }
   }
-  // Briga é encontro de **times diferentes**. Cinco do mesmo lado juntos é fila
-  // para o chapéu no quartel, e ficar filmando a fila é o jeito mais rápido de
-  // fazer um jogo cheio parecer parado.
+  // Briga é encontro de **times diferentes** — a cena que melhor explica o jogo
+  // para quem nunca jogou.
   if (melhor && melhor.quantas >= 2 && melhor.times.size >= 2) {
     return { x: melhor.x, y: melhor.y, motivo: 'briga' };
   }
 
-  // Sem encontro, a câmera abre para onde a partida está acontecendo: o centro
-  // de massa de quem está de pé, que puxa naturalmente para o meio do mapa.
-  if (vivas.length > 0) {
-    return {
-      x: vivas.reduce((s, u) => s + u.x, 0) / vivas.length,
-      y: vivas.reduce((s, u) => s + u.y, 0) / vivas.length,
-      motivo: 'campo',
-    };
-  }
+  // Sem briga, a câmera vai para o maior grupo que houver, mesmo que seja a
+  // fila do chapéu. Ver gente andando é sempre melhor que ver o meio do mapa
+  // vazio — ver o topo deste arquivo.
+  if (melhor) return { x: melhor.x, y: melhor.y, motivo: 'campo' };
   return centro;
 }
 

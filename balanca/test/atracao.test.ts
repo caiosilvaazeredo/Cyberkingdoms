@@ -67,7 +67,7 @@ describe('a câmera do modo atração', () => {
     expect(Math.hypot(alvo.x - 925, alvo.y - 305)).toBeLessThan(120);
   });
 
-  it('fila do mesmo time não é briga: a câmera abre para o campo', () => {
+  it('fila do mesmo time não é briga, mas ainda é gente: a câmera vai nela', () => {
     const partida = emJogo();
     for (let i = 0; i < 5; i++) {
       const u = partida.entrar({ nome: `a${i}`, bot: true, time: 'azul' });
@@ -76,6 +76,33 @@ describe('a câmera do modo atração', () => {
     }
     const alvo = olhar(partida.estado);
     expect(alvo.motivo).toBe('campo');
+    expect(Math.hypot(alvo.x - 440, alvo.y - 1300)).toBeLessThan(60);
+  });
+
+  it('com os dois times parados em casa, não filma o meio vazio', () => {
+    // O caso que aparecia no menu de verdade: ninguém brigando, cada time no seu
+    // canto. A média dos dois é o centro do mapa — grama, lago e mais nada. A
+    // câmera tem de ir a um dos grupos.
+    const partida = emJogo();
+    for (let i = 0; i < 4; i++) {
+      const a = partida.entrar({ nome: `a${i}`, bot: true, time: 'azul' });
+      a.x = 300 + i * 30;
+      a.y = 1000;
+      const v = partida.entrar({ nome: `v${i}`, bot: true, time: 'vermelho' });
+      v.x = ARENA_LARGURA * TILE - 300 - i * 30;
+      v.y = 1000;
+    }
+
+    const alvo = olhar(partida.estado);
+    const meio = (ARENA_LARGURA * TILE) / 2;
+    expect(alvo.motivo).toBe('campo');
+    expect(Math.abs(alvo.x - meio)).toBeGreaterThan(TILE * 10);
+    // E o alvo é de fato onde há gente: alguém perto o bastante para caber na
+    // tela junto com a câmera.
+    const perto = partida.estado.unidades.filter(
+      (u) => u.vivo && Math.hypot(u.x - alvo.x, u.y - alvo.y) < 4 * TILE,
+    );
+    expect(perto.length).toBeGreaterThanOrEqual(2);
   });
 
   it('a princesa caída no chão chama mais atenção que uma briga', () => {
