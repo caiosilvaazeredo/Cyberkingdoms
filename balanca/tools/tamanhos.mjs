@@ -14,11 +14,18 @@
  *
  * - **transbordo horizontal**: algo mais largo que a janela. Rolagem lateral num
  *   jogo é sempre defeito.
- * - **ação principal fora da tela**: um `button.grande` — entrar na batalha,
- *   escolher o lado, entrar no reino — cujo retângulo caia fora da janela. É o
- *   defeito que mais dói, porque a tela parece certa e o botão que a pessoa veio
- *   apertar não está lá. Um botão qualquer no fim de um painel rolável não conta:
- *   painel de conteúdo pode rolar, ação principal não pode se esconder.
+ * - **ação final fora da tela**: um botão marcado com `data-acao-final` cujo
+ *   retângulo caia fora da janela. É o defeito que mais dói, porque a tela
+ *   parece certa e o botão que a pessoa veio apertar não está lá.
+ *
+ *   A marca está no HTML, e não deduzida daqui, porque a diferença é semântica
+ *   e não estrutural. "Escolher o lado" é a razão de a cabine existir: escondê-lo
+ *   quebra a tela. "Abrir a sala", no meio de um painel com quatro modos
+ *   explicados e uma lista embaixo, é o botão de enviar de um formulário longo —
+ *   rolar até ele é o que se faz com formulário. Tentar separar os dois por
+ *   estrutura ("está dentro de algo que rola?") erra os dois casos, porque os
+ *   dois rolam. Quem sabe qual é qual é quem desenhou a tela, então é a tela que
+ *   declara.
  * - **alvo pequeno demais**: clicável com menos de 40 px de altura. Dedo não
  *   acerta, e o jogo é de sofá.
  * - **conteúdo cortado**: qualquer caixa cujo conteúdo seja mais largo que ela.
@@ -67,9 +74,12 @@ for (const tamanho of TAMANHOS) {
   // de ajustes, créditos — e por isso a que mais chance tem de estourar numa
   // tela pequena. Ficar de fora do roteiro só porque exige um clique a mais é
   // deixar sem teste justamente o que quebra.
-  for (const folha of ['apelido', 'regras', 'ajustes', 'creditos']) {
+  for (const folha of ['apelido', 'sala', 'regras', 'ajustes', 'creditos']) {
     await pagina.click(`button[data-folha="${folha}"]`);
     await pagina.waitForSelector(`.folha[data-folha="${folha}"]`, { state: 'visible' });
+    // O painel de salas busca a lista ao abrir; medir antes de ela chegar seria
+    // medir uma caixa vazia, que é justamente a que sempre cabe.
+    if (folha === 'sala') await pagina.waitForTimeout(600);
     await conferir(pagina, tamanho, `folha-${folha}`);
   }
 
@@ -143,9 +153,8 @@ async function conferir(pagina, tamanho, tela) {
       }
       const clicavel = el.tagName === 'BUTTON' || el.tagName === 'INPUT';
       if (!clicavel) continue;
-      const principal = el.classList.contains('grande');
-      if (principal && (r.bottom > A + 0.5 || r.top < -0.5)) {
-        fora.push(`ação principal fora da tela: ${rotulo}`);
+      if (el.hasAttribute('data-acao-final') && (r.bottom > A + 0.5 || r.top < -0.5)) {
+        fora.push(`ação final fora da tela: ${rotulo}`);
       }
       // Meio pixel de folga, como nas outras medidas. Sem ela, um botão de
       // `min-height: 40px` mede 39,99 conforme a escala do dispositivo e o

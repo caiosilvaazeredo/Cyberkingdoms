@@ -6,7 +6,12 @@ import { WebSocketServer, type WebSocket } from 'ws';
 
 import { Lobby } from './lobby';
 import type { Cliente } from './sala';
-import { VERSAO_DO_PROTOCOLO, type DoCliente, type DoServidor } from '../shared/protocolo';
+import {
+  VERSAO_DO_PROTOCOLO,
+  salaConfiguravel,
+  type DoCliente,
+  type DoServidor,
+} from '../shared/protocolo';
 
 /**
  * O processo do servidor: serve o site e aceita os jogadores.
@@ -164,6 +169,11 @@ wss.on('connection', (ws: WebSocket) => {
           // nada e é recusado. O corte de tamanho é só para o log não virar
           // despejo de texto de quem estiver brincando com o protocolo.
           ...(typeof msg.sala === 'string' ? { sala: msg.sala.slice(0, 40) } : {}),
+          // A configuração de uma sala montada é a única entrada deste protocolo
+          // que vira **números do jogo**, e por isso passa pelo saneamento antes
+          // de qualquer outra coisa tocá-la. Depois daqui, ninguém mais precisa
+          // desconfiar dela.
+          ...(msg.criar ? { criar: salaConfiguravel(msg.criar) } : {}),
           privada: msg.privada === true,
         });
         if (!sala) ws.close();

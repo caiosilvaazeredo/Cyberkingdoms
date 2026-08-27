@@ -20,8 +20,9 @@ import {
 import { Entrada } from './entrada';
 import { desenharDica, desenharHud, narrar } from './hud';
 import { Rede } from './rede';
-import { Sofa, type Modo } from './sofa';
-import { Telas } from './telas';
+import { Sofa, type Porta } from './sofa';
+import type { ConfiguracaoDeSala } from '../shared/protocolo';
+import { Telas, type SalaAberta } from './telas';
 import { princesaDe, type Unidade } from '../shared/estado';
 import { DT } from '../shared/regras';
 
@@ -83,9 +84,10 @@ let querendoJogar = false;
 /** A conexão de plateia está numa sala reservada, aberta para um jogo local. */
 let salaReservada = false;
 
-const telas = new Telas({
-  jogar: (modo) => void montarOSofa(modo),
-  assistir: () => telas.mostrar('plateia'),
+const telas: Telas = new Telas({
+  jogar: (porta, criar) => void montarOSofa(porta, criar),
+  listarSalas: () => listarSalas(),
+  assistir: (): void => telas.mostrar('plateia'),
   escolher: (time) => sofa?.escolherTime(time),
   desistir: () => desfazerOSofa(),
   ajustou: () => {
@@ -133,12 +135,15 @@ async function comecarAAssistir(): Promise<void> {
 /**
  * Prepara a cabine: garante arte, garante a sala certa, e abre o sofá.
  *
- * O jogo online reaproveita a conexão de plateia — ela já está numa sala cheia
- * de gente, que é exatamente onde se quer entrar. O jogo local não pode
- * reaproveitá-la: a sala dela é pública, e o pedido foi por uma sala em que
- * ninguém de fora entre. Aí a conexão é trocada por uma nova, privada.
+ * Só o jogo **online** reaproveita a conexão de plateia. Ela já está numa sala
+ * pública cheia de gente, que é exatamente onde ele quer entrar.
+ *
+ * As outras três portas querem outra sala — uma reservada ao aparelho, uma
+ * montada com regras próprias, ou uma escolhida na lista — e ir a outra sala
+ * exige outra conexão: a que existe já disse ao servidor onde queria estar, e
+ * isso não se desdiz.
  */
-async function montarOSofa(modo: Modo): Promise<void> {
+async function montarOSofa(porta: Porta, criar?: ConfiguracaoDeSala): Promise<void> {
   querendoJogar = true;
   if (!arte) {
     telas.mostrar('carregando');
@@ -146,14 +151,22 @@ async function montarOSofa(modo: Modo): Promise<void> {
     arte = await carregarArte();
   }
 
-  const precisaDeSalaNova = modo === 'local' || !rede || rede.fechado;
+  const convite = telas.salaDoConvite;
+  const precisaDeSalaNova = porta !== 'online' || !rede || rede.fechado;
   if (precisaDeSalaNova) {
     telas.mostrar('carregando');
-    telas.carregou(0.5, modo === 'local' ? 'abrindo a sala de vocês…' : 'procurando uma partida…');
+    telas.carregou(0.5, RECADO_DA_PORTA[porta]);
     rede?.desconectar();
     rede = new Rede(enderecoDoServidor());
-    rede.conectar(telas.preferencias.nome || 'Anônimo', true, { privada: modo === 'local' });
-    salaReservada = modo === 'local';
+    rede.conectar(telas.preferencias.nome || 'Anônimo', true, {
+      ...(porta === 'local' ? { privada: true } : {}),
+      ...(porta === 'montada' && criar ? { criar } : {}),
+      ...(porta === 'convidada' && convite ? { sala: convite } : {}),
+    });
+    // Toda sala que não é a pública do lobby precisa ser desfeita ao voltar ao
+    // menu: lá o menu tem de mostrar de novo uma partida com gente, e não a
+    // sala que estas linhas acabaram de abrir.
+    salaReservada = porta !== 'online';
   }
 
   sofa = new Sofa(enderecoDoServidor(), rede!);
@@ -161,6 +174,30 @@ async function montarOSofa(modo: Modo): Promise<void> {
   // A cabine só abre com a arena na mão: sem ela não há sala para as outras
   // conexões pedirem pelo nome, e sentar cedo demais espalharia a turma.
   if (rede!.arena) telas.mostrar('cabine');
+}
+
+/** O que a tela de espera diz, por porta. */
+const RECADO_DA_PORTA: Record<Porta, string> = {
+  local: 'abrindo a sala de vocês…',
+  online: 'procurando uma partida…',
+  montada: 'montando a sala com as suas regras…',
+  convidada: 'entrando na sala escolhida…',
+};
+
+/**
+ * Pergunta ao servidor quais salas estão abertas.
+ *
+ * Erro de rede não é tratado aqui: quem chamou é a tela, e é ela que sabe o que
+ * escrever no lugar da lista. Engolir a falha e devolver uma lista vazia diria
+ * "não há salas" quando a verdade é "não consegui perguntar" — duas coisas
+ * diferentes para quem está esperando os amigos abrirem uma.
+ */
+async function listarSalas(): Promise<SalaAberta[]> {
+  const base = location.port === '5173' ? `http://${location.hostname}:8787` : '';
+  const resposta = await fetch(`${base}/salas`, { cache: 'no-store' });
+  if (!resposta.ok) throw new Error(`servidor respondeu ${resposta.status}`);
+  const corpo = (await resposta.json()) as { salas?: SalaAberta[] };
+  return corpo.salas ?? [];
 }
 
 function desfazerOSofa(): void {

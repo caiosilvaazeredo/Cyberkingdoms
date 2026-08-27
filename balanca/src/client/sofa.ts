@@ -59,7 +59,14 @@ export interface JogadorLocal {
   rumo: Rumo;
 }
 
-export type Modo = 'local' | 'online';
+/**
+ * Por qual porta a turma entrou.
+ *
+ * Não confundir com o **modo de jogo** (`shared/modos.ts`), que é o que a
+ * partida faz. Isto aqui é só de onde veio a sala: a pública mais cheia, uma
+ * reservada ao aparelho, ou uma montada com as regras de quem a abriu.
+ */
+export type Porta = 'local' | 'online' | 'montada' | 'convidada';
 
 export class Sofa implements OlharLocal {
   private readonly locais: JogadorLocal[] = [];

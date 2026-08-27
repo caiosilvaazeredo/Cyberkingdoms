@@ -129,6 +129,57 @@ diferentes, cada uma vendo uma partida na mesma tela.
 ela e o resto do time vem de bot. *Jogo Online* usa a sala pública mais
 movimentada, e aí o sofá entra junto de quem estiver na rede.
 
+### Os quatro modos
+
+Um modo muda **uma** alavanca em relação ao clássico, e a alavanca que ele muda
+é a que dá nome a ele. É o que permite explicá-lo numa linha na hora de escolher,
+e o que impede a lista de virar seis variações indistinguíveis.
+
+| modo | o que muda |
+|---|---|
+| **Resgate** | o clássico: três resgates vencem, a balança desempata |
+| **Assalto** | um resgate decide · seis minutos · volta-se rápido para o campo |
+| **Banquete** | a balança **vence**: empanturre a refém até o talo da barra |
+| **Chapelaria aberta** | chapéu à vontade: ninguém disputa arco, ninguém rouba composição |
+
+Por dentro, um modo é **dado** e não caminho de código: uma linha em
+`shared/modos.ts` que o tick lê no lugar das constantes. A tentação era escrever
+`if (modo === 'assalto')` no meio do tick; feito quatro vezes, o tick vira uma
+árvore que ninguém lê e cada regra nova precisa lembrar de todos os modos — que
+é como um jogo ganha um modo quebrado que ninguém descobre por três meses. Aqui
+o tick nunca soube o nome de nenhum deles.
+
+O modo mora no **estado**, e não na sala, porque o cliente prevê o movimento
+rodando a mesma simulação do servidor: fosse só do servidor, a previsão rodaria
+com as regras erradas. Estando no estado, ele viaja no `bemvindo` e os dois lados
+concordam de graça — uma vez por partida, e não quinze vezes por segundo.
+
+### Montar uma sala
+
+O botão **Salas** abre um painel só, com as duas metades da mesma pergunta
+("onde eu vou jogar?"): montar a sua, e a lista das abertas. Separá-las em dois
+painéis faria quem quer jogar com um amigo abrir os dois para descobrir em qual
+está a resposta.
+
+Ao montar, escolhem-se três coisas: o modo, **quantos jogadores por time** e
+**quantos npcs por time**. As duas contagens são por time, e não por sala: "oito
+jogadores" deixa em aberto se são quatro contra quatro ou seis contra dois, e
+essa ambiguidade viraria uma partida desequilibrada que ninguém pediu.
+
+Os npcs de uma sala montada são **fixos**, e essa é a diferença que faz o campo
+existir. Numa sala do lobby o bot é tapa-buraco: entra para completar o time e
+sai quando chega gente. Numa sala montada ele foi pedido — três contra três com
+dois npcs de cada lado é oito em campo, e continua sendo oito quando o terceiro
+amigo chegar. A vaga de gente que sobra fica **aberta**, esperando por uma
+pessoa, em vez de ocupada por uma máquina que essa pessoa teria de expulsar.
+
+Os números chegam pela rede e o servidor não confia em nenhum deles: quem sanea
+é `salaConfiguravel`, e o corte do teto de unidades tira dos **npcs**, nunca das
+vagas de gente — quem pediu quatro amigos e seis bots quis, acima de tudo, jogar
+com os quatro amigos. O mesmo saneamento roda no painel, para que o número na
+tela seja o número que a sala vai ter: um formulário que promete o que o servidor
+corta é um formulário que mente.
+
 ### As telas
 
 Menu → cabine → escolha de lado → jogo.
@@ -261,7 +312,7 @@ npm start            # http://localhost:8787
 ### Testes
 
 ```sh
-npm test                 # 96 testes de regra, rede, controle, câmera e bots
+npm test                 # 125 testes de regra, rede, controle, câmera e bots
 npm run check            # TypeScript, sem emitir
 node tools/fumaca.mjs    # sobe um Chromium e joga com duas pessoas no sofá
 node tools/tamanhos.mjs  # abre cada tela em cinco tamanhos e mede o que vazou
@@ -275,13 +326,21 @@ outra nas setas —, anda, ataca, e reprova se alguma coisa escrever no console 
 erro, se o relógio da partida não andar, se o cliente parar de mandar comando ou
 se o sofá se dividir entre os dois reinos.
 
-O **roteiro de tamanhos** abre o menu, os quatro painéis, a cabine e a escolha de
+O **roteiro de tamanhos** abre o menu, os cinco painéis, a cabine e a escolha de
 lado em monitor, notebook, tablet, celular em pé e celular deitado. Ele não julga
-beleza: mede três coisas mecânicas — algo mais largo que a janela, uma **ação
-principal** fora da tela e um alvo de toque com menos de 40 px de altura. Painel
-de conteúdo pode rolar; o botão que a pessoa veio apertar, não. É o tipo de
-defeito que só aparece no tamanho em que ninguém abriu, e que passa despercebido
-justamente porque quem programa olha no monitor em que tudo cabe.
+beleza: mede três coisas mecânicas — algo mais largo que a janela, um alvo de
+toque com menos de 40 px de altura, e uma **ação final** fora da tela.
+
+"Ação final" é marcada no HTML com `data-acao-final`, e não deduzida da estrutura,
+porque a diferença é semântica. "Escolher o lado" é a razão de a cabine existir:
+escondê-lo quebra a tela. "Abrir a sala", no meio de um painel com quatro modos
+explicados e uma lista embaixo, é o botão de enviar de um formulário longo — rolar
+até ele é o que se faz com formulário. Os dois estão dentro de algo que rola, então
+nenhuma regra estrutural separa os dois; quem sabe qual é qual é quem desenhou a
+tela, e por isso é a tela que declara.
+
+É o tipo de defeito que só aparece no tamanho em que ninguém abriu, e que passa
+despercebido justamente porque quem programa olha no monitor em que tudo cabe.
 
 ---
 
@@ -291,6 +350,7 @@ justamente porque quem programa olha no monitor em que tudo cabe.
 src/
   shared/       a simulação, e ela é a mesma dos dois lados
     regras.ts     todos os números do jogo, num arquivo só
+    modos.ts      os quatro modos, como dado e não como caminho de código
     classes.ts    as oito classes, o estoque de chapéus e os ofícios
     arena.ts      o mapa como função pura da seed
     estado.ts     os tipos da partida, sem nenhuma regra

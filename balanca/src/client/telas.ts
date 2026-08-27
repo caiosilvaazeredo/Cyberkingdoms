@@ -10,7 +10,17 @@ import {
 } from './ajustes';
 import { MAXIMO_LOCAL, rotuloDaFonte, type IdDeFonte } from './controles';
 import { COR_DA_VAGA } from './desenho';
-import type { Modo } from './sofa';
+import { IDS_DOS_MODOS, MODOS, type IdDoModo } from '../shared/modos';
+import {
+  MAX_BOTS,
+  MAX_POR_TIME,
+  MAX_POR_TIME_TOTAL,
+  MIN_BOTS,
+  MIN_POR_TIME,
+  salaConfiguravel,
+  type ConfiguracaoDeSala,
+} from '../shared/protocolo';
+import type { Porta } from './sofa';
 
 /**
  * As telas fora do jogo: menu, cabine do sofá, espera e escolha de lado.
@@ -51,19 +61,43 @@ export interface AcoesDasTelas {
   /**
    * Abrir a cabine para montar o sofá.
    *
-   * @param modo `local` abre uma sala reservada ao aparelho; `online` entra na
+   * @param porta `local` abre uma sala reservada ao aparelho; `online` entra na
    * sala mais movimentada, junto com quem estiver na rede. Nos dois, cabem até
    * quatro pessoas aqui.
    */
-  jogar(modo: Modo): void;
+  jogar(porta: Porta, criar?: ConfiguracaoDeSala): void;
   /** O jogador quer só assistir, sem o menu por cima. */
   assistir(): void;
   /** O jogador confirmou o lado, e o sofá inteiro vai para ele. */
   escolher(time: Time): void;
   /** Desistiu da cabine e voltou ao menu: as conexões extras podem fechar. */
   desistir(): void;
+  /**
+   * As salas abertas agora, para a lista do painel.
+   *
+   * A busca é de quem sabe falar com o servidor, não desta classe: as telas
+   * cuidam de pixels e de foco de teclado, e enfiar um `fetch` aqui faria o
+   * menu ficar impossível de abrir sem uma rede de mentira montada em volta.
+   */
+  listarSalas(): Promise<SalaAberta[]>;
   /** Um ajuste mudou. Chamada a cada clique, já com o valor novo. */
   ajustou(ajustes: Ajustes): void;
+}
+
+/**
+ * Uma sala aberta, como o `/salas` a descreve.
+ *
+ * Repetido aqui em vez de importado do servidor porque o cliente não deve
+ * depender de nada de `src/server`: o que os dois compartilham é o formato do
+ * que trafega, e este é o formato.
+ */
+export interface SalaAberta {
+  nome: string;
+  humanos: number;
+  vagas: number;
+  modo: IdDoModo;
+  porTime: number;
+  bots: number;
 }
 
 /** O que a cabine mostra: quem já sentou e o que ainda está livre. */
@@ -106,6 +140,17 @@ const CONSELHOS: readonly string[] = [
   'No aquecimento a chapelaria já está aberta. É para isso que ele existe.',
 ];
 
+/**
+ * Os botões do menu que abrem painel, num seletor só.
+ *
+ * Escrito uma vez porque já foi escrito três: quando o menu virou coluna, dois
+ * dos três lugares continuaram procurando por `.barra`, que não existe mais. O
+ * resultado era silencioso — o realce de "painel aberto" nunca acendia e o
+ * botão deixou de fechar o que tinha aberto — e um seletor que não casa com
+ * nada não dá erro nenhum para avisar.
+ */
+const BOTOES_DE_FOLHA = '.coluna button';
+
 export class Telas {
   private readonly menu = pegar<HTMLElement>('#menu');
   private readonly cabine = pegar<HTMLElement>('#cabine');
@@ -124,13 +169,34 @@ export class Telas {
   private readonly confirmar = pegar<HTMLButtonElement>('#confirmar');
   private readonly estadoServidor = pegar<HTMLElement>('#estado-servidor');
   private readonly pulso = pegar<HTMLElement>('#pulso');
+  private readonly recadoDaSala = pegar<HTMLElement>('#recado-sala');
 
   private tela: NomeDaTela = 'menu';
   private ladoEscolhido: Time = 'azul';
   private ajustes: Ajustes;
   private ultimosDados: DadosDaEscolha | null = null;
   /** Qual botão do menu abriu a cabine. Decide a sala lá na hora de conectar. */
-  private modo: Modo = 'online';
+  private porta: Porta = 'online';
+  /**
+   * A sala que o painel está montando.
+   *
+   * Vive aqui, e não no formulário, porque ela precisa sobreviver ao desvio do
+   * apelido: quem aperta "abrir a sala" sem ter apelido cai na folha do
+   * apelido, e o que ele configurou não pode se perder no caminho de volta.
+   *
+   * O padrão é **dois e dois**, e de propósito diferente do padrão do
+   * protocolo. Aquele é o que o servidor assume quando o pacote chega torto, e
+   * repete a política do lobby: seis vagas e nenhum npc. Este é o que uma
+   * pessoa vê ao abrir o painel — e quem monta uma sala normalmente está
+   * sozinho, então "seis vagas e nenhum npc" entregaria uma partida em que não
+   * há ninguém para jogar contra. Dois de cada lado com dois npcs é um jogo
+   * assim que a sala abre, e continua sendo quando os amigos chegarem.
+   */
+  private montagem: Required<ConfiguracaoDeSala> = salaConfiguravel({ porTime: 2, bots: 2 });
+  /** A montagem que o botão do apelido deve reenviar, se houver. */
+  private montagemPendente: ConfiguracaoDeSala | undefined;
+  /** A sala aberta em que se clicou "entrar", quando a porta é `convidada`. */
+  private salaPedida: string | null = null;
 
   constructor(private readonly acoes: AcoesDasTelas) {
     this.ajustes = carregarAjustes();
@@ -138,6 +204,7 @@ export class Telas {
 
     this.ligarBarra();
     this.ligarCabine();
+    this.montarPainelDeSalas();
     this.montarAjustes();
 
     this.campoNome.addEventListener('keydown', (e) => {
@@ -203,8 +270,13 @@ export class Telas {
   }
 
   /** O botão que abriu a cabine: decide se a sala é reservada ou pública. */
-  get modoEscolhido(): Modo {
-    return this.modo;
+  /** O nome da sala em que se clicou "entrar" na lista. Lido por `main`. */
+  get salaDoConvite(): string | null {
+    return this.salaPedida;
+  }
+
+  get portaEscolhida(): Porta {
+    return this.porta;
   }
 
   mostrar(nome: NomeDaTela): void {
@@ -249,31 +321,203 @@ export class Telas {
     if (this.tela === 'escolha') this.pintarEscolha();
   }
 
-  private pedirParaJogar(modo: Modo): void {
+  private pedirParaJogar(porta: Porta, criar?: ConfiguracaoDeSala): void {
     const nome = this.campoNome.value.trim() || 'Anônimo';
     this.ajustes = { ...this.ajustes, nome };
     salvarAjustes(this.ajustes);
     this.recado.textContent = '';
     this.fecharFolhas();
-    this.modo = modo;
-    this.acoes.jogar(modo);
+    this.porta = porta;
+    this.acoes.jogar(porta, criar);
   }
 
   private confirmarLado(): void {
     this.acoes.escolher(this.ladoEscolhido);
   }
 
+  /**
+   * O painel de montar sala: o modo, o formato do time e as salas abertas.
+   *
+   * ## Por que os controles nascem do código
+   *
+   * Os quatro modos e os dois contadores são escritos a partir de `MODOS` e dos
+   * limites do protocolo, e não à mão no HTML. Escrever à mão seria mais curto
+   * de ler e mais fácil de esquecer: bastaria alguém acrescentar um modo na
+   * tabela e não no HTML para o jogo ter um modo que ninguém consegue escolher —
+   * e o teste que confere as duas listas não existiria para pegar isso.
+   *
+   * ## Por que dois botões e um número, e não um campo de texto
+   *
+   * Um `<input type="number">` aceita "-3", "1e9" e vazio, e cada um deles vira
+   * uma pergunta de validação com uma mensagem de erro para escrever. Menos e
+   * mais só produzem valores que já estão na faixa, e são alvos de dedo — que é
+   * o que interessa num jogo que se joga no sofá.
+   */
+  private montarPainelDeSalas(): void {
+    const caixaModos = pegar<HTMLElement>('#modos');
+    for (const id of IDS_DOS_MODOS) {
+      const m = MODOS[id];
+      const botao = document.createElement('button');
+      botao.className = 'modo';
+      botao.dataset.modo = id;
+      const nome = document.createElement('b');
+      nome.textContent = m.nome;
+      const lema = document.createElement('small');
+      lema.textContent = m.lema;
+      botao.append(nome, lema);
+      botao.addEventListener('click', () => {
+        this.montagem = { ...this.montagem, modo: id };
+        this.pintarMontagem();
+      });
+      caixaModos.append(botao);
+    }
+
+    const contadores: {
+      chave: 'porTime' | 'bots';
+      rotulo: string;
+      explica: string;
+      min: number;
+      max: number;
+    }[] = [
+      {
+        chave: 'porTime',
+        rotulo: 'Jogadores por time',
+        explica: 'vagas de gente em cada reino',
+        min: MIN_POR_TIME,
+        max: MAX_POR_TIME,
+      },
+      {
+        chave: 'bots',
+        rotulo: 'Npcs por time',
+        explica: 'quantos bots cada reino leva',
+        min: MIN_BOTS,
+        max: MAX_BOTS,
+      },
+    ];
+    const caixaFormato = pegar<HTMLElement>('#formato');
+    for (const c of contadores) {
+      const linha = document.createElement('div');
+      linha.className = 'ajuste';
+      const rotulo = document.createElement('span');
+      rotulo.append(document.createTextNode(c.rotulo));
+      const explica = document.createElement('small');
+      explica.textContent = c.explica;
+      rotulo.append(explica);
+
+      const grupo = document.createElement('div');
+      grupo.className = 'contador';
+      const menos = document.createElement('button');
+      menos.textContent = '−';
+      menos.setAttribute('aria-label', `menos ${c.rotulo.toLowerCase()}`);
+      const valor = document.createElement('output');
+      valor.dataset.conta = c.chave;
+      const mais = document.createElement('button');
+      mais.textContent = '+';
+      mais.setAttribute('aria-label', `mais ${c.rotulo.toLowerCase()}`);
+      for (const [botao, passo] of [
+        [menos, -1],
+        [mais, 1],
+      ] as const) {
+        botao.addEventListener('click', () => {
+          const alvo = Math.max(c.min, Math.min(c.max, this.montagem[c.chave] + passo));
+          // Passa pelo mesmo saneamento do servidor: assim o teto de unidades
+          // por time é aplicado aqui também, e o número na tela é o número que
+          // a sala vai ter. Um formulário que promete o que o servidor corta é
+          // um formulário que mente.
+          this.montagem = salaConfiguravel({ ...this.montagem, [c.chave]: alvo });
+          this.pintarMontagem();
+        });
+      }
+      grupo.append(menos, valor, mais);
+      linha.append(rotulo, grupo);
+      caixaFormato.append(linha);
+    }
+
+    pegar<HTMLButtonElement>('#abrir-sala').addEventListener('click', () => {
+      this.montagemPendente = { ...this.montagem };
+      this.pedirParaJogar('montada', this.montagemPendente);
+    });
+    pegar<HTMLButtonElement>('#atualizar-salas').addEventListener('click', () => {
+      void this.recarregarSalas();
+    });
+    this.pintarMontagem();
+  }
+
+  private pintarMontagem(): void {
+    for (const b of Array.from(document.querySelectorAll<HTMLButtonElement>('.modo'))) {
+      b.setAttribute('aria-pressed', String(b.dataset.modo === this.montagem.modo));
+    }
+    for (const o of Array.from(document.querySelectorAll<HTMLOutputElement>('output[data-conta]'))) {
+      const chave = o.dataset.conta as 'porTime' | 'bots';
+      o.textContent = String(this.montagem[chave]);
+    }
+    const total = this.montagem.porTime + this.montagem.bots;
+    this.recadoDaSala.textContent =
+      `${this.montagem.porTime} contra ${this.montagem.porTime}` +
+      (this.montagem.bots > 0 ? ` · ${this.montagem.bots} npc(s) de cada lado` : ' · sem npcs') +
+      ` · ${total} de cada lado em campo` +
+      (total >= MAX_POR_TIME_TOTAL ? ' — é o que a arena comporta' : '');
+  }
+
+  /**
+   * Busca as salas abertas e desenha a lista.
+   *
+   * Some a própria porta de entrada quando não há nada: uma lista vazia com um
+   * título em cima parece um defeito, e a frase que a substitui diz o que
+   * fazer em vez de constatar o vazio.
+   */
+  private async recarregarSalas(): Promise<void> {
+    const caixa = pegar<HTMLElement>('#salas-abertas');
+    caixa.replaceChildren(texto('procurando salas…', 'vazio'));
+    let salas: SalaAberta[];
+    try {
+      salas = await this.acoes.listarSalas();
+    } catch {
+      caixa.replaceChildren(texto('não deu para falar com o servidor', 'vazio'));
+      return;
+    }
+    const abertas = salas.filter((s) => s.vagas > 0);
+    if (abertas.length === 0) {
+      caixa.replaceChildren(texto('nenhuma sala aberta agora — monte a sua acima', 'vazio'));
+      return;
+    }
+    caixa.replaceChildren();
+    for (const s of abertas) {
+      const linha = document.createElement('div');
+      linha.className = 'sala-aberta';
+      const quem = document.createElement('span');
+      const titulo = document.createElement('b');
+      titulo.textContent = MODOS[s.modo]?.nome ?? s.nome;
+      const detalhe = document.createElement('small');
+      detalhe.textContent =
+        `${s.nome} · ${s.porTime} por time` +
+        (s.bots > 0 ? ` + ${s.bots} npc(s)` : '') +
+        ` · ${s.humanos} jogando · ${s.vagas} vaga(s)`;
+      quem.append(titulo, detalhe);
+      const botao = document.createElement('button');
+      botao.className = 'pequeno';
+      botao.textContent = 'entrar';
+      botao.addEventListener('click', () => {
+        this.montagemPendente = undefined;
+        this.salaPedida = s.nome;
+        this.pedirParaJogar('convidada');
+      });
+      linha.append(quem, botao);
+      caixa.append(linha);
+    }
+  }
+
   private ligarBarra(): void {
-    const entrar = (modo: Modo) => () => {
+    const entrar = (porta: Porta) => () => {
       // Sem apelido guardado, o primeiro clique abre a folha para escrever um;
       // com apelido, vai direto para a cabine.
       if (!this.ajustes.nome.trim()) {
-        this.modo = modo;
+        this.porta = porta;
         this.abrirFolha('apelido');
         this.campoNome.focus();
         return;
       }
-      this.pedirParaJogar(modo);
+      this.pedirParaJogar(porta);
     };
     pegar<HTMLButtonElement>('#jogar-local').addEventListener('click', entrar('local'));
     pegar<HTMLButtonElement>('#jogar-online').addEventListener('click', entrar('online'));
@@ -284,7 +528,7 @@ export class Telas {
     });
 
     for (const botao of Array.from(
-      document.querySelectorAll<HTMLButtonElement>('.coluna button[data-folha]'),
+      document.querySelectorAll<HTMLButtonElement>(`${BOTOES_DE_FOLHA}[data-folha]`),
     )) {
       botao.addEventListener('click', () => {
         const aberta = botao.getAttribute('aria-expanded') === 'true';
@@ -296,7 +540,7 @@ export class Telas {
     // O botão dentro da folha do apelido continua a mesma porta de entrada, e
     // respeita o botão do menu que a abriu.
     for (const acao of Array.from(document.querySelectorAll<HTMLElement>('[data-acao="jogar"]'))) {
-      acao.addEventListener('click', () => this.pedirParaJogar(this.modo));
+      acao.addEventListener('click', () => this.pedirParaJogar(this.porta, this.montagemPendente));
     }
   }
 
@@ -378,7 +622,7 @@ export class Telas {
       dados.sentados.length === 0
         ? 'aperte o botão de entrar para ocupar a primeira vaga'
         : `${dados.sentados.length} de ${MAXIMO_LOCAL} · ${
-            this.modo === 'local'
+            this.porta === 'local'
               ? 'sala só de vocês, o resto do time vem de bot'
               : 'vocês entram na partida pública, junto de quem estiver na rede'
           }`;
@@ -388,14 +632,18 @@ export class Telas {
     this.fecharFolhas();
     const folha = document.querySelector<HTMLElement>(`.folha[data-folha="${nome}"]`);
     if (folha) folha.hidden = false;
-    const botao = document.querySelector<HTMLButtonElement>(`.barra button[data-folha="${nome}"]`);
+    const botao = document.querySelector<HTMLButtonElement>(`${BOTOES_DE_FOLHA}[data-folha="${nome}"]`);
     botao?.setAttribute('aria-expanded', 'true');
+    // A lista de salas é buscada ao abrir, e não uma vez ao carregar a página:
+    // salas nascem e morrem o tempo todo, e uma lista de dez minutos atrás
+    // manda a pessoa entrar numa sala que já não existe.
+    if (nome === 'sala') void this.recarregarSalas();
   }
 
   private fecharFolhas(): void {
     for (const f of Array.from(document.querySelectorAll<HTMLElement>('.folha'))) f.hidden = true;
     for (const b of Array.from(
-      document.querySelectorAll<HTMLButtonElement>('.barra button[data-folha]'),
+      document.querySelectorAll<HTMLButtonElement>(`${BOTOES_DE_FOLHA}[data-folha]`),
     )) {
       b.setAttribute('aria-expanded', 'false');
     }
@@ -576,6 +824,14 @@ export class Telas {
 
     pintar();
   }
+}
+
+/** Um parágrafo de uma linha, para as listas vazias. */
+function texto(conteudo: string, classe: string): HTMLElement {
+  const p = document.createElement('p');
+  p.className = classe;
+  p.textContent = conteudo;
+  return p;
 }
 
 function pegar<T extends HTMLElement>(seletor: string): T {

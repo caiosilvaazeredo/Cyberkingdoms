@@ -1,4 +1,6 @@
 import { Sala, type Cliente } from './sala';
+import type { IdDoModo } from '../shared/modos';
+import type { ConfiguracaoDeSala } from '../shared/protocolo';
 import { DT, TICKS_POR_SEGUNDO } from '../shared/regras';
 
 /**
@@ -32,6 +34,16 @@ import { DT, TICKS_POR_SEGUNDO } from '../shared/regras';
  * sala foi.
  */
 
+export interface SalaNaLista {
+  nome: string;
+  humanos: number;
+  vagas: number;
+  modo: IdDoModo;
+  porTime: number;
+  /** Npcs fixos por time. Zero quando os bots são o tapa-buraco do lobby. */
+  bots: number;
+}
+
 export interface PedidoDeEntrada {
   /** Chegou pelo menu, só para ver. Não ocupa vaga. */
   assistindo?: boolean;
@@ -39,6 +51,15 @@ export interface PedidoDeEntrada {
   sala?: string;
   /** Abrir uma sala reservada a este aparelho. Ignorado se `sala` foi pedida. */
   privada?: boolean;
+  /**
+   * Abrir uma sala **com estas regras** — modo, vagas de gente e npcs por time.
+   *
+   * Já saneada: quem chama passa o resultado de `salaConfiguravel`, e o lobby
+   * confia nela. É a terceira exceção à regra de juntar gente, e a mais
+   * explícita das três: uma sala montada existe porque alguém escolheu aquelas
+   * regras, e mandar essa pessoa para a sala mais cheia seria ignorar o pedido.
+   */
+  criar?: Required<ConfiguracaoDeSala>;
 }
 
 export interface OpcoesDoLobby {
@@ -73,11 +94,25 @@ export class Lobby {
     return this.salas.length;
   }
 
-  /** O que o `/salas` mostra. Sala privada é de quem a abriu e não vai na lista. */
-  get lista(): { nome: string; humanos: number; vagas: number }[] {
+  /**
+   * O que o `/salas` mostra. Sala privada é de quem a abriu e não vai na lista.
+   *
+   * Leva o modo e os tamanhos porque a lista existe para alguém **escolher**
+   * uma sala, e "reino-4 · 3 jogando" não dá base para escolha nenhuma. Com o
+   * modo e o formato, a linha responde a pergunta que a pessoa realmente tem:
+   * é o jogo que eu quero jogar, e ainda cabe gente?
+   */
+  get lista(): SalaNaLista[] {
     return this.salas
       .filter((s) => !s.privada)
-      .map((s) => ({ nome: s.nome, humanos: s.humanos, vagas: s.vagas }));
+      .map((s) => ({
+        nome: s.nome,
+        humanos: s.humanos,
+        vagas: s.vagas,
+        modo: s.modo,
+        porTime: s.porTime,
+        bots: s.botsFixos ?? 0,
+      }));
   }
 
   /**
@@ -107,6 +142,16 @@ export class Lobby {
       return pedida;
     }
 
+    // Sala montada: as regras vieram de quem está entrando.
+    if (p.criar) {
+      const feita = this.abrirSala(p.criar.privada, p.criar);
+      if (!feita) {
+        cliente.enviar({ t: 'recusado', motivo: 'o servidor está cheio — tente daqui a pouco' });
+        return null;
+      }
+      return feita.entrar(cliente, assistindo) ? feita : null;
+    }
+
     const nova = p.privada === true ? this.abrirSala(true) : null;
     if (p.privada === true && !nova) {
       cliente.enviar({ t: 'recusado', motivo: 'o servidor está cheio — tente o jogo online' });
@@ -126,13 +171,16 @@ export class Lobby {
     return escolhida;
   }
 
-  private abrirSala(privada = false): Sala | null {
+  private abrirSala(privada = false, feita?: Required<ConfiguracaoDeSala>): Sala | null {
     if (this.salas.length >= this.maxSalas) return null;
     const sala = new Sala({
-      nome: `${privada ? 'sofá' : 'reino'}-${++this.contador}`,
+      nome: `${feita ? 'mesa' : privada ? 'sofá' : 'reino'}-${++this.contador}`,
       seed: this.seed(),
       privada,
-      ...(this.porTime !== undefined ? { porTime: this.porTime } : {}),
+      // A configuração do anfitrião vence os padrões do lobby. Ela vem depois na
+      // ordem de propósito: é a última palavra.
+      ...(feita ? { modo: feita.modo, porTime: feita.porTime, botsPorTime: feita.bots } : {}),
+      ...(this.porTime !== undefined && !feita ? { porTime: this.porTime } : {}),
       // A espera existe para dar tempo de os amigos de alguém chegarem pela
       // rede. Na sala do sofá não vem ninguém pela rede: os amigos já estão na
       // sala, e segurar doze segundos de tela parada seria esperar por

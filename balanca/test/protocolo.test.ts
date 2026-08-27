@@ -20,6 +20,7 @@ function estadoVazio(): Estado {
   for (const t of TIMES) estoque[t] = { ...ESTOQUE_INICIAL };
   return {
     tick: 0,
+    modo: 'resgate' as const,
     fase: 'aquecimento',
     faseEm: 0,
     relogio: 0,

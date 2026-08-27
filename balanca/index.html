@@ -240,6 +240,9 @@
       .item.rubro {
         background: linear-gradient(#e2564b, #bf3128);
       }
+      .item.ciano {
+        background: linear-gradient(#48b6c4, #2c8a99);
+      }
       /*
         `minmax(0, 1fr)` e não `1fr`.
 
@@ -408,6 +411,34 @@
         .estado {
           padding: 6px 10px;
         }
+        /*
+          No painel de salas, quem cede são os **contadores**, e não as frases
+          que explicam os modos. Empilhados, os dois custam duas linhas cada e
+          empurram "abrir a sala" para baixo da dobra; lado a lado, com o rótulo
+          acima do controle, custam uma. As frases ficam porque são elas que
+          fazem alguém escolher um modo — esconder o que explica a escolha para
+          caber o que a executa seria caber pelo motivo errado.
+        */
+        #formato {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+        }
+        #formato .ajuste {
+          display: block;
+          padding: 4px 0;
+          border-bottom: none;
+        }
+        #formato .contador {
+          margin-top: 4px;
+        }
+        .folha[data-folha='sala'] h2 {
+          font-size: 16px;
+          margin-bottom: 6px;
+        }
+        .titulo-com-acao {
+          margin-top: 10px;
+        }
       }
       .folha[hidden] {
         display: none;
@@ -461,6 +492,113 @@
         padding: 2px 7px;
         font-family: inherit;
       }
+      /* --- montar sala --- */
+      /*
+        Os quatro modos são cartões, e não uma lista de rádios.
+
+        O que decide a escolha é a frase embaixo do nome — "a balança vence",
+        "um resgate decide" — e um rádio não tem lugar para ela. Com o cartão, a
+        frase está sempre à vista e ninguém precisa escolher um modo pelo nome
+        para descobrir o que ele faz.
+      */
+      .modos {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr));
+        gap: 8px;
+        margin-bottom: 6px;
+      }
+      button.modo {
+        display: block;
+        text-align: left;
+        background: rgba(0, 0, 0, 0.04);
+        border: 2px solid rgba(0, 0, 0, 0.16);
+        color: var(--tinta);
+        font: inherit;
+        padding: 10px 12px;
+        min-height: 44px;
+        cursor: pointer;
+      }
+      button.modo b {
+        display: block;
+        font-size: 15px;
+      }
+      button.modo small {
+        display: block;
+        margin-top: 2px;
+        font-size: 12px;
+        line-height: 1.35;
+        opacity: 0.7;
+      }
+      button.modo[aria-pressed='true'] {
+        background: rgba(228, 0, 43, 0.08);
+        border-color: var(--acento);
+      }
+      button.modo[aria-pressed='true'] b {
+        color: var(--acento);
+      }
+      /* Menos, número, mais. Ver o comentário em `montarPainelDeSalas`. */
+      .contador {
+        display: flex;
+        align-items: stretch;
+        gap: 6px;
+        flex: 0 0 auto;
+      }
+      .contador button {
+        width: 44px;
+        min-height: 40px;
+        font-size: 18px;
+        line-height: 1;
+        background: transparent;
+        color: var(--tinta);
+        border: 1px solid rgba(0, 0, 0, 0.25);
+        cursor: pointer;
+      }
+      .contador button:hover {
+        background: rgba(0, 0, 0, 0.06);
+      }
+      .contador output {
+        display: grid;
+        place-items: center;
+        min-width: 34px;
+        font-weight: 700;
+        font-size: 16px;
+        font-variant-numeric: tabular-nums;
+      }
+      .titulo-com-acao {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 18px;
+      }
+      .titulo-com-acao h2 {
+        margin: 0;
+      }
+      .sala-aberta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        background: rgba(0, 0, 0, 0.05);
+        padding: 8px 10px;
+        margin-top: 6px;
+      }
+      .sala-aberta b {
+        display: block;
+        font-size: 14px;
+      }
+      .sala-aberta small {
+        display: block;
+        font-size: 12px;
+        opacity: 0.65;
+      }
+      .folha p.vazio {
+        margin: 8px 0 0;
+        font-size: 13px;
+        opacity: 0.65;
+        font-style: italic;
+      }
+
       /* --- ajustes --- */
       .ajuste {
         display: flex;
@@ -877,6 +1015,10 @@
           Jogo Online
           <small>até 4 aqui + gente da rede</small>
         </button>
+        <button class="item ciano" data-folha="sala" aria-expanded="false">
+          Salas
+          <small>monte a sua ou entre numa aberta</small>
+        </button>
         <button class="item verde" data-folha="regras" aria-expanded="false">Como se joga</button>
         <button id="assistir" class="item roxo">Assistir</button>
 
@@ -901,6 +1043,29 @@
           <button class="grande" data-acao="jogar">entrar na batalha</button>
         </div>
         <p class="recado" id="recado"></p>
+      </div>
+
+      <!--
+        Montar sala e entrar numa sala são a mesma folha de propósito. São a
+        mesma pergunta ("onde eu vou jogar?") e separá-las em dois painéis faria
+        quem quer jogar com um amigo abrir os dois para descobrir em qual está a
+        resposta. A lista vem primeiro na leitura de quem só quer entrar, e por
+        isso o formulário é o que fica embaixo do título.
+      -->
+      <div class="folha" data-folha="sala" hidden>
+        <h2>Montar uma sala</h2>
+        <div id="modos" class="modos"></div>
+        <div id="formato"></div>
+        <p class="recado" id="recado-sala"></p>
+        <div class="linha">
+          <button class="grande" id="abrir-sala">abrir a sala</button>
+        </div>
+
+        <div class="titulo-com-acao">
+          <h2>Salas abertas</h2>
+          <button class="pequeno" id="atualizar-salas">atualizar</button>
+        </div>
+        <div id="salas-abertas"></div>
       </div>
 
       <div class="folha" data-folha="regras" hidden>
@@ -1001,7 +1166,7 @@
         <p class="dica" id="cabine-recado"></p>
         <div class="linha" style="margin: 0">
           <button id="cabine-voltar" class="pequeno">voltar ao menu</button>
-          <button id="cabine-seguir" class="grande">escolher o lado</button>
+          <button id="cabine-seguir" class="grande" data-acao-final>escolher o lado</button>
         </div>
       </div>
     </section>
@@ -1043,7 +1208,7 @@
             <kbd>A</kbd> <kbd>D</kbd> ou clique para trocar de lado · <kbd>Enter</kbd> para entrar ·
             <kbd>Esc</kbd> volta ao menu
           </span>
-          <button id="confirmar" class="grande">entrar no Reino Azul</button>
+          <button id="confirmar" class="grande" data-acao-final>entrar no Reino Azul</button>
         </div>
       </div>
     </section>

@@ -14,6 +14,7 @@ import {
   type Arena,
   type TipoDeEstrutura,
 } from './arena';
+import { MODO_PADRAO, PESO_QUE_VENCE, modoDe, type IdDoModo } from './modos';
 import {
   CARGA_DO_OFICIO,
   cozinhaDe,
@@ -47,7 +48,6 @@ import {
   CURA_DO_BOLO,
   CUSTO_DO_NIVEL,
   DT,
-  DURACAO_DA_PARTIDA,
   EMPURRAO_DA_PRINCESA,
   JAZIDA_VOLTA_EM,
   NIVEL_MAXIMO,
@@ -56,10 +56,8 @@ import {
   PESO_MINIMO,
   PESO_POR_BOLO,
   PESO_TOTAL,
-  PONTOS_PARA_VENCER,
   PRINCESA_VOLTA_EM,
   RAIO_UNIDADE,
-  RENASCIMENTO_BASE,
   RENASCIMENTO_POR_PONTO,
   TEMPO_DE_FORNO,
   TEMPO_DE_TRABALHO,
@@ -126,9 +124,9 @@ const COMANDO_PARADO: Comando = {
   usar: false,
 };
 
-export function criarPartida(seed: number): Partida {
+export function criarPartida(seed: number, modo: IdDoModo = MODO_PADRAO): Partida {
   const arena = criarArena(seed);
-  const estado = estadoInicial(arena);
+  const estado = estadoInicial(arena, modo);
   const comandos = new Map<number, Comando>();
   /** Sobe a borda do botão "usar": segurar não repete a ação. */
   const usarAnterior = new Map<number, boolean>();
@@ -192,7 +190,8 @@ export function criarPartida(seed: number): Partida {
 
 // --- montagem --------------------------------------------------------------
 
-function estadoInicial(arena: Arena): Estado {
+function estadoInicial(arena: Arena, id: IdDoModo): Estado {
+  const modo = modoDe(id);
   const estoque = {} as Record<Time, Record<Classe, number>>;
   for (const t of TIMES) estoque[t] = { ...ESTOQUE_INICIAL };
 
@@ -215,9 +214,10 @@ function estadoInicial(arena: Arena): Estado {
 
   return {
     tick: 0,
+    modo: modo.id,
     fase: 'aquecimento',
     faseEm: AQUECIMENTO,
-    relogio: DURACAO_DA_PARTIDA,
+    relogio: modo.duracao,
     placar: { azul: 0, vermelho: 0 },
     unidades: [],
     princesas,
@@ -558,6 +558,11 @@ function pegarItem(estado: Estado, u: Unidade, item: Item): void {
  */
 function vestirDaChapelaria(estado: Estado, u: Unidade): void {
   const estoque = estado.estoque[u.time];
+  // Na Chapelaria aberta o estoque não se esgota. É um `||` e não um caminho
+  // separado de propósito: o resto da função — rodar a lista, passar pelo
+  // aldeão, encher a vida — continua sendo exatamente o mesmo código, e um modo
+  // não pode ter um jeito próprio de vestir chapéu que ninguém mais exercita.
+  const infinitos = modoDe(estado.modo).chapeusInfinitos;
   const atual = CLASSES_COM_CHAPEU.indexOf(u.classe);
   devolverChapeu(estado, u);
   for (let passo = 1; passo <= CLASSES_COM_CHAPEU.length + 1; passo++) {
@@ -568,8 +573,8 @@ function vestirDaChapelaria(estado: Estado, u: Unidade): void {
       return;
     }
     const classe = CLASSES_COM_CHAPEU[i]!;
-    if (estoque[classe] > 0) {
-      estoque[classe]--;
+    if (infinitos || estoque[classe] > 0) {
+      if (!infinitos) estoque[classe]--;
       trocarClasse(estado, u, classe, true);
       // Vestir na própria chapelaria não gera evento: quem roda a lista até
       // achar o chapéu que quer produziria meia dúzia de avisos por troca, e o
@@ -848,6 +853,15 @@ function alimentar(estado: Estado, u: Unidade, refem: Princesa): void {
   u.fatias++;
   estado.eventos.push({ tipo: 'fatia', unidade: u.id, princesa: refem.time, peso: refem.peso });
 
+  // No Banquete, a balança no talo acaba a partida. A conferência é aqui, na
+  // única função do jogo que move peso: procurá-la no tick custaria uma volta
+  // por quadro para responder a uma pergunta que só muda quando alguém entrega
+  // uma fatia.
+  if (modoDe(estado.modo).vitoriaPorBalanca && minha.peso <= PESO_QUE_VENCE) {
+    terminar(estado, u.time);
+    return;
+  }
+
   // A princesa não gosta de ser engordada por estranhos, e empurra quem estiver
   // colado nela. Serve ao jogo: impede que o time inteiro fique parado dentro
   // da masmorra em cima da refém enquanto o inimigo tenta o resgate.
@@ -924,7 +938,7 @@ function marcarPonto(estado: Estado, u: Unidade, p: Princesa): void {
   estado.placar[u.time]++;
   estado.eventos.push({ tipo: 'resgate', unidade: u.id, time: u.time });
 
-  if (estado.placar[u.time] >= PONTOS_PARA_VENCER) {
+  if (estado.placar[u.time] >= modoDe(estado.modo).pontosParaVencer) {
     terminar(estado, u.time);
     return;
   }
@@ -1150,7 +1164,8 @@ function morrer(estado: Estado, algoz: Unidade, alvo: Unidade): void {
   alvo.classe = 'aldeao';
   soltarTudo(estado, alvo);
   alvo.renasceEm =
-    RENASCIMENTO_BASE + estado.placar[outroTime(alvo.time)] * RENASCIMENTO_POR_PONTO;
+    modoDe(estado.modo).renascimentoBase +
+    estado.placar[outroTime(alvo.time)] * RENASCIMENTO_POR_PONTO;
 }
 
 /** Devolve ao mundo o que a unidade estava segurando. */

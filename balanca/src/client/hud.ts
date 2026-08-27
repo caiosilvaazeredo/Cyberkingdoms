@@ -1,8 +1,8 @@
 import { CLASSES_COM_CHAPEU, perfil, vidaMaxima } from '../shared/classes';
 import { nivelDe, princesaDe, type Estado, type Evento, type Unidade } from '../shared/estado';
+import { modoDe } from '../shared/modos';
 import {
   PESO_TOTAL,
-  PONTOS_PARA_VENCER,
   carregadoresPara,
   outroTime,
   type Time,
@@ -205,10 +205,17 @@ function balanca(ctx: CanvasRenderingContext2D, estado: Estado, largura: number,
     y + a + 14,
   );
 
+  // No Banquete a barra não é só o desempate: é a linha de chegada. O rótulo
+  // diz isso, porque é a única diferença visível entre os dois modos e ninguém
+  // vai deduzi-la olhando uma barra que parece a de sempre.
   ctx.textAlign = 'center';
   ctx.fillStyle = COR_CLARA[meu];
   ctx.font = '700 12px "Trebuchet MS", system-ui, sans-serif';
-  ctx.fillText('A BALANÇA DO REINO', x + l / 2, y - 13);
+  ctx.fillText(
+    modoDe(estado.modo).vitoriaPorBalanca ? 'A BALANÇA VENCE' : 'A BALANÇA DO REINO',
+    x + l / 2,
+    y - 13,
+  );
   ctx.restore();
 }
 
@@ -226,9 +233,17 @@ function placar(ctx: CanvasRenderingContext2D, estado: Estado, largura: number):
   ctx.fillStyle = '#f2e6c9';
   ctx.font = '600 18px "Trebuchet MS", system-ui, sans-serif';
   ctx.fillText(`${minutos}:${String(segundos).padStart(2, '0')}`, largura / 2, 12);
+  // A linha do objetivo vem do **modo**, e não da constante do jogo clássico.
+  // Escrita fixa, ela mentia em dois dos quatro modos: no Assalto, em que um
+  // resgate vence, e no Banquete, em que a barra logo abaixo também ganha o
+  // jogo. Uma tela que promete a regra errada é pior do que uma que não promete
+  // nada — a pessoa joga a partida inteira contando o placar errado.
+  const modo = modoDe(estado.modo);
   ctx.font = '400 10px "Trebuchet MS", system-ui, sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.65)';
-  ctx.fillText(`resgates até ${PONTOS_PARA_VENCER}`, largura / 2, 34);
+  const alvo =
+    modo.pontosParaVencer === 1 ? 'um resgate decide' : `resgates até ${modo.pontosParaVencer}`;
+  ctx.fillText(modo.vitoriaPorBalanca ? `${alvo} · ou a balança` : alvo, largura / 2, 34);
   ctx.restore();
 }
 
@@ -244,8 +259,11 @@ function cabecalho(ctx: CanvasRenderingContext2D, rede: Rede, largura: number): 
   // atravessava o meio da tela e escrevia por cima do placar — duas informações
   // no mesmo pixel viram nenhuma.
   const cabe = largura / 2 - 80;
-  const inteira = `${rede.sala} · ${humanos} jogadores, ${bots} bots · ${rede.ping} ms`;
-  const curta = `${humanos}+${bots} · ${rede.ping} ms`;
+  const nomeDoModo = modoDe(rede.modo).nome;
+  const inteira = `${nomeDoModo} · ${rede.sala} · ${humanos} jogadores, ${bots} bots · ${rede.ping} ms`;
+  // Estreito, o que sobra é o modo: numa sala montada por outra pessoa, saber
+  // por que regra se está jogando vale mais que saber o nome da sala.
+  const curta = `${nomeDoModo} · ${humanos}+${bots} · ${rede.ping} ms`;
   ctx.fillText(ctx.measureText(inteira).width <= cabe ? inteira : curta, 12, 10);
   ctx.restore();
 }

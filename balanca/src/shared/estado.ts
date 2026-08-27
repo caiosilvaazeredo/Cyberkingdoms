@@ -1,4 +1,5 @@
 import type { Classe, Oficio } from './classes';
+import type { IdDoModo } from './modos';
 import type { Time } from './regras';
 
 /**
@@ -190,6 +191,15 @@ export type Evento =
 
 export interface Estado {
   tick: number;
+  /**
+   * O modo desta partida.
+   *
+   * Mora no estado, e não na sala, porque o cliente prevê o movimento rodando a
+   * mesma simulação do servidor: com o modo só do lado do servidor, a previsão
+   * rodaria com as regras erradas. Aqui ele viaja no retrato e os dois lados
+   * concordam de graça. Ver `modos.ts`.
+   */
+  modo: IdDoModo;
   fase: Fase;
   /** Segundos restantes da fase (aquecimento, pausa de ponto). */
   faseEm: number;

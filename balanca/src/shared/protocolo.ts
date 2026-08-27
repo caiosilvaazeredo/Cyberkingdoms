@@ -10,7 +10,8 @@ import type {
   TipoDeItem,
   Unidade,
 } from './estado';
-import { TIMES, type Time } from './regras';
+import { modoDe, type IdDoModo } from './modos';
+import { POR_TIME, TIMES, type Time } from './regras';
 
 /**
  * O que trafega entre o navegador e o servidor.
@@ -40,7 +41,81 @@ import { TIMES, type Time } from './regras';
  * O mapa não viaja: o cliente monta a arena a partir da seed.
  */
 
-export const VERSAO_DO_PROTOCOLO = 3;
+export const VERSAO_DO_PROTOCOLO = 4;
+
+// --- a sala que alguém monta -----------------------------------------------
+
+/**
+ * O que o anfitrião escolhe ao abrir uma sala.
+ *
+ * Três coisas, e nenhuma delas é um número solto no meio do jogo: o modo, quantas
+ * pessoas cabem em cada time e quantos npcs cada time leva. As duas contagens
+ * são **por time**, não por sala — dizer "oito jogadores" deixa em aberto se são
+ * quatro contra quatro ou seis contra dois, e essa ambiguidade acabaria virando
+ * uma partida desequilibrada que ninguém pediu.
+ */
+export interface ConfiguracaoDeSala {
+  modo?: IdDoModo;
+  /** Vagas de gente em cada time. */
+  porTime?: number;
+  /**
+   * Npcs em cada time, fixos.
+   *
+   * "Fixos" é a diferença que faz este campo existir. Numa sala do lobby os
+   * bots são um tapa-buraco: entram para completar o time e saem quando chega
+   * gente. Numa sala montada, eles são uma escolha do anfitrião — três contra
+   * três com dois npcs de cada lado é oito em campo, e continua sendo oito
+   * quando o terceiro amigo chegar.
+   */
+  bots?: number;
+  /** Sala reservada: o lobby não manda estranhos para ela. */
+  privada?: boolean;
+}
+
+/** Vagas de gente por time: pelo menos uma, no máximo o que a arena comporta. */
+export const MIN_POR_TIME = 1;
+export const MAX_POR_TIME = 6;
+/** Npcs por time. Zero é uma escolha legítima: partida só de gente. */
+export const MIN_BOTS = 0;
+export const MAX_BOTS = 6;
+/**
+ * Unidades por time, somando gente e npc.
+ *
+ * O teto existe porque a arena tem tamanho: doze de um lado transformam a ponte
+ * num engarrafamento e o nascedouro num empurra-empurra. É o mesmo motivo de
+ * `POR_TIME` ser seis — só que agora quem soma os dois números é o anfitrião, e
+ * ele precisa esbarrar em algum lugar.
+ */
+export const MAX_POR_TIME_TOTAL = 8;
+
+/**
+ * A configuração que o servidor de fato aceita.
+ *
+ * Nada aqui confia no que chegou: os números vêm de um cliente, e um cliente é
+ * a categoria de entrada que menos merece confiança. Cortar na entrada — e não
+ * na hora de usar — é o que garante que a sala nunca exista num estado inválido:
+ * quem lê `sala.porTime` lá na frente não precisa se perguntar se aquilo é um
+ * número de verdade.
+ *
+ * O corte do total é o último e vem depois dos outros dois de propósito. Ele
+ * tira dos **npcs**, nunca das vagas de gente: quem pediu quatro amigos e seis
+ * bots quis, acima de tudo, jogar com os quatro amigos.
+ */
+export function salaConfiguravel(bruta: unknown): Required<ConfiguracaoDeSala> {
+  const c = (bruta ?? {}) as ConfiguracaoDeSala;
+  const inteiro = (v: unknown, min: number, max: number, padrao: number): number => {
+    const n = typeof v === 'number' && Number.isFinite(v) ? Math.trunc(v) : padrao;
+    return Math.max(min, Math.min(max, n));
+  };
+  const porTime = inteiro(c.porTime, MIN_POR_TIME, MAX_POR_TIME, POR_TIME);
+  const bots = inteiro(c.bots, MIN_BOTS, MAX_BOTS, 0);
+  return {
+    modo: modoDe(c.modo).id,
+    porTime,
+    bots: Math.min(bots, MAX_POR_TIME_TOTAL - porTime),
+    privada: c.privada === true,
+  };
+}
 
 // --- cliente → servidor ----------------------------------------------------
 
@@ -89,6 +164,18 @@ export type DoCliente =
       assistindo?: boolean;
       sala?: string;
       privada?: boolean;
+      /**
+       * Abrir uma sala **com estas regras**, em vez de cair na fila do lobby.
+       *
+       * Vai no `entrar` e não numa mensagem própria de "criar sala" porque
+       * criar e entrar são o mesmo gesto: ninguém cria uma sala para não entrar
+       * nela. Uma mensagem separada exigiria um estado intermediário — conectado
+       * mas sem sala — que só existiria para ser um caminho a mais de erro.
+       *
+       * Os números chegam de fora e o servidor não confia neles: quem sanea é
+       * `salaConfiguravel`, e o que volta no `bemvindo` é o que de fato valeu.
+       */
+      criar?: ConfiguracaoDeSala;
     }
   /**
    * Escolher o lado é uma mensagem separada de entrar, e não um campo dela.
@@ -117,6 +204,15 @@ export type DoServidor =
       seed: number;
       sala: string;
       porTime: number;
+      /**
+       * O modo e os bots viajam **uma vez**, aqui, e não em cada retrato.
+       *
+       * Os dois valem pela partida inteira. Mandá-los quinze vezes por segundo
+       * seria pagar banda para repetir uma constante — e o retrato é a mensagem
+       * que este protocolo mais cuida em manter pequena.
+       */
+      modo: IdDoModo;
+      botsPorTime: number;
     }
   /**
    * O espectador virou jogador. Chega depois de `escolherTime`, e de novo a

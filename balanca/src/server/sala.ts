@@ -1,5 +1,6 @@
 import { Bots } from '../shared/bots';
 import { Navegador } from '../shared/navegacao';
+import { modoDe, type IdDoModo } from '../shared/modos';
 import { criarPartida, type Partida } from '../shared/partida';
 import { empacotar, type Comando, type DoServidor, type FichaDeJogador } from '../shared/protocolo';
 import {
@@ -81,6 +82,21 @@ export interface OpcoesDaSala {
    */
   privada?: boolean;
   porTime?: number;
+  /** O modo desta sala. Vale para todas as partidas que ela montar. */
+  modo?: IdDoModo;
+  /**
+   * Npcs fixos por time, quando o anfitrião escolheu quantos quer.
+   *
+   * `undefined` mantém a política do lobby: bot é tapa-buraco, entra para
+   * completar o time e sai quando chega gente. Um número muda o contrato — os
+   * npcs passam a fazer parte da sala, e as vagas de gente que sobram ficam
+   * **abertas** em vez de preenchidas por máquina.
+   *
+   * A diferença importa: numa sala de dois contra dois com um npc de cada lado,
+   * o segundo amigo que ainda não chegou tem uma vaga esperando por ele, e não
+   * um bot que ele vai ter de expulsar.
+   */
+  botsPorTime?: number;
   /** Segundos antes de completar com bots. Os testes usam zero. */
   esperaPorJogadores?: number;
   /** Relógio injetável, para o teste não depender de `Date.now`. */
@@ -90,11 +106,15 @@ export interface OpcoesDaSala {
 export class Sala {
   readonly nome: string;
   readonly privada: boolean;
+  readonly modo: IdDoModo;
+  /** Vagas de gente por time. */
+  readonly porTime: number;
+  /** Npcs fixos por time, ou `null` quando o bot é tapa-buraco do lobby. */
+  readonly botsFixos: number | null;
   private partida: Partida;
   private navegador: Navegador;
   private bots: Bots;
   private readonly clientes = new Map<string, Cliente>();
-  private readonly porTime: number;
   private readonly espera: number;
   /** Segundos sem lotação humana. É o que dispara o backfill. */
   private esperando = 0;
@@ -106,11 +126,19 @@ export class Sala {
     this.nome = opcoes.nome;
     this.privada = opcoes.privada ?? false;
     this.seed = opcoes.seed;
+    this.modo = modoDe(opcoes.modo).id;
     this.porTime = opcoes.porTime ?? POR_TIME;
+    this.botsFixos = opcoes.botsPorTime ?? null;
     this.espera = opcoes.esperaPorJogadores ?? ESPERA_POR_JOGADORES;
-    this.partida = criarPartida(this.seed);
+    this.partida = criarPartida(this.seed, this.modo);
     this.navegador = new Navegador(this.partida.arena);
     this.bots = new Bots(this.partida.arena, this.navegador);
+  }
+
+  /** Quantos npcs cada time deve ter agora. Ver `cuidarDosBots`. */
+  private alvoDeBots(time: Time): number {
+    if (this.botsFixos !== null) return this.botsFixos;
+    return Math.max(0, this.porTime - this.contarHumanos(time));
   }
 
   get estado() {
@@ -174,12 +202,7 @@ export class Sala {
     cliente.assistindo = assistindo;
     cliente.silencio = 0;
     this.clientes.set(cliente.chave, cliente);
-    cliente.enviar({
-      t: 'bemvindo',
-      seed: this.seed,
-      sala: this.nome,
-      porTime: this.porTime,
-    });
+    cliente.enviar(this.boasVindas());
     // O elenco vai na hora: a tela de escolha precisa saber quem já está de que
     // lado antes do primeiro retrato chegar.
     cliente.enviar({ t: 'elenco', jogadores: this.elenco() });
@@ -206,7 +229,14 @@ export class Sala {
     }
     // O humano tem preferência sobre o bot, e a preferência é imediata: se o
     // time escolhido está lotado de bots, um deles sai agora.
-    if (this.contar(time) >= this.porTime) this.dispensarUmBot(time);
+    //
+    // Numa sala com npcs fixos, não: ali os npcs foram pedidos, e a vaga que a
+    // pessoa está ocupando é uma das de gente. Expulsar um bot faria a sala
+    // encolher a cada amigo que chegasse, que é o oposto do que o anfitrião
+    // configurou.
+    if (this.botsFixos === null && this.contar(time) >= this.porTime) {
+      this.dispensarUmBot(time);
+    }
 
     const u = this.partida.entrar({ nome: cliente.nome, bot: false, time });
     cliente.unidade = u.id;
@@ -277,23 +307,34 @@ export class Sala {
     this.esperando = faltaHumano ? this.esperando + DT : 0;
 
     for (const time of TIMES) {
-      const total = this.contar(time);
       const humanos = this.contarHumanos(time);
+      const bots = this.contar(time) - humanos;
+      const alvo = this.alvoDeBots(time);
 
-      // Gente demais para os bots que estão em campo: alguém tem de sair.
-      if (total > this.porTime) {
+      // Bot a mais: alguém sai. Numa sala do lobby isso é o humano que chegou
+      // tomando o lugar; numa sala montada, é o anfitrião tendo pedido menos
+      // npcs do que já havia em campo.
+      if (bots > alvo) {
         this.dispensarUmBot(time);
         continue;
       }
-      if (total >= this.porTime) continue;
+      if (bots >= alvo) continue;
       // Ninguém jogando neste servidor: não há partida para completar.
       if (this.clientes.size === 0) continue;
-      // Enquanto a espera não venceu, a vaga fica aberta para uma pessoa. A
-      // exceção é o time sem nenhum humano: um jogador sozinho contra o vazio
-      // não tem jogo nenhum, e esperar por doze segundos ali é só tela parada.
-      if (this.esperando < this.espera && humanos > 0) continue;
+      // Numa sala com npcs fixos a espera não se aplica: o anfitrião já disse
+      // quantos quer, e segurar doze segundos seria esperar por uma pessoa que
+      // não vai ocupar aquela vaga — ela é do npc.
+      //
+      // Sem npcs fixos, a espera é a política do lobby: a vaga fica aberta para
+      // gente. A exceção é o time sem nenhum humano, porque um jogador sozinho
+      // contra o vazio não tem jogo nenhum, e esperar ali é só tela parada.
+      if (this.botsFixos === null && this.esperando < this.espera && humanos > 0) continue;
 
-      const u = this.partida.entrar({ nome: nomeDeBot(this.partida.estado.proximoId), bot: true, time });
+      const u = this.partida.entrar({
+        nome: nomeDeBot(this.partida.estado.proximoId),
+        bot: true,
+        time,
+      });
       this.bots.adotar(u.id, time);
       this.elencoSujo = true;
     }
@@ -337,13 +378,13 @@ export class Sala {
 
     const antigos = [...this.clientes.values()];
     this.seed = (this.seed * 1103515245 + 12345) >>> 0;
-    this.partida = criarPartida(this.seed);
+    this.partida = criarPartida(this.seed, this.modo);
     this.navegador = new Navegador(this.partida.arena);
     this.bots = new Bots(this.partida.arena, this.navegador);
     this.esperando = 0;
 
     for (const c of antigos) {
-      c.enviar({ t: 'bemvindo', seed: this.seed, sala: this.nome, porTime: this.porTime });
+      c.enviar(this.boasVindas());
       // Quem estava jogando volta para o mesmo lado, sem passar pela tela de
       // escolha de novo: trocar de time entre partidas é decisão do jogador,
       // não uma pergunta que o servidor faz a cada dez minutos.
@@ -356,6 +397,25 @@ export class Sala {
       c.enviar({ t: 'nasceu', voce: u.id, time: c.time });
     }
     this.elencoSujo = true;
+  }
+
+  /**
+   * O cartão de visita da sala, mandado ao entrar e a cada partida nova.
+   *
+   * Numa função só porque são dois lugares que precisam mandar exatamente a
+   * mesma coisa, e "exatamente a mesma coisa" escrita duas vezes é a forma
+   * conhecida de a segunda esquecer um campo — o cliente montaria a próxima
+   * partida com o modo da anterior e ninguém entenderia por quê.
+   */
+  private boasVindas(): DoServidor {
+    return {
+      t: 'bemvindo',
+      seed: this.seed,
+      sala: this.nome,
+      porTime: this.porTime,
+      modo: this.modo,
+      botsPorTime: this.botsFixos ?? 0,
+    };
   }
 
   private elenco(): FichaDeJogador[] {

@@ -1,11 +1,14 @@
 import { criarArena, type Arena } from '../shared/arena';
 import { ESTOQUE_INICIAL, type Classe } from '../shared/classes';
 import type { Estado, Evento, Unidade } from '../shared/estado';
+import { MODO_PADRAO, modoDe, type IdDoModo } from '../shared/modos';
 import { moverUnidade } from '../shared/partida';
 import {
   desempacotar,
   VERSAO_DO_PROTOCOLO,
   type Comando,
+  type ConfiguracaoDeSala,
+  type DoCliente,
   type DoServidor,
   type FichaDeJogador,
 } from '../shared/protocolo';
@@ -49,6 +52,42 @@ interface Retratada {
   y: number;
 }
 
+/** Para onde esta conexão quer ir. Vazio quer dizer "onde o lobby mandar". */
+export interface Destino {
+  /** Uma sala que já existe, pelo nome. */
+  sala?: string;
+  /** Uma sala reservada a este aparelho. */
+  privada?: boolean;
+  /** Uma sala nova, com estas regras. */
+  criar?: ConfiguracaoDeSala;
+}
+
+/**
+ * A mensagem de entrada, montada à parte da conexão.
+ *
+ * Separada para poder ser testada sem um WebSocket — e a razão de isso valer a
+ * pena é um defeito que aconteceu: `criar` foi acrescentado ao chamador e
+ * esquecido aqui, e a sala montada saía como uma sala comum do lobby. O
+ * compilador não pegou porque o chamador passa as opções por espalhamento
+ * condicional, e propriedade que nasce de um espalhamento não é conferida como
+ * excesso. Nada acusou; a pessoa só recebia uma sala diferente da que pediu.
+ */
+export function mensagemDeEntrada(
+  nome: string,
+  assistindo: boolean,
+  onde: Destino,
+): DoCliente & { t: 'entrar' } {
+  return {
+    t: 'entrar',
+    nome,
+    versao: VERSAO_DO_PROTOCOLO,
+    assistindo,
+    ...(onde.sala !== undefined ? { sala: onde.sala } : {}),
+    ...(onde.privada ? { privada: true } : {}),
+    ...(onde.criar ? { criar: onde.criar } : {}),
+  };
+}
+
 export class Rede {
   private ws: WebSocket | null = null;
   private readonly url: string;
@@ -60,6 +99,15 @@ export class Rede {
   meuTime: Time | null = null;
   sala = '';
   porTime = 0;
+  /**
+   * O modo e os npcs da sala, ditos uma vez no `bemvindo`.
+   *
+   * O modo precisa chegar antes do primeiro retrato: é ele que a previsão local
+   * consulta, e prever com o modo errado por meia dúzia de quadros faria o
+   * boneco pular no exato instante em que a partida começa.
+   */
+  modo: IdDoModo = MODO_PADRAO;
+  botsPorTime = 0;
   /** Verdadeiro entre conectar e escolher o lado. */
   get espectador(): boolean {
     return this.meuId === null && this.arena !== null;
@@ -96,25 +144,12 @@ export class Rede {
    * terceiro e o quarto jogador do mesmo aparelho caem junto do primeiro) ou
    * uma sala privada (o jogo local, em que ninguém de fora entra).
    */
-  conectar(
-    nome: string,
-    assistindo = false,
-    onde: { sala?: string; privada?: boolean } = {},
-  ): void {
+  conectar(nome: string, assistindo = false, onde: Destino = {}): void {
     this.nome = nome;
     const ws = new WebSocket(this.url);
     this.ws = ws;
     ws.onopen = () => {
-      ws.send(
-        JSON.stringify({
-          t: 'entrar',
-          nome: this.nome,
-          versao: VERSAO_DO_PROTOCOLO,
-          assistindo,
-          ...(onde.sala !== undefined ? { sala: onde.sala } : {}),
-          ...(onde.privada ? { privada: true } : {}),
-        }),
-      );
+      ws.send(JSON.stringify(mensagemDeEntrada(this.nome, assistindo, onde)));
       this.pingar();
     };
     ws.onmessage = (ev) => this.receber(JSON.parse(String(ev.data)) as DoServidor);
@@ -170,6 +205,8 @@ export class Rede {
       case 'bemvindo': {
         this.sala = msg.sala;
         this.porTime = msg.porTime;
+        this.modo = modoDe(msg.modo).id;
+        this.botsPorTime = msg.botsPorTime;
         // Chega como espectador: a unidade só existe depois de escolher o lado,
         // e numa partida nova ela é outra. Zerar aqui evita desenhar o boneco
         // da partida passada por um quadro.
@@ -177,7 +214,7 @@ export class Rede {
         this.meuTime = null;
         // A arena nasce da seed. Nenhum tile viaja pela rede.
         this.arena = criarArena(msg.seed);
-        this.estado = estadoVazio();
+        this.estado = estadoVazio(this.modo);
         this.previsao = null;
         this.visualAnterior = null;
         this.visualAlvo = null;
@@ -208,7 +245,7 @@ export class Rede {
         return;
       }
       case 'retrato': {
-        if (!this.estado) this.estado = estadoVazio();
+        if (!this.estado) this.estado = estadoVazio(this.modo);
         this.anterior = this.atual;
         this.atual = new Map();
         desempacotar(msg.r, this.estado);
@@ -388,11 +425,12 @@ export class Rede {
 }
 
 /** Um estado zerado para o `desempacotar` preencher. */
-function estadoVazio(): Estado {
+function estadoVazio(modo: IdDoModo): Estado {
   const estoque = {} as Record<Time, Record<Classe, number>>;
   for (const t of TIMES) estoque[t] = { ...ESTOQUE_INICIAL };
   return {
     tick: 0,
+    modo,
     fase: 'aquecimento',
     faseEm: 0,
     relogio: 0,
