@@ -52,6 +52,12 @@ export interface Modo {
   /**
    * A balança também vence: levar a própria princesa ao peso mínimo — isto é,
    * empanturrar a refém que se guarda — acaba a partida na hora.
+   *
+   * Esta chave puxa **duas** coisas no tick, e a segunda é o que faz a primeira
+   * existir: o fim por peso, e a balança deixar de relaxar depois de um ponto.
+   * Sem a segunda, cada resgate devolvia metade do caminho andado e a barra
+   * nunca chegava ao talo — o modo terminava idêntico ao clássico. Ver o
+   * comentário em `recomecarRodada`.
    */
   readonly vitoriaPorBalanca: boolean;
   /** A chapelaria nunca fica vazia: chapéu deixa de ser recurso disputado. */

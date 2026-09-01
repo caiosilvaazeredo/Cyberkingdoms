@@ -154,6 +154,35 @@ rodando a mesma simulação do servidor: fosse só do servidor, a previsão roda
 com as regras erradas. Estando no estado, ele viaja no `bemvindo` e os dois lados
 concordam de graça — uma vez por partida, e não quinze vezes por segundo.
 
+#### Um modo só existe se a partida ficar diferente
+
+Os quatro nasceram com testes de unidade passando e um deles era oco. Rodando
+salas só de bots, o Banquete terminava **idêntico** ao clássico — mesmo placar,
+mesmos pesos, mesmo vencedor, nas três seeds. O fim por peso existia; só nunca
+acontecia, porque `recomecarRodada` relaxava a balança metade do caminho de volta
+ao centro a cada resgate e apagava o trabalho que o modo pede.
+
+A correção não é uma segunda alavanca: é a primeira funcionando. Uma condição de
+vitória que outra regra apaga não é condição de vitória. Com a balança preservada
+entre pontos, o modo passou a se comportar como se anuncia:
+
+| seed | antes | depois |
+|---|---|---|
+| 11 | 356s · 3-0 · 91/109 | 482s · 2-1 · **40/160**, vitória pela balança |
+| 22 | 293s · 1-3 · 109/91 | 309s · 1-3 · 100/100 |
+| 33 | 302s · 3-1 · 79/121 | 403s · 3-2 · 112/88 |
+
+A lição virou teste em duas camadas: um que confere a regra em isolamento, e um
+que **roda a partida com bots** e exige que o Assalto acabe muito antes do
+clássico. O primeiro passava com o modo oco; só o segundo prova que o jogo ficou
+diferente.
+
+Uma observação que a medição também deu, e que fica registrada em vez de
+escondida: na Chapelaria aberta, uma das três seeds terminou 0-0 nos doze minutos.
+Com chapéu à vontade todo mundo vira combatente, a defesa fica dura e o resgate
+quase não passa. É o modo sendo o que promete, mas é bom saber que ele produz a
+partida mais longa dos quatro.
+
 ### Montar uma sala
 
 O botão **Salas** abre um painel só, com as duas metades da mesma pergunta
@@ -312,7 +341,7 @@ npm start            # http://localhost:8787
 ### Testes
 
 ```sh
-npm test                 # 125 testes de regra, rede, controle, câmera e bots
+npm test                 # 128 testes de regra, rede, controle, câmera e bots
 npm run check            # TypeScript, sem emitir
 node tools/fumaca.mjs    # sobe um Chromium e joga com duas pessoas no sofá
 node tools/tamanhos.mjs  # abre cada tela em cinco tamanhos e mede o que vazou

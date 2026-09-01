@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { IDS_DOS_MODOS, MODOS, MODO_PADRAO, PESO_QUE_VENCE, modoDe } from '../src/shared/modos';
 import { princesaDe } from '../src/shared/estado';
+import { Sala } from '../src/server/sala';
 import { criarPartida } from '../src/shared/partida';
 import { AQUECIMENTO, PESO_TOTAL, TICKS_POR_SEGUNDO } from '../src/shared/regras';
 
@@ -156,6 +157,68 @@ describe('o modo Banquete', () => {
     resgatar(partida, MODOS.banquete.pontosParaVencer);
     expect(partida.estado.fase).toBe('fim');
     expect(partida.estado.vencedor).toBe('azul');
+  });
+
+  it('a balança não relaxa depois de um ponto — senão a vitória por peso nunca vem', () => {
+    // Este é o teste que faltava, e a ausência dele deixou o modo nascer vazio:
+    // o fim por peso existia, mas `recomecarRodada` devolvia metade do caminho
+    // andado a cada resgate, e medindo com bots o Banquete terminava idêntico
+    // ao clássico — mesmo placar, mesmos pesos, mesma duração.
+    // `resgatar` deixa a princesa em 60 para o cortejo caber num carregador só,
+    // o que serve de ponto de partida: 60 está longe do meio, e é justamente a
+    // distância que o relaxamento comeria.
+    const partida = emJogo('banquete');
+    resgatar(partida, 1);
+    expect(partida.estado.placar.azul).toBe(1);
+    // O trabalho de economia sobrevive ao ponto.
+    expect(princesaDe(partida.estado, 'azul').peso).toBe(60);
+  });
+
+  it('no clássico ela relaxa: o ponto devolve metade do caminho', () => {
+    // O par do teste acima. Sem ele, tirar o relaxamento do jogo inteiro
+    // passaria os dois — e a bola de neve do clássico voltaria sem aviso.
+    const partida = emJogo('resgate');
+    resgatar(partida, 1);
+    expect(princesaDe(partida.estado, 'azul').peso).toBe(80);
+  });
+});
+
+describe('os modos jogados de verdade', () => {
+  /** Roda uma sala só de bots e devolve em quantos segundos a partida acabou. */
+  function ateAcabar(modo: Parameters<typeof criarPartida>[1], limite: number): number | null {
+    const sala = new Sala({ nome: 'm', seed: 11, porTime: 6, esperaPorJogadores: 0, modo });
+    sala.entrar({
+      chave: 'Obs',
+      nome: 'Obs',
+      unidade: null,
+      time: null,
+      assistindo: false,
+      silencio: 0,
+      enviar() {},
+      fechar() {},
+    });
+    for (let i = 0; i < limite * TICKS_POR_SEGUNDO; i++) {
+      sala.tocar('Obs');
+      sala.passo();
+      if (sala.estado.fase === 'fim') return Math.floor(i / TICKS_POR_SEGUNDO);
+    }
+    return null;
+  }
+
+  /**
+   * O teste que faltava quando os modos nasceram.
+   *
+   * Os outros conferem cada alavanca em isolamento, com a partida montada à
+   * mão — e todos passavam enquanto o Banquete terminava idêntico ao clássico
+   * numa partida de verdade. O que uma tabela de números não prova é que o jogo
+   * **fica diferente**; só rodar a partida prova.
+   */
+  it('o Assalto acaba muito antes do clássico', () => {
+    const assalto = ateAcabar('assalto', 200);
+    expect(assalto).not.toBeNull();
+    expect(assalto!).toBeLessThan(150);
+    // E o clássico, no mesmo mapa, ainda está em jogo bem depois disso.
+    expect(ateAcabar('resgate', 150)).toBeNull();
   });
 });
 

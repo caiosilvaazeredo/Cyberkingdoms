@@ -955,9 +955,20 @@ function marcarPonto(estado: Estado, u: Unidade, p: Princesa): void {
  * deixar a bola de neve rolar.
  */
 function recomecarRodada(arena: Arena, estado: Estado): void {
+  // No Banquete a balança **não** relaxa, e isso não é uma segunda alavanca: é
+  // a primeira funcionando. Uma condição de vitória que outra regra apaga a cada
+  // ponto não é condição de vitória nenhuma — medido com bots, o modo terminava
+  // idêntico ao clássico nas três seeds testadas, mesmo placar e mesmos pesos, e
+  // a barra nunca chegava perto do talo que o modo promete.
+  //
+  // Sem o relaxamento, a promessa passa a acontecer: numa das mesmas três seeds
+  // a partida acaba com a barra no fim (40/160), e nas outras duas o resgate
+  // decide. É o que o modo diz ser — dois caminhos, e escolher entre eles é o
+  // jogo.
+  const relaxa = !modoDe(estado.modo).vitoriaPorBalanca;
   for (const p of estado.princesas) {
     const meio = PESO_TOTAL / 2;
-    p.peso = meio + (p.peso - meio) / 2;
+    if (relaxa) p.peso = meio + (p.peso - meio) / 2;
     devolverPrincesa(arena, p);
   }
   estado.projeteis = [];
