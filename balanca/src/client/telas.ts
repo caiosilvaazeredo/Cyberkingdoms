@@ -809,6 +809,15 @@ export class Telas {
         ],
       },
       {
+        chave: 'minimapa',
+        rotulo: 'Minimapa',
+        explica: 'o seu time e o inimigo avistado',
+        opcoes: [
+          { valor: true, texto: 'mostrar' },
+          { valor: false, texto: 'esconder' },
+        ],
+      },
+      {
         chave: 'manche',
         rotulo: 'Manche no celular',
         explica: 'de que lado fica o controle de andar',

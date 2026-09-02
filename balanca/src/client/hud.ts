@@ -11,6 +11,7 @@ import {
 import type { Ajustes } from './ajustes';
 import { COR_DA_VAGA } from './desenho';
 import type { Entrada } from './entrada';
+import { caixaDoMinimapa } from './minimapa';
 import type { Rede } from './rede';
 
 /**
@@ -76,7 +77,7 @@ export function desenharHud(
   // O aviso do meio da tela é do dono do aparelho: quatro avisos empilhados no
   // centro tapariam a briga que eles mandam resolver.
   if (eu) avisosDoCentro(ctx, estado, eu, largura, altura, tempo);
-  if (ajustes.registro) registro(ctx, rede, largura, altura);
+  if (ajustes.registro) registro(ctx, rede, largura, altura, ajustes);
   faixaDeFase(ctx, estado, largura, altura, tempo);
   if (entrada.placarAberto) tabela(ctx, estado, largura, altura);
   botoesDeToque(ctx, entrada, largura, altura);
@@ -426,13 +427,17 @@ function registro(
   rede: Rede,
   largura: number,
   altura: number,
+  ajustes: Ajustes,
 ): void {
   const agora = performance.now();
   ctx.save();
   ctx.textAlign = 'right';
   ctx.textBaseline = 'top';
   ctx.font = '500 13px "Trebuchet MS", system-ui, sans-serif';
-  let y = 110;
+  // O mural começa abaixo do minimapa quando ele está ligado: os dois moram no
+  // canto de cima à direita, e sobrepostos nenhum dos dois se lê.
+  const caixa = ajustes.minimapa && rede.arena ? caixaDoMinimapa(largura, rede.arena) : null;
+  let y = caixa ? caixa.y + caixa.a + 14 : 110;
   for (const aviso of rede.avisos) {
     const idade = (agora - aviso.quando) / 1000;
     if (idade > 8) continue;

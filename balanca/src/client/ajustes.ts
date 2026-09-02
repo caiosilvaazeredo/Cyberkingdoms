@@ -34,6 +34,13 @@ export interface Ajustes {
   mato: boolean;
   /** O registro de abates e fatias, no canto. */
   registro: boolean;
+  /**
+   * O minimapa no canto de cima.
+   *
+   * Desligável porque ele ocupa canto de tela, e em tela pequena o canto é
+   * caro. Não é vantagem: ele mostra o que o time já sabe.
+   */
+  minimapa: boolean;
   /** De que lado da tela fica o manche, no celular. */
   manche: Lado;
 }
@@ -44,6 +51,7 @@ export const PADROES: Ajustes = {
   nomes: true,
   mato: true,
   registro: true,
+  minimapa: true,
   manche: 'esquerda',
 };
 
@@ -90,6 +98,7 @@ export function sanear(bruto: unknown): Ajustes {
     nomes: booleano(o.nomes, PADROES.nomes),
     mato: booleano(o.mato, PADROES.mato),
     registro: booleano(o.registro, PADROES.registro),
+    minimapa: booleano(o.minimapa, PADROES.minimapa),
     manche: entre(o.manche, ['esquerda', 'direita'] as const, PADROES.manche),
   };
 }

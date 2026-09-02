@@ -384,6 +384,26 @@ estão em maioria no meio do mapa: a economia mínima é segura, a economia que
 
 Longe da masmorra, o bolo vira o que qualquer bolo é: comida. Comer cura 45.
 
+### O minimapa mostra o que o time está vendo
+
+O canto de cima à direita traz o relevo, o seu time inteiro, as construções que
+importam (trono e jaula) e o retângulo do pedaço de mundo que está na sua tela.
+
+O inimigo é outra história: ele só aparece **enquanto alguém do seu time está
+vendo** — perto o bastante e sem parede no meio, pela mesma função de linha livre
+que os bots usam para escolher alvo. É a soma dos olhos do time, e não os seus:
+um companheiro do outro lado do mapa acende o ponto para todo mundo. Um minimapa
+que mostrasse o inimigo o tempo todo trocaria o cerco por leitura de radar e
+apagaria a emboscada do jogo.
+
+A refém do seu reino é a exceção deliberada: ela aparece sempre, porque a bússola
+já aponta para ela e escondê-la no mapa seria o mapa desmentir a seta.
+
+Isto é névoa de **interface**, não de rede — o retrato do servidor ainda leva
+todo mundo, e o recorte acontece na hora de desenhar. A regra mora em
+`shared/vista.ts` justamente para o dia em que o recorte passar para o servidor:
+é a mesma função, só muda quem a chama.
+
 ---
 
 ## Rodar

@@ -147,6 +147,19 @@ export const RAIO_UNIDADE = 18;
 export const RENASCIMENTO_BASE = 6;
 export const RENASCIMENTO_POR_PONTO = 1.5;
 
+/**
+ * Até onde uma unidade avista o inimigo, para o minimapa.
+ *
+ * Nove tiles é mais ou menos o que cabe na altura da tela no zoom padrão — a
+ * câmera enquadra treze tiles de altura, então isto é "o que a pessoa está
+ * vendo", com folga.
+ *
+ * Fixo e igual para todos de propósito. Fazê-lo depender do que **de fato** cabe
+ * na tela de cada um daria mais informação a quem tem monitor maior, que é
+ * vantagem comprada com dinheiro. Ver `vista.ts`.
+ */
+export const ALCANCE_DE_VISTA = 9 * TILE;
+
 /** Distância em que um botão de contexto encosta em algo. */
 export const ALCANCE_DE_USO = 70;
 

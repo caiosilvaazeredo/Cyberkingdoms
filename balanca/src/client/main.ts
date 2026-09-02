@@ -21,6 +21,7 @@ import { Entrada } from './entrada';
 import { desenharDica, desenharHud, narrar } from './hud';
 import { Rede } from './rede';
 import { PainelDaEquipe } from './equipe';
+import { Minimapa } from './minimapa';
 import { Sofa, type Porta } from './sofa';
 import type { ConfiguracaoDeSala } from '../shared/protocolo';
 import { Telas, type SalaAberta } from './telas';
@@ -72,6 +73,7 @@ const ctx = tela.getContext('2d')!;
 const entrada = new Entrada(tela);
 const porteiro = new Porteiro();
 const camera = criarCamera();
+const minimapa = new Minimapa();
 /** Alvo suavizado da câmera do modo atração. */
 let olhar = { x: 0, y: 0 };
 
@@ -411,6 +413,17 @@ function laco(agora: number): void {
   }
   if (emCampo.length > 0) {
     desenharHud(ctx, rede, emCampo, entrada, largura, altura, tempo, ajustes);
+    // O minimapa é desenhado daqui, e não de dentro do HUD, porque precisa da
+    // câmera: o retângulo do que está na tela é metade do que ele serve, e a
+    // câmera é coisa deste arquivo.
+    if (ajustes.minimapa && rede.estado) {
+      minimapa.desenhar(ctx, rede.arena, rede.estado, emCampo[0]!.unidade.time, {
+        x: camera.x,
+        y: camera.y,
+        largura: largura / camera.zoom,
+        altura: altura / camera.zoom,
+      }, largura);
+    }
   }
 
   atualizarPainelDaEquipe(rede, emCampo, telas.atual === 'jogo', agora);
