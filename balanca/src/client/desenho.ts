@@ -1,9 +1,19 @@
 import { AGUA, PONTE, decoracaoEm, type Arena, type Estrutura } from '../shared/arena';
 import { perfil, vidaMaxima, type Classe } from '../shared/classes';
 import { nivelDe, type Animal, type Estado, type Unidade } from '../shared/estado';
-import { DT, PESO_MAXIMO, PESO_MINIMO, RAIO_UNIDADE, type Time } from '../shared/regras';
+import {
+  CUSTO_DO_NIVEL,
+  DT,
+  NIVEL_MAXIMO,
+  PESO_MINIMO,
+  RAIO_UNIDADE,
+  custoDaObraDe,
+  pesoMaximoDe,
+  type Time,
+} from '../shared/regras';
 import { ZOOM_DA_VISAO, type Ajustes } from './ajustes';
-import { quadro, quadroDaVez, quadroEm, type Animacao, type Arte } from './arte';
+import { quadro, quadroDaVez, quadroEm, type Animacao, type Arte, type IconeDaObra } from './arte';
+import type { Particulas } from './particulas';
 import { TILE, chaoPara, encostaNaAgua, mascaraDe } from './tileset';
 
 /**
@@ -95,6 +105,25 @@ const NOME_DA_ESTRUTURA: Record<Estrutura['tipo'], string> = {
   casaDaMoeda: 'Casa da Moeda',
   chapelaria: 'Chapelaria',
   nascedouro: 'Quartel',
+};
+
+/**
+ * O ícone que diz, sem texto, o que se faz em cada construção.
+ *
+ * O nome escrito por cima do telhado responde "que prédio é este?"; não
+ * responde "o que eu ganho aqui?". São perguntas diferentes, e a segunda é a
+ * que alguém tem no meio de uma partida — ainda mais na chapelaria, que é onde
+ * se **troca de classe** e cujo nome não diz isso a ninguém que chegou agora.
+ *
+ * O martelo na chapelaria é o mesmo ícone da obra de propósito: o prédio faz as
+ * duas coisas, e quem entrega madeira lá é a mesma pessoa que veste o chapéu.
+ */
+const ICONE_DA_ESTRUTURA: Record<Estrutura['tipo'], IconeDaObra> = {
+  tesouraria: 'moeda',
+  cofre: 'escudo',
+  casaDaMoeda: 'moeda',
+  chapelaria: 'martelo',
+  nascedouro: 'espada',
 };
 
 const COR_DO_TIME: Readonly<Record<Time, string>> = { azul: 'blue', vermelho: 'red' };
@@ -232,6 +261,7 @@ export function desenharMundo(
   altura: number,
   tempo: number,
   ajustes: Ajustes,
+  particulas?: Particulas,
 ): void {
   const estado = olhar.estado;
   const v = vistaDe(camera, largura, altura);
@@ -400,6 +430,18 @@ export function desenharMundo(
           Math.round(py - alto) - 6 * escala,
           escala,
         );
+        // A placa do que a construção dá, e — quando é o caso — se ela está
+        // pronta agora. "Pronta" é o que faz a placa valer a pena: um ícone que
+        // nunca muda vira papel de parede em duas partidas.
+        placaDaObra(
+          ctx,
+          arte,
+          e,
+          estado,
+          v.paraTelaX(e.x),
+          Math.round(py - alto) - 30 * escala,
+          escala,
+        );
         if (e.tipo === 'casaDaMoeda' && estado) {
           const forno = estado.casasDaMoeda.find((c) => c.time === e.time);
           if (forno && forno.cunhando > 0) {
@@ -509,8 +551,12 @@ export function desenharMundo(
     // flutuando na altura da janela. Carregada, sobe um pouco — está no colo.
     const py = v.paraTelaY(base.y) + (carregado ? -22 * escala : TILE * escala * 0.6);
     // O tamanho **é** o peso: de 0,9 a 1,9 do peão comum, do talo ao talo.
-    const gordura = 0.9 + ((p.peso - PESO_MINIMO) / (PESO_MAXIMO - PESO_MINIMO)) * 1;
-    const cheio = (p.peso - PESO_MINIMO) / (PESO_MAXIMO - PESO_MINIMO);
+    // O tamanho e o quanto está cheio saem da mesma fração, e a fração usa o
+    // teto **desta** partida: num time de trinta e dois a balança comporta
+    // cinco vezes mais peso, e um baú medido pelo teto de seis já nasceria
+    // desenhado no talo.
+    const cheio = (p.peso - PESO_MINIMO) / (pesoMaximoDe(estado.porTime) - PESO_MINIMO);
+    const gordura = 0.9 + cheio;
     pinturas.push({
       y: base.y + (carregado ? 1 : TILE * 0.6),
       pintar: () => desenharBau(ctx, px, py, escala * gordura, p.time, cheio, tempo),
@@ -586,6 +632,80 @@ export function desenharMundo(
     }
     ctx.restore();
   }
+
+  // --- efeitos e dizeres ---------------------------------------------------
+  // Depois de tudo, e de propósito: um estouro é um clarão de meio segundo, e
+  // meio segundo escondido atrás de uma árvore é meio segundo desperdiçado.
+  // A ordem de Y vale para o que fica em pé no chão; o que pisca por cima dele
+  // não é cenário e não disputa profundidade.
+  if (particulas) {
+    particulas.desenhar(ctx, v, escala, agora / 1000);
+    particulas.desenharDizeres(ctx, v, escala, agora / 1000);
+  }
+}
+
+/**
+ * A placa acima da construção: o que ela dá, e se está pronta.
+ *
+ * ## Por que uma placa e não mais texto
+ *
+ * O nome já está escrito ali. Empilhar "pegue uma bolsa aqui" em cima dele
+ * daria três linhas de letra pequena sobre cada telhado, e o campo tem cinco
+ * construções por reino. Um ícone é lido de relance e não compete com a briga.
+ *
+ * ## O aceso e o apagado
+ *
+ * O ícone só brilha quando **há alguma coisa a pegar**: bolsa cunhada na Casa
+ * da Moeda, obra com material para subir de nível. Apagado, ele ainda diz o que
+ * o prédio é. É a mesma ideia da chaminé da Casa da Moeda, que já dizia "esta
+ * está parada" sem nenhuma palavra.
+ */
+function placaDaObra(
+  ctx: CanvasRenderingContext2D,
+  arte: Arte,
+  e: Estrutura,
+  estado: Estado | null,
+  x: number,
+  y: number,
+  escala: number,
+): void {
+  const icone = arte.icones[ICONE_DA_ESTRUTURA[e.tipo]];
+  if (!icone) return;
+
+  let aceso = false;
+  if (estado) {
+    if (e.tipo === 'casaDaMoeda') {
+      aceso = (estado.casasDaMoeda.find((c) => c.time === e.time)?.bolsas ?? 0) > 0;
+    } else if (e.tipo === 'chapelaria') {
+      const o = estado.oficinas.find((x) => x.time === e.time);
+      if (o && o.nivel < NIVEL_MAXIMO) {
+        const base = CUSTO_DO_NIVEL[o.nivel + 1]!;
+        aceso =
+          o.madeira >= custoDaObraDe(base.madeira, estado.porTime) &&
+          o.ouro >= custoDaObraDe(base.ouro, estado.porTime);
+      }
+    }
+  }
+
+  const l = 22 * escala;
+  ctx.save();
+  // A chapa escura por trás: sem ela o ícone se perde no mato, que é verde e
+  // cheio de detalhe, e uma placa que não se lê não é uma placa. É a mesma
+  // chapa que o nome da construção já usa, pelo mesmo motivo.
+  ctx.fillStyle = aceso ? 'rgba(70, 52, 16, 0.86)' : 'rgba(12, 14, 20, 0.6)';
+  ctx.beginPath();
+  ctx.arc(x, y, l * 0.78, 0, Math.PI * 2);
+  ctx.fill();
+  if (aceso) {
+    // O anel dourado é o "pode vir buscar". Ele pulsa? Não: uma placa que pisca
+    // no canto do olho a partida inteira cansa mais do que informa.
+    ctx.strokeStyle = 'rgba(255, 224, 130, 0.9)';
+    ctx.lineWidth = Math.max(1, 2 * escala);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = aceso ? 1 : 0.62;
+  ctx.drawImage(icone, Math.round(x - l / 2), Math.round(y - l / 2), Math.ceil(l), Math.ceil(l));
+  ctx.restore();
 }
 
 /** Interpola a ovelha entre os dois últimos retratos. */

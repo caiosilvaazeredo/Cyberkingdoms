@@ -3,8 +3,8 @@ import { nivelDe, bauDe, type Carga, type Estado, type Evento, type Unidade } fr
 import { MAPAS } from '../shared/mapas';
 import { modoDe } from '../shared/modos';
 import {
-  PESO_TOTAL,
   carregadoresPara,
+  pesoTotalDe,
   outroTime,
   type Time,
 } from '../shared/regras';
@@ -176,7 +176,7 @@ function balanca(ctx: CanvasRenderingContext2D, estado: Estado, largura: number,
   const x = (largura - l) / 2;
   const y = 72;
   const a = 22;
-  const fracaoAzul = azulTemNoCofre / PESO_TOTAL;
+  const fracaoAzul = azulTemNoCofre / pesoTotalDe(estado.porTime);
 
   ctx.save();
   ctx.fillStyle = 'rgba(12, 14, 20, 0.72)';
@@ -210,16 +210,16 @@ function balanca(ctx: CanvasRenderingContext2D, estado: Estado, largura: number,
   ctx.textAlign = 'left';
   ctx.fillText(
     curto
-      ? `Azul: ${Math.round(azulTemNoCofre)} · ${carregadoresPara(azulTemNoCofre)}↑`
-      : `baú refém do Azul: ${Math.round(azulTemNoCofre)} · ${carregadoresPara(azulTemNoCofre)} carregadores`,
+      ? `Azul: ${Math.round(azulTemNoCofre)} · ${carregadoresPara(azulTemNoCofre, estado.porTime)}↑`
+      : `baú refém do Azul: ${Math.round(azulTemNoCofre)} · ${carregadoresPara(azulTemNoCofre, estado.porTime)} carregadores`,
     x,
     y + a + 14,
   );
   ctx.textAlign = 'right';
   ctx.fillText(
     curto
-      ? `${carregadoresPara(vermelhoTemNoCofre)}↑ · Vermelho: ${Math.round(vermelhoTemNoCofre)}`
-      : `${carregadoresPara(vermelhoTemNoCofre)} carregadores · baú refém do Vermelho: ${Math.round(vermelhoTemNoCofre)}`,
+      ? `${carregadoresPara(vermelhoTemNoCofre, estado.porTime)}↑ · Vermelho: ${Math.round(vermelhoTemNoCofre)}`
+      : `${carregadoresPara(vermelhoTemNoCofre, estado.porTime)} carregadores · baú refém do Vermelho: ${Math.round(vermelhoTemNoCofre)}`,
     x + l,
     y + a + 14,
   );
@@ -396,7 +396,7 @@ function avisosDoCentro(
   if (eu.carga === 'bau') {
     const p = estado.baus.find((x) => x.portador === eu.id);
     if (p) {
-      const precisa = carregadoresPara(p.peso);
+      const precisa = carregadoresPara(p.peso, estado.porTime);
       const tem = p.ajudantes + 1;
       const falta = precisa - tem;
       ctx.font = '700 22px "Trebuchet MS", system-ui, sans-serif';

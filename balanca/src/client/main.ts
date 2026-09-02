@@ -1,3 +1,5 @@
+import { GRAMA } from '../shared/arena';
+import { TILE } from '../shared/regras';
 import { alvoDaAtracao, aproximar } from './atracao';
 import { carregarArte, type Arte } from './arte';
 import { dicaDeUso } from './contexto';
@@ -22,6 +24,7 @@ import { desenharDica, desenharHud, narrar } from './hud';
 import { Rede } from './rede';
 import { PainelDaEquipe } from './equipe';
 import { Minimapa } from './minimapa';
+import { Particulas } from './particulas';
 import { Sofa, type Porta } from './sofa';
 import type { ConfiguracaoDeSala } from '../shared/protocolo';
 import { Telas, type SalaAberta } from './telas';
@@ -74,6 +77,7 @@ const entrada = new Entrada(tela);
 const porteiro = new Porteiro();
 const camera = criarCamera();
 const minimapa = new Minimapa();
+const particulas = new Particulas();
 /** Alvo suavizado da câmera do modo atração. */
 let olhar = { x: 0, y: 0 };
 
@@ -384,7 +388,35 @@ function laco(agora: number): void {
   }
 
   const tempo = agora / 1000;
-  desenharMundo(ctx, arte, rede.arena, sofa ?? rede, camera, largura, altura, tempo, ajustes);
+  // Os efeitos são colhidos **antes** de desenhar, para o estouro de uma troca
+  // de chapéu aparecer no mesmo quadro em que o boneco já mudou de folha.
+  const arena = rede.arena;
+  if (estado && arena) {
+    particulas.colher(estado, arte, tempo);
+    // A poeira dos pés é do cliente e só vale para quem está na tela: a
+    // câmera é conhecida aqui, e é aqui que ela vira o corte.
+    const meiaL = largura / 2 / camera.zoom + TILE;
+    const meiaA = altura / 2 / camera.zoom + TILE;
+    particulas.pisadas(
+      estado,
+      arte,
+      tempo,
+      (x, y) => Math.abs(x - camera.x) < meiaL && Math.abs(y - camera.y) < meiaA,
+      (x, y) => arena.tile(Math.floor(x / TILE), Math.floor(y / TILE)) !== GRAMA,
+    );
+  }
+  desenharMundo(
+    ctx,
+    arte,
+    rede.arena,
+    sofa ?? rede,
+    camera,
+    largura,
+    altura,
+    tempo,
+    ajustes,
+    particulas,
+  );
 
   const eu = emCampo[0]?.unidade ?? null;
   if (estado && eu && estado.baus.length === 2) {
@@ -409,6 +441,12 @@ function laco(agora: number): void {
     for (const evento of rede.eventosNovos.splice(0)) {
       const linha = narrar(evento, estado, eu?.time ?? null);
       if (linha && ajustes.registro) rede.avisar(linha.texto, linha.cor);
+      // A obra é o único acontecimento cujo lugar não é uma unidade: ela sobe
+      // no prédio, e é lá que o estouro tem de nascer.
+      if (evento.tipo === 'nivel') {
+        const chapelaria = rede.arena.estrutura('chapelaria', evento.time);
+        particulas.obraSubiu(arte, chapelaria.x, chapelaria.y, tempo, evento.time, evento.nivel);
+      }
     }
   }
   if (emCampo.length > 0) {

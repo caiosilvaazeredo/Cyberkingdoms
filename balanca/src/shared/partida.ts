@@ -53,10 +53,13 @@ import {
   JAZIDA_VOLTA_EM,
   NIVEL_MAXIMO,
   PAUSA_APOS_PONTO,
-  PESO_MAXIMO,
+  POR_TIME,
+  chapeusDe,
+  custoDaObraDe,
+  pesoMaximoDe,
+  pesoTotalDe,
   PESO_MINIMO,
   PESO_POR_BOLSA,
-  PESO_TOTAL,
   BAU_VOLTA_EM,
   RAIO_UNIDADE,
   RENASCIMENTO_POR_PONTO,
@@ -129,9 +132,10 @@ export function criarPartida(
   seed: number,
   modo: IdDoModo = MODO_PADRAO,
   mapa: IdDoMapa = MAPA_PADRAO,
+  porTime: number = POR_TIME,
 ): Partida {
   const arena = criarArena(seed, mapa);
-  const estado = estadoInicial(arena, modo);
+  const estado = estadoInicial(arena, modo, porTime);
   const comandos = new Map<number, Comando>();
   /** Sobe a borda do botão "usar": segurar não repete a ação. */
   const usarAnterior = new Map<number, boolean>();
@@ -195,10 +199,17 @@ export function criarPartida(
 
 // --- montagem --------------------------------------------------------------
 
-function estadoInicial(arena: Arena, id: IdDoModo): Estado {
+function estadoInicial(arena: Arena, id: IdDoModo, porTime: number): Estado {
   const modo = modoDe(id);
+  // O armário cresce com o time: ver `chapeusDe`. Sem isso, trinta e dois por
+  // lado dividiriam o armário de seis e o jogo viraria trinta e dois aldeões.
   const estoque = {} as Record<Time, Record<Classe, number>>;
-  for (const t of TIMES) estoque[t] = { ...ESTOQUE_INICIAL };
+  for (const t of TIMES) {
+    estoque[t] = { ...ESTOQUE_INICIAL };
+    for (const c of Object.keys(estoque[t]) as Classe[]) {
+      if (estoque[t][c] > 0) estoque[t][c] = chapeusDe(estoque[t][c], porTime);
+    }
+  }
 
   const baus: Bau[] = TIMES.map((time) => {
     // O baú de um time começa presa no cofre do **outro**. É a
@@ -207,7 +218,7 @@ function estadoInicial(arena: Arena, id: IdDoModo): Estado {
     const cofre = arena.estrutura('cofre', outroTime(time));
     return {
       time,
-      peso: PESO_TOTAL / 2,
+      peso: pesoTotalDe(porTime) / 2,
       onde: 'cofre',
       x: cofre.x,
       y: cofre.y,
@@ -220,6 +231,7 @@ function estadoInicial(arena: Arena, id: IdDoModo): Estado {
   return {
     tick: 0,
     modo: modo.id,
+    porTime,
     fase: 'aquecimento',
     faseEm: AQUECIMENTO,
     relogio: modo.duracao,
@@ -402,7 +414,7 @@ export function moverUnidade(
       // Sem a escolta exigida, o cortejo simplesmente não sai do lugar. Deixar
       // andar devagar seria mais gentil e destruiria o sentido do peso: o
       // resgate precisa ser uma decisão do time, não do carregador.
-      if (p.ajudantes + 1 < carregadoresPara(p.peso)) velocidade = 0;
+      if (p.ajudantes + 1 < carregadoresPara(p.peso, estado.porTime)) velocidade = 0;
     }
   }
 
@@ -697,7 +709,11 @@ function entregarNaObra(estado: Estado, u: Unidade, carga: 'madeira' | 'ouro'): 
   u.entregas++;
 
   while (oficina.nivel < NIVEL_MAXIMO) {
-    const custo = CUSTO_DO_NIVEL[oficina.nivel + 1]!;
+    const base = CUSTO_DO_NIVEL[oficina.nivel + 1]!;
+    const custo = {
+      madeira: custoDaObraDe(base.madeira, estado.porTime),
+      ouro: custoDaObraDe(base.ouro, estado.porTime),
+    };
     if (oficina.madeira < custo.madeira || oficina.ouro < custo.ouro) break;
     oficina.madeira -= custo.madeira;
     oficina.ouro -= custo.ouro;
@@ -863,7 +879,8 @@ function ferirAnimal(estado: Estado, algoz: Unidade, a: Animal, dano: number): v
  */
 function entulhar(estado: Estado, u: Unidade, refem: Bau): void {
   const minha = bauDe(estado, u.time);
-  const delta = Math.min(PESO_POR_BOLSA, PESO_MAXIMO - refem.peso, minha.peso - PESO_MINIMO);
+  const teto = pesoMaximoDe(estado.porTime);
+  const delta = Math.min(PESO_POR_BOLSA, teto - refem.peso, minha.peso - PESO_MINIMO);
   if (delta <= 0) return;
 
   refem.peso += delta;
@@ -987,7 +1004,7 @@ function recomecarRodada(arena: Arena, estado: Estado): void {
   // jogo.
   const relaxa = !modoDe(estado.modo).vitoriaPorBalanca;
   for (const p of estado.baus) {
-    const meio = PESO_TOTAL / 2;
+    const meio = pesoTotalDe(estado.porTime) / 2;
     if (relaxa) p.peso = meio + (p.peso - meio) / 2;
     devolverBau(arena, p);
   }

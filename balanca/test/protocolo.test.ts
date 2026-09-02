@@ -21,6 +21,7 @@ function estadoVazio(): Estado {
   return {
     tick: 0,
     modo: 'resgate' as const,
+    porTime: 6,
     fase: 'aquecimento',
     faseEm: 0,
     relogio: 0,

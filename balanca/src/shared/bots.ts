@@ -12,7 +12,8 @@ import {
   CUSTO_DO_NIVEL,
   DT,
   NIVEL_MAXIMO,
-  PESO_MAXIMO,
+  custoDaObraDe,
+  pesoMaximoDe,
   carregadoresPara,
   outroTime,
   type Time,
@@ -321,7 +322,7 @@ export class Bots {
     if (minha.onde === 'carregado' && minha.portador !== u.id) {
       const portador = unidade(estado, minha.portador);
       if (portador) {
-        const faltaAjuda = minha.ajudantes + 1 < carregadoresPara(minha.peso);
+        const faltaAjuda = minha.ajudantes + 1 < carregadoresPara(minha.peso, estado.porTime);
         if (faltaAjuda || m.papel !== 'cozinheiro') {
           // Encostar no cortejo é o que destrava o peso. A folga é a metade do
           // alcance de ajuda para o bot não ficar na borda, onde uma passada em
@@ -414,7 +415,11 @@ export class Bots {
   private oficioNecessario(estado: Estado, u: Unidade): Classe {
     const oficina = estado.oficinas.find((o) => o.time === u.time);
     if (oficina && oficina.nivel < NIVEL_MAXIMO) {
-      const custo = CUSTO_DO_NIVEL[oficina.nivel + 1]!;
+      const base = CUSTO_DO_NIVEL[oficina.nivel + 1]!;
+      const custo = {
+        madeira: custoDaObraDe(base.madeira, estado.porTime),
+        ouro: custoDaObraDe(base.ouro, estado.porTime),
+      };
       // O material mais atrasado primeiro: a obra exige os dois, então insistir
       // no que já está sobrando é trabalho que não vira nível.
       const faltaMadeira = custo.madeira - oficina.madeira;
@@ -487,7 +492,7 @@ export class Bots {
     const minhaCasa = estado.casasDaMoeda.find((c) => c.time === meu)!;
     // Só vale buscar bolsa se a balança ainda tem para onde ir. No talo, o depósito
     // não move nada, e o aldeão volta a ser mais útil colhendo.
-    if (minhaCasa.bolsas > 0 && refem.peso < PESO_MAXIMO) {
+    if (minhaCasa.bolsas > 0 && refem.peso < pesoMaximoDe(estado.porTime)) {
       return ir(casaDaMoeda, this.chegou(u, casaDaMoeda, ALCANCE_DE_COLETA * 0.7));
     }
 

@@ -200,6 +200,15 @@ export interface Estado {
    * concordam de graça. Ver `modos.ts`.
    */
   modo: IdDoModo;
+  /**
+   * Quantos jogadores por time esta partida foi montada para ter.
+   *
+   * Viaja junto com o modo, e pelo mesmo motivo: o cliente prevê o movimento
+   * rodando a mesma simulação, e a escala da economia sai deste número. Com ele
+   * só do lado do servidor, o cliente diria "faltam dois carregadores" enquanto
+   * o servidor exigia cinco. Ver `razaoDaEscala`, em `regras.ts`.
+   */
+  porTime: number;
   fase: Fase;
   /** Segundos restantes da fase (aquecimento, pausa de ponto). */
   faseEm: number;

@@ -1,5 +1,6 @@
 import { Sala, type Cliente } from '../src/server/sala';
 import { bauDe } from '../src/shared/estado';
+import { FORMATOS, campoPara } from '../src/shared/formatos';
 import { IDS_DOS_MAPAS, MAPAS } from '../src/shared/mapas';
 import { IDS_DOS_MODOS, MODOS, type IdDoModo } from '../src/shared/modos';
 import { type IdDoMapa } from '../src/shared/mapas';
@@ -24,7 +25,15 @@ import { NIVEL_MAXIMO, TICKS_POR_SEGUNDO } from '../src/shared/regras';
  *
  *     npx tsx tools/medir.ts            # todos os modos no mapa padrão
  *     npx tsx tools/medir.ts mapas      # o modo clássico em todos os mapas
+ *     npx tsx tools/medir.ts formatos   # o clássico em cada tamanho de time
  *     npx tsx tools/medir.ts tudo       # a matriz inteira, e demora
+ *
+ * ## A coluna do tempo de tick
+ *
+ * Só aparece nos formatos, e é a razão de eles serem medidos. Trinta e dois por
+ * lado são sessenta e quatro bots pensando trinta vezes por segundo: a pergunta
+ * "o modo funciona?" é fácil perto de "o servidor aguenta?", e a segunda só se
+ * responde rodando.
  */
 
 const SEEDS = [11, 22, 33];
@@ -44,6 +53,9 @@ function mudo(nome: string): Cliente {
 
 interface Resultado {
   segundos: number | null;
+  /** Quanto um tick custou, em média. O orçamento é 1000/30 = 33 ms. */
+  msPorTick: number;
+  unidades: number;
   /**
    * **Por que** a partida acabou.
    *
@@ -62,16 +74,20 @@ interface Resultado {
   vencedor: string;
 }
 
-function rodar(modo: IdDoModo, mapa: IdDoMapa, seed: number): Resultado {
-  const sala = new Sala({ nome: 'm', seed, porTime: 6, esperaPorJogadores: 0, modo, mapa });
+function rodar(modo: IdDoModo, mapa: IdDoMapa, seed: number, porTime = 6): Resultado {
+  const sala = new Sala({ nome: 'm', seed, porTime, esperaPorJogadores: 0, modo, mapa });
   sala.entrar(mudo('Obs'));
   const limite = MODOS[modo].duracao + 30;
   let segundos: number | null = null;
+  let ticks = 0;
+  const comecou = Date.now();
   for (let i = 0; i < limite * TICKS_POR_SEGUNDO && segundos === null; i++) {
     sala.tocar('Obs');
     sala.passo();
+    ticks++;
     if (sala.estado.fase === 'fim') segundos = Math.floor(i / TICKS_POR_SEGUNDO);
   }
+  const msPorTick = (Date.now() - comecou) / Math.max(1, ticks);
   const e = sala.estado;
   const vivos = e.animais.filter((a) => a.vivo).length;
   const m = MODOS[modo];
@@ -91,6 +107,8 @@ function rodar(modo: IdDoModo, mapa: IdDoMapa, seed: number): Resultado {
               : 'relógio';
   return {
     segundos,
+    msPorTick,
+    unidades: e.unidades.length,
     motivo,
     placar: `${e.placar.azul}-${e.placar.vermelho}`,
     abates: `${e.abates.azul}-${e.abates.vermelho}`,
@@ -112,6 +130,22 @@ function linha(r: Resultado): string {
 }
 
 const alvo = process.argv[2] ?? 'modos';
+
+if (alvo === 'formatos') {
+  console.log('Resgate, por tamanho de time (o orçamento de um tick é 33 ms)\n');
+  for (const f of FORMATOS) {
+    const campo = campoPara(f.porTime);
+    if (campo === null) continue;
+    for (const seed of SEEDS) {
+      const r = rodar('resgate', campo, seed, f.porTime);
+      console.log(
+        `  ${f.nome.padEnd(8)} ${MAPAS[campo].nome.padEnd(12)} seed ${String(seed).padEnd(3)}` +
+          ` ${String(r.unidades).padStart(2)} em campo · ${r.msPorTick.toFixed(2)} ms/tick · ${linha(r)}`,
+      );
+    }
+  }
+  process.exit(0);
+}
 const combinacoes: { modo: IdDoModo; mapa: IdDoMapa }[] = [];
 if (alvo === 'mapas') {
   for (const mapa of IDS_DOS_MAPAS) combinacoes.push({ modo: 'resgate', mapa });

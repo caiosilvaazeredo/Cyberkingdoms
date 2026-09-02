@@ -13,7 +13,7 @@ import {
   ALCANCE_DE_USO,
   CUSTO_DO_NIVEL,
   NIVEL_MAXIMO,
-  PESO_MAXIMO,
+  pesoMaximoDe,
   outroTime,
 } from '../shared/regras';
 
@@ -63,7 +63,7 @@ export function dicaDeUso(arena: Arena, estado: Estado, u: Unidade): Dica | null
     const refem = bauDe(estado, inimigo);
     const cofre = arena.estrutura('cofre', meu);
     if (refem.onde === 'cofre' && perto(cofre, ALCANCE_DE_COLETA)) {
-      return refem.peso >= PESO_MAXIMO
+      return refem.peso >= pesoMaximoDe(estado.porTime)
         ? { texto: 'a balança está no talo', alvo: cofre }
         : { texto: 'entulhar o baú — pesa nele, alivia o seu', alvo: cofre };
     }

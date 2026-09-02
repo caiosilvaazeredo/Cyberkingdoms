@@ -1,5 +1,5 @@
 import type { TipoDeEstrutura, TipoDeJazida } from './arena';
-import { ARENA_LARGURA } from './regras';
+import { ARENA_ALTURA, ARENA_LARGURA } from './regras';
 
 /**
  * Os campos de batalha, como dado.
@@ -23,15 +23,20 @@ import { ARENA_LARGURA } from './regras';
  * também em `espelhar(tx)`. Um mapa que tentasse desenhar assimetria não
  * conseguiria — o que é exatamente a intenção.
  *
- * ## Todos no mesmo grid
+ * ## O quadro faz parte do mapa
  *
- * Sessenta por trinta e quatro, os quatro. Tamanhos diferentes exigiriam tirar
- * a largura de `espelhar` e espalhá-la por tudo o que hoje é constante, e o
- * ganho não paga: relevo e planta já mudam o jogo o bastante. O que varia é o
- * que está dentro do quadro, não o quadro.
+ * Cada mapa diz de que tamanho é. Os quatro primeiros são sessenta por trinta e
+ * quatro — o grid em que o jogo nasceu, e que comporta até oito por lado com
+ * folga. Acima disso o campo tem de crescer junto: trinta e dois por lado num
+ * quadro desse tamanho não é uma batalha, é uma fila.
+ *
+ * Foi por isso que `espelhar` deixou de ser constante de módulo e virou conta
+ * local de `criarArena`, a partir da largura do mapa. Enquanto havia um grid
+ * só, a constante era honesta; com dois, ela seria uma mentira que só apareceria
+ * no dia em que o mapa grande saísse assimétrico no meio.
  */
 
-export type IdDoMapa = 'corte' | 'vau' | 'desfiladeiro' | 'arquipelago';
+export type IdDoMapa = 'corte' | 'vau' | 'desfiladeiro' | 'arquipelago' | 'planicie';
 
 /**
  * O desenhista do relevo.
@@ -51,6 +56,15 @@ export interface Pincel {
 export interface Mapa {
   readonly id: IdDoMapa;
   readonly nome: string;
+  /**
+   * O tamanho do campo, em tiles.
+   *
+   * Faz parte do mapa e não das regras porque é o mapa que sabe quanta gente
+   * cabe nele: é daqui que sai `porTimeMaximo`, e é por isso que a sala não
+   * deixa escolher trinta e dois por lado no Corte.
+   */
+  readonly largura: number;
+  readonly altura: number;
   /** Uma linha: o que este mapa faz com a partida. */
   readonly lema: string;
   /**
@@ -90,6 +104,25 @@ export interface Mapa {
 
 const meio = (ARENA_LARGURA - 1) / 2;
 
+/**
+ * Quantas unidades por time este campo comporta — gente e npc somados.
+ *
+ * A conta é de **densidade**, calibrada pelo que já se conhecia: seis por lado
+ * no Corte são doze unidades em dois mil e quarenta tiles, e oito por lado — o
+ * teto antigo, escolhido a olho e que se mostrou bom — dão cento e seis tiles
+ * por unidade. É esse número que virou a régua.
+ *
+ * Não é precisão nenhuma, e não pretende ser: é o que impede a sala de pôr
+ * trinta e dois por lado num campo onde eles fariam fila na ponte, e o que faz
+ * o teto subir sozinho no dia em que alguém desenhar um campo maior — em vez de
+ * ficar numa constante que ninguém lembra de mexer.
+ */
+const TILES_POR_UNIDADE = 110;
+
+export function porTimeMaximo(mapa: Mapa): number {
+  return Math.max(1, Math.floor((mapa.largura * mapa.altura) / (2 * TILES_POR_UNIDADE)));
+}
+
 // --- Corte ------------------------------------------------------------------
 
 /**
@@ -110,6 +143,8 @@ export const PONTES_Y = [10, 11, 22, 23] as const;
 const CORTE: Mapa = {
   id: 'corte',
   nome: 'Corte',
+  largura: ARENA_LARGURA,
+  altura: ARENA_ALTURA,
   lema: 'castelo com fosso e duas pontes · o lago cobra para trocar de flanco',
   relevo(p) {
     for (let ty = CASTELO.y0; ty <= CASTELO.y1; ty++) p.agua(CASTELO.x1, ty);
@@ -174,6 +209,8 @@ const TRAVESSIAS_Y = [7, 8, 16, 17, 25, 26] as const;
 const VAU: Mapa = {
   id: 'vau',
   nome: 'Vau',
+  largura: ARENA_LARGURA,
+  altura: ARENA_ALTURA,
   lema: 'castelo aberto e um rio no meio · a briga é sempre nas travessias',
   relevo(p) {
     // O rio é uma coluna dupla no eixo: `agua` espelha, então escrever a coluna
@@ -238,6 +275,8 @@ const PORTAO_Y = [16, 17] as const;
 const DESFILADEIRO: Mapa = {
   id: 'desfiladeiro',
   nome: 'Desfiladeiro',
+  largura: ARENA_LARGURA,
+  altura: ARENA_ALTURA,
   lema: 'uma ponte por castelo · quem defende o portão defende tudo',
   relevo(p) {
     for (let ty = CASTELO_ESTREITO.y0; ty <= CASTELO_ESTREITO.y1; ty++) {
@@ -312,6 +351,8 @@ const PONTES_DA_ILHA_Y = [14, 19] as const;
 const ARQUIPELAGO: Mapa = {
   id: 'arquipelago',
   nome: 'Arquipélago',
+  largura: ARENA_LARGURA,
+  altura: ARENA_ALTURA,
   lema: 'o ouro do meio numa ilha cercada · cavar vira ato de guerra',
   relevo(p) {
     for (let ty = CASTELO.y0; ty <= CASTELO.y1; ty++) p.agua(CASTELO.x1, ty);
@@ -374,6 +415,136 @@ const ARQUIPELAGO: Mapa = {
   ],
 };
 
+// --- Planície ---------------------------------------------------------------
+
+/**
+ * O campo grande, feito para os times de dezesseis e de trinta e dois.
+ *
+ * ## Por que um mapa novo, e não o Corte esticado
+ *
+ * Esticar o Corte daria um Corte com mais grama: as mesmas duas pontes, o mesmo
+ * lago, e trinta e dois de cada lado empilhados nos mesmos dois tiles. Um campo
+ * grande precisa de **mais frentes**, não de mais espaço entre duas.
+ *
+ * São quatro travessias no rio do meio, bem separadas, e o castelo tem três
+ * portões em vez de dois. Com sessenta e quatro pessoas em campo, uma frente
+ * disputada por vez viraria uma fila; com quatro, o time se divide sozinho e a
+ * decisão passa a ser **onde** ir, que é a decisão que faz um time grande
+ * parecer um time e não uma multidão.
+ *
+ * ## A economia cresce com o quadro
+ *
+ * Jazidas e pastos não são multiplicados por um número em tempo de execução:
+ * estão escritos aqui, na densidade que este campo pede. É a mesma escolha de
+ * `modos.ts` — o dado diz o que é, e o tick não descobre nada sozinho. Cinco
+ * vezes mais gente cavando precisa de mais ou menos cinco vezes mais onde
+ * cavar, e é isso que a lista abaixo tem.
+ */
+const CAMPO_LARGO = 120;
+const CAMPO_ALTO = 68;
+const MEIO_LARGO = (CAMPO_LARGO - 1) / 2;
+const MURALHA = { x0: 3, y0: 8, x1: 34, y1: 59 } as const;
+const PORTOES_Y = [16, 17, 33, 34, 50, 51] as const;
+const TRAVESSIAS_LARGAS_Y = [12, 13, 26, 27, 40, 41, 54, 55] as const;
+
+/** Uma fileira de jazidas, para não escrever sessenta pares à mão. */
+function fileira(
+  x: number,
+  ys: readonly number[],
+  tipo: TipoDeJazida,
+): readonly (readonly [number, number, TipoDeJazida])[] {
+  return ys.map((y) => [x, y, tipo] as const);
+}
+
+const PLANICIE: Mapa = {
+  id: 'planicie',
+  nome: 'Planície',
+  largura: CAMPO_LARGO,
+  altura: CAMPO_ALTO,
+  lema: 'campo grande · três portões por castelo e quatro travessias no rio',
+  relevo(p) {
+    // A muralha de água do castelo, com três portões.
+    for (let ty = MURALHA.y0; ty <= MURALHA.y1; ty++) p.agua(MURALHA.x1, ty);
+    for (let tx = MURALHA.x0; tx <= MURALHA.x1; tx++) {
+      p.agua(tx, MURALHA.y0);
+      p.agua(tx, MURALHA.y1);
+    }
+    for (const py of PORTOES_Y) p.ponte(MURALHA.x1, py);
+
+    // O rio do meio, com quatro travessias — a segunda frente do mapa.
+    for (let ty = 2; ty < p.altura - 2; ty++) p.agua(Math.floor(MEIO_LARGO), ty);
+    for (const py of TRAVESSIAS_LARGAS_Y) p.ponte(Math.floor(MEIO_LARGO), py);
+
+    // Dois lagos entre a muralha e o rio, para o caminho até o meio não ser uma
+    // reta de sessenta tiles em que o arqueiro vê tudo chegando.
+    elipse(p, 44, 20, 5.5, 4.5);
+    elipse(p, 44, 47, 5.5, 4.5);
+  },
+  planta: {
+    tesouraria: [10, 33],
+    cofre: [12, 18],
+    casaDaMoeda: [26, 46],
+    chapelaria: [26, 22],
+    nascedouro: [13, 45],
+  },
+  jazidasDoLado: [
+    ...fileira(30, [12, 14, 22, 24, 44, 46, 54, 56], 'arvore'),
+    ...fileira(18, [11, 13, 55, 57], 'ouro'),
+    ...fileira(40, [10, 12, 56, 58], 'arvore'),
+    ...fileira(46, [31, 33, 35], 'ouro'),
+    ...fileira(52, [16, 18, 50, 52], 'ouro'),
+  ],
+  jazidasDoMeio: [
+    ...fileira(56, [6, 8, 60, 62], 'arvore'),
+    ...fileira(57, [20, 22, 46, 48], 'ouro'),
+  ],
+  // O rebanho da Planície é **três vezes** o do Corte, e não uma vez e meia.
+  //
+  // A primeira versão tinha dezoito ovelhas para trinta e dois por lado, contra
+  // dez para seis. Medindo, a balança de uma partida de dezesseis contra
+  // dezesseis andava doze pontos em doze minutos: a economia estava faminta e
+  // nada do que dependia dela — nem a moeda, nem a obra — chegava a acontecer.
+  // Cinco vezes mais gente cavando precisa de mais ou menos cinco vezes mais
+  // onde cavar, e a lista abaixo é essa conta.
+  pastosDoLado: [
+    [20, 26],
+    [20, 30],
+    [20, 38],
+    [20, 42],
+    [12, 26],
+    [12, 42],
+    [38, 20],
+    [38, 24],
+    [38, 44],
+    [38, 48],
+    [46, 6],
+    [46, 62],
+    [48, 8],
+    [48, 60],
+    [50, 28],
+    [50, 40],
+  ],
+  pastosDoMeio: [
+    [54, 10],
+    [54, 14],
+    [54, 54],
+    [54, 58],
+    [52, 31],
+    [52, 33],
+    [52, 35],
+    [52, 37],
+    [58, 4],
+    [58, 8],
+    [58, 60],
+    [58, 64],
+    [56, 24],
+    [56, 44],
+  ],
+  portoes: [
+    { coluna: MURALHA.x1, de: MURALHA.y0, ate: MURALHA.y1, passagens: [...PORTOES_Y] },
+  ],
+};
+
 // --- a tabela ---------------------------------------------------------------
 
 export const MAPAS: Readonly<Record<IdDoMapa, Mapa>> = {
@@ -381,6 +552,7 @@ export const MAPAS: Readonly<Record<IdDoMapa, Mapa>> = {
   vau: VAU,
   desfiladeiro: DESFILADEIRO,
   arquipelago: ARQUIPELAGO,
+  planicie: PLANICIE,
 };
 
 export const MAPA_PADRAO: IdDoMapa = 'corte';
@@ -391,6 +563,7 @@ export const IDS_DOS_MAPAS: readonly IdDoMapa[] = [
   'vau',
   'desfiladeiro',
   'arquipelago',
+  'planicie',
 ];
 
 /**

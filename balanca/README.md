@@ -21,12 +21,12 @@ poder mais ser carregado de volta.
 | o que era | o que é | por quê |
 |---|---|---|
 | princesa | **baú vivo** | ninguém pergunta por que um baú fica pesado |
-| cofre | **cofre** | é onde se guarda um baú |
+| masmorra | **cofre** | é onde se guarda um baú |
 | trono | **tesouraria** | é para onde ele volta |
 | bolo | **bolsa de moedas** | o que se entulha |
 | cozinha | **Casa da Moeda** | onde o minério vira moeda |
 | carne | **minério** | o que sai do alforje do rebanho |
-| saqueador | **saqueador** | quem derruba a ovelha de carga |
+| caçador | **saqueador** | quem derruba a ovelha de carga |
 
 A troca não foi só de nome: ela apaga a pergunta que mais custava explicar no
 tema antigo — *"por que eu alimento a refém dela?"*. Ouro entrando num baú que
@@ -38,7 +38,7 @@ humor do original; o jogo ficou mais frio de propósito.
 ## O diferencial: o peso é uma balança só
 
 No Fat Princess, bolo é defesa pura: você engorda o refém que está na sua
-cofre e o cálculo acaba aí.
+masmorra e o cálculo acaba aí.
 
 Aqui o peso do reino é **conservado**. Os dois baús dividem uma balança: a soma
 dos dois pesos é sempre a mesma. Cada bolsa que você entulha no baú do seu cofre
@@ -244,6 +244,102 @@ que dez seeds desmentiram — 9×0 virou 19×21, e 10×2 virou 16×14. Amostra d
 serve para ver se o modo **faz** alguma coisa; não serve para dizer se ele é
 justo.
 
+### Os quatro formatos: de seis a trinta e dois por lado
+
+O jogo nasceu para seis por lado e agora vai até trinta e dois — sessenta e
+quatro pessoas em campo. Não bastava subir um número: a economia inteira foi
+medida com doze unidades, e cinco vezes mais gente cunhando moeda, cavando
+jazida e subindo obra transforma a mesma partida em outra coisa.
+
+| formato | campo | o que muda |
+|---|---|---|
+| **6 × 6** | qualquer | o tamanho em que o jogo foi medido |
+| **8 × 8** | qualquer | uma frente a mais, ainda nos campos pequenos |
+| **16 × 16** | Planície | o time se divide em frentes ou não chega a lugar nenhum |
+| **32 × 32** | Planície | o cortejo do baú vira uma operação de guerra |
+
+#### A regra da escala: o que é por pessoa cresce; o que é por partida, não
+
+A razão é `porTime / 6`. Cresce com ela tudo o que uma pessoa consome ou produz
+— o peso que a balança comporta, o estoque de chapéus, o custo da obra, e o
+rebanho e as jazidas do campo. Não cresce nada que seja da partida e não das
+pessoas: o relógio, os pontos para vencer, a velocidade de quem anda.
+
+O que isso **preserva** é o tempo. Se a produção de bolsas dobra e o peso que a
+balança comporta dobra junto, o tempo até o talo é o mesmo — e é dele que sai a
+duração da partida.
+
+O peso total cresce em vez de a bolsa encolher, e isso foi uma escolha. Manter
+`PESO_TOTAL` fixo e dividir o que cada bolsa move daria o mesmo tempo de partida
+e um jogo pior: com trinta e dois por lado, uma bolsa moveria dois pontos numa
+barra de duzentos, e o gesto que é a assinatura do jogo não teria efeito visível
+nenhum.
+
+O teto de gente por time saiu de uma constante e passou a ser conta do **mapa**:
+cento e dez tiles de campo por unidade, que é a densidade do que já se conhecia
+(oito por lado no Corte). Dá nove por time nos campos pequenos e trinta e sete
+na Planície, e sobe sozinho no dia em que alguém desenhar um campo maior. Uma
+sala que sorteia campo usa o teto do **menor** deles, senão aceitaria trinta e
+dois por lado e cairia no Corte.
+
+#### O que a medição mostrou, e o que ela não mostra
+
+Três seeds por formato, salas só de bots, no modo Resgate:
+
+| formato | ms por tick | como as partidas acabaram |
+|---|---|---|
+| 6 × 6 | 0,05 | duas de três por resgate, aos 253 s e 314 s |
+| 8 × 8 | 0,06 | três de três por resgate |
+| 16 × 16 | 0,31 | uma por resgate; as outras no relógio, com a balança decidindo |
+| 32 × 32 | 0,41 | as três no relógio, decididas pela balança |
+
+O orçamento de um tick é 33 ms, então sobra folga de setenta vezes até no
+formato maior.
+
+Nos formatos grandes o **resgate deixa de ser o caminho comum**: cinco
+carregadores atravessando setenta tiles no meio de sessenta e quatro brigando é
+caro, e a partida costuma ser decidida pela balança — que é a mecânica que dá
+nome ao jogo, e não um empate técnico. Toda partida medida terminou com um
+vencedor. Se isso é o desenho certo é uma pergunta de gosto, não de código, e a
+resposta está a uma linha de distância em `modos.ts`.
+
+Três seeds servem para ver se o formato faz alguma coisa; **não** servem para
+dizer se ele é justo. Os números de abates por lado saíram muito desiguais em
+algumas seeds (925 a 73 numa delas), e nada aqui autoriza a concluir nada sobre
+isso.
+
+#### O defeito que a medição pegou
+
+A primeira medição de dezesseis contra dezesseis custou **48,9 ms por tick**,
+com orçamento de 33: o servidor não daria conta. A causa não era o número de
+bots — era o cache do navegador de campo. Cada perseguição a um inimigo que
+corre pedia um destino novo, e com o cache cheio **toda** decisão virava uma
+busca em largura do mapa inteiro.
+
+O conserto tem duas metades. O cache cresceu de vinte e quatro para cento e
+vinte e oito campos (dois megabytes, barato perto de estourar o tick), e o
+destino passou a ser encostado num bloco de quatro por quatro, de modo que
+dezesseis tiles compartilham um campo. Deu **0,23 ms** — e o formato de seis,
+que ninguém estava tentando otimizar, ficou seis vezes mais rápido junto.
+
+Duas armadilhas apareceram no caminho, e as duas foram achadas medindo:
+
+- **atravessar parede.** A primeira versão ia em linha reta de dentro do bloco
+  inteiro, e quatro tiles em linha reta cruzam fosso. O cortejo do clássico
+  parou de chegar em casa: duas de três seeds terminavam 0 a 0 no relógio, onde
+  antes acabavam por resgate aos cinco minutos. O atalho voltou a ser de um tile
+  só, e a aproximação final passou a usar o campo exato.
+- **âncora do outro lado do muro.** No Desfiladeiro, a âncora de um destino caía
+  do outro lado do fosso e o campo dela dava infinito para o destino de verdade
+  — o bot concluía que não havia caminho para onde ele chegava andando. Agora o
+  campo do bloco é conferido antes de valer, ao custo de um acesso a vetor.
+
+E uma terceira, que não era de navegação: a Planície nasceu com dezoito ovelhas
+para trinta e dois por lado, contra dez para seis. A balança de uma partida de
+dezesseis contra dezesseis andava doze pontos em doze minutos — a economia
+estava faminta, e nada do que dependia dela chegava a acontecer. O rebanho
+triplicou.
+
 ### Montar uma sala
 
 O botão **Salas** abre um painel só, com as duas metades da mesma pergunta
@@ -270,24 +366,32 @@ com os quatro amigos. O mesmo saneamento roda no painel, para que o número na
 tela seja o número que a sala vai ter: um formulário que promete o que o servidor
 corta é um formulário que mente.
 
-### Os quatro campos de batalha
+### Os cinco campos de batalha
 
-Um mapa não mexe em regra nenhuma — mesma balança, mesmos chapéus, mesmo bolsa.
+Um mapa não mexe em regra nenhuma — mesma balança, mesmos chapéus, mesma moeda.
 Ele mexe nas duas coisas que decidem o **ritmo**: onde estão os estrangulamentos
 e quão exposta fica a economia.
 
-| mapa | o que muda |
-|---|---|
-| **Corte** | fosso em volta de cada castelo, duas pontes, lago no meio |
-| **Vau** | castelo aberto e um rio no meio: a briga é sempre nas travessias |
-| **Desfiladeiro** | **uma** ponte por castelo: quem defende o portão defende tudo |
-| **Arquipélago** | o ouro do meio numa ilha cercada: cavar vira ato de guerra |
+| mapa | grid | o que muda |
+|---|---|---|
+| **Corte** | 60×34 | fosso em volta de cada castelo, duas pontes, lago no meio |
+| **Vau** | 60×34 | castelo aberto e um rio no meio: a briga é sempre nas travessias |
+| **Desfiladeiro** | 60×34 | **uma** ponte por castelo: quem defende o portão defende tudo |
+| **Arquipélago** | 60×34 | o ouro do meio numa ilha cercada: cavar vira ato de guerra |
+| **Planície** | 120×68 | o campo grande: três portões por castelo e quatro travessias no rio |
 
-Os quatro são o mesmo grid de 60×34, e cada um descreve **só a metade azul**: o
+Os quatro primeiros são o mesmo grid de 60×34; a Planície tem quatro vezes a
+área e existe para os times grandes (ver abaixo). Cada um descreve **só a metade
+azul**: o
 pincel que os relevos recebem escreve nos dois lados a cada traço, então um mapa
-que tentasse desenhar assimetria não conseguiria. Com quatro mapas, manter oito
+que tentasse desenhar assimetria não conseguiria. Com cinco mapas, manter dez
 listas de coordenadas em pares seria garantir que um dia a Casa da Moeda vermelha
 ficasse um tile mais longe do que a azul.
+
+O tamanho do campo é do **mapa**, e não das regras: foi por isso que o espelho
+deixou de ser constante de módulo. Enquanto havia um grid só, a constante era
+honesta; com dois, ela daria um mapa grande espelhado pelo eixo do pequeno, e a
+assimetria apareceria exatamente no meio, onde os dois times se encontram.
 
 O que torna um mapa novo barato é o teste: `test/arena.test.ts` roda **em laço
 sobre a tabela**, então escrever quarenta linhas de coordenadas já diz se elas
@@ -411,6 +515,41 @@ estão em maioria no meio do mapa: a economia mínima é segura, a economia que
 
 Longe do cofre, a bolsa vira o que todo dinheiro é: você gasta consigo, e isso
 cura 45.
+
+### Os efeitos: o que aconteceu, e o que a construção faz
+
+O jogo mudava de estado sem avisar. Um aldeão virava arqueiro e o único sinal
+era o boneco trocar de folha entre dois quadros — quem estava olhando para outro
+canto da tela não via nada. A transformação é o segundo diferencial do jogo
+inteiro (chapéu dá classe, chapéu cai, chapéu se rouba) e não tinha gesto
+nenhum.
+
+| acontecimento | o que se vê |
+|---|---|
+| vestir chapéu | estouro dourado, e o nome da classe subindo sobre a cabeça |
+| roubar chapéu do inimigo | o mesmo estouro, maior, e "roubou Arqueiro" em vermelho |
+| entulhar o baú | labareda **no baú**, que é o que mudou de peso |
+| resgate | estouro grande em quem trouxe |
+| a obra subir de nível | labareda na chapelaria e "obra II" na cor do reino |
+| correr | um bafo de poeira sob os pés — respingo, se for na beira d'água |
+
+Os efeitos nascem de **eventos do servidor**, e não de o desenho comparar dois
+retratos. Comparar funcionaria e mentiria em dois casos: um pacote perdido junta
+duas trocas num quadro só (um efeito para duas), e a previsão local pode desfazer
+o que ela mesma previu (um efeito para nenhuma). A lista de eventos que o mural
+de abates já lia dá a contagem certa de graça.
+
+A poeira dos pés é a única exceção, e por um motivo: andar não é acontecimento,
+é o estado normal de todo mundo o tempo todo, e mandar um evento por passo seria
+pagar banda para dizer o óbvio. Ela é decidida no cliente, comparando a posição
+com a do quadro anterior, e só para quem está dentro da câmera.
+
+Cada construção ganhou também uma **placa**: um ícone numa chapa escura dizendo
+o que se faz ali. O nome no telhado responde "que prédio é este?"; não responde
+"o que eu ganho aqui?" — e essa é a pergunta de quem chegou agora, ainda mais na
+chapelaria, que é onde se troca de classe e cujo nome não diz isso a ninguém. A
+placa **acende** quando há algo a buscar: bolsa cunhada na Casa da Moeda, obra
+com material para subir. Apagada, ela ainda diz o que o prédio é.
 
 ### O minimapa mostra o que o time está vendo
 

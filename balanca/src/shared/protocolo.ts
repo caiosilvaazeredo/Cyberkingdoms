@@ -10,7 +10,7 @@ import type {
   TipoDeItem,
   Unidade,
 } from './estado';
-import { mapaDe, type IdDoMapa } from './mapas';
+import { IDS_DOS_MAPAS, MAPAS, mapaDe, porTimeMaximo, type IdDoMapa } from './mapas';
 import { modoDe, type IdDoModo } from './modos';
 import { POR_TIME, TIMES, type Time } from './regras';
 
@@ -82,50 +82,51 @@ export interface ConfiguracaoDeSala {
   privada?: boolean;
 }
 
-/** Vagas de gente por time: pelo menos uma, no máximo o que a arena comporta. */
+/** Vagas de gente por time: pelo menos uma, no máximo o que o campo comporta. */
 export const MIN_POR_TIME = 1;
-export const MAX_POR_TIME = 6;
+export const MAX_POR_TIME = 32;
 /** Npcs por time. Zero é uma escolha legítima: partida só de gente. */
 export const MIN_BOTS = 0;
-export const MAX_BOTS = 6;
-/**
- * Unidades por time, somando gente e npc.
- *
- * O teto existe porque a arena tem tamanho: doze de um lado transformam a ponte
- * num engarrafamento e o nascedouro num empurra-empurra. É o mesmo motivo de
- * `POR_TIME` ser seis — só que agora quem soma os dois números é o anfitrião, e
- * ele precisa esbarrar em algum lugar.
- */
-export const MAX_POR_TIME_TOTAL = 8;
+export const MAX_BOTS = 32;
 
 /**
- * A configuração que o servidor de fato aceita.
+ * Unidades por time, somando gente e npc — e quem dá o teto é o **mapa**.
  *
- * Nada aqui confia no que chegou: os números vêm de um cliente, e um cliente é
- * a categoria de entrada que menos merece confiança. Cortar na entrada — e não
- * na hora de usar — é o que garante que a sala nunca exista num estado inválido:
- * quem lê `sala.porTime` lá na frente não precisa se perguntar se aquilo é um
- * número de verdade.
+ * O teto era oito e era um número solto. Ele existia por um motivo verdadeiro
+ * (a arena tem tamanho, e doze de um lado transformam a ponte num
+ * engarrafamento), mas escrito assim ele valia para o Corte e para qualquer
+ * campo que viesse depois — inclusive um cinco vezes maior, onde oito por lado
+ * é um campo vazio.
  *
- * O corte do total é o último e vem depois dos outros dois de propósito. Ele
- * tira dos **npcs**, nunca das vagas de gente: quem pediu quatro amigos e seis
- * bots quis, acima de tudo, jogar com os quatro amigos.
+ * Agora a conta é do mapa (`porTimeMaximo`), e o sorteio pega o **menor** dos
+ * tetos: uma sala que sorteia campo a cada partida não pode aceitar trinta e
+ * dois por lado e depois cair no Corte.
  */
+export function totalPorTime(mapa: IdDoMapa | 'sorteio'): number {
+  if (mapa === 'sorteio') {
+    return Math.min(...IDS_DOS_MAPAS.map((id) => porTimeMaximo(MAPAS[id])));
+  }
+  return porTimeMaximo(mapaDe(mapa));
+}
+
 export function salaConfiguravel(bruta: unknown): Required<ConfiguracaoDeSala> {
   const c = (bruta ?? {}) as ConfiguracaoDeSala;
   const inteiro = (v: unknown, min: number, max: number, padrao: number): number => {
     const n = typeof v === 'number' && Number.isFinite(v) ? Math.trunc(v) : padrao;
     return Math.max(min, Math.min(max, n));
   };
-  const porTime = inteiro(c.porTime, MIN_POR_TIME, MAX_POR_TIME, POR_TIME);
+  // O mapa é resolvido primeiro porque é ele que dá o teto do resto.
+  const mapa = c.mapa === 'sorteio' ? ('sorteio' as const) : mapaDe(c.mapa).id;
+  const teto = totalPorTime(mapa);
+  const porTime = inteiro(c.porTime, MIN_POR_TIME, Math.min(MAX_POR_TIME, teto), POR_TIME);
   const bots = inteiro(c.bots, MIN_BOTS, MAX_BOTS, 0);
   return {
     modo: modoDe(c.modo).id,
     // `'sorteio'` é o único valor que não é um mapa e mesmo assim é válido;
     // qualquer outra coisa desconhecida cai no padrão, como o modo.
-    mapa: c.mapa === 'sorteio' ? 'sorteio' : mapaDe(c.mapa).id,
+    mapa,
     porTime,
-    bots: Math.min(bots, MAX_POR_TIME_TOTAL - porTime),
+    bots: Math.min(bots, teto - porTime),
     privada: c.privada === true,
   };
 }

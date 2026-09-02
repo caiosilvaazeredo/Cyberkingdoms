@@ -164,7 +164,7 @@ export class Sala {
     this.porTime = opcoes.porTime ?? POR_TIME;
     this.botsFixos = opcoes.botsPorTime ?? null;
     this.espera = opcoes.esperaPorJogadores ?? ESPERA_POR_JOGADORES;
-    this.partida = criarPartida(this.seed, this.modo, this.mapaAtual);
+    this.partida = criarPartida(this.seed, this.modo, this.mapaAtual, this.porTime);
     this.navegador = new Navegador(this.partida.arena);
     this.bots = new Bots(this.partida.arena, this.navegador);
   }
@@ -564,7 +564,7 @@ export class Sala {
     // Sorteio: o mapa da próxima partida sai da seed nova. Fixo: o mesmo campo
     // de novo, que é o que quem escolheu um mapa está esperando.
     if (this.escolhaDeMapa === 'sorteio') this.mapaAtual = mapaSorteado(this.seed);
-    this.partida = criarPartida(this.seed, this.modo, this.mapaAtual);
+    this.partida = criarPartida(this.seed, this.modo, this.mapaAtual, this.porTime);
     this.navegador = new Navegador(this.partida.arena);
     this.bots = new Bots(this.partida.arena, this.navegador);
     this.esperando = 0;

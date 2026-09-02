@@ -41,6 +41,20 @@ export interface Animacao {
 
 const RAIZ = '/tiny';
 
+/** Os ícones de interface que o pacote traz, pelo nome do que marcam. */
+export const ICONES = [
+  'martelo',
+  'tora',
+  'moeda',
+  'minerio',
+  'espada',
+  'escudo',
+  'negado',
+  'engrenagem',
+] as const;
+
+export type IconeDaObra = (typeof ICONES)[number];
+
 /** Quadros por segundo que o pacote assume. Está escrito na página dele. */
 const FPS_DO_PACOTE = 10;
 
@@ -59,6 +73,16 @@ export interface Arte {
   readonly predios: Readonly<Record<string, HTMLImageElement>>;
   readonly fogo: Animacao;
   readonly fumaca: Animacao;
+  /**
+   * As folhas de efeito, por nome do que elas significam.
+   *
+   * Os arquivos do pacote se chamam `Explosion_02` e `Dust_01`; aqui elas se
+   * chamam `estouro` e `poeira`. É o mesmo motivo de `NOME_DA_CARGA` no HUD: o
+   * nome do arquivo é do desenhista, e o nome que o código usa é do jogo.
+   */
+  readonly efeitos: Readonly<Record<'poeira' | 'poeirada' | 'labareda' | 'estouro' | 'agua', Animacao>>;
+  /** Ícones de interface, por nome do que eles marcam. */
+  readonly icones: Readonly<Record<IconeDaObra, HTMLImageElement>>;
   /** Unidades, por time e por chave de folha. */
   readonly unidades: Readonly<Record<Time, Folhas>>;
   readonly ovelha: Readonly<Record<'parada' | 'andando' | 'pastando', Animacao>>;
@@ -191,6 +215,16 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
   pede('ovelha_parada', 'recursos/ovelha_parada.png');
   pede('ovelha_andando', 'recursos/ovelha_andando.png');
   pede('ovelha_pastando', 'recursos/ovelha_pastando.png');
+  for (const [chave, arquivo] of [
+    ['fx:poeira', 'poeira'],
+    ['fx:poeirada', 'poeirada'],
+    ['fx:labareda', 'labareda'],
+    ['fx:estouro', 'estouro'],
+    ['fx:agua', 'agua'],
+  ] as const) {
+    pede(chave, `fx/${arquivo}.png`);
+  }
+  for (const nome of ICONES) pede(`icone:${nome}`, `icones/${nome}.png`);
   pede('recurso_minerio', 'recursos/minerio.png');
   pede('recurso_madeira', 'recursos/madeira.png');
   pede('recurso_ouro', 'recursos/ouro.png');
@@ -289,6 +323,22 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
     },
     jazidaOuro: img('jazida_ouro'),
     jazidaOuroVazia: img('jazida_ouro_vazia'),
+    // As folhas de efeito são tiras horizontais de quadros quadrados: a poeira
+    // e a labareda em sessenta e quatro, o estouro e o respingo em cento e
+    // noventa e dois. `animacao` deduz o lado pela altura, então basta dizer a
+    // cadência — e ela é mais rápida que a do pacote de bonecos de propósito:
+    // um efeito que demora meio segundo já não é reação, é decoração.
+    efeitos: {
+      poeira: animacao(img('fx:poeira'), 16),
+      poeirada: animacao(img('fx:poeirada'), 18),
+      labareda: animacao(img('fx:labareda'), 20),
+      estouro: animacao(img('fx:estouro'), 18),
+      agua: animacao(img('fx:agua'), 16),
+    },
+    icones: Object.fromEntries(ICONES.map((n) => [n, img(`icone:${n}`)])) as Record<
+      IconeDaObra,
+      HTMLImageElement
+    >,
   };
 }
 

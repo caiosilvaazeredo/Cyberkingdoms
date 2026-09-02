@@ -10,12 +10,13 @@ import {
 } from './ajustes';
 import { MAXIMO_LOCAL, rotuloDaFonte, type IdDeFonte } from './controles';
 import { COR_DA_VAGA } from './desenho';
+import { FORMATOS, campoPara } from '../shared/formatos';
 import { IDS_DOS_MAPAS, MAPAS, type IdDoMapa } from '../shared/mapas';
 import { IDS_DOS_MODOS, MODOS, type IdDoModo } from '../shared/modos';
 import {
   MAX_BOTS,
   MAX_POR_TIME,
-  MAX_POR_TIME_TOTAL,
+  totalPorTime,
   MIN_BOTS,
   MIN_POR_TIME,
   salaConfiguravel,
@@ -417,6 +418,36 @@ export class Telas {
       caixaMapas.append(botao);
     }
 
+    // Os formatos, que são atalhos: cada um põe o número **e** o campo que ele
+    // exige. Sem eles, montar trinta e dois contra trinta e dois seria clicar
+    // vinte e seis vezes no `+`, e ninguém faz isso.
+    const caixaFormatos = pegar<HTMLElement>('#formatos');
+    for (const f of FORMATOS) {
+      const campo = campoPara(f.porTime);
+      if (campo === null) continue;
+      const botao = document.createElement('button');
+      botao.className = 'modo';
+      botao.dataset.formato = String(f.porTime);
+      const nome = document.createElement('b');
+      nome.textContent = f.nome;
+      const lema = document.createElement('small');
+      lema.textContent = f.lema;
+      botao.append(nome, lema);
+      botao.addEventListener('click', () => {
+        // O campo entra junto só quando o atual não comporta o formato: quem
+        // escolheu a Planície e depois clicou em "8 × 8" não queria voltar para
+        // o Corte.
+        const cabe = totalPorTime(this.montagem.mapa) >= f.porTime;
+        this.montagem = salaConfiguravel({
+          ...this.montagem,
+          porTime: f.porTime,
+          ...(cabe ? {} : { mapa: campo }),
+        });
+        this.pintarMontagem();
+      });
+      caixaFormatos.append(botao);
+    }
+
     const contadores: {
       chave: 'porTime' | 'bots';
       rotulo: string;
@@ -493,7 +524,12 @@ export class Telas {
       const meu =
         b.dataset.modo !== undefined
           ? b.dataset.modo === this.montagem.modo
-          : b.dataset.mapa === this.montagem.mapa;
+          : b.dataset.formato !== undefined
+            ? // O formato acende pelo número, e não por ter sido clicado: quem
+              // chegou a trinta e dois pelo `+` vê o mesmo botão aceso de quem
+              // clicou nele. O botão é um atalho para um valor, não um modo.
+              Number(b.dataset.formato) === this.montagem.porTime
+            : b.dataset.mapa === this.montagem.mapa;
       b.setAttribute('aria-pressed', String(meu));
     }
     for (const o of Array.from(document.querySelectorAll<HTMLOutputElement>('output[data-conta]'))) {
@@ -501,11 +537,15 @@ export class Telas {
       o.textContent = String(this.montagem[chave]);
     }
     const total = this.montagem.porTime + this.montagem.bots;
+    // O teto é do campo escolhido, e por isso a frase muda quando se troca de
+    // mapa sem tocar nos contadores: "é o que o Corte comporta" e "é o que a
+    // Planície comporta" são números diferentes.
+    const teto = totalPorTime(this.montagem.mapa);
     this.recadoDaSala.textContent =
       `${this.montagem.porTime} contra ${this.montagem.porTime}` +
       (this.montagem.bots > 0 ? ` · ${this.montagem.bots} npc(s) de cada lado` : ' · sem npcs') +
       ` · ${total} de cada lado em campo` +
-      (total >= MAX_POR_TIME_TOTAL ? ' — é o que a arena comporta' : '');
+      (total >= teto ? ' — é o que este campo comporta' : '');
   }
 
   /**

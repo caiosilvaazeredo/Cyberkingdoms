@@ -1,6 +1,6 @@
 import { MAPA_PADRAO, mapaDe, type IdDoMapa, type Pincel } from './mapas';
 import { DeterministicRandom } from './rng';
-import { ARENA_ALTURA, ARENA_LARGURA, TILE, TIMES, type Time } from './regras';
+import { TILE, TIMES, type Time } from './regras';
 
 /**
  * O campo de batalha: dois castelos ilhados, um descampado no meio.
@@ -97,7 +97,15 @@ export interface Arena {
 }
 
 /** Espelha uma coluna para o lado vermelho. */
-export const espelhar = (tx: number): number => ARENA_LARGURA - 1 - tx;
+/**
+ * O espelho, a partir da largura do campo.
+ *
+ * Era uma constante de módulo enquanto todos os mapas tinham o mesmo grid.
+ * Deixou de ser quando a Planície entrou com cento e vinte tiles: uma constante
+ * ali daria um mapa grande espelhado pelo eixo do mapa pequeno, e a assimetria
+ * apareceria exatamente no meio, onde os dois times se encontram.
+ */
+export const espelharEm = (largura: number, tx: number): number => largura - 1 - tx;
 
 /**
  * O castelo do mapa clássico. Reexportado porque o desenho e os testes antigos
@@ -127,8 +135,9 @@ const centro = (tx: number, ty: number): { x: number; y: number } => ({
 
 export function criarArena(seed: number, idDoMapa: IdDoMapa = MAPA_PADRAO): Arena {
   const mapa = mapaDe(idDoMapa);
-  const largura = ARENA_LARGURA;
-  const altura = ARENA_ALTURA;
+  const largura = mapa.largura;
+  const altura = mapa.altura;
+  const espelhar = (tx: number): number => espelharEm(largura, tx);
   const tiles = new Uint8Array(largura * altura);
 
   const por = (tx: number, ty: number, v: number): void => {

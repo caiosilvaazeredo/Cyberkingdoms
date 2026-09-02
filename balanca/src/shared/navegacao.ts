@@ -33,8 +33,37 @@ import type { Arena } from './arena';
 
 const INFINITO = 0xffff;
 
-/** Quantos campos ficam guardados. Passou disso, o menos usado sai. */
-const TETO_DE_CAMPOS = 24;
+/**
+ * Quantos campos ficam guardados. Passou disso, o menos usado sai.
+ *
+ * Vinte e quatro bastavam para doze bots num mapa de dois mil tiles. Não bastam
+ * para sessenta e quatro num de oito mil: cada perseguição a um inimigo que
+ * corre é um destino novo, e com o cache cheio **toda** decisão vira uma BFS do
+ * mapa inteiro. Medido, era isso que punha o tick de dezesseis contra dezesseis
+ * em 48,9 ms com um orçamento de 33.
+ *
+ * Um campo custa dois bytes por tile — dezesseis quilobytes na Planície. Cento
+ * e vinte e oito deles são dois megabytes, que é barato perto de estourar o
+ * tick.
+ */
+const TETO_DE_CAMPOS = 128;
+
+/**
+ * O lado do bloco a que um destino é encostado, em tiles.
+ *
+ * Esta é a metade que **de fato** resolveu o custo, e o cache maior é só a
+ * outra metade. Um inimigo que corre muda de tile a cada poucos quadros, e cada
+ * tile novo era um campo novo: sessenta e quatro bots perseguindo davam dezenas
+ * de destinos distintos por segundo, e nenhum cache de tamanho razoável
+ * sobrevive a isso.
+ *
+ * Encostando o destino num bloco de quatro por quatro, dezesseis tiles passam a
+ * compartilhar um campo — e o erro que isso introduz é de no máximo quatro
+ * tiles, que é exatamente a distância a partir da qual o bot já ia reto. O
+ * caminho longo é grosso; o último trecho é fino. Que é como uma pessoa também
+ * anda: ninguém planeja rua por rua os últimos dez metros.
+ */
+const BLOCO = 4;
 
 export class Navegador {
   private readonly campos = new Map<number, Uint16Array>();
@@ -129,11 +158,18 @@ export class Navegador {
     const meuTx = Math.floor(deX / TILE);
     const meuTy = Math.floor(deY / TILE);
 
+    // Já está no bloco do alvo: vai reto. É o mesmo atalho de antes, medido em
+    // blocos em vez de tiles — e é ele que devolve a precisão que o `BLOCO`
+    // tira, porque perto do destino ninguém mais consulta campo nenhum.
     // Já está no tile do alvo: vai reto, que é mais suave que perseguir centro
-    // de tile e ficar tremendo em cima do destino.
+    // de tile e ficar tremendo em cima do destino. **Um** tile, e não um bloco:
+    // a primeira versão ia reto de dentro do bloco inteiro, e quatro tiles em
+    // linha reta atravessam fosso. Medido, era isso que fazia o cortejo do
+    // clássico parar de chegar em casa — duas de três seeds terminavam 0 a 0 no
+    // relógio, onde antes acabavam por resgate aos cinco minutos.
     if (meuTx === alvoTx && meuTy === alvoTy) return unitario(paraX - deX, paraY - deY);
 
-    const dist = this.campo(alvoTx, alvoTy);
+    const dist = this.campoDe(alvoTx, alvoTy, meuTx, meuTy);
     const { largura, altura } = this.arena;
     const meu = dist[meuTy * largura + meuTx] ?? INFINITO;
     if (meu === INFINITO) return null;
@@ -164,9 +200,61 @@ export class Navegador {
     return unitario((melhorX + 0.5) * TILE - deX, (melhorY + 0.5) * TILE - deY);
   }
 
+  /**
+   * O campo que serve um destino: o do bloco, quando ele serve; o exato, quando
+   * não serve.
+   *
+   * ## A armadilha que o teste pegou
+   *
+   * Encostar o destino num bloco de quatro por quatro parece inofensivo até o
+   * bloco atravessar uma parede. No Desfiladeiro isso acontece: a âncora de um
+   * dos destinos caía do outro lado do fosso, e o campo dela dava infinito para
+   * o destino de verdade — o bot concluía que não havia caminho para um lugar
+   * a que ele chegava andando.
+   *
+   * A conferência é de um acesso a vetor: se o campo do bloco não alcança o
+   * tile pedido, ele não vale, e o exato é usado. O caso comum — campo aberto —
+   * continua compartilhando um campo entre dezesseis tiles; o caso raro paga o
+   * que sempre pagou.
+   *
+   * Não dava para prevenir escolhendo melhor o tile do bloco: saber se dois
+   * tiles estão do mesmo lado de uma parede é justamente o que a BFS responde,
+   * e fazê-la antes para decidir se vale a pena fazê-la é a definição de não
+   * economizar nada.
+   */
+  private campoDe(tx: number, ty: number, deTx?: number, deTy?: number): Uint16Array {
+    // Perto do destino, o campo é o exato. O bloco existe para poupar a rota
+    // **longa**, que é onde o cache sofria; a aproximação final tem de ser fina
+    // ou o bot contorna a parede errada nos últimos metros.
+    if (
+      deTx !== undefined &&
+      deTy !== undefined &&
+      Math.abs(deTx - tx) <= BLOCO * 2 &&
+      Math.abs(deTy - ty) <= BLOCO * 2
+    ) {
+      return this.campo(tx, ty);
+    }
+    const bx = tx - (tx % BLOCO);
+    const by = ty - (ty % BLOCO);
+    const largura = this.arena.largura;
+    for (let dy = 0; dy < BLOCO; dy++) {
+      for (let dx = 0; dx < BLOCO; dx++) {
+        if (this.arena.bloqueado(bx + dx, by + dy)) continue;
+        const campo = this.campo(bx + dx, by + dy);
+        return campo[ty * largura + tx] === INFINITO ? this.campo(tx, ty) : campo;
+      }
+    }
+    return this.campo(tx, ty);
+  }
+
   /** Distância em tiles até um destino. Serve para escolher entre dois alvos. */
   distancia(deX: number, deY: number, paraX: number, paraY: number): number {
-    const dist = this.campo(Math.floor(paraX / TILE), Math.floor(paraY / TILE));
+    const dist = this.campoDe(
+      Math.floor(paraX / TILE),
+      Math.floor(paraY / TILE),
+      Math.floor(deX / TILE),
+      Math.floor(deY / TILE),
+    );
     const d = dist[Math.floor(deY / TILE) * this.arena.largura + Math.floor(deX / TILE)];
     return d === undefined || d === INFINITO ? Infinity : d;
   }

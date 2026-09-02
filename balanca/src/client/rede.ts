@@ -240,7 +240,7 @@ export class Rede {
         this.meuTime = null;
         // A arena nasce da seed. Nenhum tile viaja pela rede.
         this.arena = criarArena(msg.seed, this.mapa);
-        this.estado = estadoVazio(this.modo);
+        this.estado = estadoVazio(this.modo, this.porTime);
         this.previsao = null;
         this.visualAnterior = null;
         this.visualAlvo = null;
@@ -271,7 +271,7 @@ export class Rede {
         return;
       }
       case 'retrato': {
-        if (!this.estado) this.estado = estadoVazio(this.modo);
+        if (!this.estado) this.estado = estadoVazio(this.modo, this.porTime);
         this.anterior = this.atual;
         this.atual = new Map();
         desempacotar(msg.r, this.estado);
@@ -457,12 +457,13 @@ export class Rede {
 }
 
 /** Um estado zerado para o `desempacotar` preencher. */
-function estadoVazio(modo: IdDoModo): Estado {
+function estadoVazio(modo: IdDoModo, porTime: number): Estado {
   const estoque = {} as Record<Time, Record<Classe, number>>;
   for (const t of TIMES) estoque[t] = { ...ESTOQUE_INICIAL };
   return {
     tick: 0,
     modo,
+    porTime,
     fase: 'aquecimento',
     faseEm: 0,
     relogio: 0,

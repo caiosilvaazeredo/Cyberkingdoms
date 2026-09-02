@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { criarArena, decoracaoEm, espelhar, resolverColisao, type TipoDeEstrutura } from '../src/shared/arena';
+import {
+  criarArena,
+  decoracaoEm,
+  espelharEm,
+  resolverColisao,
+  type TipoDeEstrutura,
+} from '../src/shared/arena';
 import { IDS_DOS_MAPAS, MAPAS } from '../src/shared/mapas';
 import { Navegador } from '../src/shared/navegacao';
 import { RAIO_UNIDADE, TILE, TIMES } from '../src/shared/regras';
@@ -31,7 +37,7 @@ describe.each(IDS_DOS_MAPAS)('o mapa %s', (id) => {
       expect(azul).toHaveLength(vermelho.length);
       // E no espelho exato: uma árvore um tile mais longe da Casa da Moeda de um lado
       // é vantagem econômica que ninguém escolheu dar.
-      expect(azul.map((j) => espelhar(Math.floor(j.x / TILE))).sort()).toEqual(
+      expect(azul.map((j) => espelharEm(arena.largura, Math.floor(j.x / TILE))).sort()).toEqual(
         vermelho.map((j) => Math.floor(j.x / TILE)).sort(),
       );
     }
@@ -43,7 +49,7 @@ describe.each(IDS_DOS_MAPAS)('o mapa %s', (id) => {
   it('é espelhada: o que vale para um reino vale para o outro', () => {
     for (let ty = 0; ty < arena.altura; ty++) {
       for (let tx = 0; tx < arena.largura; tx++) {
-        expect(arena.tile(tx, ty)).toBe(arena.tile(espelhar(tx), ty));
+        expect(arena.tile(tx, ty)).toBe(arena.tile(espelharEm(arena.largura, tx), ty));
       }
     }
   });
@@ -53,7 +59,7 @@ describe.each(IDS_DOS_MAPAS)('o mapa %s', (id) => {
       const azul = arena.estrutura(tipo, 'azul');
       const vermelho = arena.estrutura(tipo, 'vermelho');
       expect(azul.ty).toBe(vermelho.ty);
-      expect(espelhar(azul.tx)).toBe(vermelho.tx);
+      expect(espelharEm(arena.largura, azul.tx)).toBe(vermelho.tx);
     }
   });
 

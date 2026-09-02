@@ -5,7 +5,7 @@ import { Sala, type Cliente } from '../src/server/sala';
 import {
   MAX_BOTS,
   MAX_POR_TIME,
-  MAX_POR_TIME_TOTAL,
+  totalPorTime,
   salaConfiguravel,
   type DoServidor,
 } from '../src/shared/protocolo';
@@ -60,7 +60,9 @@ describe('o saneamento da configuração', () => {
     // Tudo isto chega pela rede. Um `porTime` de `1e9` não pode virar um laço
     // de mil milhões de bots; um negativo não pode virar uma sala sem vaga.
     const absurdo = salaConfiguravel({ porTime: 1e9, bots: -40, modo: 'batalha-naval' });
-    expect(absurdo.porTime).toBe(MAX_POR_TIME);
+    // O teto é do campo, e o padrão é o Corte: nove por time, e não trinta e
+    // dois. Pedir o infinito devolve o que aquele campo comporta.
+    expect(absurdo.porTime).toBe(totalPorTime('corte'));
     expect(absurdo.bots).toBeGreaterThanOrEqual(0);
     expect(absurdo.modo).toBe('resgate');
 
@@ -74,10 +76,29 @@ describe('o saneamento da configuração', () => {
   it('respeita o teto de unidades por time cortando os npcs, nunca as pessoas', () => {
     // Quem pediu seis amigos e seis bots quis, acima de tudo, jogar com os seis
     // amigos. Cortar as vagas de gente seria desmarcar o convite.
-    const c = salaConfiguravel({ porTime: MAX_POR_TIME, bots: MAX_BOTS });
-    expect(c.porTime).toBe(MAX_POR_TIME);
-    expect(c.porTime + c.bots).toBeLessThanOrEqual(MAX_POR_TIME_TOTAL);
-    expect(c.bots).toBe(MAX_POR_TIME_TOTAL - MAX_POR_TIME);
+    const teto = totalPorTime('corte');
+    const c = salaConfiguravel({ mapa: 'corte', porTime: MAX_POR_TIME, bots: MAX_BOTS });
+    expect(c.porTime).toBe(teto);
+    expect(c.porTime + c.bots).toBeLessThanOrEqual(teto);
+    expect(c.bots).toBe(0);
+  });
+
+  it('o teto é do campo escolhido, e não um número solto', () => {
+    // A regressão que este teste guarda: o teto era a constante `8`, boa para o
+    // Corte e absurda para a Planície, que tem cinco vezes a área. Sem isto,
+    // subir o limite de jogadores daria trinta e dois por lado no campo pequeno
+    // — ou oito no campo grande, que é o mesmo erro ao contrário.
+    const pequeno = salaConfiguravel({ mapa: 'corte', porTime: 32 });
+    const grande = salaConfiguravel({ mapa: 'planicie', porTime: 32 });
+    expect(pequeno.porTime).toBeLessThan(16);
+    expect(grande.porTime).toBe(32);
+  });
+
+  it('o sorteio usa o teto do menor campo da lista', () => {
+    // Uma sala que troca de campo a cada partida não pode aceitar trinta e dois
+    // por lado e depois cair no Corte: o número tem de valer para todos.
+    const c = salaConfiguravel({ mapa: 'sorteio', porTime: 32 });
+    expect(c.porTime).toBe(totalPorTime('corte'));
   });
 });
 

@@ -96,8 +96,11 @@ export const ESPERA_POR_JOGADORES = 12;
 // --- a balança -------------------------------------------------------------
 
 /**
- * O peso do reino, dividido entre os dois baús. É esta soma que não muda:
- * entulhar move peso de um prato para o outro, nunca cria peso novo.
+ * O peso do reino num time de seis — a medida a partir da qual tudo escala.
+ *
+ * É esta soma que não muda **dentro de uma partida**: entulhar move peso de um
+ * prato para o outro, nunca cria peso novo. Entre partidas ela muda com o
+ * tamanho do time, e o porquê está em `pesoTotalDe`.
  */
 export const PESO_TOTAL = 200;
 
@@ -105,32 +108,121 @@ export const PESO_TOTAL = 200;
 export const PESO_MINIMO = 40;
 export const PESO_MAXIMO = PESO_TOTAL - PESO_MINIMO;
 
-/** Quanto um depósito move na balança. */
+// --- a escala --------------------------------------------------------------
+
+/**
+ * A economia em função do tamanho do time.
+ *
+ * ## O problema
+ *
+ * Os números abaixo foram medidos com seis por lado. Com trinta e dois, cinco
+ * vezes mais gente cunha moeda, cava jazida e sobe obra — e nada mais muda. O
+ * resultado não é uma partida grande: é uma partida que acaba em noventa
+ * segundos porque a balança estourou antes de alguém chegar à ponte, com a obra
+ * no nível três no primeiro minuto e um chapéu de arqueiro para cada seis
+ * pessoas que o querem.
+ *
+ * ## A regra: o que é por pessoa cresce; o que é por partida, não
+ *
+ * A **razão** é `porTime / 6`. Cresce com ela tudo o que uma pessoa consome ou
+ * produz — o peso que a balança comporta, o estoque de chapéus, o custo da
+ * obra. Não cresce nada que seja da partida e não das pessoas: o relógio, os
+ * pontos para vencer, a velocidade de quem anda.
+ *
+ * O que isto **preserva** é o tempo: se a produção de bolsas dobra e o peso que
+ * a balança comporta dobra junto, o tempo até o talo é o mesmo. É a única
+ * grandeza que precisa ficar igual, porque é dela que sai a duração da partida.
+ *
+ * ## Funções puras, e não um objeto no estado
+ *
+ * Poderia haver uma `Escala` montada uma vez e guardada no `Estado`. Não há,
+ * porque ela teria de viajar no retrato, ser reconstruída pelo cliente e ficar
+ * em dia com o servidor — três lugares onde a escala pode divergir. Aqui só
+ * `porTime` viaja, e os dois lados chegam ao mesmo número pela mesma conta.
+ */
+export const razaoDaEscala = (porTime: number): number => Math.max(1, porTime) / POR_TIME;
+
+/**
+ * O peso que a balança comporta, para um time deste tamanho.
+ *
+ * A alternativa era manter `PESO_TOTAL` fixo e **dividir** o que cada bolsa
+ * move. Daria o mesmo tempo de partida e um jogo pior: com trinta e dois por
+ * lado, uma bolsa moveria dois pontos numa barra de duzentos, e o gesto que é a
+ * assinatura do jogo não teria efeito visível nenhum. Crescendo o total, uma
+ * bolsa continua movendo doze, e a barra — que é uma fração — continua parecendo
+ * a mesma.
+ */
+export function pesoTotalDe(porTime: number): number {
+  // Múltiplo de vinte para o meio da balança cair num número redondo, que é o
+  // que a barra mostra a partida inteira.
+  return Math.round((PESO_TOTAL * razaoDaEscala(porTime)) / 20) * 20;
+}
+
+export const pesoMaximoDe = (porTime: number): number => pesoTotalDe(porTime) - PESO_MINIMO;
+
+/** Quanto uma bolsa de moedas move na balança. Não escala — ver acima. */
 export const PESO_POR_BOLSA = 12;
 
-/** Minério que a Casa da Moeda consome para assar uma bolsa. */
+/** Minério que a Casa da Moeda consome para cunhar uma bolsa. */
 export const MINERIO_POR_BOLSA = 2;
 
-/** Segundos de forno depois que o trigo entrou. */
+/** Segundos de cunhagem depois que o minério entrou. */
 export const TEMPO_DE_CUNHAGEM = 6;
 
-/** Bolsas parados no chão da Casa da Moeda, no máximo. Estoque não é banco. */
+/** Bolsas paradas no chão da Casa da Moeda, no máximo. Estoque não é banco. */
 export const BOLSAS_NA_CASA = 3;
 
-/** Cura de comer a bolsa em vez de entregá-lo. A escolha é o ponto. */
+/** Cura de gastar a bolsa consigo em vez de entregá-la. A escolha é o ponto. */
 export const CURA_DA_BOLSA = 45;
+
+/**
+ * Quantos carregadores o baú pode chegar a exigir, num time deste tamanho.
+ *
+ * Três é o teto de sempre e continua sendo o de seis por lado. Ele existe
+ * porque o degrau tem de ser **grosso**: o jogador precisa saber, olhando a
+ * barra, se o resgate é solo ou se vai precisar de escolta, e um número
+ * contínuo não se lê no meio de uma briga.
+ *
+ * Com times grandes, três deixa de ser escolta e vira detalhe — trinta e dois
+ * mandam três sem sentir. O teto sobe com o time, mas para em oito: acima disso
+ * o cortejo deixaria de ser um grupo e viraria o time inteiro, e o resto do
+ * mapa ficaria vazio.
+ */
+export function carregadoresMaximos(porTime: number): number {
+  return Math.max(3, Math.min(8, 1 + Math.round(porTime / 4)));
+}
 
 /**
  * Quantos carregadores o baú exige, por faixa de peso.
  *
- * O degrau é grosso de propósito: o jogador precisa saber, olhando a barra, se
- * o resgate é solo ou se vai precisar de escolta — um número contínuo não se lê
- * no meio de uma briga.
+ * Os degraus são iguais entre si, do peso mínimo ao máximo. Em seis por lado
+ * isso dá as faixas de sempre com uma diferença: a primeira quebra em 80 e não
+ * em 70. Foi trocado de propósito — a faixa irregular antiga não generalizava
+ * para nenhum outro tamanho de time, e a medição com bots não mostrou mudança
+ * no desfecho das partidas.
  */
-export function carregadoresPara(peso: number): number {
-  if (peso <= 70) return 1;
-  if (peso <= 120) return 2;
-  return 3;
+export function carregadoresPara(peso: number, porTime: number = POR_TIME): number {
+  const degraus = carregadoresMaximos(porTime);
+  const faixa = pesoMaximoDe(porTime) - PESO_MINIMO;
+  const t = faixa <= 0 ? 0 : (peso - PESO_MINIMO) / faixa;
+  return Math.max(1, Math.min(degraus, 1 + Math.floor(t * degraus)));
+}
+
+/**
+ * Chapéus de cada classe no armário, num time deste tamanho.
+ *
+ * O estoque finito é o segundo diferencial do jogo: um time que domina as
+ * trocas desmonta a composição do outro. Isso só é verdade enquanto o armário é
+ * apertado — com trinta e dois usando o armário de seis, ninguém veste nada e o
+ * jogo vira trinta e dois aldeões.
+ */
+export function chapeusDe(base: number, porTime: number): number {
+  return Math.max(1, Math.round(base * razaoDaEscala(porTime)));
+}
+
+/** O custo da obra, num time deste tamanho. Oito mineradores sobem oito vezes mais rápido. */
+export function custoDaObraDe(base: number, porTime: number): number {
+  return Math.max(1, Math.round(base * razaoDaEscala(porTime)));
 }
 
 /** Fração da velocidade normal de quem carrega o baú. */
