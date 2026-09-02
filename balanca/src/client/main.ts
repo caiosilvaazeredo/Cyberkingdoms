@@ -25,6 +25,7 @@ import { Rede } from './rede';
 import { PainelDaEquipe } from './equipe';
 import { Minimapa } from './minimapa';
 import { Particulas } from './particulas';
+import { criarFiel, desenharVitrine, moverFiel } from './vitrine';
 import { Sofa, type Porta } from './sofa';
 import type { ConfiguracaoDeSala } from '../shared/protocolo';
 import { Telas, type SalaAberta } from './telas';
@@ -78,6 +79,7 @@ const porteiro = new Porteiro();
 const camera = criarCamera();
 const minimapa = new Minimapa();
 const particulas = new Particulas();
+const fiel = criarFiel();
 /** Alvo suavizado da câmera do modo atração. */
 let olhar = { x: 0, y: 0 };
 
@@ -462,6 +464,22 @@ function laco(agora: number): void {
         altura: altura / camera.zoom,
       }, largura);
     }
+  }
+
+  // A balança do menu vem por último: ela é desenho por cima de tudo, e só
+  // existe enquanto ninguém está jogando.
+  if (telas.atual === 'menu') {
+    moverFiel(fiel, estado, dt);
+    const coluna = document.querySelector<HTMLElement>('#menu .coluna');
+    desenharVitrine(
+      ctx,
+      fiel,
+      estado,
+      largura,
+      altura,
+      coluna?.getBoundingClientRect().width ?? 0,
+      tempo,
+    );
   }
 
   atualizarPainelDaEquipe(rede, emCampo, telas.atual === 'jogo', agora);

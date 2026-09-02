@@ -136,6 +136,66 @@
         margin-bottom: 6px;
       }
       /*
+        A tira de classes e a fita de números, do desenho do menu.
+
+        Elas ficam **depois** dos botões na ordem do documento de propósito: o
+        teclado chega primeiro ao que se aperta, e só depois ao que se lê. Um
+        menu que obriga a tabular por oito avatares antes de chegar em "Jogo
+        Local" é um menu que atrapalha quem não usa mouse.
+      */
+      .elenco {
+        list-style: none;
+        display: flex;
+        flex-wrap: wrap;
+        gap: clamp(2px, 0.6vw, 6px);
+        margin: clamp(6px, 1.4vh, 14px) 0 0;
+        padding: 0;
+      }
+      /*
+        A moldura se ajusta ao **nome**, e não a uma largura escolhida a olho.
+        A primeira versão fixava a largura e "Saqueador" saía cortado em todos
+        os cinco tamanhos de tela — o verificador acusou setenta e dois casos do
+        mesmo defeito. Com `min-width` e `nowrap`, o dia em que alguém criar uma
+        classe de nome comprido a tira acomoda sozinha.
+      */
+      .elenco li {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1px;
+        min-width: clamp(34px, 4.6vw, 52px);
+        padding: 3px 5px 4px;
+        border: 2px solid rgba(0, 0, 0, 0.5);
+        border-radius: 8px;
+        background: rgba(12, 14, 20, 0.6);
+        transition:
+          transform 120ms ease,
+          background 120ms ease;
+      }
+      /* O realce é do `li` inteiro e não do avatar: crescer só a imagem dentro
+         de uma moldura parada faz o rosto vazar pela borda. */
+      .elenco li:hover {
+        transform: translateY(-3px);
+        background: rgba(60, 44, 12, 0.85);
+      }
+      .elenco img {
+        width: clamp(22px, 3vw, 34px);
+        height: auto;
+        image-rendering: pixelated;
+      }
+      .elenco span {
+        font-size: clamp(7px, 0.75vw, 9px);
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+        color: rgba(255, 255, 255, 0.75);
+      }
+      .fita {
+        margin: clamp(4px, 1vh, 10px) 0 0;
+        font-size: clamp(9px, 1vw, 11px);
+        letter-spacing: 0.08em;
+        color: rgba(255, 255, 255, 0.6);
+      }
+      /*
         O rótulo continua em fonte de texto: a BlackFlag é gótica, e gótica em
         maiúsculas de dez pixels não se lê — vira textura. Ela fica onde presta,
         que é o nome grande.
@@ -1215,6 +1275,16 @@
         </div>
 
         <p class="assinatura">um cerco a ouro · dois baús · uma balança só</p>
+
+        <!--
+          A tira de classes, do desenho do menu. Ela não é enfeite: é a resposta
+          visual a "o que dá para ser neste jogo?", que é a primeira pergunta de
+          quem chega e a que os cinco botões não respondem. O nome aparece no
+          `title` e embaixo do avatar — sem nome, oito rostinhos iguais em
+          quarenta pixels não informam nada.
+        -->
+        <ul class="elenco" id="elenco-do-menu" aria-label="as classes do jogo"></ul>
+        <p class="fita" id="fita-do-menu"></p>
 
         <span class="estado"
           ><i class="pulso" id="pulso"></i><span id="estado-servidor">ligando…</span></span

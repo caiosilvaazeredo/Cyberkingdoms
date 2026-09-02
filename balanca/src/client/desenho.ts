@@ -1005,7 +1005,7 @@ function desenharBolsa(ctx: CanvasRenderingContext2D, x: number, y: number, esca
  *
  * @param cheio de 0 a 1, o peso normalizado entre os dois talos da balança.
  */
-function desenharBau(
+export function desenharBau(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,

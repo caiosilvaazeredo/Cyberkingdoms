@@ -405,6 +405,35 @@ campo a cada partida. O sorteio vem da seed, e não de `Math.random`: a sequênc
 inteira é reproduzível a partir da primeira partida, que é o que permite repetir
 um defeito em vez de contar história sobre ele.
 
+### O menu, e a balança que é de verdade
+
+O menu tinha o nome do jogo e cinco botões. Nada ali dizia o que o jogo **é** —
+e o que ele é não é resgate, que todo mundo já viu, mas a balança: uma grandeza
+conservada repartida entre dois reféns.
+
+Agora a balança está no menu, com um baú pendurado em cada prato, e ela **pende
+de verdade**. Atrás do menu já rodava uma partida de bots servindo de papel de
+parede; é o peso daquela partida que inclina o fiel. Quem chega vê a barra
+escorregar antes de apertar qualquer coisa e já sabe a regra — encheu de um
+lado, aliviou do outro. Uma balança falsa oscilando por conta própria seria uma
+promessa; esta é um retrato.
+
+O baú é o mesmo desenho da partida, então o dia em que ele mudar de forma o menu
+muda junto. E o painel escuro por trás não é enfeite: a primeira versão usava um
+degradê suave, e por cima de um campo cheio de casa, árvore e boneco meia sombra
+some — a balança lia como cenário, dois baús no chão e uma viga atravessada.
+
+Abaixo dos botões há a tira das oito classes e a fita de números. A fita é lida
+das **tabelas**: um menu que anuncia "quatro campos" continua anunciando quatro
+no dia em que o quinto entrar, porque ninguém relê o menu. Lido da tabela, ele
+conta cinco sozinho.
+
+A tira quase entrou com um defeito bobo: a moldura tinha largura fixa e
+"Saqueador" saía cortado nos cinco tamanhos de tela — setenta e dois casos do
+mesmo erro, todos apontados por `tools/tamanhos.mjs` numa passada. A moldura
+passou a se ajustar ao nome, que também resolve a próxima classe de nome
+comprido antes de ela existir.
+
 ### As telas
 
 Menu → cabine → escolha de lado → jogo.

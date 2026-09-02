@@ -1,3 +1,4 @@
+import { CLASSES, perfil } from '../shared/classes';
 import { TIMES, type Time } from '../shared/regras';
 import type { FichaDeJogador } from '../shared/protocolo';
 import {
@@ -10,6 +11,7 @@ import {
 } from './ajustes';
 import { MAXIMO_LOCAL, rotuloDaFonte, type IdDeFonte } from './controles';
 import { COR_DA_VAGA } from './desenho';
+import { avatarDe } from './equipe';
 import { FORMATOS, campoPara } from '../shared/formatos';
 import { IDS_DOS_MAPAS, MAPAS, type IdDoMapa } from '../shared/mapas';
 import { IDS_DOS_MODOS, MODOS, type IdDoModo } from '../shared/modos';
@@ -224,6 +226,7 @@ export class Telas {
     this.ligarBarra();
     this.ligarCabine();
     this.montarPainelDeSalas();
+    this.montarVitrineDoMenu();
     this.montarAjustes();
 
     this.campoNome.addEventListener('keydown', (e) => {
@@ -372,6 +375,42 @@ export class Telas {
    * mais só produzem valores que já estão na faixa, e são alvos de dedo — que é
    * o que interessa num jogo que se joga no sofá.
    */
+  /**
+   * A tira de classes e a fita de números do menu.
+   *
+   * Os números saem das **tabelas**, e não de um texto escrito à mão. É a única
+   * diferença que importa: um menu que anuncia "quatro mapas" continua
+   * anunciando quatro no dia em que o quinto entrar, e ninguém descobre — porque
+   * ninguém relê o menu. Lido da tabela, ele conta cinco sozinho.
+   */
+  private montarVitrineDoMenu(): void {
+    const tira = document.querySelector<HTMLElement>('#elenco-do-menu');
+    if (tira) {
+      for (const classe of CLASSES) {
+        const item = document.createElement('li');
+        const nome = perfil(classe).nome;
+        item.title = nome;
+        const img = document.createElement('img');
+        img.src = avatarDe(classe);
+        img.alt = '';
+        const rotulo = document.createElement('span');
+        rotulo.textContent = nome;
+        item.append(img, rotulo);
+        tira.append(item);
+      }
+    }
+    const fita = document.querySelector<HTMLElement>('#fita-do-menu');
+    if (fita) {
+      fita.textContent = [
+        `${CLASSES.length} classes`,
+        `${IDS_DOS_MODOS.length} modos`,
+        `${IDS_DOS_MAPAS.length} campos`,
+        `até ${FORMATOS[FORMATOS.length - 1]!.porTime} por time`,
+        'até 4 no mesmo aparelho',
+      ].join(' · ');
+    }
+  }
+
   private montarPainelDeSalas(): void {
     const caixaModos = pegar<HTMLElement>('#modos');
     for (const id of IDS_DOS_MODOS) {
