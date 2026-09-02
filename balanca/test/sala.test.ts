@@ -251,7 +251,7 @@ describe('o lobby', () => {
   it('roda o número certo de ticks por segundo de relógio de parede', () => {
     const lobby = new Lobby({ porTime: 1, esperaPorJogadores: 0, seed: () => 3 });
     lobby.acolher(clienteFalso('Ana'));
-    // Um segundo entregue em fatias de 16 ms, que é como o temporizador do
+    // Um segundo entregue em depósitos de 16 ms, que é como o temporizador do
     // servidor entrega. O passo do jogo é 33,33 ms: pedir ao `setInterval` um
     // disparo por passo daria 33 ms inteiros, e o jogo rodaria em câmera lenta
     // sem nada no código parecer errado.

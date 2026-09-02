@@ -5,7 +5,7 @@ import type {
   Evento,
   Fase,
   Item,
-  Princesa,
+  Bau,
   Projetil,
   TipoDeItem,
   Unidade,
@@ -24,7 +24,7 @@ import { POR_TIME, TIMES, type Time } from './regras';
  * quinze vezes por segundo. Todo o resto é cerimônia de entrada e saída.
  *
  * Retrato inteiro, e não diferença, porque a partida cabe: doze unidades, duas
- * princesas, um punhado de projéteis. Um pacote completo custa ~1,5 kB e tem
+ * baús, um punhado de projéteis. Um pacote completo custa ~1,5 kB e tem
  * uma propriedade que diferença não tem — quem chega atrasado, ou perde um
  * pacote, se conserta sozinho no próximo. Delta exigiria confirmação, buffer de
  * reenvio e um bug de dessincronização esperando o dia de aparecer.
@@ -43,7 +43,7 @@ import { POR_TIME, TIMES, type Time } from './regras';
  * mapa, que são dois números e uma palavra em vez de dois mil tiles.
  */
 
-export const VERSAO_DO_PROTOCOLO = 6;
+export const VERSAO_DO_PROTOCOLO = 7;
 
 // --- a sala que alguém monta -----------------------------------------------
 
@@ -149,7 +149,7 @@ export interface Comando {
   ax: number;
   ay: number;
   atacar: boolean;
-  /** Botão de contexto: pegar, entregar, alimentar, vestir. */
+  /** Botão de contexto: pegar, entregar, entulhar, vestir. */
   usar: boolean;
 }
 
@@ -322,9 +322,9 @@ export interface Retrato {
 }
 
 const FASES: readonly Fase[] = ['aquecimento', 'jogando', 'ponto', 'fim'];
-const CARGAS: readonly Carga[] = ['nada', 'madeira', 'ouro', 'carne', 'bolo', 'princesa'];
-const ITENS: readonly TipoDeItem[] = ['chapeu', 'bolo', 'carne', 'madeira', 'ouro'];
-const ONDES: readonly Princesa['onde'][] = ['jaula', 'carregada', 'chao', 'salva'];
+const CARGAS: readonly Carga[] = ['nada', 'madeira', 'ouro', 'minerio', 'bolsa', 'bau'];
+const ITENS: readonly TipoDeItem[] = ['chapeu', 'bolsa', 'minerio', 'madeira', 'ouro'];
+const ONDES: readonly Bau['onde'][] = ['cofre', 'carregado', 'chao', 'resgatado'];
 
 const idxTime = (t: Time): number => TIMES.indexOf(t);
 const timePorIdx = (i: number): Time => TIMES[i]!;
@@ -347,7 +347,7 @@ export function empacotar(estado: Estado): Retrato {
     ],
     // `[id, time, classe, x, y, olharX*100, olharY*100, vida, vivo, carga,
     //   golpe*100, colheita*100, renasceEm*10, ultimoComando, abates, mortes,
-    //   fatias, resgates, entregas]`
+    //   depósitos, resgates, entregas]`
     //
     // `golpe` vai como centésimos de segundo, e não como um sim/não: é o
     // relógio da animação de ataque, e o cliente precisa dele para saber em que
@@ -369,12 +369,12 @@ export function empacotar(estado: Estado): Retrato {
       u.ultimoComando,
       u.abates,
       u.mortes,
-      u.fatias,
+      u.depositos,
       u.resgates,
       u.entregas,
     ]),
     // `[time, peso, onde, x, y, portador, ajudantes, voltaEm]`
-    pr: estado.princesas.map((p) => [
+    pr: estado.baus.map((p) => [
       idxTime(p.time),
       arred(p.peso),
       ONDES.indexOf(p.onde),
@@ -411,8 +411,8 @@ export function empacotar(estado: Estado): Retrato {
       a.vivo ? 1 : 0,
       a.fugindo > 0 ? 1 : 0,
     ]),
-    // `[time, carne, assando*10, bolos]`
-    cz: estado.cozinhas.map((c) => [idxTime(c.time), c.carne, arred(c.assando * 10), c.bolos]),
+    // `[time, minério, cunhando*10, bolsas]`
+    cz: estado.casasDaMoeda.map((c) => [idxTime(c.time), c.minerio, arred(c.cunhando * 10), c.bolsas]),
     // `[time, madeira, ouro, nivel]`
     of: estado.oficinas.map((o) => [idxTime(o.time), o.madeira, o.ouro, o.nivel]),
     es: TIMES.map((t) => CLASSES_COM_CHAPEU.map((c) => estado.estoque[t][c])),
@@ -462,7 +462,7 @@ export function desempacotar(r: Retrato, base: Estado): Estado {
       colhendoId: null,
       abates: 0,
       mortes: 0,
-      fatias: 0,
+      depositos: 0,
       resgates: 0,
       entregas: 0,
       ultimoComando: 0,
@@ -482,13 +482,13 @@ export function desempacotar(r: Retrato, base: Estado): Estado {
     u.ultimoComando = linha[13]!;
     u.abates = linha[14]!;
     u.mortes = linha[15]!;
-    u.fatias = linha[16]!;
+    u.depositos = linha[16]!;
     u.resgates = linha[17]!;
     u.entregas = linha[18]!;
     return u;
   });
 
-  base.princesas = r.pr.map((l) => ({
+  base.baus = r.pr.map((l) => ({
     time: timePorIdx(l[0]!),
     peso: l[1]!,
     onde: ONDES[l[2]!]!,
@@ -559,11 +559,11 @@ export function desempacotar(r: Retrato, base: Estado): Estado {
     return a;
   });
 
-  base.cozinhas = r.cz.map((l) => ({
+  base.casasDaMoeda = r.cz.map((l) => ({
     time: timePorIdx(l[0]!),
-    carne: l[1]!,
-    assando: l[2]! / 10,
-    bolos: l[3]!,
+    minerio: l[1]!,
+    cunhando: l[2]! / 10,
+    bolsas: l[3]!,
   }));
 
   base.oficinas = r.of.map((l) => ({

@@ -13,7 +13,7 @@ import {
  * A tentação de um modo de jogo é escrever `if (modo === 'assalto')` no meio do
  * tick. Feito quatro vezes, o tick vira uma árvore que ninguém consegue ler, e
  * cada regra nova precisa lembrar de todos os modos — que é como um jogo ganha
- * um modo em que a princesa não anda e ninguém descobre por três meses.
+ * um modo em que o baú não anda e ninguém descobre por três meses.
  *
  * Aqui um modo é **dado**: um registro de números e chaves que o tick lê no
  * lugar das constantes. Acrescentar um modo é acrescentar uma linha nesta
@@ -38,9 +38,9 @@ import {
 export type IdDoModo =
   | 'resgate'
   | 'assalto'
-  | 'banquete'
+  | 'cofrecheio'
   | 'chapelaria'
-  | 'fome'
+  | 'veiaseca'
   | 'obra'
   | 'abate';
 
@@ -57,7 +57,7 @@ export interface Modo {
   /** Base do tempo de renascimento, em segundos. */
   readonly renascimentoBase: number;
   /**
-   * A balança também vence: levar a própria princesa ao peso mínimo — isto é,
+   * A balança também vence: levar a próprio baú ao peso mínimo — isto é,
    * empanturrar a refém que se guarda — acaba a partida na hora.
    *
    * Esta chave puxa **duas** coisas no tick, e a segunda é o que faz a primeira
@@ -72,7 +72,7 @@ export interface Modo {
   /**
    * O bicho abatido volta ao pasto depois de um tempo.
    *
-   * Desligado, a carne do mapa é finita — e como bolo sai de carne, a balança
+   * Desligado, o minério do mapa é finito — e como bolsa sai de minério, a balança
    * ganha um teto que ninguém pode ultrapassar. Caçar cedo deixa de ser rotina
    * e vira investimento.
    */
@@ -86,7 +86,7 @@ export interface Modo {
    */
   readonly vitoriaPorObra: boolean;
   /**
-   * O peso em que a balança estoura e o Banquete acaba.
+   * O peso em que a balança estoura e o Cofre Cheio acaba.
    *
    * Um número por modo, e não a constante do jogo, porque medindo se descobriu
    * que os dois extremos não funcionam. No talo (`PESO_MINIMO`, 40), a balança
@@ -99,8 +99,8 @@ export interface Modo {
   /**
    * Abates que vencem a partida, ou `null` quando matar não é o objetivo.
    *
-   * Combate puro: sem cortejo, sem logística de bolo. É o modo de quem abre o
-   * jogo só para brigar — e o único em que a princesa é cenário.
+   * Combate puro: sem cortejo, sem logística de bolsa. É o modo de quem abre o
+   * jogo só para brigar — e o único em que o baú é cenário.
    */
   readonly abatesParaVencer: number | null;
 }
@@ -113,7 +113,7 @@ export interface Modo {
  * - **Assalto** existe para o sofá: uma rodada inteira em seis minutos, com um
  *   resgate só decidindo. O renascimento mais curto é o que impede a partida
  *   curta de virar uma partida em que metade do tempo se passa esperando.
- * - **Banquete** promove a mecânica-assinatura a condição de vitória. A barra
+ * - **Cofre Cheio** promove a mecânica-assinatura a condição de vitória. A barra
  *   da balança já está no alto da tela a partida inteira; aqui chegar ao fim
  *   dela ganha o jogo, e não só o desempate. Resgatar continua valendo — são
  *   dois caminhos, e escolher entre eles é o modo.
@@ -151,10 +151,10 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     abatesParaVencer: null,
     pesoQueVence: PESO_MINIMO,
   },
-  banquete: {
-    id: 'banquete',
-    nome: 'Banquete',
-    lema: 'a balança vence: empanturre a refém até o talo da barra',
+  cofrecheio: {
+    id: 'cofrecheio',
+    nome: 'Cofre Cheio',
+    lema: 'a balança vence: entulhe o baú refém até o talo da barra',
     pontosParaVencer: PONTOS_PARA_VENCER,
     duracao: DURACAO_DA_PARTIDA,
     renascimentoBase: RENASCIMENTO_BASE,
@@ -184,10 +184,10 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     abatesParaVencer: null,
     pesoQueVence: PESO_MINIMO,
   },
-  fome: {
-    id: 'fome',
-    nome: 'Fome',
-    lema: 'o bicho abatido não volta · a carne do mapa é tudo o que existe',
+  veiaseca: {
+    id: 'veiaseca',
+    nome: 'Veia Seca',
+    lema: 'a mula derrubada não volta · o minério do mapa é tudo o que existe',
     pontosParaVencer: PONTOS_PARA_VENCER,
     duracao: DURACAO_DA_PARTIDA,
     renascimentoBase: RENASCIMENTO_BASE,
@@ -215,10 +215,10 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
   abate: {
     id: 'abate',
     nome: 'Abate',
-    lema: 'trinta baixas vencem · sem cortejo, sem bolo, só briga',
+    lema: 'trinta baixas vencem · sem cortejo, sem moeda, só briga',
     // Resgate não decide nada aqui. Medindo, ele decidia duas de três partidas
     // antes de alguém chegar às trinta baixas — e um modo cujo lema promete "só
-    // briga" e termina por cortejo é um modo que mente. A princesa continua em
+    // briga" e termina por cortejo é um modo que mente. O baú continua em
     // campo e continua carregável; o que ela deixou de ser é o placar.
     pontosParaVencer: Number.POSITIVE_INFINITY,
     duracao: 8 * 60,
@@ -238,9 +238,9 @@ export const MODO_PADRAO: IdDoModo = 'resgate';
 export const IDS_DOS_MODOS: readonly IdDoModo[] = [
   'resgate',
   'assalto',
-  'banquete',
+  'cofrecheio',
   'chapelaria',
-  'fome',
+  'veiaseca',
   'obra',
   'abate',
 ];

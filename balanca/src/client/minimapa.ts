@@ -23,9 +23,9 @@ import { avistados, pontoAvistado } from '../shared/vista';
  * ## O que aparece
  *
  * O seu time inteiro, sempre. O inimigo, só o que alguém do seu time está vendo
- * — a regra é de `shared/vista.ts` e tem os testes dela lá. As duas princesas
- * seguem a mesma lógica, com uma exceção deliberada: **a sua aparece sempre**,
- * porque a bússola do jogo já aponta para ela e escondê-la aqui seria o mapa
+ * — a regra é de `shared/vista.ts` e tem os testes dela lá. Os dois baús
+ * seguem a mesma lógica, com uma exceção deliberada: **o seu aparece sempre**,
+ * porque a bússola do jogo já aponta para ele e escondê-lo aqui seria o mapa
  * contradizer a seta na tela.
  *
  * O retângulo da câmera fecha o desenho: sem ele, a pessoa vê os pontos e não
@@ -101,17 +101,17 @@ export class Minimapa {
     // As construções antes de todo mundo: elas são o mapa, e os pontos passam
     // por cima delas.
     for (const e of arena.estruturas) {
-      if (e.tipo !== 'trono' && e.tipo !== 'jaula') continue;
-      ctx.fillStyle = e.tipo === 'trono' ? '#f2e6c9' : 'rgba(0,0,0,0.55)';
+      if (e.tipo !== 'tesouraria' && e.tipo !== 'cofre') continue;
+      ctx.fillStyle = e.tipo === 'tesouraria' ? '#f2e6c9' : 'rgba(0,0,0,0.55)';
       ctx.fillRect(paraX(e.x) - 2, paraY(e.y) - 2, 4, 4);
     }
 
     const inimigo = outroTime(meuTime);
     const vistos = avistados(arena, estado, meuTime);
 
-    // As princesas primeiro, para um boneco em cima delas não as esconder.
-    for (const p of estado.princesas) {
-      if (p.onde === 'salva') continue;
+    // Os baús primeiro, para um boneco em cima deles não os esconder.
+    for (const p of estado.baus) {
+      if (p.onde === 'resgatado') continue;
       const minha = p.time === meuTime;
       if (!minha && !pontoAvistado(arena, estado, meuTime, p)) continue;
       ctx.fillStyle = minha ? '#ffd479' : 'rgba(255, 212, 121, 0.55)';
@@ -125,9 +125,9 @@ export class Minimapa {
       const meu = u.time === meuTime;
       if (!meu && !vistos.has(u.id)) continue;
       ctx.fillStyle = meu ? COR_DO_TIME[meuTime] : COR_DO_TIME[inimigo];
-      // Quem carrega a princesa é o que decide a partida: um ponto maior é a
+      // Quem carrega o baú é o que decide a partida: um ponto maior é a
       // diferença entre olhar o mapa e entender o mapa.
-      const raio = u.carga === 'princesa' ? 3.5 : 2.2;
+      const raio = u.carga === 'bau' ? 3.5 : 2.2;
       ctx.beginPath();
       ctx.arc(paraX(u.x), paraY(u.y), raio, 0, Math.PI * 2);
       ctx.fill();

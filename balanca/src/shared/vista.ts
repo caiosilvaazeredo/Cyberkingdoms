@@ -60,10 +60,10 @@ export function avistados(arena: Arena, estado: Estado, time: Time): Set<number>
 /**
  * Se um ponto qualquer está à vista de alguém do time.
  *
- * Serve para o que não é unidade: a princesa carregada, a princesa caída no
- * chão. A do próprio time é caso à parte e o minimapa mostra sempre — a bússola
- * do jogo já aponta para ela, e escondê-la no minimapa seria esconder no mapa o
- * que a seta na tela mostra.
+ * Serve para o que não é unidade: o baú carregado, o baú caído no chão. O do
+ * próprio time é caso à parte e o minimapa mostra sempre — a bússola do jogo já
+ * aponta para ele, e escondê-lo no minimapa seria esconder no mapa o que a seta
+ * na tela mostra.
  */
 export function pontoAvistado(
   arena: Arena,

@@ -1,5 +1,5 @@
 import { Sala, type Cliente } from '../src/server/sala';
-import { princesaDe } from '../src/shared/estado';
+import { bauDe } from '../src/shared/estado';
 import { IDS_DOS_MAPAS, MAPAS } from '../src/shared/mapas';
 import { IDS_DOS_MODOS, MODOS, type IdDoModo } from '../src/shared/modos';
 import { type IdDoMapa } from '../src/shared/mapas';
@@ -11,7 +11,7 @@ import { NIVEL_MAXIMO, TICKS_POR_SEGUNDO } from '../src/shared/regras';
  * ## Por que esta ferramenta existe
  *
  * Um modo com números diferentes na tabela e um mapa com coordenadas diferentes
- * na lista **parecem** prontos e podem não fazer nada. Já aconteceu: o Banquete
+ * na lista **parecem** prontos e podem não fazer nada. Já aconteceu: o Cofre Cheio
  * nasceu com todos os testes passando e terminava idêntico ao clássico, porque
  * outra regra apagava a condição de vitória a cada ponto. Nenhum teste de
  * unidade pegaria isso — só rodar a partida inteira pega.
@@ -49,7 +49,7 @@ interface Resultado {
    *
    * A coluna mais importante desta ferramenta, e a que faltava. Sem ela, medir
    * duração e placar diz que o modo "funciona" enquanto ele termina pelo mesmo
-   * caminho do clássico — foi assim que o Banquete nasceu oco, e foi assim que
+   * caminho do clássico — foi assim que o Cofre Cheio nasceu oco, e foi assim que
    * o Obra voltou a nascer oco depois de eu triplicar o custo da obra: as
    * partidas duravam o tempo certo e nenhuma delas era decidida pela obra.
    */
@@ -86,7 +86,7 @@ function rodar(modo: IdDoModo, mapa: IdDoMapa, seed: number): Resultado {
           ? 'ABATE'
           : e.vencedor !== null && e.placar[e.vencedor] >= m.pontosParaVencer
             ? 'resgate'
-            : m.vitoriaPorBalanca && e.princesas.some((p) => p.peso <= m.pesoQueVence)
+            : m.vitoriaPorBalanca && e.baus.some((p) => p.peso <= m.pesoQueVence)
               ? 'BALANÇA'
               : 'relógio';
   return {
@@ -94,7 +94,7 @@ function rodar(modo: IdDoModo, mapa: IdDoMapa, seed: number): Resultado {
     motivo,
     placar: `${e.placar.azul}-${e.placar.vermelho}`,
     abates: `${e.abates.azul}-${e.abates.vermelho}`,
-    pesos: `${Math.round(princesaDe(e, 'azul').peso)}/${Math.round(princesaDe(e, 'vermelho').peso)}`,
+    pesos: `${Math.round(bauDe(e, 'azul').peso)}/${Math.round(bauDe(e, 'vermelho').peso)}`,
     obra: e.oficinas.map((o) => o.nivel).join('/') + `de${NIVEL_MAXIMO}`,
     bichos: `${vivos}/${e.animais.length}`,
     vencedor: e.vencedor ?? '—',

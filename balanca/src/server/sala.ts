@@ -524,11 +524,11 @@ export class Sala {
   }
 
   private dispensarUmBot(time: Time): void {
-    // Sai o bot que menos vai fazer falta: nunca o que está com a princesa no
+    // Sai o bot que menos vai fazer falta: nunca o que está com o baú no
     // colo, e de preferência um que esteja morto — assim ninguém vê alguém
     // sumir no meio do campo.
     const candidatos = this.partida.estado.unidades.filter(
-      (u) => u.bot && u.time === time && u.carga !== 'princesa',
+      (u) => u.bot && u.time === time && u.carga !== 'bau',
     );
     if (candidatos.length === 0) return;
     const escolhido = candidatos.find((u) => !u.vivo) ?? candidatos[0]!;

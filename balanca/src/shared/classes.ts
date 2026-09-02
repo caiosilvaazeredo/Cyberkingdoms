@@ -5,8 +5,8 @@
  *
  * O jogo tem duas frentes, e as classes se dividem exatamente nelas. Guerreiro,
  * lanceiro, arqueiro e clérigo decidem quem passa pela ponte. Minerador,
- * lenhador e caçador decidem quanto o reino tem para gastar — e como a balança
- * só se move com bolo, e bolo só existe com carne, o time que ignora o ofício
+ * lenhador e saqueador decidem quanto o reino tem para gastar — e como a balança
+ * só se move com bolsa, e bolsa só existe com minério, o time que ignora o ofício
  * perde a partida sem nunca perder uma briga.
  *
  * ## O chapéu é um objeto, não uma escolha de menu
@@ -37,7 +37,7 @@ export type Classe =
   | 'clerigo'
   | 'minerador'
   | 'lenhador'
-  | 'cacador';
+  | 'saqueador';
 
 export const CLASSES: readonly Classe[] = [
   'aldeao',
@@ -47,7 +47,7 @@ export const CLASSES: readonly Classe[] = [
   'clerigo',
   'minerador',
   'lenhador',
-  'cacador',
+  'saqueador',
 ];
 
 /** Como o golpe da classe atinge. */
@@ -65,7 +65,7 @@ export type TipoDeAtaque =
 export type Gesto = 'arco' | 'estocada' | 'disparo' | 'bencao' | 'picareta' | 'machado' | 'faca';
 
 /** O que a classe consegue tirar do mundo. */
-export type Oficio = 'ouro' | 'madeira' | 'carne';
+export type Oficio = 'ouro' | 'madeira' | 'minerio';
 
 export interface PerfilDeClasse {
   readonly id: Classe;
@@ -89,7 +89,7 @@ export interface PerfilDeClasse {
    * devagar, e nas classes de combate, que não fazem nenhum.
    */
   readonly oficio: Oficio | null;
-  /** Multiplicador do dano contra bicho. É o que faz o caçador caçar. */
+  /** Multiplicador do dano contra bicho. É o que faz o saqueador caçar. */
   readonly danoContraAnimal: number;
   readonly tintaDoChapeu: string;
   /** Cor da arma no desenho. */
@@ -168,7 +168,7 @@ const PERFIS: Record<Classe, PerfilDeClasse> = {
   clerigo: {
     id: 'clerigo',
     nome: 'Clérigo',
-    resumo: 'Ergue o cajado e cura quem carrega a princesa. Ganha sem matar.',
+    resumo: 'Ergue o cajado e cura quem carrega a bau. Ganha sem matar.',
     vida: 110,
     velocidade: 200,
     ataque: 'cura',
@@ -216,10 +216,10 @@ const PERFIS: Record<Classe, PerfilDeClasse> = {
     tintaDoChapeu: '#8a5a2b',
     tintaDaArma: '#c0392b',
   },
-  cacador: {
-    id: 'cacador',
-    nome: 'Caçador',
-    resumo: 'Come quem corre: abate o bicho e leva a carne para a cozinha.',
+  saqueador: {
+    id: 'saqueador',
+    nome: 'Saqueador',
+    resumo: 'Come quem corre: abate o bicho e leva a minerio para a casaDaMoeda.',
     vida: 100,
     velocidade: 212,
     ataque: 'corpo',
@@ -228,7 +228,7 @@ const PERFIS: Record<Classe, PerfilDeClasse> = {
     alcance: 58,
     cadencia: 0.55,
     duracaoDoGolpe: 0.18,
-    oficio: 'carne',
+    oficio: 'minerio',
     danoContraAnimal: 4,
     tintaDoChapeu: '#6b8e23',
     tintaDaArma: '#e8e0c8',
@@ -247,7 +247,7 @@ export const CLASSES_COM_CHAPEU: readonly Classe[] = [
   'clerigo',
   'minerador',
   'lenhador',
-  'cacador',
+  'saqueador',
 ];
 
 /**
@@ -265,7 +265,7 @@ export const ESTOQUE_INICIAL: Readonly<Record<Classe, number>> = {
   clerigo: 2,
   minerador: 2,
   lenhador: 2,
-  cacador: 2,
+  saqueador: 2,
 };
 
 /** Quanto o aldeão é mais lento que o especialista no mesmo trabalho. */

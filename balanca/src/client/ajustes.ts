@@ -32,7 +32,7 @@ export interface Ajustes {
   nomes: boolean;
   /** Árvores, arbustos e pedras. Desligar ajuda em celular fraco. */
   mato: boolean;
-  /** O registro de abates e fatias, no canto. */
+  /** O registro de abates e depósitos, no canto. */
   registro: boolean;
   /**
    * O minimapa no canto de cima.

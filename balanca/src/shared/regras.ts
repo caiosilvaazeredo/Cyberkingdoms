@@ -3,38 +3,39 @@
  *
  * ## O jogo
  *
- * Dois reinos, dois castelos, duas princesas. A sua está presa na masmorra do
- * inimigo; resgatá-la e trazê-la ao seu trono vale um ponto. É o esqueleto do
- * Fat Princess, e o esqueleto é bom: resgate é um objetivo que dá para explicar
- * apontando para a tela.
+ * Dois reinos, dois castelos, dois baús vivos. O seu está trancado no cofre do
+ * inimigo; resgatá-lo e trazê-lo à sua tesouraria vale um ponto. É o esqueleto
+ * do Fat Princess, e o esqueleto é bom: resgate é um objetivo que dá para
+ * explicar apontando para a tela.
  *
  * ## O diferencial: o peso é uma balança só
  *
- * No original, bolo é defesa pura. Você engorda a princesa que está na sua
- * masmorra para que o inimigo não consiga carregá-la de volta. Quem tem mais
- * bolo tem mais defesa, e o cálculo acaba aí.
+ * No Fat Princess, bolo é defesa pura: você engorda o refém que está na sua
+ * masmorra para o inimigo não conseguir carregá-lo de volta, e o cálculo acaba
+ * aí.
  *
- * Aqui o peso do reino é **conservado**. As duas princesas dividem uma balança:
- * a soma dos dois pesos é sempre `PESO_TOTAL`. Cada fatia que você dá à refém
- * na sua masmorra tira exatamente o mesmo peso da sua princesa, presa lá do
- * outro lado.
+ * Aqui o peso do reino é **conservado**. Os dois baús dividem uma balança: a
+ * soma dos dois pesos é sempre `PESO_TOTAL`. Cada bolsa de moedas que você
+ * entulha no baú refém do seu cofre tira exatamente aquele peso do **seu** baú,
+ * trancado lá do outro lado. O ouro do mundo é finito: enterrá-lo no baú do
+ * inimigo enriquece o baú e empobrece o reino dele.
  *
- * Isso troca a conta inteira. Alimentar deixa de ser só defender:
+ * Isso troca a conta inteira. Entulhar deixa de ser só defender:
  *
- * - a refém na sua masmorra fica **mais pesada** — o inimigo precisa de mais
- *   gente para carregá-la, e anda mais devagar quando consegue;
- * - a **sua** princesa, do outro lado do mapa, fica mais leve na mesma hora —
- *   o seu resgate fica mais barato.
+ * - o baú refém no seu cofre fica **mais pesado** — o inimigo precisa de mais
+ *   gente para carregá-lo, e anda mais devagar quando consegue;
+ * - o **seu** baú, do outro lado do mapa, fica mais leve na mesma hora — o seu
+ *   resgate fica mais barato.
  *
- * Um bolo é ataque e defesa no mesmo gesto, e o inimigo está fazendo a mesma
+ * Uma bolsa é ataque e defesa no mesmo gesto, e o inimigo está fazendo a mesma
  * coisa na direção contrária. A balança vira um cabo de guerra que corre a
- * partida inteira, visível numa barra só no alto da tela, e cada fatia entregue
- * é território ganho nos dois sentidos.
+ * partida inteira, visível numa barra só no alto da tela, e cada depósito é
+ * território ganho nos dois sentidos.
  *
- * A consequência tática que fecha o desenho: bolo não nasce do chão. Sai de
- * carne, e carne sai de bicho que alguém teve de caçar no meio do mapa — e quem
- * está caçando é um a menos segurando a ponte. O custo do domínio da balança é
- * medido em gente.
+ * A consequência tática que fecha o desenho: moeda não nasce do chão. Sai de
+ * **minério**, e minério sai de mula de carga que alguém teve de derrubar no
+ * meio do mapa — e quem está saqueando é um a menos segurando a ponte. O custo
+ * do domínio da balança é medido em gente.
  *
  * ## O segundo diferencial: chapéu cai, e chapéu se rouba
  *
@@ -49,7 +50,7 @@
  *
  * Balanceamento é o trabalho que nunca acaba. Se os números moram no meio da
  * lógica, mexer em um deles vira arqueologia, e ninguém consegue responder
- * "quanto vale um bolo?" sem ler o tick inteiro. Aqui a resposta é uma linha.
+ * "quanto vale uma bolsa?" sem ler o tick inteiro. Aqui a resposta é uma linha.
  */
 
 /** Lado do tile, em unidades de mundo (que são pixels de arte). */
@@ -95,8 +96,8 @@ export const ESPERA_POR_JOGADORES = 12;
 // --- a balança -------------------------------------------------------------
 
 /**
- * O peso do reino, dividido entre as duas princesas. É esta soma que não muda:
- * alimentar move peso de um prato para o outro, nunca cria peso novo.
+ * O peso do reino, dividido entre os dois baús. É esta soma que não muda:
+ * entulhar move peso de um prato para o outro, nunca cria peso novo.
  */
 export const PESO_TOTAL = 200;
 
@@ -104,23 +105,23 @@ export const PESO_TOTAL = 200;
 export const PESO_MINIMO = 40;
 export const PESO_MAXIMO = PESO_TOTAL - PESO_MINIMO;
 
-/** Quanto uma fatia move na balança. */
-export const PESO_POR_BOLO = 12;
+/** Quanto um depósito move na balança. */
+export const PESO_POR_BOLSA = 12;
 
-/** Carne que a cozinha consome para assar um bolo. */
-export const CARNE_POR_BOLO = 2;
+/** Minério que a Casa da Moeda consome para assar uma bolsa. */
+export const MINERIO_POR_BOLSA = 2;
 
 /** Segundos de forno depois que o trigo entrou. */
-export const TEMPO_DE_FORNO = 6;
+export const TEMPO_DE_CUNHAGEM = 6;
 
-/** Bolos parados no chão da cozinha, no máximo. Estoque não é banco. */
-export const BOLOS_NA_COZINHA = 3;
+/** Bolsas parados no chão da Casa da Moeda, no máximo. Estoque não é banco. */
+export const BOLSAS_NA_CASA = 3;
 
-/** Cura de comer o bolo em vez de entregá-lo. A escolha é o ponto. */
-export const CURA_DO_BOLO = 45;
+/** Cura de comer a bolsa em vez de entregá-lo. A escolha é o ponto. */
+export const CURA_DA_BOLSA = 45;
 
 /**
- * Quantos carregadores a princesa exige, por faixa de peso.
+ * Quantos carregadores o baú exige, por faixa de peso.
  *
  * O degrau é grosso de propósito: o jogador precisa saber, olhando a barra, se
  * o resgate é solo ou se vai precisar de escolta — um número contínuo não se lê
@@ -132,7 +133,7 @@ export function carregadoresPara(peso: number): number {
   return 3;
 }
 
-/** Fração da velocidade normal de quem carrega a princesa. */
+/** Fração da velocidade normal de quem carrega o baú. */
 export function velocidadeCarregando(peso: number): number {
   const t = (peso - PESO_MINIMO) / (PESO_MAXIMO - PESO_MINIMO);
   return 0.85 - 0.45 * Math.max(0, Math.min(1, t));
@@ -174,7 +175,7 @@ export const JAZIDA_VOLTA_EM = 14;
 
 // --- a caça ----------------------------------------------------------------
 
-/** Vida de um bicho. O caçador derruba em três golpes; um guerreiro, em oito. */
+/** Vida de um bicho. O saqueador derruba em três golpes; um guerreiro, em oito. */
 export const ANIMAL_VIDA = 58;
 
 /** Velocidade pastando e velocidade em pânico. */
@@ -208,17 +209,17 @@ export const CUSTO_DO_NIVEL: readonly { madeira: number; ouro: number }[] = [
 
 export const NIVEL_MAXIMO = 3;
 
-/** Distância máxima entre carregadores para a princesa andar. */
+/** Distância máxima entre carregadores para o baú andar. */
 export const ALCANCE_DE_AJUDA = 110;
 
-/** Segundos que a princesa espera no chão antes de voltar para a masmorra. */
-export const PRINCESA_VOLTA_EM = 20;
+/** Segundos que o baú espera no chão antes de voltar para o cofre. */
+export const BAU_VOLTA_EM = 20;
 
 /** Segundos que um chapéu fica no chão antes de voltar para a chapelaria. */
 export const CHAPEU_VOLTA_EM = 25;
 
-/** Empurrão que a princesa dá ao ser alimentada — ela está de mau humor. */
-export const EMPURRAO_DA_PRINCESA = 220;
+/** Empurrão que o baú dá ao ser alimentada — ela está de mau humor. */
+export const EMPURRAO_DO_BAU = 220;
 
 // --- rede ------------------------------------------------------------------
 

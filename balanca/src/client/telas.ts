@@ -131,13 +131,13 @@ export interface EstadoDoServidor {
 
 /** Conselhos que giram na tela de espera. */
 const CONSELHOS: readonly string[] = [
-  'Cada fatia que você dá à refém alivia a sua princesa do outro lado do mapa. O peso do reino não muda: muda de prato.',
-  'Princesa acima de 120 exige três carregadores. Sem escolta, o cortejo não sai do lugar.',
-  'Carne só vem de bicho abatido. Caçador derruba uma ovelha em três golpes; um guerreiro leva o dobro do tempo.',
+  'Cada bolsa que você entulha no baú refém alivia o seu baú do outro lado do mapa. O ouro do mundo não muda: muda de cofre.',
+  'Baú acima de 120 exige três carregadores. Sem escolta, o cortejo não sai do lugar.',
+  'Minério só vem de mula derrubada. O saqueador derruba uma em três golpes; um guerreiro leva o dobro do tempo.',
   'Madeira e ouro sobem a obra da chapelaria, e a obra dá vida e dano a todo o time — inclusive a quem nunca minerou.',
   'Chapéu cai no chão quando o dono morre. Se você matar o arqueiro deles, o arco pode voltar para casa na sua cabeça.',
-  'O bolo longe da masmorra é comida: cura quarenta e cinco.',
-  'Empate no tempo? Ganha o reino cuja princesa está mais leve. A balança é o desempate.',
+  'Longe do cofre, a bolsa vira o que todo dinheiro é: você gasta consigo e cura quarenta e cinco.',
+  'Empate no tempo? Ganha o reino cujo baú está mais leve. A balança é o desempate.',
   'Trabalhar na jazida cancela se você andar. Ofício é o momento em que se está indefeso.',
   'No aquecimento a chapelaria já está aberta. É para isso que ele existe.',
 ];
@@ -802,7 +802,7 @@ export class Telas {
       {
         chave: 'registro',
         rotulo: 'Registro de eventos',
-        explica: 'quem caiu, quem deu fatia',
+        explica: 'quem caiu, quem entulhou o baú',
         opcoes: [
           { valor: true, texto: 'mostrar' },
           { valor: false, texto: 'esconder' },

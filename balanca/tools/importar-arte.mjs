@@ -57,7 +57,7 @@ const AVATARES = {
   clerigo: 'Avatars_16',
   minerador: 'Avatars_14',
   lenhador: 'Avatars_24',
-  cacador: 'Avatars_20',
+  saqueador: 'Avatars_20',
   aldeao: 'Avatars_25',
 };
 void AVATARES;
@@ -79,7 +79,7 @@ const FERRAMENTAS = [
 const CARGAS = [
   ['Wood', 'madeira'],
   ['Gold', 'ouro'],
-  ['Meat', 'carne'],
+  ['Meat', 'minerio'],
 ];
 
 const mapa = [];
@@ -139,7 +139,7 @@ mapa.push(
   [`${r}/Meat/Sheep/Sheep_Idle.png`, 'recursos/ovelha_parada.png'],
   [`${r}/Meat/Sheep/Sheep_Move.png`, 'recursos/ovelha_andando.png'],
   [`${r}/Meat/Sheep/Sheep_Grass.png`, 'recursos/ovelha_pastando.png'],
-  [`${r}/Meat/Meat Resource/Meat Resource.png`, 'recursos/carne.png'],
+  [`${r}/Meat/Meat Resource/Meat Resource.png`, 'recursos/minerio.png'],
   [`${r}/Wood/Wood Resource/Wood Resource.png`, 'recursos/madeira.png'],
   [`${r}/Gold/Gold Resource/Gold_Resource.png`, 'recursos/ouro.png'],
   [`${r}/Gold/Gold Stones/Gold Stone 3.png`, 'recursos/jazida_ouro.png'],

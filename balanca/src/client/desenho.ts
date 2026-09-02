@@ -7,7 +7,7 @@ import { quadro, quadroDaVez, quadroEm, type Animacao, type Arte } from './arte'
 import { TILE, chaoPara, encostaNaAgua, mascaraDe } from './tileset';
 
 /**
- * O mundo desenhado — água, chão, castelos, gente, bicho e princesa.
+ * O mundo desenhado — água, chão, castelos, gente, rebanho e baú.
  *
  * ## O gesto é a legenda
  *
@@ -19,10 +19,11 @@ import { TILE, chaoPara, encostaNaAgua, mascaraDe } from './tileset';
  *
  * ## O peso se vê antes de se ler
  *
- * A princesa é desenhada **do tamanho do peso dela**. A barra no alto da tela
- * diz o número, mas quem está correndo para resgatar não lê número: vê que a
- * moça na masmorra inimiga está do tamanho de uma casa e entende, sem legenda,
- * que vai precisar de ajuda.
+ * O baú é desenhado **do tamanho do peso dele**, e a tampa abre conforme
+ * enche. A barra no alto da tela diz o número, mas quem está correndo para
+ * resgatar não lê número: vê que o refém no cofre inimigo está do tamanho de
+ * uma casa, transbordando moeda, e entende sem legenda que vai precisar de
+ * ajuda.
  *
  * ## Ordem por pé, e não por camada
  *
@@ -81,17 +82,17 @@ export interface OlharLocal {
 export const COR_DA_VAGA: readonly string[] = ['#ffd479', '#7ee081', '#7ec8ff', '#ff9ad5'];
 
 const SPRITE_DA_ESTRUTURA: Record<Estrutura['tipo'], string> = {
-  trono: 'Castle',
-  jaula: 'Tower',
-  cozinha: 'Monastery',
+  tesouraria: 'Castle',
+  cofre: 'Tower',
+  casaDaMoeda: 'Monastery',
   chapelaria: 'Barracks',
   nascedouro: 'House1',
 };
 
 const NOME_DA_ESTRUTURA: Record<Estrutura['tipo'], string> = {
-  trono: 'Trono',
-  jaula: 'Masmorra',
-  cozinha: 'Cozinha',
+  tesouraria: 'Tesouraria',
+  cofre: 'Cofre',
+  casaDaMoeda: 'Casa da Moeda',
   chapelaria: 'Chapelaria',
   nascedouro: 'Quartel',
 };
@@ -399,10 +400,10 @@ export function desenharMundo(
           Math.round(py - alto) - 6 * escala,
           escala,
         );
-        if (e.tipo === 'cozinha' && estado) {
-          const forno = estado.cozinhas.find((c) => c.time === e.time);
-          if (forno && forno.assando > 0) {
-            // Chaminé apagada é a forma mais barata de dizer "esta cozinha está
+        if (e.tipo === 'casaDaMoeda' && estado) {
+          const forno = estado.casasDaMoeda.find((c) => c.time === e.time);
+          if (forno && forno.cunhando > 0) {
+            // Chaminé apagada é a forma mais barata de dizer "esta Casa da Moeda está
             // parada" — mais barata que texto, e legível de longe.
             quadro(
               ctx,
@@ -414,9 +415,9 @@ export function desenharMundo(
             );
             quadro(ctx, arte.fogo, quadroEm(arte.fogo, tempo), v.paraTelaX(e.x), py, escala * 0.8);
           }
-          if (forno && forno.bolos > 0) {
-            for (let i = 0; i < forno.bolos; i++) {
-              desenharBolo(
+          if (forno && forno.bolsas > 0) {
+            for (let i = 0; i < forno.bolsas; i++) {
+              desenharBolsa(
                 ctx,
                 v.paraTelaX(e.x) - 26 * escala + i * 24 * escala,
                 py - 4 * escala,
@@ -455,8 +456,8 @@ export function desenharMundo(
       y: item.y,
       pintar: () => {
         const pulo = Math.sin(tempo * 3 + item.id) * 3 * escala;
-        if (item.tipo === 'bolo') {
-          desenharBolo(ctx, px, py + pulo, escala);
+        if (item.tipo === 'bolsa') {
+          desenharBolsa(ctx, px, py + pulo, escala);
           return;
         }
         if (item.tipo === 'chapeu') {
@@ -496,26 +497,23 @@ export function desenharMundo(
     });
   }
 
-  // --- princesas ----------------------------------------------------------
-  for (const p of estado.princesas) {
-    if (p.onde === 'salva') continue;
-    const carregada = p.onde === 'carregada';
-    const portador = carregada ? estado.unidades.find((u) => u.id === p.portador) : undefined;
+  // --- baús ----------------------------------------------------------
+  for (const p of estado.baus) {
+    if (p.onde === 'resgatado') continue;
+    const carregado = p.onde === 'carregado';
+    const portador = carregado ? estado.unidades.find((u) => u.id === p.portador) : undefined;
     const base = portador ? olhar.posicaoDe(portador, agora) : { x: p.x, y: p.y };
     const px = v.paraTelaX(base.x);
-    // Presa, ela fica **na base** da torre, e não no centro dela: a masmorra é
-    // um sprite alto, e desenhar a princesa no ponto da estrutura a deixaria
+    // Presa, ela fica **na base** da torre, e não no centro dela: o cofre é
+    // um sprite alto, e desenhar o baú no ponto da estrutura a deixaria
     // flutuando na altura da janela. Carregada, sobe um pouco — está no colo.
-    const py = v.paraTelaY(base.y) + (carregada ? -22 * escala : TILE * escala * 0.6);
+    const py = v.paraTelaY(base.y) + (carregado ? -22 * escala : TILE * escala * 0.6);
     // O tamanho **é** o peso: de 0,9 a 1,9 do peão comum, do talo ao talo.
     const gordura = 0.9 + ((p.peso - PESO_MINIMO) / (PESO_MAXIMO - PESO_MINIMO)) * 1;
-    const anim = arte.princesa[p.time];
+    const cheio = (p.peso - PESO_MINIMO) / (PESO_MAXIMO - PESO_MINIMO);
     pinturas.push({
-      y: base.y + (carregada ? 1 : TILE * 0.6),
-      pintar: () => {
-        quadro(ctx, anim, quadroEm(anim, tempo, p.time === 'azul' ? 0 : 3), px, py, escala * gordura);
-        coroa(ctx, px, py - TILE * escala * gordura * 0.92, escala * gordura, p.time);
-      },
+      y: base.y + (carregado ? 1 : TILE * 0.6),
+      pintar: () => desenharBau(ctx, px, py, escala * gordura, p.time, cheio, tempo),
     });
   }
 
@@ -645,7 +643,7 @@ export function folhaDaUnidade(
   }
 
   const carga = u.carga;
-  if (carga === 'madeira' || carga === 'ouro' || carga === 'carne') {
+  if (carga === 'madeira' || carga === 'ouro' || carga === 'minerio') {
     const anim = pega(`carregando_${carga}_${andando ? 'correndo' : 'parado'}`);
     if (anim) return { anim, indice: quadroEm(anim, performance.now() / 1000, u.id * 3), espelhar };
   }
@@ -828,24 +826,153 @@ function desenharPonte(ctx: CanvasRenderingContext2D, x: number, y: number, lado
   }
 }
 
-/** O bolo é desenhado à mão: o pacote não tem um, e a fatia é o coração do jogo. */
-function desenharBolo(ctx: CanvasRenderingContext2D, x: number, y: number, escala: number): void {
-  const l = 20 * escala;
-  const a = 14 * escala;
+/**
+ * A bolsa de moedas, desenhada à mão: o pacote não tem uma, e o depósito é o
+ * coração do jogo.
+ */
+function desenharBolsa(ctx: CanvasRenderingContext2D, x: number, y: number, escala: number): void {
+  const l = 18 * escala;
+  const a = 15 * escala;
   ctx.save();
   ctx.translate(x, y);
   ctx.fillStyle = 'rgba(0,0,0,0.28)';
   ctx.beginPath();
   ctx.ellipse(0, 2 * escala, l * 0.6, 4 * escala, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = '#e8c98f';
-  ctx.fillRect(-l / 2, -a, l, a);
-  ctx.fillStyle = '#f6a5c0';
-  ctx.fillRect(-l / 2, -a - 5 * escala, l, 6 * escala);
-  ctx.fillStyle = '#c0392b';
+
+  // O saco: uma barriga larga que estreita no pescoço, que é o que faz uma
+  // bolsa de moedas ser reconhecida de longe sem nenhum detalhe dentro.
+  ctx.fillStyle = '#8a5a34';
   ctx.beginPath();
-  ctx.arc(0, -a - 8 * escala, 3 * escala, 0, Math.PI * 2);
+  ctx.moveTo(-l * 0.2, -a);
+  ctx.quadraticCurveTo(-l * 0.62, -a * 0.55, -l * 0.5, -a * 0.2);
+  ctx.quadraticCurveTo(-l * 0.42, 0, 0, 0);
+  ctx.quadraticCurveTo(l * 0.42, 0, l * 0.5, -a * 0.2);
+  ctx.quadraticCurveTo(l * 0.62, -a * 0.55, l * 0.2, -a);
+  ctx.closePath();
   ctx.fill();
+
+  // O cordão dourado no pescoço, e a moeda espiando por cima: é o cordão que
+  // diz que está cheia, e a moeda que diz do que.
+  ctx.fillStyle = '#c9a227';
+  ctx.fillRect(-l * 0.24, -a - escala, l * 0.48, 3 * escala);
+  ctx.fillStyle = '#f5d76e';
+  ctx.beginPath();
+  ctx.arc(l * 0.16, -a - 2.5 * escala, 3 * escala, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+/**
+ * O baú refém, e o quanto ele está cheio.
+ *
+ * ## Por que ele é desenhado e não é um sprite
+ *
+ * O pacote Tiny Swords não tem baú, e o refém precisa de uma coisa que nenhum
+ * sprite pronto entrega: **mudar de forma com o peso**. Antes daqui, o refém
+ * era o aldeão do time tingido de rosa e esticado — funcionava, mas dizia a
+ * coisa errada no tema novo, e a única pista do peso era o tamanho.
+ *
+ * Desenhado, o peso aparece em três lugares ao mesmo tempo: o tamanho (que vem
+ * de fora, na escala), a **tampa que abre** conforme enche, e as moedas que
+ * transbordam pela fresta. De longe se lê o volume; de perto se lê quanto falta
+ * para o talo — que é a pergunta que a barra do alto responde em número.
+ *
+ * ## Ele é vivo
+ *
+ * A tampa respira e as moedas balançam com o relógio. Um baú parado no chão da
+ * cofre some no cenário; um que se mexe é o refém que o jogo promete.
+ *
+ * @param cheio de 0 a 1, o peso normalizado entre os dois talos da balança.
+ */
+function desenharBau(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  escala: number,
+  time: Time,
+  cheio: number,
+  tempo: number,
+): void {
+  const l = 34 * escala;
+  const a = 22 * escala;
+  const respiro = Math.sin(tempo * 2.2 + (time === 'azul' ? 0 : 1.7)) * escala;
+  // A tampa abre com o peso: quase fechada no talo de baixo, escancarada no de
+  // cima. É a leitura de longe — não dá para contar moeda a essa distância, mas
+  // dá para ver se a tampa fecha.
+  const abertura = (5 + cheio * 17) * escala + respiro;
+  const cor = time === 'azul' ? '#2f6fd0' : '#cf3b2f';
+
+  ctx.save();
+  ctx.translate(x, y);
+
+  ctx.fillStyle = 'rgba(0,0,0,0.32)';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, l * 0.52, 5 * escala, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // As perninhas, fora de passo uma com a outra — é o que faz dele um baú
+  // **vivo** e não um móvel.
+  ctx.fillStyle = '#2c1f13';
+  for (const lado of [-1, 1]) {
+    const passo = Math.sin(tempo * 2.2 + lado) * 1.5 * escala;
+    ctx.fillRect(lado * l * 0.26 - 2 * escala, -3 * escala + passo, 4 * escala, 5 * escala);
+  }
+
+  // O corpo. As cintas são de **ferro**, e não de ouro: douradas, elas somem
+  // dentro do ouro que transborda e o baú vira um bloco amarelo.
+  ctx.fillStyle = '#7a4f2a';
+  ctx.fillRect(-l / 2, -a, l, a - 2 * escala);
+  ctx.fillStyle = '#5d3a1d';
+  ctx.fillRect(-l / 2, -a * 0.44, l, 3 * escala);
+  ctx.fillStyle = '#4a4f57';
+  for (const lado of [-1, 1]) {
+    ctx.fillRect(lado * l * 0.34 - 1.5 * escala, -a, 3 * escala, a - 2 * escala);
+  }
+  ctx.strokeStyle = '#3a2717';
+  ctx.lineWidth = Math.max(1, escala);
+  ctx.strokeRect(-l / 2, -a, l, a - 2 * escala);
+
+  // O ouro pela fresta: um monte de moedas empilhadas, e não um retângulo
+  // amarelo. O retângulo era barato e lia como "tampa amarela"; são as bordas
+  // redondas encavaladas que dizem *moeda* em dezoito pixels.
+  const monte = Math.max(1, Math.round(2 + cheio * 5));
+  for (let i = 0; i < monte; i++) {
+    const t = monte === 1 ? 0.5 : i / (monte - 1);
+    const fase = tempo * 2.6 + i * 1.7;
+    ctx.fillStyle = i % 2 === 0 ? '#ffe89a' : '#dcae25';
+    ctx.beginPath();
+    ctx.arc(
+      (t - 0.5) * l * 0.72,
+      -a - abertura * 0.34 + Math.sin(fase) * escala * 0.8 + Math.abs(t - 0.5) * 6 * escala,
+      3 * escala,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
+  }
+
+  // A tampa, erguida acima do ouro, com a faixa do reino de quem ele é: sem
+  // ela, dois baús no mesmo pedaço de tela viram o mesmo baú.
+  ctx.save();
+  ctx.translate(0, -a - abertura);
+  ctx.fillStyle = '#8a5a34';
+  ctx.strokeStyle = '#3a2717';
+  ctx.beginPath();
+  ctx.moveTo(-l / 2, 7 * escala);
+  ctx.quadraticCurveTo(0, -7 * escala, l / 2, 7 * escala);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = cor;
+  ctx.fillRect(-l * 0.12, -2 * escala, l * 0.24, 6 * escala);
+  ctx.restore();
+
+  // A fechadura, que é o rosto dele.
+  ctx.fillStyle = '#f2e6c9';
+  ctx.fillRect(-2.5 * escala, -a * 0.62, 5 * escala, 6 * escala);
+  ctx.fillStyle = '#3f2d1c';
+  ctx.fillRect(-escala, -a * 0.55, 2 * escala, 3 * escala);
   ctx.restore();
 }
 
@@ -857,7 +984,7 @@ const TINTA_DA_CLASSE: Readonly<Record<Classe, string>> = {
   clerigo: '#ecf0f1',
   minerador: '#7f8c8d',
   lenhador: '#8a5a2b',
-  cacador: '#6b8e23',
+  saqueador: '#6b8e23',
 };
 
 /** O chapéu no chão. Também é à mão: no pacote a classe é a unidade inteira. */
@@ -880,7 +1007,7 @@ function desenharChapeu(
     ctx.lineTo(0, -16 * escala);
     ctx.lineTo(9 * escala, 2 * escala);
     ctx.closePath();
-  } else if (classe === 'arqueiro' || classe === 'cacador') {
+  } else if (classe === 'arqueiro' || classe === 'saqueador') {
     ctx.moveTo(-10 * escala, 2 * escala);
     ctx.lineTo(10 * escala, 2 * escala);
     ctx.lineTo(4 * escala, -9 * escala);
@@ -903,31 +1030,6 @@ function desenharChapeu(
   ctx.restore();
 }
 
-function coroa(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  escala: number,
-  time: Time,
-): void {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.fillStyle = '#f5c542';
-  ctx.strokeStyle = time === 'azul' ? '#2f6fd0' : '#cf3b2f';
-  ctx.lineWidth = Math.max(1, 2 * escala);
-  ctx.beginPath();
-  ctx.moveTo(-10 * escala, 4 * escala);
-  ctx.lineTo(-10 * escala, -6 * escala);
-  ctx.lineTo(-4 * escala, 0);
-  ctx.lineTo(0, -8 * escala);
-  ctx.lineTo(4 * escala, 0);
-  ctx.lineTo(10 * escala, -6 * escala);
-  ctx.lineTo(10 * escala, 4 * escala);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-  ctx.restore();
-}
 
 /** Anel que marca o alvo do botão de contexto. */
 export function realce(

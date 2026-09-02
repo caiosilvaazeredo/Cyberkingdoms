@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { princesaDe, type Unidade } from '../src/shared/estado';
+import { bauDe, type Unidade } from '../src/shared/estado';
 import { criarPartida } from '../src/shared/partida';
 import {
   AQUECIMENTO,
   PESO_MAXIMO,
   PESO_MINIMO,
-  PESO_POR_BOLO,
+  PESO_POR_BOLSA,
   PESO_TOTAL,
   TICKS_POR_SEGUNDO,
   carregadoresPara,
@@ -17,7 +17,7 @@ import {
  * O diferencial do jogo, testado onde ele mora.
  *
  * Se houvesse um teste só neste repositório, seria o da conservação: é a
- * propriedade da qual todo o resto do desenho depende. No dia em que alimentar
+ * propriedade da qual todo o resto do desenho depende. No dia em que entulhar
  * criar peso do nada, o jogo deixa de ser este jogo e vira o original.
  */
 
@@ -29,12 +29,12 @@ function partidaEmJogo() {
   return partida;
 }
 
-/** Põe a unidade colada na própria masmorra, com um bolo na mão. */
-function comBoloNaMasmorra(partida: ReturnType<typeof criarPartida>, u: Unidade): void {
-  const jaula = partida.arena.estrutura('jaula', u.time);
-  u.x = jaula.x;
-  u.y = jaula.y;
-  u.carga = 'bolo';
+/** Põe a unidade colada na própria cofre, com uma bolsa na mão. */
+function comBolsaNoCofre(partida: ReturnType<typeof criarPartida>, u: Unidade): void {
+  const cofre = partida.arena.estrutura('cofre', u.time);
+  u.x = cofre.x;
+  u.y = cofre.y;
+  u.carga = 'bolsa';
 }
 
 function apertarUsar(partida: ReturnType<typeof criarPartida>, id: number): void {
@@ -47,26 +47,26 @@ function apertarUsar(partida: ReturnType<typeof criarPartida>, id: number): void
 describe('a balança', () => {
   it('começa em equilíbrio, com o peso do reino repartido', () => {
     const { estado } = criarPartida(1);
-    expect(princesaDe(estado, 'azul').peso).toBe(PESO_TOTAL / 2);
-    expect(princesaDe(estado, 'vermelho').peso).toBe(PESO_TOTAL / 2);
+    expect(bauDe(estado, 'azul').peso).toBe(PESO_TOTAL / 2);
+    expect(bauDe(estado, 'vermelho').peso).toBe(PESO_TOTAL / 2);
   });
 
-  it('uma fatia engorda a refém e alivia a própria princesa, na mesma medida', () => {
+  it('uma deposito engorda a refém e alivia o próprio baú, na mesma medida', () => {
     const partida = partidaEmJogo();
     const u = partida.entrar({ nome: 'Cozinheiro', bot: false, time: 'azul' });
-    comBoloNaMasmorra(partida, u);
+    comBolsaNoCofre(partida, u);
     apertarUsar(partida, u.id);
 
-    const refem = princesaDe(partida.estado, 'vermelho');
-    const minha = princesaDe(partida.estado, 'azul');
-    expect(refem.peso).toBe(PESO_TOTAL / 2 + PESO_POR_BOLO);
-    expect(minha.peso).toBe(PESO_TOTAL / 2 - PESO_POR_BOLO);
+    const refem = bauDe(partida.estado, 'vermelho');
+    const minha = bauDe(partida.estado, 'azul');
+    expect(refem.peso).toBe(PESO_TOTAL / 2 + PESO_POR_BOLSA);
+    expect(minha.peso).toBe(PESO_TOTAL / 2 - PESO_POR_BOLSA);
     expect(refem.peso + minha.peso).toBe(PESO_TOTAL);
     expect(u.carga).toBe('nada');
-    expect(u.fatias).toBe(1);
+    expect(u.depositos).toBe(1);
   });
 
-  it('o peso total do reino não muda, por mais fatias que se dê', () => {
+  it('o peso total do reino não muda, por mais depositos que se dê', () => {
     const partida = partidaEmJogo();
     const azul = partida.entrar({ nome: 'A', bot: false, time: 'azul' });
     const vermelho = partida.entrar({ nome: 'V', bot: false, time: 'vermelho' });
@@ -74,14 +74,14 @@ describe('a balança', () => {
     for (let rodada = 0; rodada < 30; rodada++) {
       // Os dois times alimentam, em proporções diferentes: o azul três vezes
       // mais que o vermelho, para a balança de fato encostar num dos limites.
-      comBoloNaMasmorra(partida, azul);
+      comBolsaNoCofre(partida, azul);
       apertarUsar(partida, azul.id);
       if (rodada % 3 === 0) {
-        comBoloNaMasmorra(partida, vermelho);
+        comBolsaNoCofre(partida, vermelho);
         apertarUsar(partida, vermelho.id);
       }
       const soma =
-        princesaDe(partida.estado, 'azul').peso + princesaDe(partida.estado, 'vermelho').peso;
+        bauDe(partida.estado, 'azul').peso + bauDe(partida.estado, 'vermelho').peso;
       expect(soma).toBe(PESO_TOTAL);
     }
   });
@@ -90,23 +90,23 @@ describe('a balança', () => {
     const partida = partidaEmJogo();
     const u = partida.entrar({ nome: 'A', bot: false, time: 'azul' });
     for (let i = 0; i < 40; i++) {
-      comBoloNaMasmorra(partida, u);
+      comBolsaNoCofre(partida, u);
       apertarUsar(partida, u.id);
     }
-    expect(princesaDe(partida.estado, 'vermelho').peso).toBe(PESO_MAXIMO);
-    expect(princesaDe(partida.estado, 'azul').peso).toBe(PESO_MINIMO);
+    expect(bauDe(partida.estado, 'vermelho').peso).toBe(PESO_MAXIMO);
+    expect(bauDe(partida.estado, 'azul').peso).toBe(PESO_MINIMO);
   });
 
-  it('no talo, o bolo não é consumido — a fatia não teria efeito', () => {
+  it('no talo, o bolsa não é consumido — a deposito não teria efeito', () => {
     const partida = partidaEmJogo();
     const u = partida.entrar({ nome: 'A', bot: false, time: 'azul' });
     for (let i = 0; i < 40; i++) {
-      comBoloNaMasmorra(partida, u);
+      comBolsaNoCofre(partida, u);
       apertarUsar(partida, u.id);
     }
-    comBoloNaMasmorra(partida, u);
+    comBolsaNoCofre(partida, u);
     apertarUsar(partida, u.id);
-    expect(u.carga).toBe('bolo');
+    expect(u.carga).toBe('bolsa');
   });
 
   it('pesar mais custa carregadores e velocidade', () => {
@@ -117,16 +117,16 @@ describe('a balança', () => {
     expect(velocidadeCarregando(PESO_MAXIMO)).toBeGreaterThan(0);
   });
 
-  it('alimentar a refém do inimigo não é possível: a masmorra é a sua', () => {
+  it('entulhar a refém do inimigo não é possível: o cofre é a sua', () => {
     const partida = partidaEmJogo();
     const u = partida.entrar({ nome: 'A', bot: false, time: 'azul' });
-    // Colado na masmorra **vermelha**, onde dorme a princesa azul.
-    const jaulaInimiga = partida.arena.estrutura('jaula', 'vermelho');
-    u.x = jaulaInimiga.x;
-    u.y = jaulaInimiga.y;
-    u.carga = 'bolo';
+    // Colado no cofre **vermelha**, onde dorme o baú azul.
+    const cofreInimigo = partida.arena.estrutura('cofre', 'vermelho');
+    u.x = cofreInimigo.x;
+    u.y = cofreInimigo.y;
+    u.carga = 'bolsa';
     u.vida = 1000;
     apertarUsar(partida, u.id);
-    expect(princesaDe(partida.estado, 'azul').peso).toBe(PESO_TOTAL / 2);
+    expect(bauDe(partida.estado, 'azul').peso).toBe(PESO_TOTAL / 2);
   });
 });

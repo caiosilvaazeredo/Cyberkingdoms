@@ -18,16 +18,16 @@ import { MAPA_PADRAO, type IdDoMapa } from './mapas';
 import { MODO_PADRAO, modoDe, type IdDoModo } from './modos';
 import {
   CARGA_DO_OFICIO,
-  cozinhaDe,
+  casaDaMoedaDe,
   nivelDe,
   oficinaDe,
-  princesaDe,
+  bauDe,
   unidade,
   type Animal,
   type Carga,
   type Estado,
   type Item,
-  type Princesa,
+  type Bau,
   type Unidade,
 } from './estado';
 import type { Comando } from './protocolo';
@@ -43,24 +43,24 @@ import {
   ANIMAL_VIDA,
   ANIMAL_VOLTA_EM,
   AQUECIMENTO,
-  BOLOS_NA_COZINHA,
-  CARNE_POR_BOLO,
+  BOLSAS_NA_CASA,
+  MINERIO_POR_BOLSA,
   CHAPEU_VOLTA_EM,
-  CURA_DO_BOLO,
+  CURA_DA_BOLSA,
   CUSTO_DO_NIVEL,
   DT,
-  EMPURRAO_DA_PRINCESA,
+  EMPURRAO_DO_BAU,
   JAZIDA_VOLTA_EM,
   NIVEL_MAXIMO,
   PAUSA_APOS_PONTO,
   PESO_MAXIMO,
   PESO_MINIMO,
-  PESO_POR_BOLO,
+  PESO_POR_BOLSA,
   PESO_TOTAL,
-  PRINCESA_VOLTA_EM,
+  BAU_VOLTA_EM,
   RAIO_UNIDADE,
   RENASCIMENTO_POR_PONTO,
-  TEMPO_DE_FORNO,
+  TEMPO_DE_CUNHAGEM,
   TEMPO_DE_TRABALHO,
   TILE,
   TIMES,
@@ -77,7 +77,7 @@ import {
  *
  * O cliente **prevê** o próprio movimento chamando `moverUnidade` — a mesma
  * função que o servidor chama — e corrige quando o retrato chega. Todo o resto
- * (dano, quem pegou a princesa, quem entregou a fatia) só existe depois que o
+ * (dano, quem pegou o baú, quem entregou o depósito) só existe depois que o
  * servidor disse que existe. Essa assimetria é deliberada: prever movimento
  * esconde a latência do que o jogador sente na mão, e prever dano só produz
  * mortes que voltam à vida.
@@ -93,7 +93,7 @@ import {
  *
  * Comandos, depois movimento, depois combate, depois carregamento, depois
  * economia, depois vitória. Combate antes de carregamento porque quem morreu
- * neste tick solta a princesa **neste** tick; vitória por último porque um
+ * neste tick solta o baú **neste** tick; vitória por último porque um
  * ponto marcado depende de tudo que aconteceu antes dele.
  */
 
@@ -161,7 +161,7 @@ export function criarPartida(
         colhendoId: null,
         abates: 0,
         mortes: 0,
-        fatias: 0,
+        depositos: 0,
         resgates: 0,
         entregas: 0,
         ultimoComando: 0,
@@ -200,17 +200,17 @@ function estadoInicial(arena: Arena, id: IdDoModo): Estado {
   const estoque = {} as Record<Time, Record<Classe, number>>;
   for (const t of TIMES) estoque[t] = { ...ESTOQUE_INICIAL };
 
-  const princesas: Princesa[] = TIMES.map((time) => {
-    // A princesa de um time começa presa na masmorra do **outro**. É a
+  const baus: Bau[] = TIMES.map((time) => {
+    // O baú de um time começa presa no cofre do **outro**. É a
     // premissa do jogo, e está escrita numa linha só para que não haja dois
     // lugares onde ela possa ser invertida.
-    const jaula = arena.estrutura('jaula', outroTime(time));
+    const cofre = arena.estrutura('cofre', outroTime(time));
     return {
       time,
       peso: PESO_TOTAL / 2,
-      onde: 'jaula',
-      x: jaula.x,
-      y: jaula.y,
+      onde: 'cofre',
+      x: cofre.x,
+      y: cofre.y,
       portador: null,
       voltaEm: 0,
       ajudantes: 0,
@@ -226,7 +226,7 @@ function estadoInicial(arena: Arena, id: IdDoModo): Estado {
     placar: { azul: 0, vermelho: 0 },
     abates: { azul: 0, vermelho: 0 },
     unidades: [],
-    princesas,
+    baus,
     projeteis: [],
     itens: [],
     jazidas: arena.jazidas.map((j) => ({
@@ -247,7 +247,7 @@ function estadoInicial(arena: Arena, id: IdDoModo): Estado {
       pensaEm: 0,
       fugindo: 0,
     })),
-    cozinhas: TIMES.map((time) => ({ time, carne: 0, assando: 0, bolos: 1 })),
+    casasDaMoeda: TIMES.map((time) => ({ time, minerio: 0, cunhando: 0, bolsas: 1 })),
     oficinas: TIMES.map((time) => ({ time, madeira: 0, ouro: 0, nivel: 1 })),
     estoque,
     eventos: [],
@@ -351,8 +351,8 @@ function tick(
   moverProjeteis(arena, estado);
   if (jogando) {
     moverAnimais(arena, estado);
-    cuidarDasPrincesas(arena, estado);
-    cozinhar(estado);
+    cuidarDosBaus(arena, estado);
+    cunhar(estado);
     recomporJazidas(estado);
     envelhecerItens(estado);
     conferirRelogio(estado);
@@ -362,7 +362,7 @@ function tick(
 /**
  * O movimento, e a única parte da simulação que o cliente também roda.
  *
- * Recebe `estado` porque a velocidade de quem carrega a princesa depende do
+ * Recebe `estado` porque a velocidade de quem carrega o baú depende do
  * peso dela e da escolta encostada — e essas duas coisas o cliente já tem no
  * último retrato, então a previsão continua batendo.
  */
@@ -394,9 +394,9 @@ export function moverUnidade(
   }
 
   let velocidade = perfil(u.classe).velocidade;
-  if (u.carga !== 'nada' && u.carga !== 'princesa') velocidade *= 0.95;
-  if (u.carga === 'princesa') {
-    const p = estado.princesas.find((x) => x.portador === u.id);
+  if (u.carga !== 'nada' && u.carga !== 'bau') velocidade *= 0.95;
+  if (u.carga === 'bau') {
+    const p = estado.baus.find((x) => x.portador === u.id);
     if (p) {
       velocidade *= velocidadeCarregando(p.peso);
       // Sem a escolta exigida, o cortejo simplesmente não sai do lugar. Deixar
@@ -443,41 +443,41 @@ function usar(arena: Arena, estado: Estado, u: Unidade): void {
   const meu = u.time;
   const inimigo = outroTime(meu);
 
-  if (u.carga === 'princesa') {
-    const p = estado.princesas.find((x) => x.portador === u.id);
+  if (u.carga === 'bau') {
+    const p = estado.baus.find((x) => x.portador === u.id);
     if (!p) {
       u.carga = 'nada';
       return;
     }
-    if (estruturaPerto(arena, u, 'trono', meu, ALCANCE_DE_COLETA)) {
+    if (estruturaPerto(arena, u, 'tesouraria', meu, ALCANCE_DE_COLETA)) {
       marcarPonto(estado, u, p);
     } else {
-      largarPrincesa(estado, p);
+      largarBau(estado, p);
       u.carga = 'nada';
     }
     return;
   }
 
-  if (u.carga === 'bolo') {
-    // Alimentar a refém da **sua** masmorra é o gesto central do jogo: move a
+  if (u.carga === 'bolsa') {
+    // Entulhar a refém da **sua** cofre é o gesto central do jogo: move a
     // balança nos dois sentidos de uma vez.
-    const refem = princesaDe(estado, inimigo);
-    if (refem.onde === 'jaula' && estruturaPerto(arena, u, 'jaula', meu, ALCANCE_DE_COLETA)) {
-      alimentar(estado, u, refem);
+    const refem = bauDe(estado, inimigo);
+    if (refem.onde === 'cofre' && estruturaPerto(arena, u, 'cofre', meu, ALCANCE_DE_COLETA)) {
+      entulhar(estado, u, refem);
       return;
     }
-    // Longe da masmorra, o bolo vira o que qualquer bolo é: comida.
+    // Longe do cofre, a bolsa vira o que qualquer bolsa é: comida.
     const maximo = vidaMaxima(u.classe, nivelDe(estado, meu));
     if (u.vida < maximo) {
-      u.vida = Math.min(maximo, u.vida + CURA_DO_BOLO);
+      u.vida = Math.min(maximo, u.vida + CURA_DA_BOLSA);
       u.carga = 'nada';
     }
     return;
   }
 
-  if (u.carga === 'carne') {
-    if (estruturaPerto(arena, u, 'cozinha', meu, ALCANCE_DE_COLETA)) {
-      cozinhaDe(estado, meu).carne++;
+  if (u.carga === 'minerio') {
+    if (estruturaPerto(arena, u, 'casaDaMoeda', meu, ALCANCE_DE_COLETA)) {
+      casaDaMoedaDe(estado, meu).minerio++;
       u.carga = 'nada';
       u.entregas++;
     }
@@ -499,22 +499,22 @@ function usar(arena: Arena, estado: Estado, u: Unidade): void {
     return;
   }
 
-  // A princesa do próprio time, presa lá ou largada no caminho. Ninguém
-  // sequestra a princesa inimiga de novo: o objetivo é trazer a sua.
-  const minha = princesaDe(estado, meu);
+  // O baú do próprio time, presa lá ou largada no caminho. Ninguém
+  // sequestra o baú inimiga de novo: o objetivo é trazer a sua.
+  const minha = bauDe(estado, meu);
   if (
-    (minha.onde === 'jaula' || minha.onde === 'chao') &&
+    (minha.onde === 'cofre' || minha.onde === 'chao') &&
     perto(u, minha, ALCANCE_DE_COLETA)
   ) {
-    pegarPrincesa(estado, u, minha);
+    pegarBau(estado, u, minha);
     return;
   }
 
-  if (estruturaPerto(arena, u, 'cozinha', meu)) {
-    const cozinha = cozinhaDe(estado, meu);
-    if (cozinha.bolos > 0) {
-      cozinha.bolos--;
-      u.carga = 'bolo';
+  if (estruturaPerto(arena, u, 'casaDaMoeda', meu)) {
+    const casaDaMoeda = casaDaMoedaDe(estado, meu);
+    if (casaDaMoeda.bolsas > 0) {
+      casaDaMoeda.bolsas--;
+      u.carga = 'bolsa';
     }
     return;
   }
@@ -720,19 +720,19 @@ function entregarNaObra(estado: Estado, u: Unidade, carga: 'madeira' | 'ouro'): 
   }
 }
 
-function cozinhar(estado: Estado): void {
-  for (const c of estado.cozinhas) {
-    if (c.assando > 0) {
-      c.assando -= DT;
-      if (c.assando <= 0) {
-        c.assando = 0;
-        c.bolos = Math.min(BOLOS_NA_COZINHA, c.bolos + 1);
+function cunhar(estado: Estado): void {
+  for (const c of estado.casasDaMoeda) {
+    if (c.cunhando > 0) {
+      c.cunhando -= DT;
+      if (c.cunhando <= 0) {
+        c.cunhando = 0;
+        c.bolsas = Math.min(BOLSAS_NA_CASA, c.bolsas + 1);
       }
       continue;
     }
-    if (c.carne >= CARNE_POR_BOLO && c.bolos < BOLOS_NA_COZINHA) {
-      c.carne -= CARNE_POR_BOLO;
-      c.assando = TEMPO_DE_FORNO;
+    if (c.minerio >= MINERIO_POR_BOLSA && c.bolsas < BOLSAS_NA_CASA) {
+      c.minerio -= MINERIO_POR_BOLSA;
+      c.cunhando = TEMPO_DE_CUNHAGEM;
     }
   }
 }
@@ -753,13 +753,13 @@ function envelhecerItens(estado: Estado): void {
 /**
  * As ovelhas: pastam, e correm quando apanham.
  *
- * Elas são a única fonte de carne, e carne é a única entrada do bolo — então
+ * Elas são a única fonte de minério, e minério é a única entrada do bolsa — então
  * este pedaço de código, que parece decoração, é o começo da cadeia que move a
- * balança. O caçador as derruba em três golpes; qualquer outro leva o dobro do
+ * balança. O saqueador as derruba em três golpes; qualquer outro leva o dobro do
  * tempo e vira alvo fácil enquanto tenta.
  */
 function moverAnimais(arena: Arena, estado: Estado): void {
-  // Na Fome o pasto não repõe: a carne do mapa é finita, e com ela o bolo e o
+  // Na Veia Seca o pasto não repõe: o minério do mapa é finito, e e com ele a moeda e o
   // teto da balança. O relógio do bicho morto continua correndo à toa em vez de
   // ganhar um `if` só para ele — é um decremento por bicho e por tick, e o
   // caminho de reposição fica com uma condição só, no lugar onde a regra é.
@@ -841,84 +841,84 @@ function ferirAnimal(estado: Estado, algoz: Unidade, a: Animal, dano: number): v
   a.voltaEm = ANIMAL_VOLTA_EM;
   estado.itens.push({
     id: estado.proximoId++,
-    tipo: 'carne',
+    tipo: 'minerio',
     classe: null,
     origem: null,
     x: a.x,
     y: a.y,
     voltaEm: CHAPEU_VOLTA_EM,
   });
-  estado.eventos.push({ tipo: 'caca', unidade: algoz.id });
+  estado.eventos.push({ tipo: 'saque', unidade: algoz.id });
 }
 
 // --- a balança -------------------------------------------------------------
 
 /**
- * A fatia, e a conta que dá nome ao jogo.
+ * O depósito, e a conta que dá nome ao jogo.
  *
- * O que a refém ganha, a princesa do próprio time perde — exatamente, e no
+ * O que a refém ganha, o baú do próprio time perde — exatamente, e no
  * mesmo instante. `delta` é cortado pelas duas pontas antes de qualquer coisa
- * mudar, porque cortar depois quebraria a soma: bastaria uma das princesas
+ * mudar, porque cortar depois quebraria a soma: bastaria uma dos baús
  * bater no limite para o peso total do reino mudar sem que ninguém notasse.
  */
-function alimentar(estado: Estado, u: Unidade, refem: Princesa): void {
-  const minha = princesaDe(estado, u.time);
-  const delta = Math.min(PESO_POR_BOLO, PESO_MAXIMO - refem.peso, minha.peso - PESO_MINIMO);
+function entulhar(estado: Estado, u: Unidade, refem: Bau): void {
+  const minha = bauDe(estado, u.time);
+  const delta = Math.min(PESO_POR_BOLSA, PESO_MAXIMO - refem.peso, minha.peso - PESO_MINIMO);
   if (delta <= 0) return;
 
   refem.peso += delta;
   minha.peso -= delta;
   u.carga = 'nada';
-  u.fatias++;
-  estado.eventos.push({ tipo: 'fatia', unidade: u.id, princesa: refem.time, peso: refem.peso });
+  u.depositos++;
+  estado.eventos.push({ tipo: 'deposito', unidade: u.id, bau: refem.time, peso: refem.peso });
 
-  // No Banquete, a balança no talo acaba a partida. A conferência é aqui, na
+  // No Cofre Cheio, a balança no talo acaba a partida. A conferência é aqui, na
   // única função do jogo que move peso: procurá-la no tick custaria uma volta
   // por quadro para responder a uma pergunta que só muda quando alguém entrega
-  // uma fatia.
+  // um depósito.
   const modo = modoDe(estado.modo);
   if (modo.vitoriaPorBalanca && minha.peso <= modo.pesoQueVence) {
     terminar(estado, u.time);
     return;
   }
 
-  // A princesa não gosta de ser engordada por estranhos, e empurra quem estiver
+  // O baú não gosta de ser engordada por estranhos, e empurra quem estiver
   // colado nela. Serve ao jogo: impede que o time inteiro fique parado dentro
-  // da masmorra em cima da refém enquanto o inimigo tenta o resgate.
+  // do cofre em cima da refém enquanto o inimigo tenta o resgate.
   for (const outro of estado.unidades) {
     if (!outro.vivo || outro.time === u.time) continue;
     const d = Math.hypot(outro.x - refem.x, outro.y - refem.y);
     if (d > ALCANCE_DE_USO || d < 0.001) continue;
-    outro.x += ((outro.x - refem.x) / d) * EMPURRAO_DA_PRINCESA * DT * 4;
-    outro.y += ((outro.y - refem.y) / d) * EMPURRAO_DA_PRINCESA * DT * 4;
+    outro.x += ((outro.x - refem.x) / d) * EMPURRAO_DO_BAU * DT * 4;
+    outro.y += ((outro.y - refem.y) / d) * EMPURRAO_DO_BAU * DT * 4;
   }
 }
 
-// --- princesas -------------------------------------------------------------
+// --- baús -------------------------------------------------------------
 
-function pegarPrincesa(estado: Estado, u: Unidade, p: Princesa): void {
-  p.onde = 'carregada';
+function pegarBau(estado: Estado, u: Unidade, p: Bau): void {
+  p.onde = 'carregado';
   p.portador = u.id;
   p.voltaEm = 0;
-  u.carga = 'princesa';
+  u.carga = 'bau';
   u.colhendoId = null;
-  estado.eventos.push({ tipo: 'pegouPrincesa', unidade: u.id, princesa: p.time });
+  estado.eventos.push({ tipo: 'pegouBau', unidade: u.id, bau: p.time });
 }
 
-function largarPrincesa(estado: Estado, p: Princesa): void {
+function largarBau(estado: Estado, p: Bau): void {
   p.onde = 'chao';
   p.portador = null;
-  p.voltaEm = PRINCESA_VOLTA_EM;
+  p.voltaEm = BAU_VOLTA_EM;
   p.ajudantes = 0;
-  estado.eventos.push({ tipo: 'largouPrincesa', princesa: p.time });
+  estado.eventos.push({ tipo: 'largouBau', bau: p.time });
 }
 
-function cuidarDasPrincesas(arena: Arena, estado: Estado): void {
-  for (const p of estado.princesas) {
-    if (p.onde === 'carregada') {
+function cuidarDosBaus(arena: Arena, estado: Estado): void {
+  for (const p of estado.baus) {
+    if (p.onde === 'carregado') {
       const portador = unidade(estado, p.portador);
-      if (!portador || !portador.vivo || portador.carga !== 'princesa') {
-        largarPrincesa(estado, p);
+      if (!portador || !portador.vivo || portador.carga !== 'bau') {
+        largarBau(estado, p);
         continue;
       }
       p.x = portador.x;
@@ -928,30 +928,30 @@ function cuidarDasPrincesas(arena: Arena, estado: Estado): void {
           o.id !== portador.id &&
           o.vivo &&
           o.time === p.time &&
-          o.carga !== 'princesa' &&
+          o.carga !== 'bau' &&
           perto(o, portador, ALCANCE_DE_AJUDA),
       ).length;
       continue;
     }
     if (p.onde === 'chao') {
       p.voltaEm -= DT;
-      if (p.voltaEm <= 0) devolverPrincesa(arena, p);
+      if (p.voltaEm <= 0) devolverBau(arena, p);
     }
   }
 }
 
-function devolverPrincesa(arena: Arena, p: Princesa): void {
-  const jaula = arena.estrutura('jaula', outroTime(p.time));
-  p.onde = 'jaula';
-  p.x = jaula.x;
-  p.y = jaula.y;
+function devolverBau(arena: Arena, p: Bau): void {
+  const cofre = arena.estrutura('cofre', outroTime(p.time));
+  p.onde = 'cofre';
+  p.x = cofre.x;
+  p.y = cofre.y;
   p.portador = null;
   p.voltaEm = 0;
   p.ajudantes = 0;
 }
 
-function marcarPonto(estado: Estado, u: Unidade, p: Princesa): void {
-  p.onde = 'salva';
+function marcarPonto(estado: Estado, u: Unidade, p: Bau): void {
+  p.onde = 'resgatado';
   p.portador = null;
   u.carga = 'nada';
   u.resgates++;
@@ -970,12 +970,12 @@ function marcarPonto(estado: Estado, u: Unidade, p: Princesa): void {
  * Recomeça a rodada depois de um ponto.
  *
  * A balança **não** volta ao zero: ela relaxa metade do caminho. Zerar apagaria
- * o trabalho de economia do time que dominou a cozinha, e manter congelaria a
+ * o trabalho de economia do time que dominou a Casa da Moeda, e manter congelaria a
  * partida a favor de quem abriu vantagem. Meio caminho preserva a história sem
  * deixar a bola de neve rolar.
  */
 function recomecarRodada(arena: Arena, estado: Estado): void {
-  // No Banquete a balança **não** relaxa, e isso não é uma segunda alavanca: é
+  // No Cofre Cheio a balança **não** relaxa, e isso não é uma segunda alavanca: é
   // a primeira funcionando. Uma condição de vitória que outra regra apaga a cada
   // ponto não é condição de vitória nenhuma — medido com bots, o modo terminava
   // idêntico ao clássico nas três seeds testadas, mesmo placar e mesmos pesos, e
@@ -986,10 +986,10 @@ function recomecarRodada(arena: Arena, estado: Estado): void {
   // decide. É o que o modo diz ser — dois caminhos, e escolher entre eles é o
   // jogo.
   const relaxa = !modoDe(estado.modo).vitoriaPorBalanca;
-  for (const p of estado.princesas) {
+  for (const p of estado.baus) {
     const meio = PESO_TOTAL / 2;
     if (relaxa) p.peso = meio + (p.peso - meio) / 2;
-    devolverPrincesa(arena, p);
+    devolverBau(arena, p);
   }
   estado.projeteis = [];
   for (const u of estado.unidades) {
@@ -1015,10 +1015,10 @@ function conferirRelogio(estado: Estado): void {
     terminar(estado, azul > vermelho ? 'azul' : 'vermelho');
     return;
   }
-  // Empate no placar: ganha quem venceu a balança. A princesa mais leve é a do
-  // time que entregou mais fatias, e é o desempate que o jogo inteiro treinou.
-  const pesoAzul = princesaDe(estado, 'azul').peso;
-  const pesoVermelho = princesaDe(estado, 'vermelho').peso;
+  // Empate no placar: ganha quem venceu a balança. O baú mais leve é a do
+  // time que entregou mais depósitos, e é o desempate que o jogo inteiro treinou.
+  const pesoAzul = bauDe(estado, 'azul').peso;
+  const pesoVermelho = bauDe(estado, 'vermelho').peso;
   if (pesoAzul === pesoVermelho) {
     terminar(estado, null);
     return;
@@ -1036,7 +1036,7 @@ function terminar(estado: Estado, vencedor: Time | null): void {
 // --- combate ---------------------------------------------------------------
 
 function atacar(arena: Arena, estado: Estado, u: Unidade): void {
-  if (u.recarga > 0 || u.carga === 'princesa') return;
+  if (u.recarga > 0 || u.carga === 'bau') return;
   const p = perfil(u.classe);
   u.recarga = p.cadencia;
   u.golpe = p.duracaoDoGolpe;
@@ -1213,15 +1213,15 @@ function morrer(estado: Estado, algoz: Unidade, alvo: Unidade): void {
 
 /** Devolve ao mundo o que a unidade estava segurando. */
 function soltarTudo(estado: Estado, u: Unidade): void {
-  if (u.carga === 'princesa') {
-    const p = estado.princesas.find((x) => x.portador === u.id);
-    if (p) largarPrincesa(estado, p);
+  if (u.carga === 'bau') {
+    const p = estado.baus.find((x) => x.portador === u.id);
+    if (p) largarBau(estado, p);
   } else if (u.carga !== 'nada') {
     // A carga cai inteira e continua valendo. Quem matou o carregador acabou de
-    // ganhar um bolo — se tiver coragem de parar para pegá-lo.
+    // ganhar uma bolsa — se tiver coragem de parar para pegá-lo.
     estado.itens.push({
       id: estado.proximoId++,
-      tipo: u.carga as Exclude<Carga, 'nada' | 'princesa'>,
+      tipo: u.carga as Exclude<Carga, 'nada' | 'bau'>,
       classe: null,
       origem: null,
       x: u.x,

@@ -1,5 +1,5 @@
 import { CLASSES_COM_CHAPEU, perfil, type Classe } from './classes';
-import { princesaDe, unidade, type Estado, type Unidade } from './estado';
+import { bauDe, unidade, type Estado, type Unidade } from './estado';
 import type { Arena } from './arena';
 import { MODO_PADRAO, modoDe, type IdDoModo } from './modos';
 import type { Navegador } from './navegacao';
@@ -33,13 +33,13 @@ import {
  * ## Três papéis, e o resto é reação
  *
  * Cozinheiro sustenta a balança, atacante empurra o resgate, defensor segura a
- * masmorra. Sobre isso vêm as urgências, que valem para qualquer papel: quem
- * está carregando a princesa vai para casa, quem vê a princesa do próprio time
+ * cofre. Sobre isso vêm as urgências, que valem para qualquer papel: quem
+ * está carregando o baú vai para casa, quem vê o baú do próprio time
  * no chão corre para pegá-la, e quem vê o cortejo travado por falta de escolta
  * larga o que estava fazendo e vai empurrar.
  *
  * A urgência vem antes do papel porque é assim que um time humano joga: ninguém
- * continua colhendo trigo enquanto a princesa passa carregada na frente.
+ * continua colhendo trigo enquanto o baú passa carregado na frente.
  *
  * ## Por que o bot demora a atirar
  *
@@ -60,7 +60,7 @@ export type Papel = 'cozinheiro' | 'atacante' | 'defensor';
  * na economia, e a obra empacava no nível dois: as três partidas medidas saíram
  * idênticas às do modo clássico, decididas por resgate, com a vitória do modo
  * nunca disparando. No **Abate**, em que só a briga conta, dois dos seis
- * ficavam cozinhando um bolo que não decide nada.
+ * ficavam cunhando uma bolsa que não decide nada.
  *
  * O rodízio não é uma estratégia ótima e não pretende ser: é a divisão de
  * trabalho que faz o time perseguir o objetivo **daquele** modo em vez do
@@ -70,7 +70,7 @@ const RODIZIO_CLASSICO: readonly Papel[] = ['atacante', 'cozinheiro', 'defensor'
 const RODIZIOS: Partial<Record<IdDoModo, readonly Papel[]>> = {
   // Metade do time na picareta: sem isso a obra não sai do lugar.
   obra: ['cozinheiro', 'atacante', 'cozinheiro', 'defensor'],
-  // Ninguém cozinha: no Abate o bolo não vale ponto nenhum.
+  // Ninguém Casa da Moeda: no Abate a bolsa não vale ponto nenhum.
   abate: ['atacante', 'atacante', 'defensor'],
 };
 
@@ -79,18 +79,18 @@ const rodizioDe = (modo: IdDoModo): readonly Papel[] => RODIZIOS[modo] ?? RODIZI
 /**
  * Os ofícios, na ordem em que um time deve preenchê-los.
  *
- * O **primeiro** cozinheiro de cada time é caçador e não muda mais: carne é a
- * única entrada do bolo, e o bolo é o que move a balança — se ninguém caçar por
+ * O **primeiro** cozinheiro de cada time é saqueador e não muda mais: minério é a
+ * única entrada do bolsa, e a bolsa é o que move a balança — se ninguém caçar por
  * princípio, o time perde o diferencial do jogo enquanto constrói uma obra
  * bonita. Do segundo em diante o ofício é escolhido pela falta: madeira ou ouro,
  * o que estiver travando o próximo nível.
  */
-const OFICIOS: readonly Classe[] = ['cacador', 'lenhador', 'minerador'];
+const OFICIOS: readonly Classe[] = ['saqueador', 'lenhador', 'minerador'];
 
 /** Segundos entre ver o alvo e conseguir atirar nele. */
 const ESPERA_PARA_MIRAR = 0.3;
 
-/** Vida abaixo desta fração manda o bot comer o bolo em vez de entregá-lo. */
+/** Vida abaixo desta fração manda o bot comer a bolsa em vez de entregá-lo. */
 const VIDA_PARA_COMER = 0.35;
 
 interface Memoria {
@@ -102,7 +102,7 @@ interface Memoria {
    *
    * Existe para quebrar o passo. Sem ele, dois times de bots num mapa espelhado
    * tomam decisões idênticas no mesmo tick e a partida vira uma coreografia:
-   * as duas princesas saem da masmorra juntas, os dois cortejos travam juntos,
+   * os dois baús saem do cofre juntas, os dois cortejos travam juntos,
    * e o placar termina zero a zero por construção. Um número derivado do id —
    * determinístico, sem sorteio — dá a cada um a sua pressa e o seu recuo, e o
    * empate volta a ser uma coisa que acontece, não uma consequência da simetria.
@@ -125,7 +125,7 @@ interface Memoria {
   ordenado: boolean;
   /** Segundos até rever o ofício. Dá inércia à troca de chapéu. */
   esperaDoOficio: number;
-  /** Ofício que não se revê. É o caçador de plantão de cada time. */
+  /** Ofício que não se revê. É o saqueador de plantão de cada time. */
   fixo: boolean;
 }
 
@@ -167,10 +167,10 @@ export class Bots {
       const quantos = this.cozinheiros.get(time) ?? 0;
       this.cozinheiros.set(time, quantos + 1);
       oficio = OFICIOS[Math.min(quantos, OFICIOS.length - 1)]!;
-      // O caçador do time é fixo — carne é a única entrada do bolo, e sem ele o
+      // O saqueador do time é fixo — minério é a única entrada do bolsa, e sem ele o
       // time perde o diferencial do jogo enquanto constrói uma obra bonita.
       //
-      // No Obra não: ali o bolo não decide nada, e um caçador fixo é justamente
+      // No Obra não: ali a bolsa não decide nada, e um saqueador fixo é justamente
       // o bot que faltava na jazida. Todos trocam de ofício conforme a falta.
       fixo = quantos === 0 && !modoDe(modo).vitoriaPorObra;
     }
@@ -282,7 +282,7 @@ export class Bots {
       cmd.usar = true;
       m.usarPor = 1;
       // O intervalo entre dois usos também é temperado: é o que faz dois
-      // cozinheiros espelhados deixarem de entregar a fatia no mesmo tick, e a
+      // cozinheiros espelhados deixarem de entregar o depósito no mesmo tick, e a
       // balança sair do meio em vez de se anular a cada tick.
       m.esperaDoUsar = 0.35 + m.tempero * 0.4;
     }
@@ -297,8 +297,8 @@ export class Bots {
   ): { destino: { x: number; y: number } | null; usar: boolean; folga: number; podeRecuar: boolean } {
     const meu = u.time;
     const inimigo = outroTime(meu);
-    const minha = princesaDe(estado, meu);
-    const refem = princesaDe(estado, inimigo);
+    const minha = bauDe(estado, meu);
+    const refem = bauDe(estado, inimigo);
     const ir = (
       destino: { x: number; y: number } | null,
       usar = false,
@@ -313,12 +313,12 @@ export class Bots {
 
     // --- urgências, válidas para qualquer papel ---------------------------
 
-    if (u.carga === 'princesa') {
-      const trono = this.arena.estrutura('trono', meu);
-      return ir(trono, this.chegou(u, trono, ALCANCE_DE_COLETA * 0.7));
+    if (u.carga === 'bau') {
+      const tesouraria = this.arena.estrutura('tesouraria', meu);
+      return ir(tesouraria, this.chegou(u, tesouraria, ALCANCE_DE_COLETA * 0.7));
     }
 
-    if (minha.onde === 'carregada' && minha.portador !== u.id) {
+    if (minha.onde === 'carregado' && minha.portador !== u.id) {
       const portador = unidade(estado, minha.portador);
       if (portador) {
         const faltaAjuda = minha.ajudantes + 1 < carregadoresPara(minha.peso);
@@ -345,7 +345,7 @@ export class Bots {
     // e há gente para ela, e quem deu a ordem está vendo o campo inteiro.
     //
     // O que continua vindo antes são as duas coisas que o npc tem nas mãos:
-    // carregar a princesa e socorrer a própria, caída ou em cortejo. Trocar de
+    // carregar o baú e socorrer a própria, caída ou em cortejo. Trocar de
     // chapéu no meio disso perderia a partida para obedecer a um clique.
     if (
       m.ordenado &&
@@ -360,7 +360,7 @@ export class Bots {
 
     // O inimigo está levando a refém embora: todo mundo que não é cozinheiro
     // vira defensor por um instante.
-    if (refem.onde === 'carregada' && m.papel !== 'cozinheiro') {
+    if (refem.onde === 'carregado' && m.papel !== 'cozinheiro') {
       const ladrao = unidade(estado, refem.portador);
       if (ladrao) return ir(ladrao, false, 0, false);
     }
@@ -376,7 +376,7 @@ export class Bots {
     );
     if (chapeu) return ir(chapeu, this.chegou(u, chapeu, ALCANCE_DE_COLETA * 0.8));
 
-    if (u.carga === 'bolo' && u.vida < perfil(u.classe).vida * VIDA_PARA_COMER) {
+    if (u.carga === 'bolsa' && u.vida < perfil(u.classe).vida * VIDA_PARA_COMER) {
       return ir(null, true);
     }
 
@@ -390,24 +390,24 @@ export class Bots {
     }
 
     if (m.papel === 'defensor') {
-      const jaula = this.arena.estrutura('jaula', meu);
-      const invasor = this.inimigoMaisPertoDe(estado, u, jaula, 600 + m.tempero * 260);
+      const cofre = this.arena.estrutura('cofre', meu);
+      const invasor = this.inimigoMaisPertoDe(estado, u, cofre, 600 + m.tempero * 260);
       if (invasor) return ir(invasor, false, 0, true);
-      return ir(jaula, false, 110 + m.tempero * 90, true);
+      return ir(cofre, false, 110 + m.tempero * 90, true);
     }
 
-    // Atacante: o alvo é a masmorra inimiga, onde dorme a princesa deste time.
-    if (minha.onde === 'jaula') {
+    // Atacante: o alvo é o cofre inimigo, onde dorme o baú deste time.
+    if (minha.onde === 'cofre') {
       return ir(minha, this.chegou(u, minha, ALCANCE_DE_COLETA * 0.8), 0, true);
     }
-    return ir(this.arena.estrutura('jaula', inimigo), false, 120, true);
+    return ir(this.arena.estrutura('cofre', inimigo), false, 120, true);
   }
 
   /**
    * O ofício que o time está pedindo agora.
    *
-   * A conta é a ordem das urgências do jogo: sem carne não há bolo, e sem bolo a
-   * balança não se move; com a cozinha abastecida, o que falta é o material que
+   * A conta é a ordem das urgências do jogo: sem minério não há bolsa, e sem bolsa a
+   * balança não se move; com a Casa da Moeda abastecida, o que falta é o material que
    * está travando o próximo nível da obra. É o que permite dois cozinheiros
    * cobrirem três cadeias — eles trocam de chapéu conforme a falta.
    */
@@ -423,10 +423,10 @@ export class Bots {
         return faltaMadeira >= faltaOuro ? 'lenhador' : 'minerador';
       }
     }
-    // Obra pronta: o resto do time vira carne, que é o que move a balança.
-    const cozinha = estado.cozinhas.find((c) => c.time === u.time);
-    if (cozinha && cozinha.bolos === 0) return 'cacador';
-    return 'cacador';
+    // Obra pronta: o resto do time vira minério, que é o que move a balança.
+    const casaDaMoeda = estado.casasDaMoeda.find((c) => c.time === u.time);
+    if (casaDaMoeda && casaDaMoeda.bolsas === 0) return 'saqueador';
+    return 'saqueador';
   }
 
   private planoDoCozinheiro(
@@ -441,13 +441,13 @@ export class Bots {
     ) => { destino: { x: number; y: number } | null; usar: boolean; folga: number; podeRecuar: boolean },
   ) {
     const meu = u.time;
-    const cozinha = this.arena.estrutura('cozinha', meu);
-    const jaula = this.arena.estrutura('jaula', meu);
-    const refem = princesaDe(estado, outroTime(meu));
+    const casaDaMoeda = this.arena.estrutura('casaDaMoeda', meu);
+    const cofre = this.arena.estrutura('cofre', meu);
+    const refem = bauDe(estado, outroTime(meu));
 
-    // Carga no chão perto é o trabalho mais barato do mapa: a carne que o
-    // caçador acabou de derrubar, a madeira que caiu de quem morreu. Sem isto o
-    // bot mata a ovelha e vai atrás da próxima, deixando a carne apodrecer.
+    // Carga no chão perto é o trabalho mais barato do mapa: o minério que o
+    // saqueador acabou de derrubar, a madeira que caiu de quem morreu. Sem isto o
+    // bot mata a ovelha e vai atrás da próxima, deixando o minério apodrecer.
     if (u.carga === 'nada') {
       const largada = estado.itens
         .filter((i) => i.tipo !== 'chapeu' && Math.hypot(i.x - u.x, i.y - u.y) < 420)
@@ -465,7 +465,7 @@ export class Bots {
       m.esperaDoOficio = 12;
     }
 
-    // Primeiro a ferramenta: um caçador sem faca leva o dobro do tempo para
+    // Primeiro a ferramenta: um saqueador sem faca leva o dobro do tempo para
     // derrubar um bicho, e um lenhador sem machado é um aldeão com pressa.
     if (
       u.carga === 'nada' &&
@@ -477,25 +477,25 @@ export class Bots {
       return ir(chapelaria, this.chegou(u, chapelaria, ALCANCE_DE_COLETA * 0.7));
     }
 
-    if (u.carga === 'carne') return ir(cozinha, this.chegou(u, cozinha, ALCANCE_DE_COLETA * 0.7));
+    if (u.carga === 'minerio') return ir(casaDaMoeda, this.chegou(u, casaDaMoeda, ALCANCE_DE_COLETA * 0.7));
     if (u.carga === 'madeira' || u.carga === 'ouro') {
       const chapelaria = this.arena.estrutura('chapelaria', meu);
       return ir(chapelaria, this.chegou(u, chapelaria, ALCANCE_DE_COLETA * 0.7));
     }
-    if (u.carga === 'bolo') return ir(jaula, this.chegou(u, jaula, ALCANCE_DE_COLETA * 0.7));
+    if (u.carga === 'bolsa') return ir(cofre, this.chegou(u, cofre, ALCANCE_DE_COLETA * 0.7));
 
-    const minhaCozinha = estado.cozinhas.find((c) => c.time === meu)!;
-    // Só vale buscar bolo se a balança ainda tem para onde ir. No talo, a fatia
+    const minhaCasa = estado.casasDaMoeda.find((c) => c.time === meu)!;
+    // Só vale buscar bolsa se a balança ainda tem para onde ir. No talo, o depósito
     // não move nada, e o aldeão volta a ser mais útil colhendo.
-    if (minhaCozinha.bolos > 0 && refem.peso < PESO_MAXIMO) {
-      return ir(cozinha, this.chegou(u, cozinha, ALCANCE_DE_COLETA * 0.7));
+    if (minhaCasa.bolsas > 0 && refem.peso < PESO_MAXIMO) {
+      return ir(casaDaMoeda, this.chegou(u, casaDaMoeda, ALCANCE_DE_COLETA * 0.7));
     }
 
     // O alvo do ofício mais perto **pelo caminho**, não em linha reta: o lago do
     // meio faz uma jazida do outro lado parecer perto e ficar longe.
     const oficio = perfil(u.classe).oficio;
 
-    if (oficio === 'carne' || oficio === null) {
+    if (oficio === 'minerio' || oficio === null) {
       const bicho = this.animalMaisPerto(estado, u);
       if (bicho) return ir(bicho, false, 0, false);
     }
@@ -516,7 +516,7 @@ export class Bots {
         melhor = j;
       }
     }
-    if (!melhor) return ir(cozinha, false, 120);
+    if (!melhor) return ir(casaDaMoeda, false, 120);
     return ir(melhor, this.chegou(u, melhor, ALCANCE_DE_COLETA * 0.7));
   }
 
@@ -542,9 +542,9 @@ export class Bots {
       return { ax: (ferido.x - u.x) / d, ay: (ferido.y - u.y) / d, atacar: true, recuar: false };
     }
 
-    // Quem carrega a princesa não ataca: a mão está ocupada, e mirar só faria
+    // Quem carrega o baú não ataca: a mão está ocupada, e mirar só faria
     // o bot parar de andar para nada.
-    if (u.carga === 'princesa') return null;
+    if (u.carga === 'bau') return null;
 
     const alvo = this.alvoDeAtaque(estado, u, p.alcance) ?? this.bichoNaMira(estado, u, m, p.alcance);
     if (!alvo) {
@@ -579,9 +579,9 @@ export class Bots {
       const d = Math.hypot(o.x - u.x, o.y - u.y);
       if (d > alcance) continue;
       if (!enxerga(this.arena, u, o)) continue;
-      // Quem está carregando a princesa é sempre o alvo: matá-lo derruba o
+      // Quem está carregando o baú é sempre o alvo: matá-lo derruba o
       // resgate inteiro, e nenhum outro abate vale tanto.
-      const nota = (o.carga === 'princesa' ? 10000 : 0) + (alcance - d);
+      const nota = (o.carga === 'bau' ? 10000 : 0) + (alcance - d);
       if (nota > melhorNota) {
         melhorNota = nota;
         melhor = o;
@@ -591,7 +591,7 @@ export class Bots {
   }
 
   /**
-   * O bicho ao alcance, para quem vive de carne.
+   * O bicho ao alcance, para quem vive de minério.
    *
    * Caçar é a única coleta do jogo que se faz atacando, então ela precisa
    * entrar pelo mesmo caminho do combate — sem isto o bot chega na ovelha, para
@@ -604,8 +604,8 @@ export class Bots {
     alcance: number,
   ): { id: number; x: number; y: number; carga: string } | null {
     if (u.carga !== 'nada') return null;
-    const cacador = perfil(u.classe).oficio === 'carne' || m.oficio === 'cacador';
-    if (!cacador) return null;
+    const saqueador = perfil(u.classe).oficio === 'minerio' || m.oficio === 'saqueador';
+    if (!saqueador) return null;
     for (const a of estado.animais) {
       if (!a.vivo) continue;
       if (Math.hypot(a.x - u.x, a.y - u.y) > alcance) continue;
@@ -616,7 +616,7 @@ export class Bots {
     return null;
   }
 
-  /** O bicho mais perto que ainda está de pé. O caçador vive disso. */
+  /** O bicho mais perto que ainda está de pé. O saqueador vive disso. */
   private animalMaisPerto(estado: Estado, u: Unidade): { x: number; y: number } | null {
     let melhor: { x: number; y: number } | null = null;
     let menor = Infinity;

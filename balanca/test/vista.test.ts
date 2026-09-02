@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { CASTELO, criarArena } from '../src/shared/arena';
-import { princesaDe } from '../src/shared/estado';
+import { bauDe } from '../src/shared/estado';
 import { criarPartida } from '../src/shared/partida';
 import { ALCANCE_DE_VISTA, AQUECIMENTO, TICKS_POR_SEGUNDO, TILE } from '../src/shared/regras';
 import { avistados, pontoAvistado } from '../src/shared/vista';
@@ -133,7 +133,7 @@ describe('a visão do time', () => {
     expect(avistados(partida.arena, partida.estado, 'azul').size).toBe(0);
   });
 
-  it('vale para um ponto solto, como a princesa caída', () => {
+  it('vale para um ponto solto, como a bau caída', () => {
     const partida = emJogo();
     const meu = partida.entrar({ nome: 'eu', bot: false, time: 'azul' });
     por(meu, 28, 4);
@@ -144,13 +144,13 @@ describe('a visão do time', () => {
     expect(pontoAvistado(partida.arena, partida.estado, 'azul', longe)).toBe(false);
   });
 
-  it('a princesa do inimigo na sua masmorra é vista por quem a guarda', () => {
-    // Caso concreto e o mais comum de todos: a refém dorme na sua jaula, e o
+  it('o baú do inimigo na sua cofre é vista por quem a guarda', () => {
+    // Caso concreto e o mais comum de todos: a refém dorme na seu cofre, e o
     // seu time está em volta dela. Se a regra a escondesse, o minimapa mentiria
     // sobre a própria casa.
     const partida = emJogo();
     const guarda = partida.entrar({ nome: 'guarda', bot: false, time: 'azul' });
-    const refem = princesaDe(partida.estado, 'vermelho');
+    const refem = bauDe(partida.estado, 'vermelho');
     guarda.x = refem.x;
     guarda.y = refem.y;
     guarda.vivo = true;

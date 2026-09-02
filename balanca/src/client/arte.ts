@@ -62,11 +62,18 @@ export interface Arte {
   /** Unidades, por time e por chave de folha. */
   readonly unidades: Readonly<Record<Time, Folhas>>;
   readonly ovelha: Readonly<Record<'parada' | 'andando' | 'pastando', Animacao>>;
-  readonly recursos: Readonly<Record<'carne' | 'madeira' | 'ouro', HTMLImageElement>>;
+  /**
+   * O ícone de cada carga no chão.
+   *
+   * `HTMLCanvasElement` entra na união porque o minério é repintado no
+   * carregamento (ver `pedra`), e não um arquivo. As duas formas têm `width`,
+   * que é o que o desenho precisa — `CanvasImageSource` sozinho não tem.
+   */
+  readonly recursos: Readonly<
+    Record<'minerio' | 'madeira' | 'ouro', HTMLImageElement | HTMLCanvasElement>
+  >;
   readonly jazidaOuro: HTMLImageElement;
   readonly jazidaOuroVazia: HTMLImageElement;
-  /** A princesa é o peão do time, aumentada e rosada na hora de desenhar. */
-  readonly princesa: Readonly<Record<Time, Animacao>>;
 }
 
 async function carregar(caminho: string): Promise<HTMLImageElement> {
@@ -77,7 +84,11 @@ async function carregar(caminho: string): Promise<HTMLImageElement> {
 }
 
 /** Pinta uma folha inteira com uma cor, preservando o sombreado. */
-function tingir(img: HTMLImageElement, cor: string, forca: number): HTMLCanvasElement {
+function tingir(
+  img: HTMLImageElement | HTMLCanvasElement,
+  cor: string,
+  forca: number,
+): HTMLCanvasElement {
   const tela = document.createElement('canvas');
   tela.width = img.width;
   tela.height = img.height;
@@ -89,6 +100,23 @@ function tingir(img: HTMLImageElement, cor: string, forca: number): HTMLCanvasEl
   ctx.fillStyle = cor;
   ctx.fillRect(0, 0, tela.width, tela.height);
   return tela;
+}
+
+/**
+ * O bife do pacote virando pedra de minério.
+ *
+ * O Tiny Swords não tem sprite de minério, e o que o saqueador derruba da mula
+ * é justamente o alforje de pedra. Repintar sai mais barato — e sai melhor —
+ * que desenhar: no tamanho em que a coisa aparece em jogo, o que se lê é a
+ * silhueta de um bloco carregado na cabeça, e o vermelho do bife era a única
+ * coisa que a denunciava.
+ *
+ * São duas passadas porque uma só não chega lá. A primeira **apaga** o vermelho
+ * quase por inteiro; sozinha, ela deixa um cinza de chumbo que some no chão. A
+ * segunda devolve o ocre que faz a pedra parecer que tem metal dentro.
+ */
+function pedra(img: HTMLImageElement): HTMLCanvasElement {
+  return tingir(tingir(img, '#7c8088', 0.82), '#c79a3c', 0.22);
 }
 
 export function animacao(
@@ -117,18 +145,18 @@ const FOLHAS_POR_CLASSE: Readonly<Record<Classe, readonly string[]>> = {
   clerigo: ['golpe', 'bencao'],
   minerador: ['trabalhando'],
   lenhador: ['trabalhando'],
-  cacador: ['trabalhando'],
+  saqueador: ['trabalhando'],
 };
 
 /** O nome do arquivo de cada ofício segue a ferramenta, como no pacote. */
 export const FERRAMENTA_DA_CLASSE: Readonly<Partial<Record<Classe, string>>> = {
   minerador: 'picareta',
   lenhador: 'machado',
-  cacador: 'faca',
+  saqueador: 'faca',
 };
 
 /** A carga na mão troca a folha inteira: o peão carrega com os dois braços. */
-export const CARGAS_DESENHADAS = ['madeira', 'ouro', 'carne'] as const;
+export const CARGAS_DESENHADAS = ['madeira', 'ouro', 'minerio'] as const;
 
 function arquivoDaClasse(classe: Classe): string {
   return FERRAMENTA_DA_CLASSE[classe] ?? classe;
@@ -163,7 +191,7 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
   pede('ovelha_parada', 'recursos/ovelha_parada.png');
   pede('ovelha_andando', 'recursos/ovelha_andando.png');
   pede('ovelha_pastando', 'recursos/ovelha_pastando.png');
-  pede('recurso_carne', 'recursos/carne.png');
+  pede('recurso_minerio', 'recursos/minerio.png');
   pede('recurso_madeira', 'recursos/madeira.png');
   pede('recurso_ouro', 'recursos/ouro.png');
   pede('jazida_ouro', 'recursos/jazida_ouro.png');
@@ -206,7 +234,6 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
   };
 
   const unidades = {} as Record<Time, Record<string, Animacao>>;
-  const princesa = {} as Record<Time, Animacao>;
   for (const time of TIMES) {
     const folhas: Record<string, Animacao> = {};
     for (const { chave } of pedidos) {
@@ -214,19 +241,14 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
       if (!chave.startsWith(prefixo)) continue;
       folhas[chave.slice(prefixo.length)] = animacao(img(chave));
     }
+    // As duas folhas de quem leva minério nascem do bife do pacote e passam
+    // pela repintura antes de entrar no mapa. Feito aqui e não na hora de
+    // desenhar: são duas composições por folha, e elas não mudam nunca.
+    for (const folha of ['carregando_minerio_parado', 'carregando_minerio_correndo']) {
+      const base = folhas[folha];
+      if (base) folhas[folha] = { ...base, imagem: pedra(img(`u:${time}:${folha}`)) };
+    }
     unidades[time] = folhas;
-    // A princesa é o aldeão do time, desenhado grande e cor de rosa. Não há
-    // sprite de princesa no pacote, e inventar um em pixel art que não
-    // destoasse do resto custaria mais do que o jogo ganha.
-    //
-    // A tintura é feita **uma vez**, aqui: `source-atop` com transparência
-    // mantém o sombreado que o desenhista pintou e só empurra a matiz. Repintar
-    // a cada quadro custaria duas composições por princesa, sessenta vezes por
-    // segundo, para chegar ao mesmo pixel.
-    princesa[time] = {
-      ...animacao(img(`u:${time}:aldeao_parado`), 6),
-      imagem: tingir(img(`u:${time}:aldeao_parado`), '#ff7bc2', 0.5),
-    };
   }
 
   const predios: Record<string, HTMLImageElement> = {};
@@ -261,13 +283,12 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
       pastando: animacao(img('ovelha_pastando'), 8),
     },
     recursos: {
-      carne: img('recurso_carne'),
+      minerio: img('recurso_minerio'),
       madeira: img('recurso_madeira'),
       ouro: img('recurso_ouro'),
     },
     jazidaOuro: img('jazida_ouro'),
     jazidaOuroVazia: img('jazida_ouro_vazia'),
-    princesa,
   };
 }
 

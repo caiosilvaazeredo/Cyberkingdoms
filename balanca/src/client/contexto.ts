@@ -1,6 +1,13 @@
 import type { Arena } from '../shared/arena';
 import { LERDEZA_DO_ALDEAO, perfil, vidaMaxima } from '../shared/classes';
-import { cozinhaDe, nivelDe, princesaDe, type Estado, type Unidade } from '../shared/estado';
+import {
+  casaDaMoedaDe,
+  nivelDe,
+  bauDe,
+  type Estado,
+  type TipoDeItem,
+  type Unidade,
+} from '../shared/estado';
 import {
   ALCANCE_DE_COLETA,
   ALCANCE_DE_USO,
@@ -32,33 +39,41 @@ export interface Dica {
   alvo?: { x: number; y: number };
 }
 
+/** Como cada coisa no chão se chama na dica. Ver `NOME_DA_CARGA`, no HUD. */
+const NOME_DO_ITEM: Record<Exclude<TipoDeItem, 'chapeu'>, string> = {
+  madeira: 'a madeira',
+  ouro: 'o ouro',
+  minerio: 'o minério',
+  bolsa: 'a bolsa de moedas',
+};
+
 export function dicaDeUso(arena: Arena, estado: Estado, u: Unidade): Dica | null {
   const meu = u.time;
   const inimigo = outroTime(meu);
   const perto = (a: { x: number; y: number }, r: number): boolean =>
     Math.hypot(a.x - u.x, a.y - u.y) <= r;
 
-  if (u.carga === 'princesa') {
-    const trono = arena.estrutura('trono', meu);
-    if (perto(trono, ALCANCE_DE_COLETA)) return { texto: 'entregar a princesa', alvo: trono };
-    return { texto: 'largar a princesa' };
+  if (u.carga === 'bau') {
+    const tesouraria = arena.estrutura('tesouraria', meu);
+    if (perto(tesouraria, ALCANCE_DE_COLETA)) return { texto: 'entregar o baú', alvo: tesouraria };
+    return { texto: 'largar o baú' };
   }
 
-  if (u.carga === 'bolo') {
-    const refem = princesaDe(estado, inimigo);
-    const jaula = arena.estrutura('jaula', meu);
-    if (refem.onde === 'jaula' && perto(jaula, ALCANCE_DE_COLETA)) {
+  if (u.carga === 'bolsa') {
+    const refem = bauDe(estado, inimigo);
+    const cofre = arena.estrutura('cofre', meu);
+    if (refem.onde === 'cofre' && perto(cofre, ALCANCE_DE_COLETA)) {
       return refem.peso >= PESO_MAXIMO
-        ? { texto: 'a balança está no talo', alvo: jaula }
-        : { texto: 'dar a fatia — pesa nela, alivia a sua', alvo: jaula };
+        ? { texto: 'a balança está no talo', alvo: cofre }
+        : { texto: 'entulhar o baú — pesa nele, alivia o seu', alvo: cofre };
     }
-    if (u.vida < vidaMaxima(u.classe, nivelDe(estado, meu))) return { texto: 'comer o bolo' };
+    if (u.vida < vidaMaxima(u.classe, nivelDe(estado, meu))) return { texto: 'gastar a bolsa consigo' };
     return null;
   }
 
-  if (u.carga === 'carne') {
-    const cozinha = arena.estrutura('cozinha', meu);
-    if (perto(cozinha, ALCANCE_DE_COLETA)) return { texto: 'entregar a carne', alvo: cozinha };
+  if (u.carga === 'minerio') {
+    const casaDaMoeda = arena.estrutura('casaDaMoeda', meu);
+    if (perto(casaDaMoeda, ALCANCE_DE_COLETA)) return { texto: 'entregar o minério', alvo: casaDaMoeda };
     return null;
   }
 
@@ -83,7 +98,7 @@ export function dicaDeUso(arena: Arena, estado: Estado, u: Unidade): Dica | null
     .filter((i) => perto(i, ALCANCE_DE_COLETA))
     .sort((a, b) => Math.hypot(a.x - u.x, a.y - u.y) - Math.hypot(b.x - u.x, b.y - u.y))[0];
   if (item) {
-    if (item.tipo !== 'chapeu') return { texto: `pegar ${item.tipo}`, alvo: item };
+    if (item.tipo !== 'chapeu') return { texto: `pegar ${NOME_DO_ITEM[item.tipo]}`, alvo: item };
     const roubo = item.origem !== null && item.origem !== u.time;
     return {
       texto: roubo ? `roubar o chapéu de ${item.classe}` : `vestir o chapéu de ${item.classe}`,
@@ -91,16 +106,16 @@ export function dicaDeUso(arena: Arena, estado: Estado, u: Unidade): Dica | null
     };
   }
 
-  const minha = princesaDe(estado, meu);
-  if ((minha.onde === 'jaula' || minha.onde === 'chao') && perto(minha, ALCANCE_DE_COLETA)) {
-    return { texto: 'carregar a sua princesa', alvo: minha };
+  const minha = bauDe(estado, meu);
+  if ((minha.onde === 'cofre' || minha.onde === 'chao') && perto(minha, ALCANCE_DE_COLETA)) {
+    return { texto: 'carregar o seu baú', alvo: minha };
   }
 
-  const cozinha = arena.estrutura('cozinha', meu);
-  if (perto(cozinha, ALCANCE_DE_USO)) {
-    const forno = cozinhaDe(estado, meu);
-    if (forno.bolos > 0) return { texto: 'pegar um bolo', alvo: cozinha };
-    return { texto: 'a cozinha está vazia — falta carne', alvo: cozinha };
+  const casaDaMoeda = arena.estrutura('casaDaMoeda', meu);
+  if (perto(casaDaMoeda, ALCANCE_DE_USO)) {
+    const forno = casaDaMoedaDe(estado, meu);
+    if (forno.bolsas > 0) return { texto: 'pegar uma bolsa de moedas', alvo: casaDaMoeda };
+    return { texto: 'a Casa da Moeda está vazia — falta minério', alvo: casaDaMoeda };
   }
 
   const chapelaria = arena.estrutura('chapelaria', meu);
@@ -121,10 +136,10 @@ export function dicaDeUso(arena: Arena, estado: Estado, u: Unidade): Dica | null
     };
   }
 
-  // O bicho não se "usa": se mata. A dica existe porque um caçador novo fica
-  // apertando E na frente da ovelha esperando uma barra de progresso.
+  // A mula não se "usa": se derruba. A dica existe porque um saqueador novo
+  // fica apertando E na frente dela esperando uma barra de progresso.
   const bicho = estado.animais.find((a) => a.vivo && perto(a, ALCANCE_DE_COLETA * 1.5));
-  if (bicho) return { texto: 'ataque o bicho para tirar a carne', alvo: bicho };
+  if (bicho) return { texto: 'derrube a mula para abrir o alforje', alvo: bicho };
 
   return null;
 }

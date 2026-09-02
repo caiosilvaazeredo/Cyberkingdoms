@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { alvoDaAtracao, aproximar } from '../src/client/atracao';
-import { princesaDe, type Estado } from '../src/shared/estado';
+import { bauDe, type Estado } from '../src/shared/estado';
 import { criarPartida } from '../src/shared/partida';
 import { ARENA_ALTURA, ARENA_LARGURA, AQUECIMENTO, TICKS_POR_SEGUNDO, TILE } from '../src/shared/regras';
 
@@ -10,7 +10,7 @@ import { ARENA_ALTURA, ARENA_LARGURA, AQUECIMENTO, TICKS_POR_SEGUNDO, TILE } fro
  *
  * Ela decide o que o jogo mostra para quem ainda não jogou — e é a primeira
  * impressão do jogo inteiro. Uma câmera que fica olhando um canto vazio do mapa
- * enquanto a princesa é carregada do outro lado não quebra nada; só faz o jogo
+ * enquanto o baú é carregado do outro lado não quebra nada; só faz o jogo
  * parecer morto para quem acabou de chegar, que é pior.
  */
 
@@ -32,13 +32,13 @@ describe('a câmera do modo atração', () => {
   it('larga tudo para seguir o cortejo', () => {
     const partida = emJogo();
     const heroi = partida.entrar({ nome: 'H', bot: false, time: 'azul' });
-    const minha = princesaDe(partida.estado, 'azul');
+    const minha = bauDe(partida.estado, 'azul');
     minha.peso = 60;
     heroi.x = minha.x;
     heroi.y = minha.y;
     partida.comandar(heroi.id, { seq: 1, mx: 0, my: 0, ax: 0, ay: 0, atacar: false, usar: true });
     partida.passo();
-    expect(minha.onde).toBe('carregada');
+    expect(minha.onde).toBe('carregado');
 
     const alvo = olhar(partida.estado);
     expect(alvo.motivo).toBe('cortejo');
@@ -105,7 +105,7 @@ describe('a câmera do modo atração', () => {
     expect(perto.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('a princesa caída no chão chama mais atenção que uma briga', () => {
+  it('a bau caída no chão chama mais atenção que uma briga', () => {
     const partida = emJogo();
     const a1 = partida.entrar({ nome: 'a1', bot: true, time: 'azul' });
     const v1 = partida.entrar({ nome: 'v1', bot: true, time: 'vermelho' });
@@ -113,13 +113,13 @@ describe('a câmera do modo atração', () => {
     a1.y = 300;
     v1.x = 940;
     v1.y = 300;
-    const minha = princesaDe(partida.estado, 'azul');
+    const minha = bauDe(partida.estado, 'azul');
     minha.onde = 'chao';
     minha.x = 1500;
     minha.y = 1200;
 
     const alvo = olhar(partida.estado);
-    expect(alvo.motivo).toBe('princesa-no-chao');
+    expect(alvo.motivo).toBe('bau-no-chao');
     expect(alvo.x).toBe(1500);
   });
 });

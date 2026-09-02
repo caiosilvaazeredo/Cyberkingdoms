@@ -14,13 +14,13 @@ import type { Time } from './regras';
 export type Fase = 'aquecimento' | 'jogando' | 'ponto' | 'fim';
 
 /** O que a unidade tem nas mãos. Uma coisa de cada vez, sempre. */
-export type Carga = 'nada' | 'madeira' | 'ouro' | 'carne' | 'bolo' | 'princesa';
+export type Carga = 'nada' | 'madeira' | 'ouro' | 'minerio' | 'bolsa' | 'bau';
 
 /** A carga que cada ofício produz. */
 export const CARGA_DO_OFICIO: Readonly<Record<Oficio, Carga>> = {
   madeira: 'madeira',
   ouro: 'ouro',
-  carne: 'carne',
+  minerio: 'minerio',
 };
 
 export interface Unidade {
@@ -57,31 +57,31 @@ export interface Unidade {
   colhendoId: number | null;
   abates: number;
   mortes: number;
-  /** Fatias entregues à refém. É o placar do diferencial. */
-  fatias: number;
+  /** Depositos entregues à refém. É o placar do diferencial. */
+  depositos: number;
   resgates: number;
-  /** Carga entregue em casa: carne, madeira e pedra somadas. */
+  /** Carga entregue em casa: minério, madeira e pedra somadas. */
   entregas: number;
   /** Último comando confirmado, para o cliente reconciliar a previsão. */
   ultimoComando: number;
 }
 
 /**
- * Uma princesa, e onde ela está.
+ * Um baú refém, e onde ele está.
  *
- * `time` é de quem ela **é**, não onde está: a princesa azul começa a partida
- * dentro da masmorra vermelha. Confundir isso inverte o jogo inteiro, e é o
+ * `time` é de quem ele **é**, não onde está: o baú azul começa a partida
+ * trancado no cofre vermelho. Confundir isso inverte o jogo inteiro, e é o
  * tipo de erro que só aparece quando alguém marca ponto para o time errado.
  */
-export interface Princesa {
+export interface Bau {
   time: Time;
   peso: number;
-  onde: 'jaula' | 'carregada' | 'chao' | 'salva';
+  onde: 'cofre' | 'carregado' | 'chao' | 'resgatado';
   x: number;
   y: number;
   /** Quem está na frente do cortejo. */
   portador: number | null;
-  /** Segundos até voltar sozinha para a masmorra, largada no chão. */
+  /** Segundos até voltar sozinho para o cofre, largado no chão. */
   voltaEm: number;
   /** Carregadores encostados no último tick. Diagnóstico e HUD. */
   ajudantes: number;
@@ -103,7 +103,7 @@ export interface Projetil {
   vida: number;
 }
 
-export type TipoDeItem = 'chapeu' | 'bolo' | 'carne' | 'madeira' | 'ouro';
+export type TipoDeItem = 'chapeu' | 'bolsa' | 'minerio' | 'madeira' | 'ouro';
 
 export interface Item {
   id: number;
@@ -130,9 +130,9 @@ export interface Jazida {
 }
 
 /**
- * Um bicho, que é o único jeito de conseguir carne.
+ * Um bicho, que é o único jeito de conseguir minério.
  *
- * O caçador não enche uma barra de progresso: ele **mata** o bicho, e o bicho
+ * O saqueador não enche uma barra de progresso: ele **mata** o bicho, e o bicho
  * corre. É a única fonte de recurso do jogo que exige mirar, e é de propósito —
  * dá ao ofício mais barulhento um gesto de combate em vez de um de espera.
  */
@@ -153,13 +153,13 @@ export interface Animal {
   fugindo: number;
 }
 
-export interface Cozinha {
+export interface CasaDaMoeda {
   time: Time;
-  carne: number;
-  /** Segundos de forno restantes. Zero quando não há nada assando. */
-  assando: number;
-  /** Bolos prontos esperando alguém pegar. */
-  bolos: number;
+  minerio: number;
+  /** Segundos de forno restantes. Zero quando não há nada cunhando. */
+  cunhando: number;
+  /** Bolsas prontos esperando alguém pegar. */
+  bolsas: number;
 }
 
 /**
@@ -179,12 +179,12 @@ export interface Oficina {
 
 export type Evento =
   | { tipo: 'abate'; algoz: number; vitima: number }
-  | { tipo: 'fatia'; unidade: number; princesa: Time; peso: number }
+  | { tipo: 'deposito'; unidade: number; bau: Time; peso: number }
   | { tipo: 'resgate'; unidade: number; time: Time }
   | { tipo: 'chapeu'; unidade: number; classe: Classe; roubado: boolean }
-  | { tipo: 'pegouPrincesa'; unidade: number; princesa: Time }
-  | { tipo: 'largouPrincesa'; princesa: Time }
-  | { tipo: 'caca'; unidade: number }
+  | { tipo: 'pegouBau'; unidade: number; bau: Time }
+  | { tipo: 'largouBau'; bau: Time }
+  | { tipo: 'saque'; unidade: number }
   | { tipo: 'cura'; clerigo: number; alvo: number }
   | { tipo: 'nivel'; time: Time; nivel: number }
   | { tipo: 'fim'; vencedor: Time | null };
@@ -214,12 +214,12 @@ export interface Estado {
    */
   abates: Record<Time, number>;
   unidades: Unidade[];
-  princesas: Princesa[];
+  baus: Bau[];
   projeteis: Projetil[];
   itens: Item[];
   jazidas: Jazida[];
   animais: Animal[];
-  cozinhas: Cozinha[];
+  casasDaMoeda: CasaDaMoeda[];
   oficinas: Oficina[];
   /** Chapéus ainda guardados, por time e classe. */
   estoque: Record<Time, Record<Classe, number>>;
@@ -234,15 +234,15 @@ export function unidade(estado: Estado, id: number | null): Unidade | undefined 
   return estado.unidades.find((u) => u.id === id);
 }
 
-export function princesaDe(estado: Estado, time: Time): Princesa {
-  const p = estado.princesas.find((x) => x.time === time);
-  if (!p) throw new Error(`princesa ausente: ${time}`);
+export function bauDe(estado: Estado, time: Time): Bau {
+  const p = estado.baus.find((x) => x.time === time);
+  if (!p) throw new Error(`bau ausente: ${time}`);
   return p;
 }
 
-export function cozinhaDe(estado: Estado, time: Time): Cozinha {
-  const c = estado.cozinhas.find((x) => x.time === time);
-  if (!c) throw new Error(`cozinha ausente: ${time}`);
+export function casaDaMoedaDe(estado: Estado, time: Time): CasaDaMoeda {
+  const c = estado.casasDaMoeda.find((x) => x.time === time);
+  if (!c) throw new Error(`casaDaMoeda ausente: ${time}`);
   return c;
 }
 

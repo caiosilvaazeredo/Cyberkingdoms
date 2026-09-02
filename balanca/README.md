@@ -3,8 +3,8 @@
 Um jogo de resgate por times, jogado só em rede, feito com a base do
 CyberKingdoms: a mesma arte Tiny Swords, o mesmo gerador determinístico, o mesmo
 jeito de escrever TypeScript. É o esqueleto do **Fat Princess** do PS3 — dois
-castelos, duas princesas, chapéus que dão classe — com uma regra nova no meio,
-que muda a conta do jogo inteiro.
+castelos, dois reféns, chapéus que dão classe — com o tema trocado e uma regra
+nova no meio, que muda a conta do jogo inteiro.
 
 > A pasta continua se chamando `balanca/`, e o serviço publicado também: renomear
 > os dois quebraria o `rootDir` do deploy que já está no ar por nada. **Balança**
@@ -12,29 +12,55 @@ que muda a conta do jogo inteiro.
 
 ---
 
+## O tema: o Peso do Tesouro
+
+Não há princesa. O refém é um **baú vivo** — um saco de tesouro com pernas —, e
+o que o inimigo faz com ele é o oposto de cuidar: entulha de moeda até ele não
+poder mais ser carregado de volta.
+
+| o que era | o que é | por quê |
+|---|---|---|
+| princesa | **baú vivo** | ninguém pergunta por que um baú fica pesado |
+| cofre | **cofre** | é onde se guarda um baú |
+| trono | **tesouraria** | é para onde ele volta |
+| bolo | **bolsa de moedas** | o que se entulha |
+| cozinha | **Casa da Moeda** | onde o minério vira moeda |
+| carne | **minério** | o que sai do alforje do rebanho |
+| saqueador | **saqueador** | quem derruba a ovelha de carga |
+
+A troca não foi só de nome: ela apaga a pergunta que mais custava explicar no
+tema antigo — *"por que eu alimento a refém dela?"*. Ouro entrando num baú que
+não é seu é uma frase que não precisa de manual. Em compensação perde-se o
+humor do original; o jogo ficou mais frio de propósito.
+
+---
+
 ## O diferencial: o peso é uma balança só
 
-No original, bolo é defesa. Você engorda a princesa presa na sua masmorra para
-que o inimigo não consiga carregá-la de volta, e o cálculo acaba aí.
+No Fat Princess, bolo é defesa pura: você engorda o refém que está na sua
+cofre e o cálculo acaba aí.
 
-Aqui o peso do reino é **conservado**. As duas princesas dividem uma balança:
-a soma dos dois pesos é sempre a mesma. Cada fatia que você dá à refém tira
-exatamente aquele peso da **sua** princesa, presa do outro lado do mapa.
+Aqui o peso do reino é **conservado**. Os dois baús dividem uma balança: a soma
+dos dois pesos é sempre a mesma. Cada bolsa que você entulha no baú do seu cofre
+tira exatamente aquele peso do **seu** baú, trancado do outro lado do mapa. O
+ouro do mundo é finito, e enterrá-lo no baú do inimigo enriquece o baú e
+empobrece o reino dele.
 
-Uma fatia é ataque e defesa no mesmo gesto:
+Uma bolsa é ataque e defesa no mesmo gesto:
 
-| o que você faz | o que acontece na sua masmorra | o que acontece no seu resgate |
+| o que você faz | o que acontece no seu cofre | o que acontece no seu resgate |
 |---|---|---|
-| dá uma fatia à refém | ela engorda: o inimigo precisa de mais carregadores e anda mais devagar | a sua princesa emagrece: o seu resgate fica mais barato |
+| entulha uma bolsa no baú refém | ele pesa mais: o inimigo precisa de mais carregadores e anda mais devagar | o seu baú alivia: o seu resgate fica mais barato |
 
 E o inimigo está fazendo a mesma coisa na direção contrária. A barra no alto da
 tela é literalmente um cabo de guerra, e é o placar que mais se olha durante a
 partida — inclusive porque ela **desempata** o jogo: acabado o tempo com o
-placar igual, ganha o reino cuja princesa está mais leve.
+placar igual, ganha o reino cujo baú está mais leve.
 
-O que fecha o desenho é o custo. Bolo não nasce do chão: sai de **carne**, e
-carne sai de bicho que alguém teve de caçar no meio do mapa — e quem está caçando
-é um a menos segurando a ponte. Dominar a balança se paga em gente.
+O que fecha o desenho é o custo. Moeda não nasce do chão: sai de **minério**, e
+minério sai de ovelha de carga que alguém teve de derrubar no meio do mapa — e
+quem está saqueando é um a menos segurando a ponte. Dominar a balança se paga
+em gente.
 
 ### O segundo diferencial: chapéu cai, e chapéu se rouba
 
@@ -70,15 +96,15 @@ bot que não dá para balancear.
 
 ## Como se joga
 
-Traga a **sua** princesa da masmorra inimiga até o seu trono. Três resgates
+Traga o **seu** baú do cofre inimigo até a sua tesouraria. Três resgates
 vencem; doze minutos no relógio.
 
 | tecla | ação |
 |---|---|
 | `W` `A` `S` `D` | andar |
 | mouse | mirar (dá para recuar atirando) |
-| clique / `F` | atacar — e caçar, que é atacar bicho |
-| `E` / botão direito | usar: pegar, entregar, alimentar, vestir, trabalhar |
+| clique / `F` | atacar — e saquear, que é derrubar a ovelha de carga |
+| `E` / botão direito | usar: pegar, entregar, entulhar, vestir, trabalhar |
 | `Tab` | placar |
 
 No celular: manche numa metade da tela e botões na outra — de que lado fica cada
@@ -139,11 +165,11 @@ e o que impede a lista de virar sete variações indistinguíveis.
 |---|---|---|
 | **Resgate** | o clássico: três resgates vencem, a balança desempata | 370 s |
 | **Assalto** | um resgate decide · seis minutos · volta-se rápido para o campo | 85 s |
-| **Banquete** | a balança **vence**: empanturre a refém até o talo da barra | 395 s |
+| **Cofre Cheio** | a balança **vence**: entulhe o baú refém até o talo da barra | 395 s |
 | **Chapelaria aberta** | chapéu à vontade: ninguém disputa arco, ninguém rouba composição | 309 s |
-| **Fome** | o bicho abatido não volta: a carne do mapa é tudo o que existe | 372 s |
+| **Veia Seca** | a ovelha derrubada não volta: o minério do mapa é tudo o que existe | 372 s |
 | **Obra** | vence quem terminar a chapelaria: picareta e machado decidem | 229 s |
-| **Abate** | trinta baixas vencem · sem cortejo, sem bolo, só briga | 166 s |
+| **Abate** | trinta baixas vencem · sem cortejo, sem moeda, só briga | 166 s |
 
 A coluna da direita é medida, não estimada: doze seeds por modo, salas só de
 bots. Todas as oitenta e quatro partidas terminaram, e o placar por lado ficou
@@ -164,7 +190,7 @@ concordam de graça — uma vez por partida, e não quinze vezes por segundo.
 #### Um modo só existe se a partida ficar diferente
 
 Os quatro nasceram com testes de unidade passando e um deles era oco. Rodando
-salas só de bots, o Banquete terminava **idêntico** ao clássico — mesmo placar,
+salas só de bots, o Cofre Cheio terminava **idêntico** ao clássico — mesmo placar,
 mesmos pesos, mesmo vencedor, nas três seeds. O fim por peso existia; só nunca
 acontecia, porque `recomecarRodada` relaxava a balança metade do caminho de volta
 ao centro a cada resgate e apagava o trabalho que o modo pede.
@@ -186,14 +212,14 @@ diferente.
 
 A lição se repetiu com os modos novos, e as duas vezes a medição pegou:
 
-- O **Obra** nasceu oco pelo mesmo motivo do Banquete. O rodízio de papéis dos
+- O **Obra** nasceu oco pelo mesmo motivo do Cofre Cheio. O rodízio de papéis dos
   bots põe **um** deles por time na economia, e a obra empacava no nível dois: as
   três primeiras partidas saíram idênticas às do clássico. Um bot que ignora a
   condição de vitória do modo é um bot que não joga aquele modo, então o rodízio
-  passou a ser por modo — metade do time na picareta no Obra, ninguém cozinhando
+  passou a ser por modo — metade do time na picareta no Obra, ninguém cunhando
   no Abate.
 - O **Abate** terminava por resgate em duas de três, num modo cujo lema promete
-  "sem cortejo". O resgate deixou de decidir; a princesa continua em campo e
+  "sem cortejo". O resgate deixou de decidir; o baú continua em campo e
   continua carregável, mas deixou de ser o placar.
 
 E dois defeitos que só apareceram porque a medição foi feita:
@@ -246,7 +272,7 @@ corta é um formulário que mente.
 
 ### Os quatro campos de batalha
 
-Um mapa não mexe em regra nenhuma — mesma balança, mesmos chapéus, mesmo bolo.
+Um mapa não mexe em regra nenhuma — mesma balança, mesmos chapéus, mesmo bolsa.
 Ele mexe nas duas coisas que decidem o **ritmo**: onde estão os estrangulamentos
 e quão exposta fica a economia.
 
@@ -260,7 +286,7 @@ e quão exposta fica a economia.
 Os quatro são o mesmo grid de 60×34, e cada um descreve **só a metade azul**: o
 pincel que os relevos recebem escreve nos dois lados a cada traço, então um mapa
 que tentasse desenhar assimetria não conseguiria. Com quatro mapas, manter oito
-listas de coordenadas em pares seria garantir que um dia a cozinha vermelha
+listas de coordenadas em pares seria garantir que um dia a Casa da Moeda vermelha
 ficasse um tile mais longe do que a azul.
 
 O que torna um mapa novo barato é o teste: `test/arena.test.ts` roda **em laço
@@ -282,7 +308,7 @@ Menu → cabine → escolha de lado → jogo.
 **O menu não tem fundo: o fundo é o jogo.** A página conecta ao servidor assim
 que abre, entra como plateia numa sala que já está rodando e desenha a partida
 atrás do título, com uma câmera que persegue o que decide o jogo — o cortejo da
-princesa primeiro, a princesa caída depois, o maior amontoado **com os dois
+baú primeiro, o baú caído depois, o maior amontoado **com os dois
 times** em seguida e, se ninguém estiver se esbarrando, o maior grupo de gente
 que houver. É o modo atração do fliperama, e num jogo só multiplayer ele responde
 sem texto a pergunta que todo mundo faz ao abrir: *tem alguém jogando aí?*
@@ -355,23 +381,24 @@ de longe quem é quem.
 | Clérigo | 110 | ergue o cajado, com aura no curado | cura o aliado mais ferido no alcance |
 | Minerador | 125 | picareta | tira **ouro** da jazida |
 | Lenhador | 130 | machado | tira **madeira** da árvore |
-| Caçador | 100 | faca, rápida | abate o bicho e leva a **carne** |
+| Saqueador | 100 | faca, rápida | derruba a ovelha de carga e leva o **minério** |
 | Aldeão | 90 | sem arma | é o padrão, e é infinito: junta de tudo 1,8× mais devagar |
 
 ### As três cadeias da economia
 
 ```
-ovelha → caçador abate (3 golpes) → carne no chão → cozinha (2 carnes)
-       → forno (6 s) → bolo → masmorra → fatia → a balança pende
+ovelha de carga → saqueador derruba (3 golpes) → minério no chão
+       → Casa da Moeda (2 minérios) → cunhagem (6 s) → bolsa de moedas
+       → cofre → entulha o baú refém → a balança pende
 
 árvore → lenhador  (2,4 s parado) → madeira ┐
 jazida → minerador (2,4 s parado) → ouro    ┴→ chapelaria → obra I → II → III
                                                (+15% de vida e dano por nível)
 ```
 
-Caçar é a única coleta que se faz **atacando**: o bicho corre, e o caçador o
-derruba em três golpes — qualquer outra classe leva o dobro do tempo e vira alvo
-fácil enquanto tenta. Nas jazidas é o contrário: andar cancela o trabalho, e é
+Saquear é a única coleta que se faz **atacando**: a ovelha corre com o alforje
+nas costas, e o saqueador a derruba em três golpes — qualquer outra classe leva
+o dobro do tempo e vira alvo fácil enquanto tenta. Nas jazidas é o contrário: andar cancela o trabalho, e é
 isso que faz o ofício custar posição em vez de não custar nada.
 
 A obra exige os **dois** materiais, de propósito: um time só de lenhador acumula
@@ -382,12 +409,13 @@ Parte das jazidas fica dentro do castelo e parte no campo aberto, e as ovelhas
 estão em maioria no meio do mapa: a economia mínima é segura, a economia que
 **ganha** a balança exige sair de casa.
 
-Longe da masmorra, o bolo vira o que qualquer bolo é: comida. Comer cura 45.
+Longe do cofre, a bolsa vira o que todo dinheiro é: você gasta consigo, e isso
+cura 45.
 
 ### O minimapa mostra o que o time está vendo
 
 O canto de cima à direita traz o relevo, o seu time inteiro, as construções que
-importam (trono e jaula) e o retângulo do pedaço de mundo que está na sua tela.
+importam (tesouraria e cofre) e o retângulo do pedaço de mundo que está na sua tela.
 
 O inimigo é outra história: ele só aparece **enquanto alguém do seu time está
 vendo** — perto o bastante e sem parede no meio, pela mesma função de linha livre
@@ -527,12 +555,12 @@ rodam o mesmo `criarArena` e chegam ao mesmo tile. O servidor manda um número.
 
 **2. O cliente prevê o próprio movimento, e só isso.** `moverUnidade` é a mesma
 função nos dois lados: o cliente aplica o comando na hora, guarda-o numa fila e
-refaz a conta quando o retrato chega. Dano, resgate e fatia só existem depois que
+refaz a conta quando o retrato chega. Dano, resgate e depósito só existem depois que
 o servidor disse que existem — prever dano só produz mortes que voltam à vida.
 
 **3. O tick não sorteia nada.** Nenhuma decisão da simulação usa aleatoriedade,
 nem no dano, nem nos bots. É o que torna um replay possível a partir da seed e da
-lista de comandos, e o que faz "às vezes o carregador solta a princesa" ser
+lista de comandos, e o que faz "às vezes o carregador solta o baú" ser
 reproduzível em vez de folclore.
 
 ### Números da rede

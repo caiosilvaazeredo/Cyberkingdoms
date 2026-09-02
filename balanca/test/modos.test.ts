@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { IDS_DOS_MODOS, MODOS, MODO_PADRAO, modoDe, pesoQueVence } from '../src/shared/modos';
-import { oficinaDe, princesaDe } from '../src/shared/estado';
+import { oficinaDe, bauDe } from '../src/shared/estado';
 import { Sala } from '../src/server/sala';
 import { criarPartida } from '../src/shared/partida';
 import {
@@ -30,7 +30,7 @@ function emJogo(modo = MODO_PADRAO) {
 /**
  * Marca `quantos` resgates para o azul, do jeito mais curto possível.
  *
- * A princesa e o herói são **teleportados** para a jaula e para o trono: andar
+ * O baú e o herói são **teleportados** para a cofre e para a tesouraria: andar
  * até lá seria exercitar a navegação, que tem os testes dela, e faria este
  * arquivo depender do mapa. O que não é teleportado é o gesto — os dois toques
  * no botão de contexto, com a solta entre eles, porque é exatamente o caminho
@@ -48,8 +48,8 @@ function resgatar(partida: ReturnType<typeof criarPartida>, quantos: number): vo
     const heroi =
       partida.estado.unidades.find((u) => u.time === 'azul' && u.vivo) ??
       partida.entrar({ nome: 'H', bot: false, time: 'azul' });
-    const minha = princesaDe(partida.estado, 'azul');
-    const trono = partida.arena.estrutura('trono', 'azul');
+    const minha = bauDe(partida.estado, 'azul');
+    const tesouraria = partida.arena.estrutura('tesouraria', 'azul');
 
     // Leve o bastante para um carregador só: escolta é outro teste.
     minha.peso = 60;
@@ -57,10 +57,10 @@ function resgatar(partida: ReturnType<typeof criarPartida>, quantos: number): vo
     heroi.y = minha.y;
     tocar(heroi.id, false);
     tocar(heroi.id, true);
-    expect(minha.onde).toBe('carregada');
+    expect(minha.onde).toBe('carregado');
 
-    heroi.x = trono.x;
-    heroi.y = trono.y;
+    heroi.x = tesouraria.x;
+    heroi.y = tesouraria.y;
     // O botão precisa ser solto antes de valer de novo: segurar não repete.
     tocar(heroi.id, false);
     tocar(heroi.id, true);
@@ -118,51 +118,51 @@ describe('o modo Assalto', () => {
   });
 });
 
-describe('o modo Banquete', () => {
+describe('o modo Cofre Cheio', () => {
   it('acaba quando a balança chega ao limiar do modo', () => {
-    const partida = emJogo('banquete');
+    const partida = emJogo('cofrecheio');
     const heroi = partida.entrar({ nome: 'H', bot: false, time: 'azul' });
-    const refem = princesaDe(partida.estado, 'vermelho');
-    const minha = princesaDe(partida.estado, 'azul');
-    // Uma fatia antes do fim: o resto do caminho já foi andado.
-    minha.peso = pesoQueVence('banquete') + 5;
+    const refem = bauDe(partida.estado, 'vermelho');
+    const minha = bauDe(partida.estado, 'azul');
+    // Uma depósito antes do fim: o resto do caminho já foi andado.
+    minha.peso = pesoQueVence('cofrecheio') + 5;
     refem.peso = PESO_TOTAL - minha.peso;
 
     heroi.x = refem.x;
     heroi.y = refem.y;
-    heroi.carga = 'bolo';
+    heroi.carga = 'bolsa';
     partida.comandar(heroi.id, { seq: 1, mx: 0, my: 0, ax: 0, ay: 0, atacar: false, usar: true });
     partida.passo();
 
     // Abaixo do limiar, e não exatamente nele: o limiar do modo (70) é maior
-    // que o piso do jogo (40), então a fatia inteira entra e o peso passa
+    // que o piso do jogo (40), então o depósito inteira entra e o peso passa
     // direto. É o fim que importa, não o número redondo.
-    expect(minha.peso).toBeLessThanOrEqual(pesoQueVence('banquete'));
+    expect(minha.peso).toBeLessThanOrEqual(pesoQueVence('cofrecheio'));
     expect(partida.estado.fase).toBe('fim');
     expect(partida.estado.vencedor).toBe('azul');
   });
 
-  it('no clássico, a mesma fatia não acaba a partida', () => {
+  it('no clássico, a mesma deposito não acaba a partida', () => {
     const partida = emJogo('resgate');
     const heroi = partida.entrar({ nome: 'H', bot: false, time: 'azul' });
-    const refem = princesaDe(partida.estado, 'vermelho');
-    const minha = princesaDe(partida.estado, 'azul');
-    minha.peso = pesoQueVence('banquete') + 5;
+    const refem = bauDe(partida.estado, 'vermelho');
+    const minha = bauDe(partida.estado, 'azul');
+    minha.peso = pesoQueVence('cofrecheio') + 5;
     refem.peso = PESO_TOTAL - minha.peso;
 
     heroi.x = refem.x;
     heroi.y = refem.y;
-    heroi.carga = 'bolo';
+    heroi.carga = 'bolsa';
     partida.comandar(heroi.id, { seq: 1, mx: 0, my: 0, ax: 0, ay: 0, atacar: false, usar: true });
     partida.passo();
 
-    expect(minha.peso).toBeLessThanOrEqual(pesoQueVence('banquete'));
+    expect(minha.peso).toBeLessThanOrEqual(pesoQueVence('cofrecheio'));
     expect(partida.estado.fase).not.toBe('fim');
   });
 
   it('o resgate continua valendo: são dois caminhos, não um', () => {
-    const partida = emJogo('banquete');
-    resgatar(partida, MODOS.banquete.pontosParaVencer);
+    const partida = emJogo('cofrecheio');
+    resgatar(partida, MODOS.cofrecheio.pontosParaVencer);
     expect(partida.estado.fase).toBe('fim');
     expect(partida.estado.vencedor).toBe('azul');
   });
@@ -170,16 +170,16 @@ describe('o modo Banquete', () => {
   it('a balança não relaxa depois de um ponto — senão a vitória por peso nunca vem', () => {
     // Este é o teste que faltava, e a ausência dele deixou o modo nascer vazio:
     // o fim por peso existia, mas `recomecarRodada` devolvia metade do caminho
-    // andado a cada resgate, e medindo com bots o Banquete terminava idêntico
+    // andado a cada resgate, e medindo com bots o Cofre Cheio terminava idêntico
     // ao clássico — mesmo placar, mesmos pesos, mesma duração.
-    // `resgatar` deixa a princesa em 60 para o cortejo caber num carregador só,
+    // `resgatar` deixa o baú em 60 para o cortejo caber num carregador só,
     // o que serve de ponto de partida: 60 está longe do meio, e é justamente a
     // distância que o relaxamento comeria.
-    const partida = emJogo('banquete');
+    const partida = emJogo('cofrecheio');
     resgatar(partida, 1);
     expect(partida.estado.placar.azul).toBe(1);
     // O trabalho de economia sobrevive ao ponto.
-    expect(princesaDe(partida.estado, 'azul').peso).toBe(60);
+    expect(bauDe(partida.estado, 'azul').peso).toBe(60);
   });
 
   it('no clássico ela relaxa: o ponto devolve metade do caminho', () => {
@@ -187,13 +187,13 @@ describe('o modo Banquete', () => {
     // passaria os dois — e a bola de neve do clássico voltaria sem aviso.
     const partida = emJogo('resgate');
     resgatar(partida, 1);
-    expect(princesaDe(partida.estado, 'azul').peso).toBe(80);
+    expect(bauDe(partida.estado, 'azul').peso).toBe(80);
   });
 });
 
-describe('o modo Fome', () => {
+describe('o modo Veia Seca', () => {
   it('não repõe o bicho abatido', () => {
-    const partida = emJogo('fome');
+    const partida = emJogo('veiaseca');
     const bicho = partida.estado.animais[0]!;
     bicho.vivo = false;
     bicho.voltaEm = 0.1;
@@ -336,7 +336,7 @@ describe('os modos jogados de verdade', () => {
    * O teste que faltava quando os modos nasceram.
    *
    * Os outros conferem cada alavanca em isolamento, com a partida montada à
-   * mão — e todos passavam enquanto o Banquete terminava idêntico ao clássico
+   * mão — e todos passavam enquanto o Cofre Cheio terminava idêntico ao clássico
    * numa partida de verdade. O que uma tabela de números não prova é que o jogo
    * **fica diferente**; só rodar a partida prova.
    */
@@ -347,7 +347,7 @@ describe('os modos jogados de verdade', () => {
     //
     // A comparação é o que importa, e não o número: um modo "rápido" que
     // durasse o mesmo que o clássico seria um modo só de nome, e foi assim que
-    // o Banquete nasceu.
+    // o Cofre Cheio nasceu.
     const CORTE = 250;
     const assalto = ateAcabar('assalto', CORTE);
     expect(assalto).not.toBeNull();

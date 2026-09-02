@@ -18,7 +18,7 @@ import { RAIO_UNIDADE, TILE, TIMES } from '../src/shared/regras';
  * andar até o canto para ver se dá.
  */
 
-const TIPOS: TipoDeEstrutura[] = ['trono', 'jaula', 'cozinha', 'chapelaria', 'nascedouro'];
+const TIPOS: TipoDeEstrutura[] = ['tesouraria', 'cofre', 'casaDaMoeda', 'chapelaria', 'nascedouro'];
 
 describe.each(IDS_DOS_MAPAS)('o mapa %s', (id) => {
   const arena = criarArena(123, id);
@@ -29,7 +29,7 @@ describe.each(IDS_DOS_MAPAS)('o mapa %s', (id) => {
       const azul = arena.jazidas.filter((j) => j.lado === 'azul' && j.tipo === tipo);
       const vermelho = arena.jazidas.filter((j) => j.lado === 'vermelho' && j.tipo === tipo);
       expect(azul).toHaveLength(vermelho.length);
-      // E no espelho exato: uma árvore um tile mais longe da cozinha de um lado
+      // E no espelho exato: uma árvore um tile mais longe da Casa da Moeda de um lado
       // é vantagem econômica que ninguém escolheu dar.
       expect(azul.map((j) => espelhar(Math.floor(j.x / TILE))).sort()).toEqual(
         vermelho.map((j) => Math.floor(j.x / TILE)).sort(),
@@ -100,7 +100,7 @@ describe.each(IDS_DOS_MAPAS)('o mapa %s', (id) => {
   });
 
   it('não deixa nenhum ponto de interesse dentro do castelo do inimigo', () => {
-    // A jaula do azul guarda a princesa vermelha e fica no castelo azul; tudo o
+    // A cofre do azul guarda o baú vermelha e fica no castelo azul; tudo o
     // mais que tem lado precisa estar do lado certo do eixo, senão o mapa dá a
     // um time uma jazida dentro da casa do outro.
     const meio = (arena.largura * TILE) / 2;
@@ -144,7 +144,7 @@ describe('o navegador', () => {
   it('guarda um campo por destino, e não um por consulta', () => {
     const arena = criarArena(9);
     const navegador = new Navegador(arena);
-    const alvo = arena.estrutura('jaula', 'vermelho');
+    const alvo = arena.estrutura('cofre', 'vermelho');
     for (let i = 0; i < 50; i++) {
       navegador.direcao(200 + i, 400, alvo.x, alvo.y);
     }
@@ -155,7 +155,7 @@ describe('o navegador', () => {
     const arena = criarArena(9);
     const navegador = new Navegador(arena);
     const casa = arena.estrutura('nascedouro', 'azul');
-    const alvo = arena.estrutura('jaula', 'vermelho');
+    const alvo = arena.estrutura('cofre', 'vermelho');
     let x = casa.x;
     let y = casa.y;
     let passos = 0;

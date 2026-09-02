@@ -9,7 +9,7 @@ import type { Arena } from './arena';
  * A tentação é rodar um A* por bot por decisão. Doze bots decidindo três vezes
  * por segundo dão trinta e seis buscas, e cada uma joga fora o que a anterior
  * descobriu — mesmo quando todas vão para o mesmo lugar, que é o caso comum:
- * numa partida, "todo mundo indo para a masmorra inimiga" é literalmente o
+ * numa partida, "todo mundo indo para o cofre inimigo" é literalmente o
  * plano do time.
  *
  * Então a busca é invertida. Para cada **destino** se calcula uma vez a
@@ -18,7 +18,7 @@ import type { Arena } from './arena';
  * constante por bot por tick, e um campo serve o time inteiro.
  *
  * Os destinos do jogo são poucos e quase sempre os mesmos (as duas masmorras,
- * os dois tronos, as cozinhas, as chapelarias, os trigais), então o cache
+ * os dois tesourarias, as casas da moeda, as chapelarias, os trigais), então o cache
  * acerta quase sempre. O teto existe para o caso móvel — perseguir um inimigo
  * que corre —, e aí o campo mais velho sai.
  *

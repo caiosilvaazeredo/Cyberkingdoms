@@ -9,7 +9,7 @@ import { TILE, type Time } from '../shared/regras';
  * O jogo é só multiplayer, e a primeira pergunta de quem chega é "tem gente
  * jogando?". Uma arte de fundo não responde; uma partida de verdade correndo
  * atrás do título responde antes de a pessoa perguntar — e ainda ensina o jogo
- * sem tutorial, porque dá para ver a princesa gorda sendo carregada e o cortejo
+ * sem tutorial, porque dá para ver o baú gorda sendo carregado e o cortejo
  * travando na ponte.
  *
  * É o modo atração dos fliperamas, com uma diferença: aqui não é uma gravação.
@@ -17,8 +17,8 @@ import { TILE, type Time } from '../shared/regras';
  *
  * ## O que faz uma cena valer a pena
  *
- * A câmera persegue **o que decide a partida**, nesta ordem: a princesa sendo
- * carregada, a princesa caída no chão, o maior encontro entre os dois times e,
+ * A câmera persegue **o que decide a partida**, nesta ordem: o baú sendo
+ * carregado, o baú caído no chão, o maior encontro entre os dois times e,
  * se ninguém estiver se esbarrando, o maior grupo de gente que houver. É a mesma
  * ordem de importância que um comentarista usaria — e o encontro entre times
  * pesa mais de propósito: cinco do mesmo lado juntos é fila para o chapéu, e
@@ -39,7 +39,7 @@ import { TILE, type Time } from '../shared/regras';
  * ## Por que isto é uma função pura
  *
  * Escolher o alvo não desenha nada e não depende do relógio: recebe o estado,
- * devolve um ponto. Assim dá para testar "com a princesa carregada, a câmera
+ * devolve um ponto. Assim dá para testar "com o baú carregado, a câmera
  * segue o cortejo" sem abrir um navegador — que é o tipo de regra que quebra em
  * silêncio quando alguém mexe no desenho.
  */
@@ -48,7 +48,7 @@ export interface AlvoDaAtracao {
   x: number;
   y: number;
   /** O que prendeu a atenção. Só o diagnóstico e o teste usam. */
-  motivo: 'cortejo' | 'princesa-no-chao' | 'briga' | 'campo' | 'centro';
+  motivo: 'cortejo' | 'bau-no-chao' | 'briga' | 'campo' | 'centro';
 }
 
 /** Raio em que duas unidades contam como parte do mesmo amontoado. */
@@ -62,11 +62,11 @@ export function alvoDaAtracao(
   const centro = { x: (largura * TILE) / 2, y: (altura * TILE) / 2, motivo: 'centro' as const };
   if (!estado || estado.unidades.length === 0) return centro;
 
-  const carregada = estado.princesas.find((p) => p.onde === 'carregada');
-  if (carregada) return { x: carregada.x, y: carregada.y, motivo: 'cortejo' };
+  const carregado = estado.baus.find((p) => p.onde === 'carregado');
+  if (carregado) return { x: carregado.x, y: carregado.y, motivo: 'cortejo' };
 
-  const caida = estado.princesas.find((p) => p.onde === 'chao');
-  if (caida) return { x: caida.x, y: caida.y, motivo: 'princesa-no-chao' };
+  const caida = estado.baus.find((p) => p.onde === 'chao');
+  if (caida) return { x: caida.x, y: caida.y, motivo: 'bau-no-chao' };
 
   // O maior amontoado: para cada unidade viva, quantas outras estão ao redor.
   // É O(n²) sobre doze unidades — quarenta e quatro contas por quadro, menos do

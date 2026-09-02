@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { Sala, type Cliente } from '../src/server/sala';
-import { princesaDe } from '../src/shared/estado';
+import { bauDe } from '../src/shared/estado';
 import { PESO_TOTAL, TICKS_POR_SEGUNDO, TILE } from '../src/shared/regras';
 
 /**
@@ -9,8 +9,8 @@ import { PESO_TOTAL, TICKS_POR_SEGUNDO, TILE } from '../src/shared/regras';
  *
  * Um teste de unidade diria que a função de decisão devolve o destino esperado
  * — e passaria com bots que andam em círculo. O que interessa é outra coisa:
- * **depois de alguns minutos de partida, o jogo andou?** Houve fatia, houve
- * disputa, alguém pegou a princesa? Por isso este teste roda a partida inteira
+ * **depois de alguns minutos de partida, o jogo andou?** Houve depósito, houve
+ * disputa, alguém pegou o baú? Por isso este teste roda a partida inteira
  * e olha o resultado, e não as decisões.
  */
 
@@ -45,7 +45,7 @@ function jogar(segundos: number, seed: number) {
     for (const e of sala.estado.eventos) eventos.push(e.tipo);
     maiorDesequilibrio = Math.max(
       maiorDesequilibrio,
-      Math.abs(princesaDe(sala.estado, 'azul').peso - PESO_TOTAL / 2),
+      Math.abs(bauDe(sala.estado, 'azul').peso - PESO_TOTAL / 2),
     );
   }
   return { sala, eventos, maiorDesequilibrio };
@@ -54,9 +54,9 @@ function jogar(segundos: number, seed: number) {
 describe('os bots', () => {
   it('sustentam a economia e movem a balança', () => {
     const { sala, eventos, maiorDesequilibrio } = jogar(150, 21);
-    expect(eventos.filter((e) => e === 'fatia').length).toBeGreaterThan(0);
-    const azul = princesaDe(sala.estado, 'azul').peso;
-    const vermelho = princesaDe(sala.estado, 'vermelho').peso;
+    expect(eventos.filter((e) => e === 'deposito').length).toBeGreaterThan(0);
+    const azul = bauDe(sala.estado, 'azul').peso;
+    const vermelho = bauDe(sala.estado, 'vermelho').peso;
     expect(azul + vermelho).toBe(PESO_TOTAL);
     expect(maiorDesequilibrio).toBeGreaterThan(0);
   });
@@ -68,7 +68,7 @@ describe('os bots', () => {
 
   it('tentam o resgate de verdade', () => {
     const { eventos } = jogar(240, 23);
-    expect(eventos.filter((e) => e === 'pegouPrincesa').length).toBeGreaterThan(0);
+    expect(eventos.filter((e) => e === 'pegouBau').length).toBeGreaterThan(0);
   });
 
   it('nunca ficam presos dentro da água', () => {

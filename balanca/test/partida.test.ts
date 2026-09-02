@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { princesaDe, type Unidade } from '../src/shared/estado';
+import { bauDe, type Unidade } from '../src/shared/estado';
 import { vidaMaxima } from '../src/shared/classes';
 import { criarPartida, moverUnidade, type Partida } from '../src/shared/partida';
 import type { Comando } from '../src/shared/protocolo';
@@ -8,11 +8,11 @@ import {
   ALCANCE_DE_AJUDA,
   ANIMAL_VIDA,
   AQUECIMENTO,
-  CARNE_POR_BOLO,
+  MINERIO_POR_BOLSA,
   CUSTO_DO_NIVEL,
   DT,
   PONTOS_PARA_VENCER,
-  TEMPO_DE_FORNO,
+  TEMPO_DE_CUNHAGEM,
   TEMPO_DE_TRABALHO,
   TICKS_POR_SEGUNDO,
 } from '../src/shared/regras';
@@ -46,25 +46,25 @@ describe('o resgate', () => {
     heroi = partida.entrar({ nome: 'Herói', bot: false, time: 'azul' });
   });
 
-  it('pega a própria princesa na masmorra inimiga', () => {
-    const minha = princesaDe(partida.estado, 'azul');
+  it('pega o próprio baú no cofre inimiga', () => {
+    const minha = bauDe(partida.estado, 'azul');
     em(heroi, minha);
     usar(partida, heroi.id);
-    expect(heroi.carga).toBe('princesa');
-    expect(minha.onde).toBe('carregada');
+    expect(heroi.carga).toBe('bau');
+    expect(minha.onde).toBe('carregado');
     expect(minha.portador).toBe(heroi.id);
   });
 
-  it('não sequestra a princesa inimiga: ela não é para carregar', () => {
-    const refem = princesaDe(partida.estado, 'vermelho');
+  it('não sequestra a bau inimiga: ela não é para carregar', () => {
+    const refem = bauDe(partida.estado, 'vermelho');
     em(heroi, refem);
     usar(partida, heroi.id);
-    expect(heroi.carga).not.toBe('princesa');
-    expect(refem.onde).toBe('jaula');
+    expect(heroi.carga).not.toBe('bau');
+    expect(refem.onde).toBe('cofre');
   });
 
   it('sem escolta suficiente, o cortejo não sai do lugar', () => {
-    const minha = princesaDe(partida.estado, 'azul');
+    const minha = bauDe(partida.estado, 'azul');
     minha.peso = 100; // dois carregadores
     em(heroi, minha);
     usar(partida, heroi.id);
@@ -86,14 +86,14 @@ describe('o resgate', () => {
     expect(Math.hypot(heroi.x - antes.x, heroi.y - antes.y)).toBeGreaterThan(20);
   });
 
-  it('entregar no trono vale um ponto e reinicia a rodada', () => {
-    const minha = princesaDe(partida.estado, 'azul');
+  it('entregar no tesouraria vale um ponto e reinicia a rodada', () => {
+    const minha = bauDe(partida.estado, 'azul');
     minha.peso = 60; // um carregador basta
     em(heroi, minha);
     usar(partida, heroi.id);
-    expect(heroi.carga).toBe('princesa');
+    expect(heroi.carga).toBe('bau');
 
-    em(heroi, partida.arena.estrutura('trono', 'azul'));
+    em(heroi, partida.arena.estrutura('tesouraria', 'azul'));
     usar(partida, heroi.id);
 
     expect(partida.estado.placar.azul).toBe(1);
@@ -103,12 +103,12 @@ describe('o resgate', () => {
 
   it('a partida acaba quando um reino chega aos pontos combinados', () => {
     for (let ponto = 0; ponto < PONTOS_PARA_VENCER; ponto++) {
-      const minha = princesaDe(partida.estado, 'azul');
+      const minha = bauDe(partida.estado, 'azul');
       minha.peso = 60;
-      minha.onde = 'jaula';
+      minha.onde = 'cofre';
       em(heroi, minha);
       usar(partida, heroi.id);
-      em(heroi, partida.arena.estrutura('trono', 'azul'));
+      em(heroi, partida.arena.estrutura('tesouraria', 'azul'));
       usar(partida, heroi.id);
       // Deixa a pausa entre pontos passar.
       for (let i = 0; i < 5 * TICKS_POR_SEGUNDO; i++) partida.passo();
@@ -117,8 +117,8 @@ describe('o resgate', () => {
     expect(partida.estado.vencedor).toBe('azul');
   });
 
-  it('quem morre carregando a princesa a deixa cair', () => {
-    const minha = princesaDe(partida.estado, 'azul');
+  it('quem morre carregando a bau a deixa cair', () => {
+    const minha = bauDe(partida.estado, 'azul');
     minha.peso = 60;
     em(heroi, minha);
     usar(partida, heroi.id);
@@ -133,7 +133,7 @@ describe('o resgate', () => {
       partida.passo();
     }
     expect(heroi.vivo).toBe(false);
-    expect(princesaDe(partida.estado, 'azul').onde).toBe('chao');
+    expect(bauDe(partida.estado, 'azul').onde).toBe('chao');
   });
 });
 
@@ -212,43 +212,43 @@ describe('os ofícios', () => {
     expect(vidaMaxima('guerreiro', 2)).toBeGreaterThan(vidaMaxima('guerreiro', 1));
   });
 
-  it('só se tira carne matando o bicho', () => {
+  it('só se tira minerio matando o bicho', () => {
     const partida = emJogo();
-    const cacador = partida.entrar({ nome: 'Caçador', bot: false, time: 'azul' });
-    cacador.classe = 'cacador';
+    const saqueador = partida.entrar({ nome: 'Saqueador', bot: false, time: 'azul' });
+    saqueador.classe = 'saqueador';
     const bicho = partida.estado.animais[0]!;
-    em(cacador, { x: bicho.x - 30, y: bicho.y });
+    em(saqueador, { x: bicho.x - 30, y: bicho.y });
 
     // Apertar "usar" na frente do bicho não faz nada: caça não é barra de
     // progresso.
-    usar(partida, cacador.id);
-    expect(cacador.colhendoId).toBeNull();
-    expect(cacador.carga).toBe('nada');
+    usar(partida, saqueador.id);
+    expect(saqueador.colhendoId).toBeNull();
+    expect(saqueador.carga).toBe('nada');
 
     for (let i = 0; i < 400 && bicho.vivo; i++) {
-      const dx = bicho.x - cacador.x;
-      const dy = bicho.y - cacador.y;
+      const dx = bicho.x - saqueador.x;
+      const dy = bicho.y - saqueador.y;
       const d = Math.hypot(dx, dy) || 1;
       // Corre atrás: o bicho foge quando apanha.
-      em(cacador, { x: bicho.x - (dx / d) * 30, y: bicho.y - (dy / d) * 30 });
-      partida.comandar(cacador.id, { ...parado, seq: 500 + i, ax: dx / d, ay: dy / d, atacar: true });
+      em(saqueador, { x: bicho.x - (dx / d) * 30, y: bicho.y - (dy / d) * 30 });
+      partida.comandar(saqueador.id, { ...parado, seq: 500 + i, ax: dx / d, ay: dy / d, atacar: true });
       partida.passo();
     }
     expect(bicho.vivo).toBe(false);
-    const carne = partida.estado.itens.find((i) => i.tipo === 'carne');
-    expect(carne).toBeDefined();
+    const minerio = partida.estado.itens.find((i) => i.tipo === 'minerio');
+    expect(minerio).toBeDefined();
 
-    em(cacador, carne!);
-    usar(partida, cacador.id);
-    expect(cacador.carga).toBe('carne');
+    em(saqueador, minerio!);
+    usar(partida, saqueador.id);
+    expect(saqueador.carga).toBe('minerio');
 
-    em(cacador, partida.arena.estrutura('cozinha', 'azul'));
-    usar(partida, cacador.id);
-    expect(partida.estado.cozinhas.find((c) => c.time === 'azul')!.carne).toBe(1);
+    em(saqueador, partida.arena.estrutura('casaDaMoeda', 'azul'));
+    usar(partida, saqueador.id);
+    expect(partida.estado.casasDaMoeda.find((c) => c.time === 'azul')!.minerio).toBe(1);
   });
 
-  it('o caçador derruba o bicho mais rápido que um guerreiro', () => {
-    const golpesDo = (classe: 'cacador' | 'guerreiro'): number => {
+  it('o saqueador derruba o bicho mais rápido que um guerreiro', () => {
+    const golpesDo = (classe: 'saqueador' | 'guerreiro'): number => {
       const partida = emJogo();
       const u = partida.entrar({ nome: classe, bot: false, time: 'azul' });
       u.classe = classe;
@@ -264,26 +264,26 @@ describe('os ofícios', () => {
       }
       return golpes;
     };
-    expect(golpesDo('cacador')).toBeLessThan(golpesDo('guerreiro'));
+    expect(golpesDo('saqueador')).toBeLessThan(golpesDo('guerreiro'));
   });
 
-  it('a carne vira bolo no forno', () => {
+  it('a minerio vira bolsa no forno', () => {
     const partida = emJogo();
     const u = partida.entrar({ nome: 'U', bot: false, time: 'azul' });
-    const cozinha = partida.arena.estrutura('cozinha', 'azul');
-    const forno = partida.estado.cozinhas.find((c) => c.time === 'azul')!;
-    forno.bolos = 0;
+    const casaDaMoeda = partida.arena.estrutura('casaDaMoeda', 'azul');
+    const forno = partida.estado.casasDaMoeda.find((c) => c.time === 'azul')!;
+    forno.bolsas = 0;
 
-    for (let i = 0; i < CARNE_POR_BOLO; i++) {
-      u.carga = 'carne';
-      em(u, cozinha);
+    for (let i = 0; i < MINERIO_POR_BOLSA; i++) {
+      u.carga = 'minerio';
+      em(u, casaDaMoeda);
       usar(partida, u.id);
     }
-    for (let i = 0; i < Math.ceil(TEMPO_DE_FORNO / DT) + 4; i++) partida.passo();
-    expect(forno.bolos).toBe(1);
+    for (let i = 0; i < Math.ceil(TEMPO_DE_CUNHAGEM / DT) + 4; i++) partida.passo();
+    expect(forno.bolsas).toBe(1);
 
     usar(partida, u.id);
-    expect(u.carga).toBe('bolo');
+    expect(u.carga).toBe('bolsa');
   });
 
   it('andar cancela o trabalho — ofício é ficar exposto', () => {

@@ -25,7 +25,7 @@ import { Minimapa } from './minimapa';
 import { Sofa, type Porta } from './sofa';
 import type { ConfiguracaoDeSala } from '../shared/protocolo';
 import { Telas, type SalaAberta } from './telas';
-import { princesaDe, type Unidade } from '../shared/estado';
+import { bauDe, type Unidade } from '../shared/estado';
 import { DT } from '../shared/regras';
 
 /**
@@ -387,15 +387,15 @@ function laco(agora: number): void {
   desenharMundo(ctx, arte, rede.arena, sofa ?? rede, camera, largura, altura, tempo, ajustes);
 
   const eu = emCampo[0]?.unidade ?? null;
-  if (estado && eu && estado.princesas.length === 2) {
+  if (estado && eu && estado.baus.length === 2) {
     const dica = dicaDeUso(rede.arena, estado, eu);
     if (dica?.alvo) realce(ctx, vista, dica.alvo, tempo);
     if (dica) desenharDica(ctx, dica.texto, largura, altura, entrada.usandoToque);
 
-    // A bússola aponta o que decide a partida: a sua princesa. Sem ela, quem
+    // A bússola aponta o que decide a partida: a seu baú. Sem ela, quem
     // está no meio do mapa não sabe para onde correr quando o cortejo começa.
-    const minha = princesaDe(estado, eu.time);
-    if (minha.onde !== 'salva') bussola(ctx, vista, largura, altura, minha, '#ffd479');
+    const minha = bauDe(estado, eu.time);
+    if (minha.onde !== 'resgatado') bussola(ctx, vista, largura, altura, minha, '#ffd479');
   }
   // Quem do sofá saiu de quadro ganha uma seta na cor da sua vaga: a câmera já
   // abriu o que podia, e daqui em diante é mais honesto apontar do que

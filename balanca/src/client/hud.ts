@@ -1,5 +1,5 @@
 import { CLASSES_COM_CHAPEU, perfil, vidaMaxima } from '../shared/classes';
-import { nivelDe, princesaDe, type Estado, type Evento, type Unidade } from '../shared/estado';
+import { nivelDe, bauDe, type Carga, type Estado, type Evento, type Unidade } from '../shared/estado';
 import { MAPAS } from '../shared/mapas';
 import { modoDe } from '../shared/modos';
 import {
@@ -22,7 +22,7 @@ import type { Rede } from './rede';
  * Um jogo cujo diferencial é uma grandeza conservada precisa mostrar essa
  * grandeza o tempo todo, e mostrar de um jeito que não peça leitura. Por isso a
  * barra do alto é **uma só**, dividida: o pedaço azul é o quanto o reino azul
- * engordou a refém que guarda, o vermelho é o mesmo do outro lado, e a soma dos
+ * encheu o baú refém que guarda, o vermelho é o mesmo do outro lado, e a soma dos
  * dois é sempre a largura inteira.
  *
  * Quem olha entende três coisas de uma vez, sem número: quem está ganhando a
@@ -41,6 +41,23 @@ import type { Rede } from './rede';
 const COR: Record<Time, string> = { azul: '#3b7fe0', vermelho: '#e04b3b' };
 const COR_CLARA: Record<Time, string> = { azul: '#8fc0ff', vermelho: '#ff9c8f' };
 const NOME_DO_TIME: Record<Time, string> = { azul: 'Azul', vermelho: 'Vermelho' };
+
+/**
+ * Como cada carga se chama na tela.
+ *
+ * Existe porque o cartão do sofá escrevia o identificador cru — "minerio",
+ * "bau" — no lugar onde a pessoa lê o que está carregando. O identificador é
+ * do código; o rótulo é de quem joga, e os dois não precisam ser a mesma
+ * palavra.
+ */
+const NOME_DA_CARGA: Record<Carga, string> = {
+  nada: '',
+  madeira: 'madeira',
+  ouro: 'ouro',
+  minerio: 'minério',
+  bolsa: 'bolsa de moedas',
+  bau: 'o baú',
+};
 
 /**
  * @param locais as unidades de quem está neste aparelho, em ordem de vaga.
@@ -63,8 +80,8 @@ export function desenharHud(
   const eu = locais[0]?.unidade ?? null;
   // Entre o "bem-vindo" e o primeiro retrato existe um punhado de quadros em
   // que o estado existe mas está vazio. Desenhar a balança ali significaria
-  // procurar uma princesa que ainda não chegou.
-  if (!estado || estado.princesas.length < 2) return;
+  // procurar um baú que ainda não chegou.
+  if (!estado || estado.baus.length < 2) return;
 
   balanca(ctx, estado, largura, eu?.time ?? 'azul');
   placar(ctx, estado, largura);
@@ -133,7 +150,7 @@ function cartoesDoSofa(
       ctx.fillStyle = 'rgba(255,255,255,0.72)';
       ctx.font = '500 11px "Trebuchet MS", system-ui, sans-serif';
       ctx.fillText(
-        `${perfil(u.classe).nome}${u.carga !== 'nada' ? ` · ${u.carga}` : ''}`,
+        `${perfil(u.classe).nome}${u.carga !== 'nada' ? ` · ${NOME_DA_CARGA[u.carga]}` : ''}`,
         x + margem,
         y + 23,
       );
@@ -153,13 +170,13 @@ function cartoesDoSofa(
 
 /** A barra que dá nome ao jogo. */
 function balanca(ctx: CanvasRenderingContext2D, estado: Estado, largura: number, meu: Time): void {
-  const azulTemNaMasmorra = princesaDe(estado, 'vermelho').peso;
-  const vermelhoTemNaMasmorra = princesaDe(estado, 'azul').peso;
+  const azulTemNoCofre = bauDe(estado, 'vermelho').peso;
+  const vermelhoTemNoCofre = bauDe(estado, 'azul').peso;
   const l = Math.min(560, largura - 80);
   const x = (largura - l) / 2;
   const y = 72;
   const a = 22;
-  const fracaoAzul = azulTemNaMasmorra / PESO_TOTAL;
+  const fracaoAzul = azulTemNoCofre / PESO_TOTAL;
 
   ctx.save();
   ctx.fillStyle = 'rgba(12, 14, 20, 0.72)';
@@ -193,21 +210,21 @@ function balanca(ctx: CanvasRenderingContext2D, estado: Estado, largura: number,
   ctx.textAlign = 'left';
   ctx.fillText(
     curto
-      ? `Azul: ${Math.round(azulTemNaMasmorra)} · ${carregadoresPara(azulTemNaMasmorra)}↑`
-      : `refém do Azul: ${Math.round(azulTemNaMasmorra)} · ${carregadoresPara(azulTemNaMasmorra)} carregadores`,
+      ? `Azul: ${Math.round(azulTemNoCofre)} · ${carregadoresPara(azulTemNoCofre)}↑`
+      : `baú refém do Azul: ${Math.round(azulTemNoCofre)} · ${carregadoresPara(azulTemNoCofre)} carregadores`,
     x,
     y + a + 14,
   );
   ctx.textAlign = 'right';
   ctx.fillText(
     curto
-      ? `${carregadoresPara(vermelhoTemNaMasmorra)}↑ · Vermelho: ${Math.round(vermelhoTemNaMasmorra)}`
-      : `${carregadoresPara(vermelhoTemNaMasmorra)} carregadores · refém do Vermelho: ${Math.round(vermelhoTemNaMasmorra)}`,
+      ? `${carregadoresPara(vermelhoTemNoCofre)}↑ · Vermelho: ${Math.round(vermelhoTemNoCofre)}`
+      : `${carregadoresPara(vermelhoTemNoCofre)} carregadores · baú refém do Vermelho: ${Math.round(vermelhoTemNoCofre)}`,
     x + l,
     y + a + 14,
   );
 
-  // No Banquete a barra não é só o desempate: é a linha de chegada. O rótulo
+  // No Cofre Cheio a barra não é só o desempate: é a linha de chegada. O rótulo
   // diz isso, porque é a única diferença visível entre os dois modos e ninguém
   // vai deduzi-la olhando uma barra que parece a de sempre.
   ctx.textAlign = 'center';
@@ -229,7 +246,7 @@ function placar(ctx: CanvasRenderingContext2D, estado: Estado, largura: number):
   ctx.textBaseline = 'top';
   ctx.font = '700 26px "Trebuchet MS", system-ui, sans-serif';
   // No Abate o placar **é** o de baixas: mostrar resgates num modo em que
-  // ninguém carrega princesa seria dois zeros que nunca mudam ao lado de um
+  // ninguém carrega o baú seria dois zeros que nunca mudam ao lado de um
   // relógio que corre.
   const contagem = modoDe(estado.modo).abatesParaVencer !== null ? estado.abates : estado.placar;
   ctx.fillStyle = COR.azul;
@@ -326,10 +343,10 @@ function cartaoDaClasse(
     .join(' · ');
   ctx.fillStyle = 'rgba(255,255,255,0.6)';
   ctx.fillText(`chapelaria: ${chapeus || 'vazia'}`, x + 12, y + 48);
-  const forno = estado.cozinhas.find((c) => c.time === eu.time);
+  const forno = estado.casasDaMoeda.find((c) => c.time === eu.time);
   if (forno) {
     ctx.fillText(
-      `cozinha: ${forno.bolos} bolo(s) · ${forno.carne} carne${forno.assando > 0 ? ' · assando' : ''}`,
+      `moeda: ${forno.bolsas} bolsa(s) · ${forno.minerio} minério${forno.cunhando > 0 ? ' · cunhando' : ''}`,
       x + 12,
       y + 62,
     );
@@ -376,8 +393,8 @@ function avisosDoCentro(
     ctx.fillText('trabalhando — andar cancela', largura / 2, altura - 172);
   }
 
-  if (eu.carga === 'princesa') {
-    const p = estado.princesas.find((x) => x.portador === eu.id);
+  if (eu.carga === 'bau') {
+    const p = estado.baus.find((x) => x.portador === eu.id);
     if (p) {
       const precisa = carregadoresPara(p.peso);
       const tem = p.ajudantes + 1;
@@ -393,7 +410,7 @@ function avisosDoCentro(
         );
       } else {
         ctx.fillStyle = 'rgba(150, 240, 160, 0.95)';
-        ctx.fillText(`levando a princesa (${tem}/${precisa})`, largura / 2, altura - 150);
+        ctx.fillText(`levando o baú (${tem}/${precisa})`, largura / 2, altura - 150);
       }
     }
   }
@@ -460,7 +477,7 @@ function faixaDeFase(
   let texto: string | null = null;
   let cor = '#f2e6c9';
   if (estado.fase === 'aquecimento') texto = `preparar… ${Math.ceil(estado.faseEm)}`;
-  if (estado.fase === 'ponto') texto = 'princesa em casa!';
+  if (estado.fase === 'ponto') texto = 'baú em casa!';
   if (estado.fase === 'fim') {
     texto = estado.vencedor ? `${NOME_DO_TIME[estado.vencedor]} vence` : 'empate';
     cor = estado.vencedor ? COR_CLARA[estado.vencedor] : '#f2e6c9';
@@ -510,14 +527,14 @@ function tabela(
 
     const time_ = estado.unidades
       .filter((u) => u.time === time)
-      .sort((a2, b) => b.fatias + b.resgates * 5 - (a2.fatias + a2.resgates * 5));
+      .sort((a2, b) => b.depositos + b.resgates * 5 - (a2.depositos + a2.resgates * 5));
     time_.forEach((u, i) => {
       const ly = y + 62 + i * 20;
       ctx.fillStyle = u.bot ? 'rgba(255,255,255,0.55)' : '#ffffff';
       ctx.font = '500 13px "Trebuchet MS", system-ui, sans-serif';
       ctx.fillText(`${u.nome}${u.bot ? ' ⚙' : ''} · ${perfil(u.classe).nome}`, cx, ly);
       ctx.fillText(
-        `${pad(u.abates)}  ${pad(u.mortes)}  ${pad(u.fatias)}  ${pad(u.resgates)}  ${pad(u.entregas)}`,
+        `${pad(u.abates)}  ${pad(u.mortes)}  ${pad(u.depositos)}  ${pad(u.resgates)}  ${pad(u.entregas)}`,
         cx + l / 2 - 168,
         ly,
       );
@@ -528,7 +545,7 @@ function tabela(
   ctx.font = '500 12px "Trebuchet MS", system-ui, sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.55)';
   ctx.fillText(
-    'aba = abates · mor = mortes · fat = fatias · res = resgates · ent = carga entregue',
+    'aba = abates · mor = mortes · dep = depósitos · res = resgates · ent = carga entregue',
     largura / 2,
     y + a - 26,
   );
@@ -614,16 +631,16 @@ export function narrar(
   switch (evento.tipo) {
     case 'abate':
       return { texto: `${nome(evento.algoz)} derrubou ${nome(evento.vitima)}` };
-    case 'fatia': {
-      const quemGanhou = outroTime(evento.princesa);
+    case 'deposito': {
+      const quemGanhou = outroTime(evento.bau);
       return {
-        texto: `${nome(evento.unidade)} deu uma fatia — refém do ${NOME_DO_TIME[quemGanhou]} em ${Math.round(evento.peso)}`,
+        texto: `${nome(evento.unidade)} entulhou o baú — refém do ${NOME_DO_TIME[quemGanhou]} em ${Math.round(evento.peso)}`,
         cor: COR_CLARA[quemGanhou],
       };
     }
     case 'resgate':
       return {
-        texto: `${nome(evento.unidade)} trouxe a princesa do ${NOME_DO_TIME[evento.time]} para casa!`,
+        texto: `${nome(evento.unidade)} trouxe o baú do ${NOME_DO_TIME[evento.time]} para casa!`,
         cor: COR_CLARA[evento.time],
       };
     case 'chapeu':
@@ -635,17 +652,17 @@ export function narrar(
         texto: `a obra do ${NOME_DO_TIME[evento.time]} chegou ao nível ${'I'.repeat(evento.nivel)}`,
         cor: COR_CLARA[evento.time],
       };
-    case 'caca':
+    case 'saque':
       return null;
     case 'cura':
       return null;
-    case 'pegouPrincesa':
+    case 'pegouBau':
       return {
-        texto: `${nome(evento.unidade)} pegou a princesa do ${NOME_DO_TIME[evento.princesa]}`,
-        cor: evento.princesa === meuTime ? COR_CLARA[evento.princesa] : undefined,
+        texto: `${nome(evento.unidade)} pegou o baú do ${NOME_DO_TIME[evento.bau]}`,
+        cor: evento.bau === meuTime ? COR_CLARA[evento.bau] : undefined,
       };
-    case 'largouPrincesa':
-      return { texto: `a princesa do ${NOME_DO_TIME[evento.princesa]} caiu no chão` };
+    case 'largouBau':
+      return { texto: `o baú do ${NOME_DO_TIME[evento.bau]} caiu no chão` };
     case 'fim':
       return {
         texto: evento.vencedor ? `fim — ${NOME_DO_TIME[evento.vencedor]} vence` : 'fim — empate',

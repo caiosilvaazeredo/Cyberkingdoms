@@ -146,11 +146,11 @@ describe('uma sala montada', () => {
   it('conta o modo e os npcs no cartão de boas-vindas', () => {
     // O cliente prevê o movimento com o modo, e precisa dele antes do primeiro
     // retrato.
-    const sala = new Sala({ nome: 'mesa', seed: 12, porTime: 2, botsPorTime: 3, modo: 'banquete' });
+    const sala = new Sala({ nome: 'mesa', seed: 12, porTime: 2, botsPorTime: 3, modo: 'cofrecheio' });
     const ana = clienteFalso('Ana');
     sala.entrar(ana);
     const bemvindo = ana.recebidas.find((m) => m.t === 'bemvindo');
-    expect(bemvindo).toMatchObject({ modo: 'banquete', porTime: 2, botsPorTime: 3 });
+    expect(bemvindo).toMatchObject({ modo: 'cofrecheio', porTime: 2, botsPorTime: 3 });
   });
 
   it('a partida seguinte mantém o modo da sala', () => {
@@ -192,7 +192,7 @@ describe('o lobby e as salas montadas', () => {
   it('a sala montada aparece na lista com o formato dela, e a privada não', () => {
     const lobby = new Lobby({ seed: () => 5 });
     lobby.acolher(clienteFalso('A'), {
-      criar: salaConfiguravel({ modo: 'banquete', porTime: 3, bots: 2 }),
+      criar: salaConfiguravel({ modo: 'cofrecheio', porTime: 3, bots: 2 }),
     });
     lobby.acolher(clienteFalso('B'), {
       criar: salaConfiguravel({ modo: 'resgate', porTime: 2, bots: 0, privada: true }),
@@ -200,7 +200,7 @@ describe('o lobby e as salas montadas', () => {
 
     const lista = lobby.lista;
     expect(lista).toHaveLength(1);
-    expect(lista[0]).toMatchObject({ modo: 'banquete', porTime: 3, bots: 2 });
+    expect(lista[0]).toMatchObject({ modo: 'cofrecheio', porTime: 3, bots: 2 });
   });
 
   it('quem pede a sala pelo nome cai nela, com as regras dela', () => {

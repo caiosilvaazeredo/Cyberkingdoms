@@ -41,13 +41,13 @@ describe('a mensagem de entrada', () => {
     // O defeito que deu origem a este arquivo. Se `criar` sumir de novo, é aqui
     // que aparece — e não numa partida em que alguém percebe, dez minutos
     // depois, que os npcs não são os que pediu.
-    const criar = salaConfiguravel({ modo: 'banquete', mapa: 'vau', porTime: 2, bots: 3 });
+    const criar = salaConfiguravel({ modo: 'cofrecheio', mapa: 'vau', porTime: 2, bots: 3 });
     const m = mensagemDeEntrada('Dora', true, { criar });
     // Comparação exata, e não parcial: é ela que faz este teste falhar quando o
     // formato ganha um campo novo, que é exatamente quando alguém precisa parar
     // e conferir se o campo novo está sendo repassado.
     expect(m.criar).toEqual({
-      modo: 'banquete',
+      modo: 'cofrecheio',
       mapa: 'vau',
       porTime: 2,
       bots: 3,

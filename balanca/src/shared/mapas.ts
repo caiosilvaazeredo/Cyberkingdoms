@@ -6,7 +6,7 @@ import { ARENA_LARGURA } from './regras';
  *
  * ## O que um mapa muda, e o que ele não muda
  *
- * Um mapa não mexe em regra nenhuma: mesma balança, mesmos chapéus, mesmo bolo.
+ * Um mapa não mexe em regra nenhuma: mesma balança, mesmos chapéus, mesmo bolsa.
  * Ele mexe nas duas coisas que decidem o **ritmo** de uma partida — onde estão
  * os estrangulamentos, e quão exposta fica a economia. É por isso que quatro
  * mapas dão quatro jogos e não quatro papéis de parede.
@@ -16,7 +16,7 @@ import { ARENA_LARGURA } from './regras';
  * Cada mapa desenha a metade esquerda e a coluna do eixo; o vermelho é o
  * espelho, montado por `criarArena`. É a mesma regra que a arena original já
  * seguia, e ela vale ainda mais agora: com quatro mapas, manter oito listas de
- * coordenadas em pares seria garantir que um dia a cozinha vermelha ficasse um
+ * coordenadas em pares seria garantir que um dia a Casa da Moeda vermelha ficasse um
  * tile mais longe do que a azul, e ninguém descobriria sem medir.
  *
  * O `Pincel` que os relevos recebem espelha sozinho: escrever em `tx` escreve
@@ -121,9 +121,9 @@ const CORTE: Mapa = {
     elipse(p, meio, (p.altura - 1) / 2, 3.5, 4.5);
   },
   planta: {
-    trono: [5, 15],
-    jaula: [6, 9],
-    cozinha: [11, 20],
+    tesouraria: [5, 15],
+    cofre: [6, 9],
+    casaDaMoeda: [11, 20],
     chapelaria: [11, 12],
     nascedouro: [6, 20],
   },
@@ -182,9 +182,9 @@ const VAU: Mapa = {
     for (const py of TRAVESSIAS_Y) p.ponte(Math.floor(meio), py);
   },
   planta: {
-    trono: [5, 17],
-    jaula: [5, 9],
-    cozinha: [12, 22],
+    tesouraria: [5, 17],
+    cofre: [5, 9],
+    casaDaMoeda: [12, 22],
     chapelaria: [12, 11],
     nascedouro: [8, 17],
   },
@@ -225,7 +225,7 @@ const VAU: Mapa = {
  *
  * O Corte dá duas portas e obriga a defesa a escolher; aqui há uma só, e a
  * escolha desaparece. Atacar exige juntar gente e passar por cima de quem está
- * lá — e o cortejo da princesa, que anda devagar e precisa de escolta, tem de
+ * lá — e o cortejo do baú, que anda devagar e precisa de escolta, tem de
  * atravessar exatamente o tile onde a defesa está sentada.
  *
  * O meio fica limpo de propósito. Com um funil desses em cada ponta, um lago no
@@ -250,9 +250,9 @@ const DESFILADEIRO: Mapa = {
     for (const py of PORTAO_Y) p.ponte(CASTELO_ESTREITO.x1, py);
   },
   planta: {
-    trono: [5, 16],
-    jaula: [6, 10],
-    cozinha: [11, 22],
+    tesouraria: [5, 16],
+    cofre: [6, 10],
+    casaDaMoeda: [11, 22],
     chapelaria: [11, 11],
     nascedouro: [7, 16],
   },
@@ -335,9 +335,9 @@ const ARQUIPELAGO: Mapa = {
     p.ponte(29, ILHA.y1);
   },
   planta: {
-    trono: [5, 15],
-    jaula: [6, 9],
-    cozinha: [11, 20],
+    tesouraria: [5, 15],
+    cofre: [6, 9],
+    casaDaMoeda: [11, 20],
     chapelaria: [11, 12],
     nascedouro: [6, 20],
   },

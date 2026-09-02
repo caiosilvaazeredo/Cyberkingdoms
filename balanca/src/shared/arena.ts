@@ -26,7 +26,7 @@ import { ARENA_ALTURA, ARENA_LARGURA, TILE, TIMES, type Time } from './regras';
  * Só o lado azul é escrito. O vermelho é o espelho em X, montado por código.
  * Um mapa competitivo assimétrico exige balanceamento que este jogo não tem
  * como pagar, e duas listas de coordenadas para manter iguais é a receita para
- * o dia em que a cozinha vermelha fica um tile mais longe do que a azul.
+ * o dia em que a Casa da Moeda vermelha fica um tile mais longe do que a azul.
  */
 
 export const AGUA = 0;
@@ -34,12 +34,12 @@ export const GRAMA = 1;
 export const PONTE = 2;
 
 export type TipoDeEstrutura =
-  /** O castelo. Entregar a princesa aqui vale ponto. */
-  | 'trono'
-  /** A masmorra onde dorme a princesa **inimiga**. É aqui que se alimenta. */
-  | 'jaula'
-  /** Recebe trigo, devolve bolo. */
-  | 'cozinha'
+  /** O castelo. Entregar o baú aqui vale ponto. */
+  | 'tesouraria'
+  /** O cofre onde dorme o baú **inimiga**. É aqui que se alimenta. */
+  | 'cofre'
+  /** Recebe trigo, devolve bolsa. */
+  | 'casaDaMoeda'
   /** O estoque de chapéus do time. */
   | 'chapelaria'
   /** Onde o time renasce. */
