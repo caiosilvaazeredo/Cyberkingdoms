@@ -86,15 +86,16 @@ export interface Modo {
    */
   readonly vitoriaPorObra: boolean;
   /**
-   * Quanto a obra custa, em múltiplos do preço normal.
+   * O peso em que a balança estoura e o Banquete acaba.
    *
-   * Existe pelo mesmo motivo que a balança do Banquete não relaxa: sem isso, a
-   * alavanca do modo não vira jogo. Medindo com bots, o Obra decidia em 115
-   * segundos de mediana — quase tão rápido quanto o Assalto, que é o modo
-   * expresso de propósito. Uma corrida de construção que acaba antes de o
-   * inimigo chegar à jazida não é corrida: é um sprint com um corredor só.
+   * Um número por modo, e não a constante do jogo, porque medindo se descobriu
+   * que os dois extremos não funcionam. No talo (`PESO_MINIMO`, 40), a balança
+   * decidia uma partida em dez: mover sessenta unidades de peso é caro demais
+   * para dar tempo antes de alguém somar três resgates. Este limiar é o que faz
+   * a promessa do modo acontecer — e continua sendo a **mesma barra** que já
+   * está na tela, só que o fim é declarado um pouco antes do fim dela.
    */
-  readonly custoDaObra: number;
+  readonly pesoQueVence: number;
   /**
    * Abates que vencem a partida, ou `null` quando matar não é o objetivo.
    *
@@ -133,8 +134,8 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     chapeusInfinitos: false,
     animaisVoltam: true,
     vitoriaPorObra: false,
-    custoDaObra: 1,
     abatesParaVencer: null,
+    pesoQueVence: PESO_MINIMO,
   },
   assalto: {
     id: 'assalto',
@@ -147,8 +148,8 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     chapeusInfinitos: false,
     animaisVoltam: true,
     vitoriaPorObra: false,
-    custoDaObra: 1,
     abatesParaVencer: null,
+    pesoQueVence: PESO_MINIMO,
   },
   banquete: {
     id: 'banquete',
@@ -161,8 +162,13 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     chapeusInfinitos: false,
     animaisVoltam: true,
     vitoriaPorObra: false,
-    custoDaObra: 1,
     abatesParaVencer: null,
+    // Setenta, e não o talo da barra. Medindo dez seeds: no talo (40) a balança
+    // decidia **uma** partida em dez e o modo era o clássico com outro nome; em
+    // 82 ela decidia oito e o resgate virava enfeite. Em 70 são quatro pela
+    // balança e seis por resgate — os dois caminhos vivos, que é o que o lema
+    // promete.
+    pesoQueVence: 70,
   },
   chapelaria: {
     id: 'chapelaria',
@@ -175,8 +181,8 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     chapeusInfinitos: true,
     animaisVoltam: true,
     vitoriaPorObra: false,
-    custoDaObra: 1,
     abatesParaVencer: null,
+    pesoQueVence: PESO_MINIMO,
   },
   fome: {
     id: 'fome',
@@ -189,8 +195,8 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     chapeusInfinitos: false,
     animaisVoltam: false,
     vitoriaPorObra: false,
-    custoDaObra: 1,
     abatesParaVencer: null,
+    pesoQueVence: PESO_MINIMO,
   },
   obra: {
     id: 'obra',
@@ -203,8 +209,8 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     chapeusInfinitos: false,
     animaisVoltam: true,
     vitoriaPorObra: true,
-    custoDaObra: 3,
     abatesParaVencer: null,
+    pesoQueVence: PESO_MINIMO,
   },
   abate: {
     id: 'abate',
@@ -221,8 +227,8 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     chapeusInfinitos: false,
     animaisVoltam: true,
     vitoriaPorObra: false,
-    custoDaObra: 1,
     abatesParaVencer: 30,
+    pesoQueVence: PESO_MINIMO,
   },
 };
 
@@ -251,12 +257,5 @@ export function modoDe(id: unknown): Modo {
   return typeof id === 'string' && id in MODOS ? MODOS[id as IdDoModo] : MODOS[MODO_PADRAO];
 }
 
-/**
- * O peso em que a balança "estoura" e o Banquete acaba.
- *
- * É o mesmo `PESO_MINIMO` que o resto do jogo já respeita: `alimentar` nunca
- * deixa uma princesa passar dele. Ter um número só significa que a barra na
- * tela e a condição de vitória são a mesma coisa — quem vê a barra encostar no
- * fim viu o jogo acabar, sem precisar aprender um segundo limiar.
- */
-export const PESO_QUE_VENCE = PESO_MINIMO;
+/** O peso em que a balança estoura, para o modo que vence por ela. */
+export const pesoQueVence = (id: IdDoModo): number => modoDe(id).pesoQueVence;

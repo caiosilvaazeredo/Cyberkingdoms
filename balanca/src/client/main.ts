@@ -20,6 +20,7 @@ import {
 import { Entrada } from './entrada';
 import { desenharDica, desenharHud, narrar } from './hud';
 import { Rede } from './rede';
+import { PainelDaEquipe } from './equipe';
 import { Sofa, type Porta } from './sofa';
 import type { ConfiguracaoDeSala } from '../shared/protocolo';
 import { Telas, type SalaAberta } from './telas';
@@ -83,6 +84,14 @@ let anterior = performance.now();
 let querendoJogar = false;
 /** A conexão de plateia está numa sala reservada, aberta para um jogo local. */
 let salaReservada = false;
+
+/**
+ * O painel do time. Fala com a **anfitriã** do sofá — ver `atualizarPainelDaEquipe`.
+ */
+const painelDaEquipe = new PainelDaEquipe(document.querySelector<HTMLElement>('#equipe')!, {
+  mandar: (alvo, classe, votar) => sofa?.jogadores[0]?.rede.mandar(alvo, classe, votar),
+  votar: (classe) => sofa?.jogadores[0]?.rede.votarEm(classe),
+});
 
 const telas: Telas = new Telas({
   jogar: (porta, criar) => void montarOSofa(porta, criar),
@@ -403,6 +412,41 @@ function laco(agora: number): void {
   if (emCampo.length > 0) {
     desenharHud(ctx, rede, emCampo, entrada, largura, altura, tempo, ajustes);
   }
+
+  atualizarPainelDaEquipe(rede, emCampo, telas.atual === 'jogo', agora);
+}
+
+/**
+ * O painel do time, ligado só durante a partida.
+ *
+ * A anfitriã é quem manda e quem recebe a votação: com quatro pessoas no mesmo
+ * aparelho, quatro conexões receberiam quatro cópias da mesma urna e quatro
+ * cliques abririam quatro votações. Uma tela, uma voz — a da primeira vaga.
+ */
+function atualizarPainelDaEquipe(
+  rede: Rede,
+  emCampo: readonly { vaga: number; unidade: Unidade }[],
+  emJogo: boolean,
+  agora: number,
+): void {
+  if (!emJogo || emCampo.length === 0) {
+    painelDaEquipe.esconder();
+    return;
+  }
+  const primeira = emCampo[0]!.unidade;
+  const minhaFicha = rede.elenco.get(primeira.id);
+  const recadoNovo =
+    rede.recadoDoTime && agora - rede.recadoDoTime.quando < 8000 ? rede.recadoDoTime.texto : null;
+
+  painelDaEquipe.atualizar({
+    time: primeira.time,
+    estado: rede.estado,
+    elenco: [...rede.elenco.values()],
+    meus: emCampo.map((c) => c.unidade.id),
+    souLider: minhaFicha?.lider === true,
+    votacao: rede.votacao,
+    recado: recadoNovo,
+  });
 }
 
 /**

@@ -33,6 +33,35 @@ if (!origem) {
 }
 const destino = resolve(process.cwd(), 'public/tiny');
 
+/**
+ * Os avatares, e por que a escolha é forma **e** cor.
+ *
+ * O pacote `Human Avatars` traz cinco personagens — capitão com estandarte,
+ * soldado de elmo redondo, arqueiro de elmo cônico, barbudo e aldeão — em cinco
+ * cores. Cinco formas não cobrem as oito classes deste jogo, e repetir a mesma
+ * cara em duas classes faria o painel do time mentir sobre quem é quem.
+ *
+ * Então a cor entra como segundo eixo. O time não precisa dela: o painel mostra
+ * **só o seu time** e já tem a cor do reino na moldura. Com a cor livre, cada
+ * classe fica com um par forma+cor próprio, e as escolhas seguem o que a coisa
+ * parece: capacete amarelo para o minerador, cinza para o lenhador, o capitão de
+ * estandarte para o clérigo, que é quem sustenta o time.
+ *
+ * Estes são copiados à mão para `public/tiny/avatares/` — o pacote de avatares
+ * é um download separado do Tiny Swords, e este roteiro só cuida do principal.
+ */
+const AVATARES = {
+  guerreiro: 'Avatars_07',
+  lanceiro: 'Avatars_02',
+  arqueiro: 'Avatars_13',
+  clerigo: 'Avatars_16',
+  minerador: 'Avatars_14',
+  lenhador: 'Avatars_24',
+  cacador: 'Avatars_20',
+  aldeao: 'Avatars_25',
+};
+void AVATARES;
+
 /** Cor do pacote → cor do time. */
 const CORES = [
   ['Blue', 'azul'],

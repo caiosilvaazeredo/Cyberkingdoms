@@ -982,6 +982,171 @@
         cursor: not-allowed;
       }
 
+      /* ---------------------------------------------------- painel do time */
+      /*
+        Encostado à esquerda, durante a partida. Fundo escuro e translúcido como
+        o resto do HUD — este painel é da mesma família dos cartões desenhados no
+        `canvas`, e não da moldura de papel do menu.
+      */
+      #equipe {
+        position: fixed;
+        left: 10px;
+        top: 96px;
+        z-index: 8;
+        width: clamp(184px, 17vw, 232px);
+        max-height: calc(100dvh - 220px);
+        overflow-y: auto;
+        background: rgba(12, 14, 20, 0.78);
+        border-left: 4px solid var(--azul);
+        border-radius: 0 10px 10px 0;
+        padding: 8px 10px 10px;
+        font-size: 13px;
+      }
+      #equipe[data-time='vermelho'] {
+        border-left-color: var(--vermelho);
+      }
+      #equipe[hidden] {
+        display: none;
+      }
+      #equipe h2 {
+        margin: 0 0 6px;
+        font-size: 11px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.55);
+      }
+      .membro {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 3px 0;
+      }
+      /* Caído continua na lista, apagado: sumir faria parecer que a pessoa saiu
+         do time, quando ela só está esperando renascer. */
+      .membro.caido {
+        opacity: 0.42;
+      }
+      .membro.eu .quem b {
+        color: var(--ouro);
+      }
+      .membro .retrato {
+        width: 34px;
+        height: 34px;
+        flex: 0 0 auto;
+        image-rendering: pixelated;
+      }
+      .quem {
+        min-width: 0;
+        flex: 1 1 auto;
+      }
+      .quem b {
+        display: block;
+        font-size: 13px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .quem small {
+        display: block;
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.6);
+      }
+      .vida {
+        display: block;
+        height: 4px;
+        margin-top: 3px;
+        background: rgba(255, 255, 255, 0.16);
+        border-radius: 2px;
+        overflow: hidden;
+      }
+      .vida i {
+        display: block;
+        height: 100%;
+        width: 100%;
+        background: #6ac46a;
+      }
+      .vida i[data-baixa='true'] {
+        background: #d9534f;
+      }
+      button.mandar {
+        flex: 0 0 auto;
+        width: 28px;
+        min-height: 28px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 6px;
+        color: #fff;
+        font: inherit;
+        cursor: pointer;
+      }
+      button.mandar:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+      .ordens {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 3px;
+        margin: 4px 0 8px;
+      }
+      button.ordem {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 6px;
+        color: #fff;
+        font: inherit;
+        font-size: 11px;
+        padding: 3px 4px;
+        cursor: pointer;
+        text-align: left;
+      }
+      button.ordem img {
+        width: 22px;
+        height: 22px;
+        image-rendering: pixelated;
+      }
+      button.ordem:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+      button.ordem.meu-voto {
+        border-color: var(--ouro);
+        background: rgba(255, 212, 121, 0.18);
+      }
+      .dica-ordem {
+        grid-column: 1 / -1;
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.5);
+      }
+      .equipe-urna {
+        border-top: 1px solid rgba(255, 255, 255, 0.14);
+        margin-top: 6px;
+        padding-top: 6px;
+      }
+      .equipe-urna > b {
+        display: block;
+        font-size: 12px;
+        color: var(--ouro);
+        margin-bottom: 4px;
+      }
+      .equipe-recado {
+        margin: 4px 0 0;
+        font-size: 11px;
+        line-height: 1.4;
+        color: rgba(255, 255, 255, 0.72);
+      }
+      .equipe-recado[hidden] {
+        display: none;
+      }
+      /* Numa tela estreita o painel viraria metade do campo. Ele sai, e o
+         cartão da classe no rodapé continua dizendo o essencial. */
+      @media (max-width: 760px), (max-height: 520px) {
+        #equipe {
+          display: none;
+        }
+      }
+
       /* ------------------------------------------------- crachá de plateia */
       #plateia {
         position: fixed;
@@ -1005,6 +1170,20 @@
     <canvas id="tela"></canvas>
 
     <div id="plateia" hidden>assistindo · <kbd>Esc</kbd> volta ao menu</div>
+
+    <!--
+      O painel do time, durante a partida.
+
+      Fica fora das `section.tela` de propósito: as telas se escondem umas às
+      outras, e este painel convive com o jogo em vez de substituí-lo. Quem o
+      liga e desliga é o laço de quadro.
+    -->
+    <aside id="equipe" hidden>
+      <h2>O seu reino</h2>
+      <div class="equipe-lista"></div>
+      <div class="equipe-urna" hidden></div>
+      <p class="equipe-recado" hidden></p>
+    </aside>
 
     <!-- ------------------------------------------------------- menu inicial -->
     <section id="menu" class="tela">

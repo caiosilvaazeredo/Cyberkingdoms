@@ -43,7 +43,7 @@ import { POR_TIME, TIMES, type Time } from './regras';
  * mapa, que são dois números e uma palavra em vez de dois mil tiles.
  */
 
-export const VERSAO_DO_PROTOCOLO = 5;
+export const VERSAO_DO_PROTOCOLO = 6;
 
 // --- a sala que alguém monta -----------------------------------------------
 
@@ -198,6 +198,16 @@ export type DoCliente =
    * um espectador, e é esta mensagem que transforma o espectador em jogador.
    */
   | { t: 'escolherTime'; time: Time; nome?: string }
+  /**
+   * O líder manda um npc do time dele vestir uma classe.
+   *
+   * `votar: true` abre a decisão para os humanos do time em vez de resolvê-la.
+   * É a mesma mensagem porque é o mesmo gesto — "este npc devia ser arqueiro" —
+   * e o que muda é só quem responde.
+   */
+  | { t: 'mandar'; alvo: number; classe: Classe; votar?: boolean }
+  /** Um voto numa votação aberta. O último voto da pessoa é o que vale. */
+  | { t: 'votar'; classe: Classe }
   | { t: 'comando'; c: Comando }
   | { t: 'ping'; tempo: number }
   | { t: 'sair' };
@@ -209,6 +219,37 @@ export interface FichaDeJogador {
   nome: string;
   time: Time;
   bot: boolean;
+  /**
+   * Manda no time: pode ordenar a classe de um npc ou abrir uma votação.
+   *
+   * Vem no elenco e não no retrato porque muda quase nunca — uma vez quando
+   * alguém entra e outra quando o líder sai. O retrato é a mensagem que este
+   * protocolo mais cuida em manter pequena.
+   */
+  lider: boolean;
+  /**
+   * A classe que o time pediu a este npc, enquanto ele não a veste.
+   *
+   * Some quando o bot chega à chapelaria e obedece. Serve ao painel: sem ela, o
+   * líder manda um arqueiro e não vê nada acontecer por dez segundos, que é o
+   * tempo de o bot atravessar o castelo.
+   */
+  pedida?: Classe;
+}
+
+/** Uma votação em curso, como o painel do time a vê. */
+export interface VotacaoAberta {
+  /** O npc cuja classe está em jogo. */
+  alvo: number;
+  /** O nome dele, para a frase não ser "vote na classe da unidade 7". */
+  alvoNome: string;
+  proposta: Classe;
+  /** Segundos restantes, arredondados. */
+  restante: number;
+  /** Quantos votos cada classe tem, na ordem de `CLASSES_COM_CHAPEU`. */
+  votos: number[];
+  /** Em que você votou, se votou. */
+  meuVoto?: Classe;
 }
 
 export type DoServidor =
@@ -241,6 +282,15 @@ export type DoServidor =
    */
   | { t: 'nasceu'; voce: number; time: Time }
   | { t: 'elenco'; jogadores: FichaDeJogador[] }
+  /**
+   * A votação do **seu** time, ou `null` quando não há nenhuma.
+   *
+   * Mandada só a quem é do time: a votação do inimigo não é da sua conta, e
+   * saber que eles estão decidindo pôr um clérigo seria informação de graça.
+   */
+  | { t: 'votacao'; v: VotacaoAberta | null }
+  /** Uma frase curta para o painel do time: ordem dada, votação apurada. */
+  | { t: 'recadoDoTime'; texto: string }
   | { t: 'retrato'; r: Retrato }
   | { t: 'pong'; tempo: number }
   | { t: 'recusado'; motivo: string };

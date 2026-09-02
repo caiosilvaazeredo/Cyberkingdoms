@@ -115,6 +115,14 @@ interface Memoria {
   usarPor: number;
   /** Segundos até poder apertar usar de novo. Evita martelar a chapelaria. */
   esperaDoUsar: number;
+  /**
+   * O ofício veio de uma ordem do time, e não da conta do próprio bot.
+   *
+   * Separado de `fixo` porque as duas coisas dizem respeito a momentos
+   * diferentes: `fixo` impede a revisão automática, e isto manda o bot **ir
+   * buscar** o chapéu mesmo não sendo da economia.
+   */
+  ordenado: boolean;
   /** Segundos até rever o ofício. Dá inércia à troca de chapéu. */
   esperaDoOficio: number;
   /** Ofício que não se revê. É o caçador de plantão de cada time. */
@@ -168,6 +176,29 @@ export class Bots {
     }
     this.memorias.set(id, vazia(escolhido, id, oficio, fixo));
     return escolhido;
+  }
+
+  /**
+   * O time mandou este npc vestir uma classe.
+   *
+   * A ordem **fixa** o ofício: sem isso, o bot que revê a escolha a cada doze
+   * segundos trocaria o arco pela picareta assim que a obra sentisse falta de
+   * ouro, e o líder veria a ordem dele ser desfeita sozinha. Uma ordem do time
+   * vale mais que a heurística do bot — é a pessoa que sabe por que quer um
+   * arqueiro naquela ponte.
+   *
+   * Quem obedece é o `planoDoCozinheiro`, que já sabe ir à chapelaria buscar o
+   * chapéu do ofício. Um bot atacante que recebe ordem vira, para efeito de
+   * chapéu, alguém com um ofício a cumprir — e volta a atacar assim que estiver
+   * vestido, porque o papel dele não mudou.
+   */
+  mandarVestir(id: number, classe: Classe): void {
+    const m = this.memorias.get(id);
+    if (!m) return;
+    m.oficio = classe;
+    m.fixo = true;
+    m.ordenado = true;
+    m.esperaDoOficio = 0;
   }
 
   esquecer(id: number): void {
@@ -302,6 +333,29 @@ export class Bots {
 
     if (minha.onde === 'chao') {
       return ir(minha, this.chegou(u, minha, ALCANCE_DE_COLETA * 0.8), 0, false);
+    }
+
+    // A ordem do time entra **aqui**: depois do que o próprio npc está
+    // segurando, antes de perseguir o ladrão da refém.
+    //
+    // A posição foi medida, não escolhida no papel. Embaixo da perseguição, uma
+    // ordem dada com a refém sendo levada embora simplesmente não acontecia —
+    // e é exatamente nesse momento que o líder quer mandar alguém buscar um
+    // arco. A perseguição é uma preferência, não uma emergência: há outros bots
+    // e há gente para ela, e quem deu a ordem está vendo o campo inteiro.
+    //
+    // O que continua vindo antes são as duas coisas que o npc tem nas mãos:
+    // carregar a princesa e socorrer a própria, caída ou em cortejo. Trocar de
+    // chapéu no meio disso perderia a partida para obedecer a um clique.
+    if (
+      m.ordenado &&
+      m.oficio !== null &&
+      u.classe !== m.oficio &&
+      u.carga === 'nada' &&
+      estado.estoque[meu][m.oficio] > 0
+    ) {
+      const chapelaria = this.arena.estrutura('chapelaria', meu);
+      return ir(chapelaria, this.chegou(u, chapelaria, ALCANCE_DE_COLETA * 0.7));
     }
 
     // O inimigo está levando a refém embora: todo mundo que não é cozinheiro
@@ -606,6 +660,7 @@ export class Bots {
 }
 
 const vazia = (papel: Papel, id: number, oficio: Classe | null, fixo: boolean): Memoria => ({
+  ordenado: false,
   papel,
   oficio,
   fixo,

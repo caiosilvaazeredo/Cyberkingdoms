@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { IDS_DOS_MODOS, MODOS, MODO_PADRAO, PESO_QUE_VENCE, modoDe } from '../src/shared/modos';
+import { IDS_DOS_MODOS, MODOS, MODO_PADRAO, modoDe, pesoQueVence } from '../src/shared/modos';
 import { oficinaDe, princesaDe } from '../src/shared/estado';
 import { Sala } from '../src/server/sala';
 import { criarPartida } from '../src/shared/partida';
@@ -119,13 +119,13 @@ describe('o modo Assalto', () => {
 });
 
 describe('o modo Banquete', () => {
-  it('acaba quando a balança chega ao talo', () => {
+  it('acaba quando a balança chega ao limiar do modo', () => {
     const partida = emJogo('banquete');
     const heroi = partida.entrar({ nome: 'H', bot: false, time: 'azul' });
     const refem = princesaDe(partida.estado, 'vermelho');
     const minha = princesaDe(partida.estado, 'azul');
     // Uma fatia antes do fim: o resto do caminho já foi andado.
-    minha.peso = PESO_QUE_VENCE + 5;
+    minha.peso = pesoQueVence('banquete') + 5;
     refem.peso = PESO_TOTAL - minha.peso;
 
     heroi.x = refem.x;
@@ -134,7 +134,10 @@ describe('o modo Banquete', () => {
     partida.comandar(heroi.id, { seq: 1, mx: 0, my: 0, ax: 0, ay: 0, atacar: false, usar: true });
     partida.passo();
 
-    expect(minha.peso).toBe(PESO_QUE_VENCE);
+    // Abaixo do limiar, e não exatamente nele: o limiar do modo (70) é maior
+    // que o piso do jogo (40), então a fatia inteira entra e o peso passa
+    // direto. É o fim que importa, não o número redondo.
+    expect(minha.peso).toBeLessThanOrEqual(pesoQueVence('banquete'));
     expect(partida.estado.fase).toBe('fim');
     expect(partida.estado.vencedor).toBe('azul');
   });
@@ -144,7 +147,7 @@ describe('o modo Banquete', () => {
     const heroi = partida.entrar({ nome: 'H', bot: false, time: 'azul' });
     const refem = princesaDe(partida.estado, 'vermelho');
     const minha = princesaDe(partida.estado, 'azul');
-    minha.peso = PESO_QUE_VENCE + 5;
+    minha.peso = pesoQueVence('banquete') + 5;
     refem.peso = PESO_TOTAL - minha.peso;
 
     heroi.x = refem.x;
@@ -153,7 +156,7 @@ describe('o modo Banquete', () => {
     partida.comandar(heroi.id, { seq: 1, mx: 0, my: 0, ax: 0, ay: 0, atacar: false, usar: true });
     partida.passo();
 
-    expect(minha.peso).toBe(PESO_QUE_VENCE);
+    expect(minha.peso).toBeLessThanOrEqual(pesoQueVence('banquete'));
     expect(partida.estado.fase).not.toBe('fim');
   });
 
@@ -240,10 +243,14 @@ describe('o modo Obra', () => {
     expect(partida.estado.fase).not.toBe('fim');
   });
 
-  it('cobra mais caro pela obra — senão a corrida acaba antes de começar', () => {
-    // Medindo com bots, a versão com o preço normal decidia em 115 s de mediana,
-    // quase tão rápido quanto o Assalto. Com o preço triplicado, 236 s.
-    expect(MODOS.obra.custoDaObra).toBeGreaterThan(MODOS.resgate.custoDaObra);
+  it('a chapelaria custa o mesmo de sempre — encarecê-la esvazia o modo', () => {
+    // Tentei triplicar o preço porque 115 s de mediana pareciam rápidos demais
+    // para uma corrida de construção. Medindo dez seeds: com o preço normal a
+    // obra decide **dez em dez**; com o dobro ou o triplo, **zero em dez** — os
+    // bots nunca chegam ao nível máximo e a partida volta a ser decidida por
+    // resgate. A alavanca é binária, e um modo rápido que cumpre a promessa vale
+    // mais que um modo longo que não cumpre.
+    expect(MODOS.obra.vitoriaPorObra).toBe(true);
   });
 });
 

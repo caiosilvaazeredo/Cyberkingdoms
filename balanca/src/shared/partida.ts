@@ -15,7 +15,7 @@ import {
   type TipoDeEstrutura,
 } from './arena';
 import { MAPA_PADRAO, type IdDoMapa } from './mapas';
-import { MODO_PADRAO, PESO_QUE_VENCE, modoDe, type IdDoModo } from './modos';
+import { MODO_PADRAO, modoDe, type IdDoModo } from './modos';
 import {
   CARGA_DO_OFICIO,
   cozinhaDe,
@@ -696,10 +696,8 @@ function entregarNaObra(estado: Estado, u: Unidade, carga: 'madeira' | 'ouro'): 
   u.carga = 'nada';
   u.entregas++;
 
-  const fator = modoDe(estado.modo).custoDaObra;
   while (oficina.nivel < NIVEL_MAXIMO) {
-    const base = CUSTO_DO_NIVEL[oficina.nivel + 1]!;
-    const custo = { madeira: base.madeira * fator, ouro: base.ouro * fator };
+    const custo = CUSTO_DO_NIVEL[oficina.nivel + 1]!;
     if (oficina.madeira < custo.madeira || oficina.ouro < custo.ouro) break;
     oficina.madeira -= custo.madeira;
     oficina.ouro -= custo.ouro;
@@ -878,7 +876,8 @@ function alimentar(estado: Estado, u: Unidade, refem: Princesa): void {
   // única função do jogo que move peso: procurá-la no tick custaria uma volta
   // por quadro para responder a uma pergunta que só muda quando alguém entrega
   // uma fatia.
-  if (modoDe(estado.modo).vitoriaPorBalanca && minha.peso <= PESO_QUE_VENCE) {
+  const modo = modoDe(estado.modo);
+  if (modo.vitoriaPorBalanca && minha.peso <= modo.pesoQueVence) {
     terminar(estado, u.time);
     return;
   }

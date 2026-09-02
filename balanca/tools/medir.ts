@@ -44,6 +44,16 @@ function mudo(nome: string): Cliente {
 
 interface Resultado {
   segundos: number | null;
+  /**
+   * **Por que** a partida acabou.
+   *
+   * A coluna mais importante desta ferramenta, e a que faltava. Sem ela, medir
+   * duração e placar diz que o modo "funciona" enquanto ele termina pelo mesmo
+   * caminho do clássico — foi assim que o Banquete nasceu oco, e foi assim que
+   * o Obra voltou a nascer oco depois de eu triplicar o custo da obra: as
+   * partidas duravam o tempo certo e nenhuma delas era decidida pela obra.
+   */
+  motivo: string;
   placar: string;
   abates: string;
   pesos: string;
@@ -64,8 +74,24 @@ function rodar(modo: IdDoModo, mapa: IdDoMapa, seed: number): Resultado {
   }
   const e = sala.estado;
   const vivos = e.animais.filter((a) => a.vivo).length;
+  const m = MODOS[modo];
+  const motivo =
+    segundos === null
+      ? 'sem fim'
+      : e.oficinas.some((o) => o.time === e.vencedor && o.nivel >= NIVEL_MAXIMO) && m.vitoriaPorObra
+        ? 'OBRA'
+        : m.abatesParaVencer !== null &&
+            e.vencedor !== null &&
+            e.abates[e.vencedor] >= m.abatesParaVencer
+          ? 'ABATE'
+          : e.vencedor !== null && e.placar[e.vencedor] >= m.pontosParaVencer
+            ? 'resgate'
+            : m.vitoriaPorBalanca && e.princesas.some((p) => p.peso <= m.pesoQueVence)
+              ? 'BALANÇA'
+              : 'relógio';
   return {
     segundos,
+    motivo,
     placar: `${e.placar.azul}-${e.placar.vermelho}`,
     abates: `${e.abates.azul}-${e.abates.vermelho}`,
     pesos: `${Math.round(princesaDe(e, 'azul').peso)}/${Math.round(princesaDe(e, 'vermelho').peso)}`,
@@ -78,6 +104,7 @@ function rodar(modo: IdDoModo, mapa: IdDoMapa, seed: number): Resultado {
 function linha(r: Resultado): string {
   return (
     `${(r.segundos === null ? 'NÃO ACABOU' : `${r.segundos}s`).padEnd(11)}` +
+    ` por ${r.motivo.padEnd(8)}` +
     ` placar ${r.placar.padEnd(5)} abates ${r.abates.padEnd(7)}` +
     ` pesos ${r.pesos.padEnd(8)} obra ${r.obra.padEnd(6)}` +
     ` bichos ${r.bichos.padEnd(6)} vence ${r.vencedor}`

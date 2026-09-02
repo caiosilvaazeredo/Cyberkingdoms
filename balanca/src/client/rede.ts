@@ -12,6 +12,7 @@ import {
   type DoCliente,
   type DoServidor,
   type FichaDeJogador,
+  type VotacaoAberta,
 } from '../shared/protocolo';
 import { DT, TICKS_POR_ENVIO, TICKS_POR_SEGUNDO, TIMES, type Time } from '../shared/regras';
 
@@ -123,6 +124,10 @@ export class Rede {
   readonly eventosNovos: Evento[] = [];
   /** Bênçãos do clérigo em curso: o desenho toca o efeito sobre o curado. */
   readonly brilhos: { alvo: number; quando: number }[] = [];
+  /** A votação do seu time, ou `null`. O painel do time desenha a partir dela. */
+  votacao: VotacaoAberta | null = null;
+  /** A última frase do time — ordem dada, votação apurada. */
+  recadoDoTime: { texto: string; quando: number } | null = null;
 
   private anterior = new Map<number, Retratada>();
   private atual = new Map<number, Retratada>();
@@ -177,6 +182,23 @@ export class Rede {
     if (agora - this.ultimoAceno < 2000) return;
     this.ultimoAceno = agora;
     this.ws.send(JSON.stringify({ t: 'ping', tempo: agora }));
+  }
+
+  /**
+   * O líder manda um npc vestir uma classe, ou abre a decisão para o time.
+   *
+   * O servidor confere se quem mandou é mesmo o líder — o cliente esconder o
+   * botão de quem não lidera é conveniência, não segurança.
+   */
+  mandar(alvo: number, classe: Classe, votar = false): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    this.ws.send(JSON.stringify({ t: 'mandar', alvo, classe, ...(votar ? { votar: true } : {}) }));
+  }
+
+  /** Vota numa votação aberta. O último voto é o que vale. */
+  votarEm(classe: Classe): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    this.ws.send(JSON.stringify({ t: 'votar', classe }));
   }
 
   /**
@@ -274,6 +296,12 @@ export class Rede {
         this.reconciliar();
         return;
       }
+      case 'votacao':
+        this.votacao = msg.v;
+        return;
+      case 'recadoDoTime':
+        this.recadoDoTime = { texto: msg.texto, quando: performance.now() };
+        return;
       case 'pong':
         this.ping = Math.round(performance.now() - msg.tempo);
         return;

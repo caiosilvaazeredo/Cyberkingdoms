@@ -4,6 +4,7 @@ import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer, type WebSocket } from 'ws';
 
+import { classePedivel } from './comando';
 import { Lobby } from './lobby';
 import type { Cliente } from './sala';
 import {
@@ -187,6 +188,23 @@ wss.on('connection', (ws: WebSocket) => {
         // menu, como plateia, antes de a pessoa dizer como quer ser chamada.
         if (msg.nome !== undefined) cliente.nome = apelido(msg.nome);
         sala.escolher(chave, msg.time);
+        return;
+      }
+      case 'mandar': {
+        if (!sala) return;
+        sala.tocar(chave);
+        // A classe vem de fora e não é confiada: só as que têm chapéu podem ser
+        // pedidas, e o resto é descartado sem resposta.
+        const classe = classePedivel(msg.classe);
+        if (classe === null) return;
+        sala.mandar(chave, Math.trunc(Number(msg.alvo) || 0), classe, msg.votar === true);
+        return;
+      }
+      case 'votar': {
+        if (!sala) return;
+        sala.tocar(chave);
+        const classe = classePedivel(msg.classe);
+        if (classe !== null) sala.votar(chave, classe);
         return;
       }
       case 'comando':
