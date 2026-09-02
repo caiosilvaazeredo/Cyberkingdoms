@@ -10,6 +10,7 @@ import {
 } from './ajustes';
 import { MAXIMO_LOCAL, rotuloDaFonte, type IdDeFonte } from './controles';
 import { COR_DA_VAGA } from './desenho';
+import { IDS_DOS_MAPAS, MAPAS, type IdDoMapa } from '../shared/mapas';
 import { IDS_DOS_MODOS, MODOS, type IdDoModo } from '../shared/modos';
 import {
   MAX_BOTS,
@@ -96,6 +97,7 @@ export interface SalaAberta {
   humanos: number;
   vagas: number;
   modo: IdDoModo;
+  mapa: IdDoMapa | 'sorteio';
   porTime: number;
   bots: number;
 }
@@ -150,6 +152,22 @@ const CONSELHOS: readonly string[] = [
  * nada não dá erro nenhum para avisar.
  */
 const BOTOES_DE_FOLHA = '.coluna button';
+
+/**
+ * Para onde o sofá está indo, por porta.
+ *
+ * Uma tabela e não um ternário: a frase começou distinguindo "local" de "o
+ * resto", e quando surgiram a sala montada e a sala convidada o "resto" passou
+ * a mentir — quem acabava de montar uma sala com as próprias regras lia que ia
+ * entrar "na partida pública". Com uma entrada por porta, acrescentar uma porta
+ * sem escrever a frase dela não compila.
+ */
+const ONDE_VOCES_VAO: Record<Porta, string> = {
+  local: 'sala só de vocês, o resto do time vem de bot',
+  online: 'vocês entram na partida pública, junto de quem estiver na rede',
+  montada: 'sala montada por vocês, com as regras que escolheram',
+  convidada: 'vocês entram na sala escolhida na lista',
+};
 
 export class Telas {
   private readonly menu = pegar<HTMLElement>('#menu');
@@ -372,6 +390,33 @@ export class Telas {
       caixaModos.append(botao);
     }
 
+    // Os mapas, com o mesmo desenho dos modos — mais um cartão, "Sortear", que
+    // não é um mapa e por isso vem escrito à mão em vez de sair da tabela.
+    const caixaMapas = pegar<HTMLElement>('#mapas');
+    const cartoesDeMapa: { valor: IdDoMapa | 'sorteio'; nome: string; lema: string }[] = [
+      ...IDS_DOS_MAPAS.map((id) => ({ valor: id, nome: MAPAS[id].nome, lema: MAPAS[id].lema })),
+      {
+        valor: 'sorteio',
+        nome: 'Sortear',
+        lema: 'um campo diferente a cada partida da sala',
+      },
+    ];
+    for (const c of cartoesDeMapa) {
+      const botao = document.createElement('button');
+      botao.className = 'modo';
+      botao.dataset.mapa = c.valor;
+      const nome = document.createElement('b');
+      nome.textContent = c.nome;
+      const lema = document.createElement('small');
+      lema.textContent = c.lema;
+      botao.append(nome, lema);
+      botao.addEventListener('click', () => {
+        this.montagem = { ...this.montagem, mapa: c.valor };
+        this.pintarMontagem();
+      });
+      caixaMapas.append(botao);
+    }
+
     const contadores: {
       chave: 'porTime' | 'bots';
       rotulo: string;
@@ -445,7 +490,11 @@ export class Telas {
 
   private pintarMontagem(): void {
     for (const b of Array.from(document.querySelectorAll<HTMLButtonElement>('.modo'))) {
-      b.setAttribute('aria-pressed', String(b.dataset.modo === this.montagem.modo));
+      const meu =
+        b.dataset.modo !== undefined
+          ? b.dataset.modo === this.montagem.modo
+          : b.dataset.mapa === this.montagem.mapa;
+      b.setAttribute('aria-pressed', String(meu));
     }
     for (const o of Array.from(document.querySelectorAll<HTMLOutputElement>('output[data-conta]'))) {
       const chave = o.dataset.conta as 'porTime' | 'bots';
@@ -489,8 +538,9 @@ export class Telas {
       const titulo = document.createElement('b');
       titulo.textContent = MODOS[s.modo]?.nome ?? s.nome;
       const detalhe = document.createElement('small');
+      const campo = s.mapa === 'sorteio' ? 'sorteio' : (MAPAS[s.mapa]?.nome ?? s.mapa);
       detalhe.textContent =
-        `${s.nome} · ${s.porTime} por time` +
+        `${campo} · ${s.porTime} por time` +
         (s.bots > 0 ? ` + ${s.bots} npc(s)` : '') +
         ` · ${s.humanos} jogando · ${s.vagas} vaga(s)`;
       quem.append(titulo, detalhe);
@@ -621,11 +671,7 @@ export class Telas {
     this.recadoDaCabine.textContent =
       dados.sentados.length === 0
         ? 'aperte o botão de entrar para ocupar a primeira vaga'
-        : `${dados.sentados.length} de ${MAXIMO_LOCAL} · ${
-            this.porta === 'local'
-              ? 'sala só de vocês, o resto do time vem de bot'
-              : 'vocês entram na partida pública, junto de quem estiver na rede'
-          }`;
+        : `${dados.sentados.length} de ${MAXIMO_LOCAL} · ${ONDE_VOCES_VAO[this.porta]}`;
   }
 
   private abrirFolha(nome: string): void {

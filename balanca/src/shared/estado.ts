@@ -206,6 +206,13 @@ export interface Estado {
   /** Segundos restantes da partida. */
   relogio: number;
   placar: Record<Time, number>;
+  /**
+   * Baixas causadas por cada time, acumuladas na partida.
+   *
+   * Guardadas aqui e não somadas das unidades: quem sai da sala leva os abates
+   * dele, e no modo Abate isso faria o placar andar para trás.
+   */
+  abates: Record<Time, number>;
   unidades: Unidade[];
   princesas: Princesa[];
   projeteis: Projetil[];

@@ -1,6 +1,7 @@
 import { criarArena, type Arena } from '../shared/arena';
 import { ESTOQUE_INICIAL, type Classe } from '../shared/classes';
 import type { Estado, Evento, Unidade } from '../shared/estado';
+import { MAPA_PADRAO, mapaDe, type IdDoMapa } from '../shared/mapas';
 import { MODO_PADRAO, modoDe, type IdDoModo } from '../shared/modos';
 import { moverUnidade } from '../shared/partida';
 import {
@@ -108,6 +109,8 @@ export class Rede {
    */
   modo: IdDoModo = MODO_PADRAO;
   botsPorTime = 0;
+  /** O mapa desta partida. É dele que a arena local nasce. */
+  mapa: IdDoMapa = MAPA_PADRAO;
   /** Verdadeiro entre conectar e escolher o lado. */
   get espectador(): boolean {
     return this.meuId === null && this.arena !== null;
@@ -207,13 +210,14 @@ export class Rede {
         this.porTime = msg.porTime;
         this.modo = modoDe(msg.modo).id;
         this.botsPorTime = msg.botsPorTime;
+        this.mapa = mapaDe(msg.mapa).id;
         // Chega como espectador: a unidade só existe depois de escolher o lado,
         // e numa partida nova ela é outra. Zerar aqui evita desenhar o boneco
         // da partida passada por um quadro.
         this.meuId = null;
         this.meuTime = null;
         // A arena nasce da seed. Nenhum tile viaja pela rede.
-        this.arena = criarArena(msg.seed);
+        this.arena = criarArena(msg.seed, this.mapa);
         this.estado = estadoVazio(this.modo);
         this.previsao = null;
         this.visualAnterior = null;
@@ -435,6 +439,7 @@ function estadoVazio(modo: IdDoModo): Estado {
     faseEm: 0,
     relogio: 0,
     placar: { azul: 0, vermelho: 0 },
+    abates: { azul: 0, vermelho: 0 },
     unidades: [],
     princesas: [],
     projeteis: [],

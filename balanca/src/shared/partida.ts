@@ -14,6 +14,7 @@ import {
   type Arena,
   type TipoDeEstrutura,
 } from './arena';
+import { MAPA_PADRAO, type IdDoMapa } from './mapas';
 import { MODO_PADRAO, PESO_QUE_VENCE, modoDe, type IdDoModo } from './modos';
 import {
   CARGA_DO_OFICIO,
@@ -124,8 +125,12 @@ const COMANDO_PARADO: Comando = {
   usar: false,
 };
 
-export function criarPartida(seed: number, modo: IdDoModo = MODO_PADRAO): Partida {
-  const arena = criarArena(seed);
+export function criarPartida(
+  seed: number,
+  modo: IdDoModo = MODO_PADRAO,
+  mapa: IdDoMapa = MAPA_PADRAO,
+): Partida {
+  const arena = criarArena(seed, mapa);
   const estado = estadoInicial(arena, modo);
   const comandos = new Map<number, Comando>();
   /** Sobe a borda do botão "usar": segurar não repete a ação. */
@@ -219,6 +224,7 @@ function estadoInicial(arena: Arena, id: IdDoModo): Estado {
     faseEm: AQUECIMENTO,
     relogio: modo.duracao,
     placar: { azul: 0, vermelho: 0 },
+    abates: { azul: 0, vermelho: 0 },
     unidades: [],
     princesas,
     projeteis: [],
@@ -690,13 +696,23 @@ function entregarNaObra(estado: Estado, u: Unidade, carga: 'madeira' | 'ouro'): 
   u.carga = 'nada';
   u.entregas++;
 
+  const fator = modoDe(estado.modo).custoDaObra;
   while (oficina.nivel < NIVEL_MAXIMO) {
-    const custo = CUSTO_DO_NIVEL[oficina.nivel + 1]!;
+    const base = CUSTO_DO_NIVEL[oficina.nivel + 1]!;
+    const custo = { madeira: base.madeira * fator, ouro: base.ouro * fator };
     if (oficina.madeira < custo.madeira || oficina.ouro < custo.ouro) break;
     oficina.madeira -= custo.madeira;
     oficina.ouro -= custo.ouro;
     oficina.nivel++;
     estado.eventos.push({ tipo: 'nivel', time: u.time, nivel: oficina.nivel });
+    // No modo Obra a chapelaria pronta acaba a partida. A conferência é aqui,
+    // no único lugar que sobe nível: procurá-la no tick custaria uma volta por
+    // quadro para responder a uma pergunta que só muda quando alguém entrega
+    // uma tábua.
+    if (modoDe(estado.modo).vitoriaPorObra && oficina.nivel >= NIVEL_MAXIMO) {
+      terminar(estado, u.time);
+      return;
+    }
     // O nível novo vale para quem já está em campo: a vida máxima subiu, e
     // seria cruel deixar o time inteiro com a barra pela metade por isso.
     for (const outro of estado.unidades) {
@@ -745,10 +761,15 @@ function envelhecerItens(estado: Estado): void {
  * tempo e vira alvo fácil enquanto tenta.
  */
 function moverAnimais(arena: Arena, estado: Estado): void {
+  // Na Fome o pasto não repõe: a carne do mapa é finita, e com ela o bolo e o
+  // teto da balança. O relógio do bicho morto continua correndo à toa em vez de
+  // ganhar um `if` só para ele — é um decremento por bicho e por tick, e o
+  // caminho de reposição fica com uma condição só, no lugar onde a regra é.
+  const repoe = modoDe(estado.modo).animaisVoltam;
   for (const a of estado.animais) {
     if (!a.vivo) {
       a.voltaEm -= DT;
-      if (a.voltaEm <= 0) reporAnimal(arena, estado, a);
+      if (repoe && a.voltaEm <= 0) reporAnimal(arena, estado, a);
       continue;
     }
     a.fugindo = Math.max(0, a.fugindo - DT);
@@ -1168,8 +1189,20 @@ function morrer(estado: Estado, algoz: Unidade, alvo: Unidade): void {
   alvo.vivo = false;
   alvo.vida = 0;
   alvo.mortes++;
-  if (algoz.id !== alvo.id && algoz.time !== alvo.time) algoz.abates++;
+  if (algoz.id !== alvo.id && algoz.time !== alvo.time) {
+    algoz.abates++;
+    // A contagem é do **time**, e não a soma dos abates de quem está em campo:
+    // um bot dispensado leva embora os abates dele, e o placar de um modo de
+    // combate não pode andar para trás porque alguém saiu da sala.
+    estado.abates[algoz.time]++;
+  }
   estado.eventos.push({ tipo: 'abate', algoz: algoz.id, vitima: alvo.id });
+
+  const alvoDeAbates = modoDe(estado.modo).abatesParaVencer;
+  if (alvoDeAbates !== null && estado.abates[algoz.time] >= alvoDeAbates) {
+    terminar(estado, algoz.time);
+    return;
+  }
 
   soltarChapeuNoChao(estado, alvo);
   alvo.classe = 'aldeao';

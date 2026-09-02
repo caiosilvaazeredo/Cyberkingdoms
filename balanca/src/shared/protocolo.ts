@@ -10,6 +10,7 @@ import type {
   TipoDeItem,
   Unidade,
 } from './estado';
+import { mapaDe, type IdDoMapa } from './mapas';
 import { modoDe, type IdDoModo } from './modos';
 import { POR_TIME, TIMES, type Time } from './regras';
 
@@ -38,10 +39,11 @@ import { POR_TIME, TIMES, type Time } from './regras';
  * ## O que **não** vai no retrato
  *
  * Nome e time não mudam durante a partida, então viajam uma vez, no `elenco`.
- * O mapa não viaja: o cliente monta a arena a partir da seed.
+ * O terreno não viaja: o cliente monta a arena a partir da seed e do **nome** do
+ * mapa, que são dois números e uma palavra em vez de dois mil tiles.
  */
 
-export const VERSAO_DO_PROTOCOLO = 4;
+export const VERSAO_DO_PROTOCOLO = 5;
 
 // --- a sala que alguém monta -----------------------------------------------
 
@@ -56,6 +58,14 @@ export const VERSAO_DO_PROTOCOLO = 4;
  */
 export interface ConfiguracaoDeSala {
   modo?: IdDoModo;
+  /**
+   * O campo de batalha, ou `'sorteio'` para trocar a cada partida.
+   *
+   * O sorteio é uma escolha e não a ausência de uma: quem quer treinar um mapa
+   * fixa um, quem quer variedade pede sorteio, e o servidor não decide por
+   * ninguém.
+   */
+  mapa?: IdDoMapa | 'sorteio';
   /** Vagas de gente em cada time. */
   porTime?: number;
   /**
@@ -111,6 +121,9 @@ export function salaConfiguravel(bruta: unknown): Required<ConfiguracaoDeSala> {
   const bots = inteiro(c.bots, MIN_BOTS, MAX_BOTS, 0);
   return {
     modo: modoDe(c.modo).id,
+    // `'sorteio'` é o único valor que não é um mapa e mesmo assim é válido;
+    // qualquer outra coisa desconhecida cai no padrão, como o modo.
+    mapa: c.mapa === 'sorteio' ? 'sorteio' : mapaDe(c.mapa).id,
     porTime,
     bots: Math.min(bots, MAX_POR_TIME_TOTAL - porTime),
     privada: c.privada === true,
@@ -213,6 +226,14 @@ export type DoServidor =
        */
       modo: IdDoModo;
       botsPorTime: number;
+      /**
+       * O mapa **desta** partida, já resolvido.
+       *
+       * Nunca `'sorteio'`: o cliente monta a arena a partir dele e precisa do
+       * mapa concreto. Numa sala que sorteia, cada `bemvindo` — inclusive o da
+       * partida seguinte — traz o que de fato saiu.
+       */
+      mapa: IdDoMapa;
     }
   /**
    * O espectador virou jogador. Chega depois de `escolherTime`, e de novo a
@@ -225,7 +246,14 @@ export type DoServidor =
   | { t: 'recusado'; motivo: string };
 
 export interface Retrato {
-  /** `[tick, faseIdx, faseEm*10, relogio, placarAzul, placarVermelho, vencedor]` */
+  /**
+   * `[tick, faseIdx, faseEm*10, relogio, placarAzul, placarVermelho, vencedor,
+   *   abatesAzul, abatesVermelho]`
+   *
+   * As baixas vão no retrato, e não no `bemvindo`, porque mudam durante a
+   * partida: no modo Abate elas **são** o placar, e um placar que só chegasse
+   * ao entrar seria um placar congelado.
+   */
   p: number[];
   u: number[][];
   pr: number[][];
@@ -264,6 +292,8 @@ export function empacotar(estado: Estado): Retrato {
       estado.placar.azul,
       estado.placar.vermelho,
       estado.vencedor === null ? -1 : idxTime(estado.vencedor),
+      estado.abates.azul,
+      estado.abates.vermelho,
     ],
     // `[id, time, classe, x, y, olharX*100, olharY*100, vida, vivo, carga,
     //   golpe*100, colheita*100, renasceEm*10, ultimoComando, abates, mortes,
@@ -348,13 +378,15 @@ export function empacotar(estado: Estado): Retrato {
  * local sem uma segunda versão dos tipos para manter em sincronia.
  */
 export function desempacotar(r: Retrato, base: Estado): Estado {
-  const [tick, fase, faseEm, relogio, azul, vermelho, vencedor] = r.p as number[];
+  const [tick, fase, faseEm, relogio, azul, vermelho, vencedor, abAzul, abVermelho] =
+    r.p as number[];
   base.tick = tick!;
   base.fase = FASES[fase!]!;
   base.faseEm = faseEm! / 10;
   base.relogio = relogio!;
   base.placar = { azul: azul!, vermelho: vermelho! };
   base.vencedor = vencedor! < 0 ? null : timePorIdx(vencedor!);
+  base.abates = { azul: abAzul ?? 0, vermelho: abVermelho ?? 0 };
 
   const antigas = new Map(base.unidades.map((u) => [u.id, u]));
   base.unidades = r.u.map((linha) => {

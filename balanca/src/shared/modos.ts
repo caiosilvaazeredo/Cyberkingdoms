@@ -35,7 +35,14 @@ import {
  * no estado, ele viaja no retrato e os dois lados concordam de graça.
  */
 
-export type IdDoModo = 'resgate' | 'assalto' | 'banquete' | 'chapelaria';
+export type IdDoModo =
+  | 'resgate'
+  | 'assalto'
+  | 'banquete'
+  | 'chapelaria'
+  | 'fome'
+  | 'obra'
+  | 'abate';
 
 export interface Modo {
   readonly id: IdDoModo;
@@ -62,6 +69,39 @@ export interface Modo {
   readonly vitoriaPorBalanca: boolean;
   /** A chapelaria nunca fica vazia: chapéu deixa de ser recurso disputado. */
   readonly chapeusInfinitos: boolean;
+  /**
+   * O bicho abatido volta ao pasto depois de um tempo.
+   *
+   * Desligado, a carne do mapa é finita — e como bolo sai de carne, a balança
+   * ganha um teto que ninguém pode ultrapassar. Caçar cedo deixa de ser rotina
+   * e vira investimento.
+   */
+  readonly animaisVoltam: boolean;
+  /**
+   * Levar a chapelaria ao nível máximo vence a partida.
+   *
+   * Promove minerador e lenhador a decisivos. Nos outros modos a obra é uma
+   * melhoria lateral que o time faz quando sobra gente; aqui ela é o objetivo,
+   * e quem manda todo mundo para a briga perde por falta de picareta.
+   */
+  readonly vitoriaPorObra: boolean;
+  /**
+   * Quanto a obra custa, em múltiplos do preço normal.
+   *
+   * Existe pelo mesmo motivo que a balança do Banquete não relaxa: sem isso, a
+   * alavanca do modo não vira jogo. Medindo com bots, o Obra decidia em 115
+   * segundos de mediana — quase tão rápido quanto o Assalto, que é o modo
+   * expresso de propósito. Uma corrida de construção que acaba antes de o
+   * inimigo chegar à jazida não é corrida: é um sprint com um corredor só.
+   */
+  readonly custoDaObra: number;
+  /**
+   * Abates que vencem a partida, ou `null` quando matar não é o objetivo.
+   *
+   * Combate puro: sem cortejo, sem logística de bolo. É o modo de quem abre o
+   * jogo só para brigar — e o único em que a princesa é cenário.
+   */
+  readonly abatesParaVencer: number | null;
 }
 
 /**
@@ -91,6 +131,10 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     renascimentoBase: RENASCIMENTO_BASE,
     vitoriaPorBalanca: false,
     chapeusInfinitos: false,
+    animaisVoltam: true,
+    vitoriaPorObra: false,
+    custoDaObra: 1,
+    abatesParaVencer: null,
   },
   assalto: {
     id: 'assalto',
@@ -101,6 +145,10 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     renascimentoBase: 3,
     vitoriaPorBalanca: false,
     chapeusInfinitos: false,
+    animaisVoltam: true,
+    vitoriaPorObra: false,
+    custoDaObra: 1,
+    abatesParaVencer: null,
   },
   banquete: {
     id: 'banquete',
@@ -111,6 +159,10 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     renascimentoBase: RENASCIMENTO_BASE,
     vitoriaPorBalanca: true,
     chapeusInfinitos: false,
+    animaisVoltam: true,
+    vitoriaPorObra: false,
+    custoDaObra: 1,
+    abatesParaVencer: null,
   },
   chapelaria: {
     id: 'chapelaria',
@@ -121,6 +173,56 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     renascimentoBase: RENASCIMENTO_BASE,
     vitoriaPorBalanca: false,
     chapeusInfinitos: true,
+    animaisVoltam: true,
+    vitoriaPorObra: false,
+    custoDaObra: 1,
+    abatesParaVencer: null,
+  },
+  fome: {
+    id: 'fome',
+    nome: 'Fome',
+    lema: 'o bicho abatido não volta · a carne do mapa é tudo o que existe',
+    pontosParaVencer: PONTOS_PARA_VENCER,
+    duracao: DURACAO_DA_PARTIDA,
+    renascimentoBase: RENASCIMENTO_BASE,
+    vitoriaPorBalanca: false,
+    chapeusInfinitos: false,
+    animaisVoltam: false,
+    vitoriaPorObra: false,
+    custoDaObra: 1,
+    abatesParaVencer: null,
+  },
+  obra: {
+    id: 'obra',
+    nome: 'Obra',
+    lema: 'vence quem terminar a chapelaria · picareta e machado decidem',
+    pontosParaVencer: PONTOS_PARA_VENCER,
+    duracao: DURACAO_DA_PARTIDA,
+    renascimentoBase: RENASCIMENTO_BASE,
+    vitoriaPorBalanca: false,
+    chapeusInfinitos: false,
+    animaisVoltam: true,
+    vitoriaPorObra: true,
+    custoDaObra: 3,
+    abatesParaVencer: null,
+  },
+  abate: {
+    id: 'abate',
+    nome: 'Abate',
+    lema: 'trinta baixas vencem · sem cortejo, sem bolo, só briga',
+    // Resgate não decide nada aqui. Medindo, ele decidia duas de três partidas
+    // antes de alguém chegar às trinta baixas — e um modo cujo lema promete "só
+    // briga" e termina por cortejo é um modo que mente. A princesa continua em
+    // campo e continua carregável; o que ela deixou de ser é o placar.
+    pontosParaVencer: Number.POSITIVE_INFINITY,
+    duracao: 8 * 60,
+    renascimentoBase: 4,
+    vitoriaPorBalanca: false,
+    chapeusInfinitos: false,
+    animaisVoltam: true,
+    vitoriaPorObra: false,
+    custoDaObra: 1,
+    abatesParaVencer: 30,
   },
 };
 
@@ -132,6 +234,9 @@ export const IDS_DOS_MODOS: readonly IdDoModo[] = [
   'assalto',
   'banquete',
   'chapelaria',
+  'fome',
+  'obra',
+  'abate',
 ];
 
 /**

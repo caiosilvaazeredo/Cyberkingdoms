@@ -1,4 +1,5 @@
 import { Sala, type Cliente } from './sala';
+import type { IdDoMapa } from '../shared/mapas';
 import type { IdDoModo } from '../shared/modos';
 import type { ConfiguracaoDeSala } from '../shared/protocolo';
 import { DT, TICKS_POR_SEGUNDO } from '../shared/regras';
@@ -39,6 +40,8 @@ export interface SalaNaLista {
   humanos: number;
   vagas: number;
   modo: IdDoModo;
+  /** O mapa fixo da sala, ou `'sorteio'` se ela troca a cada partida. */
+  mapa: IdDoMapa | 'sorteio';
   porTime: number;
   /** Npcs fixos por time. Zero quando os bots são o tapa-buraco do lobby. */
   bots: number;
@@ -110,6 +113,7 @@ export class Lobby {
         humanos: s.humanos,
         vagas: s.vagas,
         modo: s.modo,
+        mapa: s.escolhaDeMapa,
         porTime: s.porTime,
         bots: s.botsFixos ?? 0,
       }));
@@ -179,7 +183,14 @@ export class Lobby {
       privada,
       // A configuração do anfitrião vence os padrões do lobby. Ela vem depois na
       // ordem de propósito: é a última palavra.
-      ...(feita ? { modo: feita.modo, porTime: feita.porTime, botsPorTime: feita.bots } : {}),
+      ...(feita
+        ? {
+            modo: feita.modo,
+            mapa: feita.mapa,
+            porTime: feita.porTime,
+            botsPorTime: feita.bots,
+          }
+        : {}),
       ...(this.porTime !== undefined && !feita ? { porTime: this.porTime } : {}),
       // A espera existe para dar tempo de os amigos de alguém chegarem pela
       // rede. Na sala do sofá não vem ninguém pela rede: os amigos já estão na

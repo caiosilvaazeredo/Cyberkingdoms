@@ -493,6 +493,13 @@
         font-family: inherit;
       }
       /* --- montar sala --- */
+      .folha h3.subtitulo {
+        margin: 14px 0 6px;
+        font-size: 13px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: rgba(20, 17, 15, 0.5);
+      }
       /*
         Os quatro modos são cartões, e não uma lista de rádios.
 
@@ -1054,7 +1061,10 @@
       -->
       <div class="folha" data-folha="sala" hidden>
         <h2>Montar uma sala</h2>
+        <h3 class="subtitulo">Modo</h3>
         <div id="modos" class="modos"></div>
+        <h3 class="subtitulo">Campo de batalha</h3>
+        <div id="mapas" class="modos"></div>
         <div id="formato"></div>
         <p class="recado" id="recado-sala"></p>
         <div class="linha">

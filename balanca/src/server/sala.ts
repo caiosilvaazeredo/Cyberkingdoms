@@ -1,5 +1,6 @@
 import { Bots } from '../shared/bots';
 import { Navegador } from '../shared/navegacao';
+import { mapaDe, mapaSorteado, type IdDoMapa } from '../shared/mapas';
 import { modoDe, type IdDoModo } from '../shared/modos';
 import { criarPartida, type Partida } from '../shared/partida';
 import { empacotar, type Comando, type DoServidor, type FichaDeJogador } from '../shared/protocolo';
@@ -85,6 +86,16 @@ export interface OpcoesDaSala {
   /** O modo desta sala. Vale para todas as partidas que ela montar. */
   modo?: IdDoModo;
   /**
+   * O mapa desta sala, ou `'sorteio'` para trocar a cada partida.
+   *
+   * Fixo, a sala é sempre o mesmo campo — que é o que quem treina quer. Em
+   * sorteio, cada partida nova tira um mapa da seed dela, e como a seed já é
+   * derivada da anterior, a sequência inteira é reproduzível a partir da
+   * primeira. Um `Math.random` aqui seria a única coisa do jogo que o servidor
+   * não conseguiria repetir ao investigar um defeito.
+   */
+  mapa?: IdDoMapa | 'sorteio';
+  /**
    * Npcs fixos por time, quando o anfitrião escolheu quantos quer.
    *
    * `undefined` mantém a política do lobby: bot é tapa-buraco, entra para
@@ -107,6 +118,10 @@ export class Sala {
   readonly nome: string;
   readonly privada: boolean;
   readonly modo: IdDoModo;
+  /** O que o anfitrião pediu: um mapa, ou sorteio a cada partida. */
+  readonly escolhaDeMapa: IdDoMapa | 'sorteio';
+  /** O mapa da partida que está rodando agora. */
+  private mapaAtual: IdDoMapa;
   /** Vagas de gente por time. */
   readonly porTime: number;
   /** Npcs fixos por time, ou `null` quando o bot é tapa-buraco do lobby. */
@@ -127,10 +142,13 @@ export class Sala {
     this.privada = opcoes.privada ?? false;
     this.seed = opcoes.seed;
     this.modo = modoDe(opcoes.modo).id;
+    this.escolhaDeMapa = opcoes.mapa === 'sorteio' ? 'sorteio' : mapaDe(opcoes.mapa).id;
+    this.mapaAtual =
+      this.escolhaDeMapa === 'sorteio' ? mapaSorteado(opcoes.seed) : this.escolhaDeMapa;
     this.porTime = opcoes.porTime ?? POR_TIME;
     this.botsFixos = opcoes.botsPorTime ?? null;
     this.espera = opcoes.esperaPorJogadores ?? ESPERA_POR_JOGADORES;
-    this.partida = criarPartida(this.seed, this.modo);
+    this.partida = criarPartida(this.seed, this.modo, this.mapaAtual);
     this.navegador = new Navegador(this.partida.arena);
     this.bots = new Bots(this.partida.arena, this.navegador);
   }
@@ -335,7 +353,7 @@ export class Sala {
         bot: true,
         time,
       });
-      this.bots.adotar(u.id, time);
+      this.bots.adotar(u.id, time, this.modo);
       this.elencoSujo = true;
     }
   }
@@ -378,7 +396,10 @@ export class Sala {
 
     const antigos = [...this.clientes.values()];
     this.seed = (this.seed * 1103515245 + 12345) >>> 0;
-    this.partida = criarPartida(this.seed, this.modo);
+    // Sorteio: o mapa da próxima partida sai da seed nova. Fixo: o mesmo campo
+    // de novo, que é o que quem escolheu um mapa está esperando.
+    if (this.escolhaDeMapa === 'sorteio') this.mapaAtual = mapaSorteado(this.seed);
+    this.partida = criarPartida(this.seed, this.modo, this.mapaAtual);
     this.navegador = new Navegador(this.partida.arena);
     this.bots = new Bots(this.partida.arena, this.navegador);
     this.esperando = 0;
@@ -415,6 +436,7 @@ export class Sala {
       porTime: this.porTime,
       modo: this.modo,
       botsPorTime: this.botsFixos ?? 0,
+      mapa: this.mapaAtual,
     };
   }
 

@@ -1,29 +1,28 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  CASTELO,
-  PONTES_Y,
-  criarArena,
-  decoracaoEm,
-  espelhar,
-  resolverColisao,
-  type TipoDeEstrutura,
-} from '../src/shared/arena';
+import { criarArena, decoracaoEm, espelhar, resolverColisao, type TipoDeEstrutura } from '../src/shared/arena';
+import { IDS_DOS_MAPAS, MAPAS } from '../src/shared/mapas';
 import { Navegador } from '../src/shared/navegacao';
 import { RAIO_UNIDADE, TILE, TIMES } from '../src/shared/regras';
 
 /**
- * O mapa: simetria e alcançabilidade.
+ * Os mapas: simetria e alcançabilidade, para todos eles.
  *
  * Um mapa competitivo assimétrico é um mapa desequilibrado, e um mapa com um
  * canto inalcançável é um bot parado na parede a partida inteira. As duas
  * coisas são invisíveis lendo o código — e óbvias para quem está jogando.
+ *
+ * Este arquivo roda **em laço sobre a tabela de mapas**, e é essa a razão de
+ * um mapa novo ser barato: escrever quarenta linhas de coordenadas e descobrir
+ * na hora se elas produzem um campo jogável, em vez de abrir o navegador e
+ * andar até o canto para ver se dá.
  */
 
 const TIPOS: TipoDeEstrutura[] = ['trono', 'jaula', 'cozinha', 'chapelaria', 'nascedouro'];
 
-describe('a arena', () => {
-  const arena = criarArena(123);
+describe.each(IDS_DOS_MAPAS)('o mapa %s', (id) => {
+  const arena = criarArena(123, id);
+  const mapa = MAPAS[id];
 
   it('dá a cada reino as mesmas jazidas e os mesmos pastos', () => {
     for (const tipo of ['arvore', 'ouro'] as const) {
@@ -83,15 +82,32 @@ describe('a arena', () => {
     }
   });
 
-  it('cerca cada castelo, deixando só as pontes', () => {
-    // Na coluna do fosso, as únicas passagens são as pontes. É o que dá à
-    // defesa algo para defender: sem isso o castelo teria uma frente de vinte
-    // tiles e nenhum estrangulamento.
-    const passagens: number[] = [];
-    for (let ty = CASTELO.y0; ty <= CASTELO.y1; ty++) {
-      if (!arena.bloqueado(CASTELO.x1, ty)) passagens.push(ty);
+  it('estrangula onde diz que estrangula, e só ali', () => {
+    // Cada portão declarado tem de ter exatamente as passagens que promete. É o
+    // que dá à defesa algo para defender — e é a parte que mais fácil se quebra
+    // ao mexer num relevo, porque um tile de água a mais fecha o mapa e um a
+    // menos abre um buraco que ninguém vê.
+    //
+    // Um mapa sem portão nenhum é legítimo: o Vau existe para isso. O que não
+    // pode é prometer um estrangulamento e não entregá-lo.
+    for (const portao of mapa.portoes) {
+      const passagens: number[] = [];
+      for (let ty = portao.de; ty <= portao.ate; ty++) {
+        if (!arena.bloqueado(portao.coluna, ty)) passagens.push(ty);
+      }
+      expect(passagens).toEqual([...portao.passagens]);
     }
-    expect(passagens).toEqual([...PONTES_Y]);
+  });
+
+  it('não deixa nenhum ponto de interesse dentro do castelo do inimigo', () => {
+    // A jaula do azul guarda a princesa vermelha e fica no castelo azul; tudo o
+    // mais que tem lado precisa estar do lado certo do eixo, senão o mapa dá a
+    // um time uma jazida dentro da casa do outro.
+    const meio = (arena.largura * TILE) / 2;
+    for (const j of arena.jazidas) {
+      if (j.lado === 'azul') expect(j.x).toBeLessThan(meio);
+      if (j.lado === 'vermelho') expect(j.x).toBeGreaterThan(meio);
+    }
   });
 
   it('a colisão desliza pela parede em vez de grudar', () => {

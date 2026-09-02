@@ -1,6 +1,7 @@
 import { CLASSES_COM_CHAPEU, perfil, type Classe } from './classes';
 import { princesaDe, unidade, type Estado, type Unidade } from './estado';
 import type { Arena } from './arena';
+import { MODO_PADRAO, modoDe, type IdDoModo } from './modos';
 import type { Navegador } from './navegacao';
 import type { Partida } from './partida';
 import { enxerga } from './partida';
@@ -50,8 +51,30 @@ import {
 
 export type Papel = 'cozinheiro' | 'atacante' | 'defensor';
 
-/** A cara que cada papel dá ao time. Seis bots viram 2/2/2. */
-const RODIZIO: readonly Papel[] = ['atacante', 'cozinheiro', 'defensor'];
+/**
+ * Como o time se divide, por modo. Seis bots percorrem o rodízio em ciclo.
+ *
+ * Isto existe porque um bot que ignora a condição de vitória do modo é um bot
+ * que não joga aquele modo — e foi o que a medição mostrou. No **Obra**, em que
+ * vence quem terminar a chapelaria, o rodízio clássico põe **um** bot por time
+ * na economia, e a obra empacava no nível dois: as três partidas medidas saíram
+ * idênticas às do modo clássico, decididas por resgate, com a vitória do modo
+ * nunca disparando. No **Abate**, em que só a briga conta, dois dos seis
+ * ficavam cozinhando um bolo que não decide nada.
+ *
+ * O rodízio não é uma estratégia ótima e não pretende ser: é a divisão de
+ * trabalho que faz o time perseguir o objetivo **daquele** modo em vez do
+ * objetivo de outro.
+ */
+const RODIZIO_CLASSICO: readonly Papel[] = ['atacante', 'cozinheiro', 'defensor'];
+const RODIZIOS: Partial<Record<IdDoModo, readonly Papel[]>> = {
+  // Metade do time na picareta: sem isso a obra não sai do lugar.
+  obra: ['cozinheiro', 'atacante', 'cozinheiro', 'defensor'],
+  // Ninguém cozinha: no Abate o bolo não vale ponto nenhum.
+  abate: ['atacante', 'atacante', 'defensor'],
+};
+
+const rodizioDe = (modo: IdDoModo): readonly Papel[] => RODIZIOS[modo] ?? RODIZIO_CLASSICO;
 
 /**
  * Os ofícios, na ordem em que um time deve preenchê-los.
@@ -101,23 +124,47 @@ interface Memoria {
 export class Bots {
   private readonly memorias = new Map<number, Memoria>();
   private readonly cozinheiros = new Map<Time, number>();
-  private proximoPapel = 0;
+  /**
+   * Onde cada time está no rodízio. **Por time**, e não um contador só.
+   *
+   * Com um contador global e os bots entrando alternados — azul, vermelho,
+   * azul... — a paridade decide a composição: um rodízio de tamanho par dá
+   * todos os papéis das posições pares a um time e os das ímpares ao outro. O
+   * rodízio clássico tem três posições e por acaso escapava disso; o do modo
+   * Obra tem quatro, e o azul saía com **os três cozinheiros**, terminava a
+   * chapelaria em noventa segundos e vencia as três partidas medidas.
+   *
+   * Contando por time, cada um percorre o mesmo ciclo desde o começo, e a
+   * composição deixa de depender da ordem em que o servidor chamou os bots.
+   */
+  private readonly proximoPapel = new Map<Time, number>();
 
   constructor(
     private readonly arena: Arena,
     private readonly navegador: Navegador,
   ) {}
 
-  adotar(id: number, time: Time, papel?: Papel): Papel {
-    const escolhido = papel ?? RODIZIO[this.proximoPapel++ % RODIZIO.length]!;
+  /**
+   * @param modo o que decide a partida, e por isso o que decide a divisão de
+   * trabalho do time. Ver `RODIZIOS`.
+   */
+  adotar(id: number, time: Time, modo: IdDoModo = MODO_PADRAO, papel?: Papel): Papel {
+    const rodizio = rodizioDe(modo);
+    const passo = this.proximoPapel.get(time) ?? 0;
+    this.proximoPapel.set(time, passo + 1);
+    const escolhido = papel ?? rodizio[passo % rodizio.length]!;
     let oficio: Classe | null = null;
     let fixo = false;
     if (escolhido === 'cozinheiro') {
       const quantos = this.cozinheiros.get(time) ?? 0;
       this.cozinheiros.set(time, quantos + 1);
       oficio = OFICIOS[Math.min(quantos, OFICIOS.length - 1)]!;
-      // O caçador do time é fixo; os outros trocam de chapéu conforme a falta.
-      fixo = quantos === 0;
+      // O caçador do time é fixo — carne é a única entrada do bolo, e sem ele o
+      // time perde o diferencial do jogo enquanto constrói uma obra bonita.
+      //
+      // No Obra não: ali o bolo não decide nada, e um caçador fixo é justamente
+      // o bot que faltava na jazida. Todos trocam de ofício conforme a falta.
+      fixo = quantos === 0 && !modoDe(modo).vitoriaPorObra;
     }
     this.memorias.set(id, vazia(escolhido, id, oficio, fixo));
     return escolhido;

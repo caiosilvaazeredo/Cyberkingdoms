@@ -129,22 +129,29 @@ diferentes, cada uma vendo uma partida na mesma tela.
 ela e o resto do time vem de bot. *Jogo Online* usa a sala pública mais
 movimentada, e aí o sofá entra junto de quem estiver na rede.
 
-### Os quatro modos
+### Os sete modos
 
 Um modo muda **uma** alavanca em relação ao clássico, e a alavanca que ele muda
 é a que dá nome a ele. É o que permite explicá-lo numa linha na hora de escolher,
-e o que impede a lista de virar seis variações indistinguíveis.
+e o que impede a lista de virar sete variações indistinguíveis.
 
-| modo | o que muda |
-|---|---|
-| **Resgate** | o clássico: três resgates vencem, a balança desempata |
-| **Assalto** | um resgate decide · seis minutos · volta-se rápido para o campo |
-| **Banquete** | a balança **vence**: empanturre a refém até o talo da barra |
-| **Chapelaria aberta** | chapéu à vontade: ninguém disputa arco, ninguém rouba composição |
+| modo | o que muda | mediana com bots |
+|---|---|---|
+| **Resgate** | o clássico: três resgates vencem, a balança desempata | 370 s |
+| **Assalto** | um resgate decide · seis minutos · volta-se rápido para o campo | 85 s |
+| **Banquete** | a balança **vence**: empanturre a refém até o talo da barra | 395 s |
+| **Chapelaria aberta** | chapéu à vontade: ninguém disputa arco, ninguém rouba composição | 309 s |
+| **Fome** | o bicho abatido não volta: a carne do mapa é tudo o que existe | 372 s |
+| **Obra** | vence quem terminar a chapelaria: picareta e machado decidem | 229 s |
+| **Abate** | trinta baixas vencem · sem cortejo, sem bolo, só briga | 166 s |
+
+A coluna da direita é medida, não estimada: doze seeds por modo, salas só de
+bots. Todas as oitenta e quatro partidas terminaram, e o placar por lado ficou
+equilibrado em todos os sete.
 
 Por dentro, um modo é **dado** e não caminho de código: uma linha em
 `shared/modos.ts` que o tick lê no lugar das constantes. A tentação era escrever
-`if (modo === 'assalto')` no meio do tick; feito quatro vezes, o tick vira uma
+`if (modo === 'assalto')` no meio do tick; feito sete vezes, o tick vira uma
 árvore que ninguém lê e cada regra nova precisa lembrar de todos os modos — que
 é como um jogo ganha um modo quebrado que ninguém descobre por três meses. Aqui
 o tick nunca soube o nome de nenhum deles.
@@ -177,11 +184,39 @@ que **roda a partida com bots** e exige que o Assalto acabe muito antes do
 clássico. O primeiro passava com o modo oco; só o segundo prova que o jogo ficou
 diferente.
 
-Uma observação que a medição também deu, e que fica registrada em vez de
-escondida: na Chapelaria aberta, uma das três seeds terminou 0-0 nos doze minutos.
-Com chapéu à vontade todo mundo vira combatente, a defesa fica dura e o resgate
-quase não passa. É o modo sendo o que promete, mas é bom saber que ele produz a
-partida mais longa dos quatro.
+A lição se repetiu com os modos novos, e as duas vezes a medição pegou:
+
+- O **Obra** nasceu oco pelo mesmo motivo do Banquete. O rodízio de papéis dos
+  bots põe **um** deles por time na economia, e a obra empacava no nível dois: as
+  três primeiras partidas saíram idênticas às do clássico. Um bot que ignora a
+  condição de vitória do modo é um bot que não joga aquele modo, então o rodízio
+  passou a ser por modo — metade do time na picareta no Obra, ninguém cozinhando
+  no Abate.
+- O **Abate** terminava por resgate em duas de três, num modo cujo lema promete
+  "sem cortejo". O resgate deixou de decidir; a princesa continua em campo e
+  continua carregável, mas deixou de ser o placar.
+
+E dois defeitos que só apareceram porque a medição foi feita:
+
+- O contador do rodízio dos bots era **global**, e os bots entram alternando
+  azul e vermelho. Com o rodízio clássico de três posições a paridade escapava
+  por acaso; com o de quatro do modo Obra, o azul saía com **todos** os
+  cozinheiros, terminava a chapelaria em noventa segundos e vencia as três
+  partidas medidas. O contador virou um por time.
+- O Obra, já equilibrado, decidia em 115 s de mediana — quase tão rápido quanto
+  o Assalto, que é o modo expresso de propósito. Uma corrida de construção que
+  acaba antes de o inimigo chegar à jazida não é corrida. A obra passou a custar
+  o triplo nesse modo, e a mediana foi para 229 s.
+
+Uma observação que fica registrada em vez de escondida: a **Chapelaria aberta**
+produz a partida mais longa dos sete (até 729 s, e uma das seeds terminou 0-0 no
+relógio). Com chapéu à vontade todo mundo vira combatente, a defesa fica dura e o
+resgate quase não passa. É o modo sendo o que promete, mas é bom saber.
+
+E uma sobre método: por duas vezes três seeds sugeriram um desequilíbrio de lado
+que dez seeds desmentiram — 9×0 virou 19×21, e 10×2 virou 16×14. Amostra de três
+serve para ver se o modo **faz** alguma coisa; não serve para dizer se ele é
+justo.
 
 ### Montar uma sala
 
@@ -208,6 +243,37 @@ vagas de gente — quem pediu quatro amigos e seis bots quis, acima de tudo, jog
 com os quatro amigos. O mesmo saneamento roda no painel, para que o número na
 tela seja o número que a sala vai ter: um formulário que promete o que o servidor
 corta é um formulário que mente.
+
+### Os quatro campos de batalha
+
+Um mapa não mexe em regra nenhuma — mesma balança, mesmos chapéus, mesmo bolo.
+Ele mexe nas duas coisas que decidem o **ritmo**: onde estão os estrangulamentos
+e quão exposta fica a economia.
+
+| mapa | o que muda |
+|---|---|
+| **Corte** | fosso em volta de cada castelo, duas pontes, lago no meio |
+| **Vau** | castelo aberto e um rio no meio: a briga é sempre nas travessias |
+| **Desfiladeiro** | **uma** ponte por castelo: quem defende o portão defende tudo |
+| **Arquipélago** | o ouro do meio numa ilha cercada: cavar vira ato de guerra |
+
+Os quatro são o mesmo grid de 60×34, e cada um descreve **só a metade azul**: o
+pincel que os relevos recebem escreve nos dois lados a cada traço, então um mapa
+que tentasse desenhar assimetria não conseguiria. Com quatro mapas, manter oito
+listas de coordenadas em pares seria garantir que um dia a cozinha vermelha
+ficasse um tile mais longe do que a azul.
+
+O que torna um mapa novo barato é o teste: `test/arena.test.ts` roda **em laço
+sobre a tabela**, então escrever quarenta linhas de coordenadas já diz se elas
+produzem um campo simétrico, alcançável, sem nada em cima d'água e com os
+estrangulamentos que o mapa promete. Um mapa sem portão nenhum é legítimo — o
+Vau existe para isso; o que não pode é prometer um estrangulamento e não
+entregá-lo.
+
+Na sala, o mapa é escolhido como o modo, e há um cartão **Sortear** que troca o
+campo a cada partida. O sorteio vem da seed, e não de `Math.random`: a sequência
+inteira é reproduzível a partir da primeira partida, que é o que permite repetir
+um defeito em vez de contar história sobre ele.
 
 ### As telas
 
@@ -341,7 +407,7 @@ npm start            # http://localhost:8787
 ### Testes
 
 ```sh
-npm test                 # 128 testes de regra, rede, controle, câmera e bots
+npm test                 # 164 testes de regra, rede, controle, câmera e bots
 npm run check            # TypeScript, sem emitir
 node tools/fumaca.mjs    # sobe um Chromium e joga com duas pessoas no sofá
 node tools/tamanhos.mjs  # abre cada tela em cinco tamanhos e mede o que vazou
@@ -379,7 +445,8 @@ despercebido justamente porque quem programa olha no monitor em que tudo cabe.
 src/
   shared/       a simulação, e ela é a mesma dos dois lados
     regras.ts     todos os números do jogo, num arquivo só
-    modos.ts      os quatro modos, como dado e não como caminho de código
+    modos.ts      os sete modos, como dado e não como caminho de código
+    mapas.ts      os quatro campos de batalha, idem
     classes.ts    as oito classes, o estoque de chapéus e os ofícios
     arena.ts      o mapa como função pura da seed
     estado.ts     os tipos da partida, sem nenhuma regra
@@ -407,6 +474,7 @@ tools/
   importar-arte.mjs  traz do pacote Tiny Swords só a arte que o jogo desenha
   fumaca.mjs         teste de fumaça num Chromium de verdade
   tamanhos.mjs       as telas em cinco tamanhos, medindo o que vazou
+  medir.ts           partidas de bot por modo e por mapa, para um humano ler
 ```
 
 ## A arte

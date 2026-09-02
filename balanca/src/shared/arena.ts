@@ -1,3 +1,4 @@
+import { MAPA_PADRAO, mapaDe, type IdDoMapa, type Pincel } from './mapas';
 import { DeterministicRandom } from './rng';
 import { ARENA_ALTURA, ARENA_LARGURA, TILE, TIMES, type Time } from './regras';
 
@@ -79,6 +80,8 @@ export interface Pasto {
 
 export interface Arena {
   readonly seed: number;
+  /** De que mapa este campo veio. O desenho e o HUD mostram o nome. */
+  readonly mapa: IdDoMapa;
   readonly largura: number;
   readonly altura: number;
   readonly tiles: Uint8Array;
@@ -97,77 +100,33 @@ export interface Arena {
 export const espelhar = (tx: number): number => ARENA_LARGURA - 1 - tx;
 
 /**
- * O recorte do castelo azul, em tiles, e as duas pontes que o ligam ao campo.
- *
- * O fosso é a borda deste retângulo. As pontes ficam longe uma da outra de
- * propósito: se estivessem coladas, um time seguraria as duas com os mesmos
- * quatro guerreiros e o mapa teria um portão só.
+ * O castelo do mapa clássico. Reexportado porque o desenho e os testes antigos
+ * o conhecem pelo nome; a definição mora com o mapa a que ele pertence.
  */
-export const CASTELO = { x0: 2, y0: 6, x1: 16, y1: 27 } as const;
-export const PONTES_Y = [10, 11, 22, 23] as const;
-
-/** Onde cada coisa fica dentro do castelo azul, em tiles. */
-const PLANTA: Readonly<Record<TipoDeEstrutura, readonly [number, number]>> = {
-  trono: [5, 15],
-  jaula: [6, 9],
-  cozinha: [11, 20],
-  chapelaria: [11, 12],
-  nascedouro: [6, 20],
-};
+export { CASTELO, PONTES_Y } from './mapas';
 
 /**
- * As jazidas do lado azul: onde há madeira e onde há ouro.
+ * O desenho econômico, que agora é de cada mapa e não do arquivo.
  *
- * Parte fica **dentro** do castelo e parte fora, e a divisão é o desenho
- * econômico do jogo. Só com jazida em campo aberto, um time encurralado perde a
- * economia junto com o território e não tem como voltar. Só com jazida em casa,
- * ninguém precisaria sair, e o meio do mapa seria enfeite. Com as duas, a obra
- * mínima é segura e a obra que **decide a partida** exige sair de casa.
- */
-const JAZIDAS_DO_LADO: readonly (readonly [number, number, TipoDeJazida])[] = [
-  [13, 15, 'arvore'],
-  [13, 17, 'arvore'],
-  [8, 25, 'ouro'],
-  [20, 9, 'arvore'],
-  [20, 24, 'ouro'],
-  [24, 16, 'ouro'],
-];
-// O meio do mapa é escrito em **pares espelhados** — (29, y) e (30, y) —
-// porque um ponto solto na coluna 30 teria o espelho na 29 e sairia do lugar.
-const JAZIDAS_DO_MEIO: readonly (readonly [number, number, TipoDeJazida])[] = [
-  [29, 4, 'arvore'],
-  [30, 4, 'arvore'],
-  [29, 29, 'arvore'],
-  [30, 29, 'arvore'],
-];
-
-/**
- * Os pastos, que são de onde vem a carne — e a carne é o que move a balança.
+ * A divisão continua valendo para todos: parte das jazidas fica **dentro** do
+ * castelo e parte em campo aberto. Só com jazida em campo aberto, um time
+ * encurralado perde a economia junto com o território e não tem como voltar; só
+ * com jazida em casa, ninguém precisaria sair e o meio do mapa seria enfeite.
+ * Com as duas, a obra mínima é segura e a obra que **decide a partida** exige
+ * sair de casa. O mesmo vale para os pastos: o grosso das ovelhas fica no meio,
+ * e um pasto por castelo garante que um time cercado ainda tenha o que comer.
  *
- * O grosso das ovelhas fica no meio do mapa de propósito: caçar é sair de casa,
- * e é isso que faz a economia do bolo custar exposição em vez de custar tempo.
- * Um pasto por castelo garante que um time cercado ainda tenha o que comer.
+ * O que muda de mapa para mapa é **quanto** cada uma dessas coisas custa. Ver
+ * `mapas.ts`.
  */
-const PASTOS_DO_LADO: readonly (readonly [number, number])[] = [
-  [10, 10],
-  [22, 20],
-];
-const PASTOS_DO_MEIO: readonly (readonly [number, number])[] = [
-  [29, 10],
-  [30, 10],
-  [29, 23],
-  [30, 23],
-  // Estes dois abraçam o lago pelos flancos: dentro dele seria água.
-  [25, 16],
-  [34, 16],
-];
 
 const centro = (tx: number, ty: number): { x: number; y: number } => ({
   x: (tx + 0.5) * TILE,
   y: (ty + 0.5) * TILE,
 });
 
-export function criarArena(seed: number): Arena {
+export function criarArena(seed: number, idDoMapa: IdDoMapa = MAPA_PADRAO): Arena {
+  const mapa = mapaDe(idDoMapa);
   const largura = ARENA_LARGURA;
   const altura = ARENA_ALTURA;
   const tiles = new Uint8Array(largura * altura);
@@ -186,42 +145,36 @@ export function criarArena(seed: number): Arena {
     }
   }
 
-  // O fosso de cada castelo, e as pontes por cima dele.
-  for (const time of TIMES) {
-    const mapear = (tx: number): number => (time === 'azul' ? tx : espelhar(tx));
-    for (let ty = CASTELO.y0; ty <= CASTELO.y1; ty++) {
-      por(mapear(CASTELO.x1), ty, AGUA);
-    }
-    for (let tx = CASTELO.x0; tx <= CASTELO.x1; tx++) {
-      por(mapear(tx), CASTELO.y0, AGUA);
-      por(mapear(tx), CASTELO.y1, AGUA);
-    }
-    for (const py of PONTES_Y) por(mapear(CASTELO.x1), py, PONTE);
-  }
-
-  // Um lago no meio do descampado. Ele existe para que o caminho mais curto
-  // entre as duas pontes de cima e as duas de baixo não seja uma reta: quem
-  // troca de flanco paga em segundos, e é isso que dá tempo de a defesa
-  // reagir.
+  // O relevo do mapa. O pincel escreve **nos dois lados** a cada traço, então o
+  // mapa só descreve a metade azul e a simetria sai de graça — em vez de sair
+  // de duas listas de coordenadas que alguém tem de manter iguais.
   //
-  // O centro é o **eixo do espelho** — `(largura - 1) / 2`, que cai entre dois
-  // tiles —, e não o tile do meio. Centrar num tile deslocaria o lago meio tile
-  // para um dos lados, e a arena deixaria de ser simétrica exatamente no lugar
-  // onde os dois times se encontram.
-  const lagoCx = (largura - 1) / 2;
-  const lagoCy = (altura - 1) / 2;
-  for (let ty = Math.floor(lagoCy) - 5; ty <= Math.ceil(lagoCy) + 5; ty++) {
-    for (let tx = Math.floor(lagoCx) - 4; tx <= Math.ceil(lagoCx) + 4; tx++) {
-      const dx = (tx - lagoCx) / 3.5;
-      const dy = (ty - lagoCy) / 4.5;
-      if (dx * dx + dy * dy <= 1) por(tx, ty, AGUA);
-    }
-  }
+  // As curvas do meio ficam certas pelo mesmo motivo: o eixo do espelho é
+  // `(largura - 1) / 2`, que cai **entre** dois tiles. Um lago centrado no tile
+  // do meio ficaria meio tile deslocado, e a arena deixaria de ser simétrica
+  // exatamente onde os dois times se encontram.
+  const pincel: Pincel = {
+    largura,
+    altura,
+    agua: (tx, ty) => {
+      por(tx, ty, AGUA);
+      por(espelhar(tx), ty, AGUA);
+    },
+    ponte: (tx, ty) => {
+      por(tx, ty, PONTE);
+      por(espelhar(tx), ty, PONTE);
+    },
+    chao: (tx, ty) => {
+      por(tx, ty, GRAMA);
+      por(espelhar(tx), ty, GRAMA);
+    },
+  };
+  mapa.relevo(pincel);
 
   const estruturas: Estrutura[] = [];
   for (const time of TIMES) {
-    for (const tipo of Object.keys(PLANTA) as TipoDeEstrutura[]) {
-      const [tx, ty] = PLANTA[tipo];
+    for (const tipo of Object.keys(mapa.planta) as TipoDeEstrutura[]) {
+      const [tx, ty] = mapa.planta[tipo];
       const cx = time === 'azul' ? tx : espelhar(tx);
       estruturas.push({ tipo, time, tx: cx, ty, ...centro(cx, ty) });
     }
@@ -230,7 +183,7 @@ export function criarArena(seed: number): Arena {
   const jazidas: Jazida[] = [];
   let idJazida = 0;
   for (const time of TIMES) {
-    for (const [tx, ty, tipo] of JAZIDAS_DO_LADO) {
+    for (const [tx, ty, tipo] of mapa.jazidasDoLado) {
       const cx = time === 'azul' ? tx : espelhar(tx);
       jazidas.push({
         id: idJazida++,
@@ -241,19 +194,19 @@ export function criarArena(seed: number): Arena {
       });
     }
   }
-  for (const [tx, ty, tipo] of JAZIDAS_DO_MEIO) {
+  for (const [tx, ty, tipo] of mapa.jazidasDoMeio) {
     jazidas.push({ id: idJazida++, tipo, lado: null, variante: (tx + ty) % 4, ...centro(tx, ty) });
   }
 
   const pastos: Pasto[] = [];
   let idPasto = 0;
   for (const time of TIMES) {
-    for (const [tx, ty] of PASTOS_DO_LADO) {
+    for (const [tx, ty] of mapa.pastosDoLado) {
       const cx = time === 'azul' ? tx : espelhar(tx);
       pastos.push({ id: idPasto++, lado: time, ...centro(cx, ty) });
     }
   }
-  for (const [tx, ty] of PASTOS_DO_MEIO) {
+  for (const [tx, ty] of mapa.pastosDoMeio) {
     pastos.push({ id: idPasto++, lado: null, ...centro(tx, ty) });
   }
 
@@ -286,6 +239,7 @@ export function criarArena(seed: number): Arena {
 
   const arena: Arena = {
     seed,
+    mapa: mapa.id,
     largura,
     altura,
     tiles,

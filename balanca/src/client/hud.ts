@@ -1,5 +1,6 @@
 import { CLASSES_COM_CHAPEU, perfil, vidaMaxima } from '../shared/classes';
 import { nivelDe, princesaDe, type Estado, type Evento, type Unidade } from '../shared/estado';
+import { MAPAS } from '../shared/mapas';
 import { modoDe } from '../shared/modos';
 import {
   PESO_TOTAL,
@@ -226,25 +227,38 @@ function placar(ctx: CanvasRenderingContext2D, estado: Estado, largura: number):
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   ctx.font = '700 26px "Trebuchet MS", system-ui, sans-serif';
+  // No Abate o placar **é** o de baixas: mostrar resgates num modo em que
+  // ninguém carrega princesa seria dois zeros que nunca mudam ao lado de um
+  // relógio que corre.
+  const contagem = modoDe(estado.modo).abatesParaVencer !== null ? estado.abates : estado.placar;
   ctx.fillStyle = COR.azul;
-  ctx.fillText(String(estado.placar.azul), largura / 2 - 64, 8);
+  ctx.fillText(String(contagem.azul), largura / 2 - 64, 8);
   ctx.fillStyle = COR.vermelho;
-  ctx.fillText(String(estado.placar.vermelho), largura / 2 + 64, 8);
+  ctx.fillText(String(contagem.vermelho), largura / 2 + 64, 8);
   ctx.fillStyle = '#f2e6c9';
   ctx.font = '600 18px "Trebuchet MS", system-ui, sans-serif';
   ctx.fillText(`${minutos}:${String(segundos).padStart(2, '0')}`, largura / 2, 12);
-  // A linha do objetivo vem do **modo**, e não da constante do jogo clássico.
-  // Escrita fixa, ela mentia em dois dos quatro modos: no Assalto, em que um
-  // resgate vence, e no Banquete, em que a barra logo abaixo também ganha o
-  // jogo. Uma tela que promete a regra errada é pior do que uma que não promete
-  // nada — a pessoa joga a partida inteira contando o placar errado.
-  const modo = modoDe(estado.modo);
   ctx.font = '400 10px "Trebuchet MS", system-ui, sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.65)';
+  ctx.fillText(objetivoDoModo(estado), largura / 2, 34);
+  ctx.restore();
+}
+
+/**
+ * Uma linha dizendo como se ganha esta partida.
+ *
+ * Nasce do modo, e não de constante: escrita fixa, ela mentia em dois dos
+ * quatro modos que existiam, e mentiria em três dos sete de hoje. Uma tela que
+ * promete a regra errada é pior do que uma que não promete nada — a pessoa joga
+ * a partida inteira perseguindo o objetivo de outro jogo.
+ */
+function objetivoDoModo(estado: Estado): string {
+  const modo = modoDe(estado.modo);
+  if (modo.abatesParaVencer !== null) return `${modo.abatesParaVencer} baixas vencem`;
+  if (modo.vitoriaPorObra) return 'vence quem terminar a chapelaria';
   const alvo =
     modo.pontosParaVencer === 1 ? 'um resgate decide' : `resgates até ${modo.pontosParaVencer}`;
-  ctx.fillText(modo.vitoriaPorBalanca ? `${alvo} · ou a balança` : alvo, largura / 2, 34);
-  ctx.restore();
+  return modo.vitoriaPorBalanca ? `${alvo} · ou a balança` : alvo;
 }
 
 function cabecalho(ctx: CanvasRenderingContext2D, rede: Rede, largura: number): void {
@@ -260,10 +274,12 @@ function cabecalho(ctx: CanvasRenderingContext2D, rede: Rede, largura: number): 
   // no mesmo pixel viram nenhuma.
   const cabe = largura / 2 - 80;
   const nomeDoModo = modoDe(rede.modo).nome;
-  const inteira = `${nomeDoModo} · ${rede.sala} · ${humanos} jogadores, ${bots} bots · ${rede.ping} ms`;
-  // Estreito, o que sobra é o modo: numa sala montada por outra pessoa, saber
-  // por que regra se está jogando vale mais que saber o nome da sala.
-  const curta = `${nomeDoModo} · ${humanos}+${bots} · ${rede.ping} ms`;
+  const nomeDoMapa = MAPAS[rede.mapa]?.nome ?? rede.mapa;
+  const inteira = `${nomeDoModo} · ${nomeDoMapa} · ${rede.sala} · ${humanos} jogadores, ${bots} bots · ${rede.ping} ms`;
+  // Estreito, o que sobra é o modo e o mapa: numa sala montada por outra pessoa,
+  // saber por que regra e em que campo se está jogando vale mais do que saber o
+  // nome da sala.
+  const curta = `${nomeDoModo} · ${nomeDoMapa} · ${rede.ping} ms`;
   ctx.fillText(ctx.measureText(inteira).width <= cabe ? inteira : curta, 12, 10);
   ctx.restore();
 }

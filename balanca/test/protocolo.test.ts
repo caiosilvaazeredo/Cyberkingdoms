@@ -25,6 +25,7 @@ function estadoVazio(): Estado {
     faseEm: 0,
     relogio: 0,
     placar: { azul: 0, vermelho: 0 },
+    abates: { azul: 0, vermelho: 0 },
     unidades: [],
     princesas: [],
     projeteis: [],
