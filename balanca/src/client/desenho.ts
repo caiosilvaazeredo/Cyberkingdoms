@@ -485,6 +485,21 @@ export function desenharMundo(
               escala,
               '#ffd479',
             );
+            // O anexo: nada no nível 1, a cabana encostada no 2, a torre no
+            // 3. Cada nível já tinha o "obra I/II/III" escrito; agora também
+            // se vê de longe, sem precisar chegar perto para ler a placa.
+            const ladoDoAnexo = e.time === 'azul' ? -1 : 1;
+            const px = v.paraTelaX(e.x) + ladoDoAnexo * largo * 0.68;
+            if (oficina.nivel === 2) {
+              const anim = arte.obraNivel2;
+              const escalaAnexo = escala * 0.55;
+              quadro(ctx, anim, quadroEm(anim, tempo, e.tx * 3), px, py, escalaAnexo);
+            } else if (oficina.nivel >= 3) {
+              const im = arte.obraNivel3;
+              const l = im.width * escala * 0.6;
+              const a = im.height * escala * 0.6;
+              ctx.drawImage(im, Math.round(px - l / 2), Math.round(py - a), Math.ceil(l), Math.ceil(a));
+            }
           }
         }
       },

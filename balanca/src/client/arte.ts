@@ -74,6 +74,15 @@ export interface Arte {
   readonly fogo: Animacao;
   readonly fumaca: Animacao;
   /**
+   * O anexo da chapelaria em obra — cabana no nível 2, torre no nível 3.
+   *
+   * Não tem cor de time: é obra tosca do Enemy Pack encostada na fachada do
+   * prédio de verdade, não uma ala nova do castelo. A leitura é "isto foi
+   * erguido às pressas", que é exatamente o que o modo Obra promete.
+   */
+  readonly obraNivel2: Animacao;
+  readonly obraNivel3: HTMLImageElement;
+  /**
    * As folhas de efeito, por nome do que elas significam.
    *
    * Os arquivos do pacote se chamam `Explosion_02` e `Dust_01`; aqui elas se
@@ -218,6 +227,8 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
       pede(`predio:${cor}/${forma}`, `buildings/${cor}/${forma}.png`);
     }
   }
+  pede('obra_nivel2', 'buildings/oficina_nivel2.png');
+  pede('obra_nivel3', 'buildings/oficina_nivel3.png');
   pede('ovelha_parada', 'recursos/ovelha_parada.png');
   pede('ovelha_andando', 'recursos/ovelha_andando.png');
   pede('ovelha_pastando', 'recursos/ovelha_pastando.png');
@@ -318,6 +329,8 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
     arbustos: [1, 2, 3, 4].map((i) => animacao(img(`arbusto${i}`), 6)),
     pedras: [1, 2, 3, 4].map((i) => img(`pedra${i}`)),
     ossos: [1, 2, 3].map((i) => img(`osso${i}`)),
+    obraNivel2: animacao(img('obra_nivel2'), 8),
+    obraNivel3: img('obra_nivel3'),
     predios,
     fogo: animacao(img('fogo'), 12),
     fumaca: animacao(img('fumaca'), 10),
