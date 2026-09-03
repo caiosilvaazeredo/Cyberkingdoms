@@ -41,17 +41,15 @@ export interface Animacao {
 
 const RAIZ = '/tiny';
 
-/** Os ícones de interface que o pacote traz, pelo nome do que marcam. */
-export const ICONES = [
-  'martelo',
-  'tora',
-  'moeda',
-  'minerio',
-  'espada',
-  'escudo',
-  'negado',
-  'engrenagem',
-] as const;
+/**
+ * Os ícones de interface, pelo nome do que marcam.
+ *
+ * A lista tem só os que **são desenhados**. O pacote traz doze; carregar os oito
+ * que pareciam úteis custava quatro pedidos que nunca viravam pixel nenhum, e
+ * uma lista de nomes que não dizia mais nada sobre o jogo. Quando um deles fizer
+ * falta, ele volta com o desenho que o usa — e não antes.
+ */
+export const ICONES = ['martelo', 'moeda', 'espada', 'escudo'] as const;
 
 export type IconeDaObra = (typeof ICONES)[number];
 

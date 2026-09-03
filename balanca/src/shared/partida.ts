@@ -58,7 +58,7 @@ import {
   custoDaObraDe,
   pesoMaximoDe,
   pesoTotalDe,
-  PESO_MINIMO,
+  pesoMinimoDe,
   PESO_POR_BOLSA,
   BAU_VOLTA_EM,
   RAIO_UNIDADE,
@@ -880,7 +880,8 @@ function ferirAnimal(estado: Estado, algoz: Unidade, a: Animal, dano: number): v
 function entulhar(estado: Estado, u: Unidade, refem: Bau): void {
   const minha = bauDe(estado, u.time);
   const teto = pesoMaximoDe(estado.porTime);
-  const delta = Math.min(PESO_POR_BOLSA, teto - refem.peso, minha.peso - PESO_MINIMO);
+  const piso = pesoMinimoDe(estado.porTime);
+  const delta = Math.min(PESO_POR_BOLSA, teto - refem.peso, minha.peso - piso);
   if (delta <= 0) return;
 
   refem.peso += delta;

@@ -288,12 +288,12 @@ Três seeds por formato, salas só de bots, no modo Resgate:
 
 | formato | ms por tick | como as partidas acabaram |
 |---|---|---|
-| 6 × 6 | 0,05 | duas de três por resgate, aos 253 s e 314 s |
-| 8 × 8 | 0,06 | três de três por resgate |
-| 16 × 16 | 0,31 | uma por resgate; as outras no relógio, com a balança decidindo |
-| 32 × 32 | 0,41 | as três no relógio, decididas pela balança |
+| 6 × 6 | 0,04 | duas de três por resgate, aos 253 s e 314 s |
+| 8 × 8 | 0,04 | três de três por resgate |
+| 16 × 16 | 0,19 | uma por resgate; as outras no relógio, com a balança decidindo |
+| 32 × 32 | 0,26 | as três no relógio, decididas pela balança |
 
-O orçamento de um tick é 33 ms, então sobra folga de setenta vezes até no
+O orçamento de um tick é 33 ms, então sobra folga de mais de cem vezes até no
 formato maior.
 
 Nos formatos grandes o **resgate deixa de ser o caminho comum**: cinco
@@ -339,6 +339,17 @@ para trinta e dois por lado, contra dez para seis. A balança de uma partida de
 dezesseis contra dezesseis andava doze pontos em doze minutos — a economia
 estava faminta, e nada do que dependia dela chegava a acontecer. O rebanho
 triplicou.
+
+Uma quarta só apareceu depois, ao escrever o teste da invariante em vez de
+confiar que ela estava certa. O que decide a duração da partida não é o peso
+total: é a distância do meio até o talo, `total / 2 − piso`. O piso (`40`, o
+que sobra mesmo perdendo a balança inteira) tinha ficado fixo enquanto o total
+crescia, e essa distância crescia **mais rápido** que o time — o piso mordia
+uma fatia proporcionalmente menor a cada formato. Medido: bolsas por pessoa até
+o talo saíam 12% acima do normal em oito contra oito e 53% acima em trinta e
+dois contra trinta e dois. O piso passou a escalar junto (`pesoMinimoDe`), e a
+invariante — o tempo até estourar a balança é o mesmo em qualquer formato — tem
+agora um teste que a guarda: `test/escala.test.ts`.
 
 ### Montar uma sala
 

@@ -104,7 +104,10 @@ export const ESPERA_POR_JOGADORES = 12;
  */
 export const PESO_TOTAL = 200;
 
-/** Ninguém fica de papel: mesmo perdendo a balança inteira, sobra este peso. */
+/**
+ * Ninguém fica de papel: mesmo perdendo a balança inteira, sobra este peso —
+ * num time de seis. Ver `pesoMinimoDe`.
+ */
 export const PESO_MINIMO = 40;
 export const PESO_MAXIMO = PESO_TOTAL - PESO_MINIMO;
 
@@ -158,7 +161,29 @@ export function pesoTotalDe(porTime: number): number {
   return Math.round((PESO_TOTAL * razaoDaEscala(porTime)) / 20) * 20;
 }
 
-export const pesoMaximoDe = (porTime: number): number => pesoTotalDe(porTime) - PESO_MINIMO;
+/**
+ * O piso da balança, para um time deste tamanho.
+ *
+ * Ele **tem** de escalar junto com o total, e por um motivo que só apareceu
+ * quando o teste da invariante foi escrito. O que decide a duração da partida
+ * não é o peso total: é a distância do meio até o talo, que é
+ * `total / 2 - piso`. Com o total crescendo e o piso fixo em quarenta, essa
+ * distância cresce **mais rápido** que o time — o piso morde uma fatia
+ * proporcionalmente menor a cada formato.
+ *
+ * Medido: com o piso fixo, o número de bolsas por pessoa até o talo saía 12%
+ * acima do normal em oito contra oito e **53%** acima em trinta e dois contra
+ * trinta e dois. A partida grande levaria metade a mais de tempo para a balança
+ * fechar, e a invariante que justifica a escala inteira estaria quebrada.
+ *
+ * Escalando o piso, a distância vira `razão × (100 - 40)` e é linear no time,
+ * que é o que se queria.
+ */
+export const pesoMinimoDe = (porTime: number): number =>
+  Math.round(PESO_MINIMO * razaoDaEscala(porTime));
+
+export const pesoMaximoDe = (porTime: number): number =>
+  pesoTotalDe(porTime) - pesoMinimoDe(porTime);
 
 /** Quanto uma bolsa de moedas move na balança. Não escala — ver acima. */
 export const PESO_POR_BOLSA = 12;
@@ -203,8 +228,9 @@ export function carregadoresMaximos(porTime: number): number {
  */
 export function carregadoresPara(peso: number, porTime: number = POR_TIME): number {
   const degraus = carregadoresMaximos(porTime);
-  const faixa = pesoMaximoDe(porTime) - PESO_MINIMO;
-  const t = faixa <= 0 ? 0 : (peso - PESO_MINIMO) / faixa;
+  const piso = pesoMinimoDe(porTime);
+  const faixa = pesoMaximoDe(porTime) - piso;
+  const t = faixa <= 0 ? 0 : (peso - piso) / faixa;
   return Math.max(1, Math.min(degraus, 1 + Math.floor(t * degraus)));
 }
 

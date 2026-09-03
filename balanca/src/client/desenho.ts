@@ -5,7 +5,7 @@ import {
   CUSTO_DO_NIVEL,
   DT,
   NIVEL_MAXIMO,
-  PESO_MINIMO,
+  pesoMinimoDe,
   RAIO_UNIDADE,
   custoDaObraDe,
   pesoMaximoDe,
@@ -555,7 +555,8 @@ export function desenharMundo(
     // teto **desta** partida: num time de trinta e dois a balança comporta
     // cinco vezes mais peso, e um baú medido pelo teto de seis já nasceria
     // desenhado no talo.
-    const cheio = (p.peso - PESO_MINIMO) / (pesoMaximoDe(estado.porTime) - PESO_MINIMO);
+    const piso = pesoMinimoDe(estado.porTime);
+    const cheio = (p.peso - piso) / (pesoMaximoDe(estado.porTime) - piso);
     const gordura = 0.9 + cheio;
     pinturas.push({
       y: base.y + (carregado ? 1 : TILE * 0.6),

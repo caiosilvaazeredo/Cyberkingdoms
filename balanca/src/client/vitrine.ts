@@ -1,5 +1,5 @@
 import type { Estado } from '../shared/estado';
-import { PESO_MINIMO, TIMES, pesoMaximoDe, type Time } from '../shared/regras';
+import { TIMES, pesoMaximoDe, pesoMinimoDe, type Time } from '../shared/regras';
 import { desenharBau } from './desenho';
 
 /**
@@ -58,23 +58,38 @@ export function criarFiel(): Fiel {
  * servidor, e o desenho só demora um instante para chegar lá.
  */
 export function moverFiel(fiel: Fiel, estado: Estado | null, dt: number): void {
-  const alvo = anguloDe(estado);
+  const alvo = anguloDaBalanca(estado);
   const passo = Math.min(1, dt * 3);
   fiel.angulo += (alvo - fiel.angulo) * passo;
 }
 
-function anguloDe(estado: Estado | null): number {
+/**
+ * O ângulo do fiel, exportado para ter teste.
+ *
+ * O risco aqui não é a conta: é **inverter os pratos**. O prato azul carrega o
+ * refém que o azul guarda, que é o baú vermelho, e trocar os dois faria o menu
+ * pender ao contrário do jogo — ninguém perceberia até jogar uma partida e
+ * comparar com a barra do alto. É o tipo de erro que só um teste pega.
+ */
+export function anguloDaBalanca(estado: Estado | null): number {
   if (!estado || estado.baus.length < 2) return 0;
   // O prato azul carrega o refém que o azul guarda, que é o baú **vermelho**.
   // Trocar os dois aqui inverteria o menu em relação ao jogo, e ninguém
   // perceberia até jogar.
   const peso: Record<Time, number> = { azul: 0, vermelho: 0 };
   for (const b of estado.baus) peso[b.time] = b.peso;
-  const faixa = pesoMaximoDe(estado.porTime) - PESO_MINIMO;
+  const piso = pesoMinimoDe(estado.porTime);
+  const faixa = pesoMaximoDe(estado.porTime) - piso;
   if (faixa <= 0) return 0;
-  const azulGuarda = (peso.vermelho - PESO_MINIMO) / faixa;
-  const vermelhoGuarda = (peso.azul - PESO_MINIMO) / faixa;
-  return (azulGuarda - vermelhoGuarda) * INCLINACAO;
+  const azulGuarda = (peso.vermelho - piso) / faixa;
+  const vermelhoGuarda = (peso.azul - piso) / faixa;
+  // O sinal: `rotate` positivo gira no sentido do relógio, e o prato azul está
+  // à **esquerda** — então ângulo positivo **levanta** o azul. Quem guarda o
+  // refém mais pesado tem de descer, e por isso a subtração vai ao contrário do
+  // que a leitura ingênua pediria. A primeira versão estava invertida, e nada
+  // na tela acusava: o menu pendia ao contrário do jogo, e só uma partida
+  // comparada com a barra do alto revelaria.
+  return (vermelhoGuarda - azulGuarda) * INCLINACAO;
 }
 
 /**
@@ -195,7 +210,8 @@ export function desenharVitrine(
     // o mesmo da partida: se o baú mudar de forma um dia, o menu muda junto.
     const refem = estado?.baus.find((b) => b.time !== time);
     const cheio = refem
-      ? (refem.peso - PESO_MINIMO) / (pesoMaximoDe(estado!.porTime) - PESO_MINIMO)
+      ? (refem.peso - pesoMinimoDe(estado!.porTime)) /
+        (pesoMaximoDe(estado!.porTime) - pesoMinimoDe(estado!.porTime))
       : 0.5;
     desenharBau(ctx, 0, corda + 42 * escala, escala * (1 + cheio * 0.6), time, cheio, tempo);
     ctx.restore();
