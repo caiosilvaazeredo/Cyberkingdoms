@@ -119,6 +119,15 @@ export interface Arte {
    */
   readonly porcoMontado: Animacao;
   /**
+   * O resto da vida selvagem decorativa — mesmo regime do porco: sem dono,
+   * sem `estado.animais`, um passeio de relógio em torno de uma âncora fixa
+   * da arena. Cada um mora perto do que faz sentido pra ele (`desenho.ts`
+   * decide onde): a tartaruga na água, o urso e o abelhão perto do mato.
+   */
+  readonly tartaruga: Animacao;
+  readonly urso: Animacao;
+  readonly abelhao: Animacao;
+  /**
    * O ícone de cada carga no chão.
    *
    * `HTMLCanvasElement` entra na união porque o minério é repintado no
@@ -258,6 +267,9 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
   pede('porco_parado', 'recursos/porco_parado.png');
   pede('porco_andando', 'recursos/porco_andando.png');
   pede('porco_montado', 'recursos/porco_montado.png');
+  pede('tartaruga_andando', 'recursos/tartaruga_andando.png');
+  pede('urso_andando', 'recursos/urso_andando.png');
+  pede('abelhao_voando', 'recursos/abelhao_voando.png');
   for (const [chave, arquivo] of [
     ['fx:poeira', 'poeira'],
     ['fx:poeirada', 'poeirada'],
@@ -375,6 +387,9 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
       andando: animacao(img('porco_andando'), 8),
     },
     porcoMontado: animacao(img('porco_montado'), 8),
+    tartaruga: animacao(img('tartaruga_andando'), 6),
+    urso: animacao(img('urso_andando'), 8),
+    abelhao: animacao(img('abelhao_voando'), 10),
     recursos: {
       minerio: img('recurso_minerio'),
       madeira: img('recurso_madeira'),

@@ -590,6 +590,52 @@ export function desenharMundo(
     });
   }
 
+  // --- o resto da vida selvagem decorativa ----------------------------
+  const tartaruga = posicaoDaTartaruga(arena, tempo);
+  if (tartaruga) {
+    const px = v.paraTelaX(tartaruga.x);
+    const py = v.paraTelaY(tartaruga.y);
+    pinturas.push({
+      y: tartaruga.y,
+      pintar: () => {
+        espelhado(ctx, px, tartaruga.paraEsquerda, () =>
+          quadro(ctx, arte.tartaruga, quadroEm(arte.tartaruga, tempo), px, py, escala * 0.55, 'centro'),
+        );
+      },
+    });
+  }
+
+  const urso = posicaoDoUrso(arena, tempo);
+  if (urso) {
+    const px = v.paraTelaX(urso.x);
+    const py = v.paraTelaY(urso.y) + RAIO_UNIDADE * escala * 0.6;
+    pinturas.push({
+      y: urso.y,
+      pintar: () => {
+        espelhado(ctx, px, urso.paraEsquerda, () =>
+          quadro(ctx, arte.urso, quadroEm(arte.urso, tempo), px, py, escala * 0.75, 'centro'),
+        );
+      },
+    });
+  }
+
+  const abelhao = posicaoDoAbelhao(arena, tempo);
+  if (abelhao) {
+    const px = v.paraTelaX(abelhao.x);
+    // Voa: sobe da linha do chão em vez de ficar preso a ela, e ganha um
+    // batimento vertical próprio (`Math.sin` num período curto) por cima do
+    // passeio — senão parece um inseto deslizando, não voando.
+    const py = v.paraTelaY(abelhao.y) - 18 * escala + Math.sin(tempo * 6) * 3 * escala;
+    pinturas.push({
+      y: abelhao.y - TILE,
+      pintar: () => {
+        espelhado(ctx, px, abelhao.paraEsquerda, () =>
+          quadro(ctx, arte.abelhao, quadroEm(arte.abelhao, tempo), px, py, escala * 0.35, 'centro'),
+        );
+      },
+    });
+  }
+
   // --- baús ----------------------------------------------------------
   for (const p of estado.baus) {
     if (p.onde === 'resgatado') continue;
@@ -788,39 +834,137 @@ function posicaoDoAnimal(a: Animal, alfa: number): { x: number; y: number } {
 }
 
 /**
- * O passeio do porco decorativo: uma volta lenta em torno do centro do mapa.
+ * Um passeio circular decorativo em torno de uma âncora fixa da arena.
  *
- * Não é física, é um relógio — `Math.sin`/`Math.cos` do tempo de parede — e
- * por isso não precisa de rede, colisão ou estado nenhum: qualquer tela que
- * olhe para o mesmo instante mostra o mesmo porco no mesmo lugar. A fase
- * (`arena.seed`) só existe para duas arenas em telas diferentes não
- * desenharem o mesmo passeio idêntico, o que pareceria um sprite colado à
- * câmera em vez de um bicho andando por conta própria.
+ * A base de todo bicho de clima (porco, tartaruga, urso, abelhão): nenhum
+ * deles é física ou estado, é só este relógio — `Math.sin`/`Math.cos` do
+ * tempo de parede, deslocado por uma fase própria de cada bicho e de cada
+ * arena. Duas telas olhando o mesmo instante veem o mesmo bicho no mesmo
+ * lugar, sem gastar um byte de rede.
  */
+function passeioCircular(
+  ancora: { x: number; y: number },
+  tempo: number,
+  fase: number,
+  raio: number,
+  velocidade: number,
+  achatamento: number,
+): { x: number; y: number; paraEsquerda: boolean } {
+  const angulo = tempo * velocidade + fase;
+  const dx = Math.cos(angulo) * raio;
+  return {
+    x: ancora.x + dx,
+    y: ancora.y + Math.sin(angulo * 1.7) * raio * achatamento,
+    paraEsquerda: -Math.sin(angulo) < 0,
+  };
+}
+
 function posicaoDoPorco(
   arena: Arena,
   tempo: number,
 ): { x: number; y: number; paraEsquerda: boolean; montado: boolean } {
   // Ancorado num pasto do meio — chão já garantido seco e limpo de decoração
-  // — e não no centro geométrico do mapa, que em todo relevo cai dentro do
-  // lago central (ver o `elipse` de cada mapa em mapas.ts). Sem pasto
-  // nenhum, o que não deveria acontecer em nenhum mapa da lista, ele some em
-  // vez de nadar.
+  // — e não no centro geométrico do mapa, que em vários relevos cai dentro
+  // d'água (ver `aguaCentralDe`, que é para lá que a tartaruga vai). Sem
+  // pasto nenhum, o que não deveria acontecer em nenhum mapa da lista, ele
+  // some em vez de nadar.
   const ancora = arena.pastos.find((p) => p.lado === null) ?? arena.pastos[0];
   if (!ancora) return { x: -9999, y: -9999, paraEsquerda: false, montado: false };
 
   const fase = (arena.seed % 1000) * 0.01;
-  const angulo = tempo * 0.25 + fase;
-  const raio = 2.2 * TILE;
-  const dx = Math.cos(angulo) * raio;
+  const passeio = passeioCircular(ancora, tempo, fase, 2.2 * TILE, 0.25, 0.6);
   return {
-    x: ancora.x + dx,
-    y: ancora.y + Math.sin(angulo * 1.7) * raio * 0.6,
-    paraEsquerda: -Math.sin(angulo) < 0,
+    ...passeio,
     // Uma em vinte: raro o bastante para ser notícia quando alguém vê, comum
     // o bastante para não virar lenda urbana de "ninguém nunca viu isso".
     montado: Math.abs(arena.seed) % 20 === 0,
   };
+}
+
+/**
+ * A água mais perto do centro do mapa — a lagoa, o rio, o fosso, o que for.
+ *
+ * Uma busca em anéis a partir do centro geométrico, e não a suposição de que
+ * o centro **é** água: só o Corte e a Planície desenham `elipse` ali; Vau e
+ * Arquipélago molham o meio do campo de outros jeitos, e ainda assim perto
+ * do centro. O raio para em oito tiles de propósito — o suficiente para os
+ * quatro mapas com água central de verdade, curto o bastante para o
+ * Desfiladeiro (que não tem: só uma ponte por castelo, nada no meio) não
+ * achar uma poça perdida do outro lado do mapa e colar a tartaruga lá. Sem
+ * água por perto, a tartaruga simplesmente não aparece nesse mapa — o mesmo
+ * "some em vez de nadar" do porco. O resultado é cacheado por arena: refazer
+ * este anel a cada quadro seria o único ponto quente desta tela inteira sem
+ * necessidade nenhuma, já que a arena não muda de forma no meio da partida.
+ */
+const RAIO_DA_BUSCA_DE_AGUA = 8;
+
+const CACHE_AGUA_CENTRAL = new WeakMap<Arena, { x: number; y: number } | null>();
+
+function aguaCentralDe(arena: Arena): { x: number; y: number } | null {
+  const cache = CACHE_AGUA_CENTRAL.get(arena);
+  if (cache !== undefined) return cache;
+
+  const ctx0 = Math.floor(arena.largura / 2);
+  const cty0 = Math.floor(arena.altura / 2);
+  let achado: { x: number; y: number } | null = null;
+  for (let r = 0; r <= RAIO_DA_BUSCA_DE_AGUA && !achado; r++) {
+    for (let dy = -r; dy <= r && !achado; dy++) {
+      for (let dx = -r; dx <= r && !achado; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        const tx = ctx0 + dx;
+        const ty = cty0 + dy;
+        if (arena.tile(tx, ty) === AGUA) achado = { x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE };
+      }
+    }
+  }
+  CACHE_AGUA_CENTRAL.set(arena, achado);
+  return achado;
+}
+
+function posicaoDaTartaruga(
+  arena: Arena,
+  tempo: number,
+): { x: number; y: number; paraEsquerda: boolean } | null {
+  const ancora = aguaCentralDe(arena);
+  if (!ancora) return null;
+  const fase = (arena.seed % 700) * 0.013;
+  // Devagar — é uma tartaruga — e num raio pequeno: a lagoa central não tem
+  // o mesmo tamanho em todo mapa, e um raio grande a mandaria pisar em
+  // terra firme na Planície, que tem duas lagoas pequenas em vez de uma.
+  return passeioCircular(ancora, tempo, fase, 1.3 * TILE, 0.1, 0.5);
+}
+
+/**
+ * A âncora do urso e do abelhão: uma árvore do meio do campo.
+ *
+ * O deslocamento tira os dois de cima da própria árvore — sem ele, o bicho
+ * nasceria dentro do tronco, que já é decoração sólida e bloqueia passagem.
+ */
+function ancoraDoMato(arena: Arena): { x: number; y: number } | null {
+  const j = arena.jazidas.find((j) => j.tipo === 'arvore' && j.lado === null) ?? null;
+  return j ? { x: j.x + TILE * 1.4, y: j.y } : null;
+}
+
+function posicaoDoUrso(
+  arena: Arena,
+  tempo: number,
+): { x: number; y: number; paraEsquerda: boolean } | null {
+  const ancora = ancoraDoMato(arena);
+  if (!ancora) return null;
+  const fase = (arena.seed % 500) * 0.017;
+  return passeioCircular(ancora, tempo, fase, 1.6 * TILE, 0.18, 0.5);
+}
+
+function posicaoDoAbelhao(
+  arena: Arena,
+  tempo: number,
+): { x: number; y: number; paraEsquerda: boolean } | null {
+  const ancora = ancoraDoMato(arena);
+  if (!ancora) return null;
+  // Fase própria — mesma âncora do urso, mas deslocada, para o par não
+  // nascer colado como se fossem um bicho só.
+  const fase = (arena.seed % 300) * 0.021 + 3;
+  return passeioCircular(ancora, tempo, fase, 0.9 * TILE, 0.9, 0.7);
 }
 
 export interface FolhaEscolhida {
