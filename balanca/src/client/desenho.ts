@@ -448,6 +448,16 @@ export function desenharMundo(
           Math.round(py - alto) - 30 * escala,
           escala,
         );
+        if (e.tipo === 'tesouraria') {
+          // Um guarda de mercenário — sem cor de time, do jeito que o anexo
+          // da obra também não tem — parado ao lado da porta. É onde o ouro
+          // do reino descansa; não faz sentido ele ficar sem ninguém na
+          // frente.
+          const anim = arte.guardaDaTesouraria;
+          const ladoDoGuarda = e.time === 'azul' ? 1 : -1;
+          const pxGuarda = v.paraTelaX(e.x) + ladoDoGuarda * largo * 0.6;
+          quadro(ctx, anim, quadroEm(anim, tempo, e.tx * 3), pxGuarda, py, escala * 0.6);
+        }
         if (e.tipo === 'casaDaMoeda' && estado) {
           const forno = estado.casasDaMoeda.find((c) => c.time === e.time);
           if (forno && forno.cunhando > 0) {

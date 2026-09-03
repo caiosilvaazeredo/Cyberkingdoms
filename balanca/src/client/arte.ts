@@ -82,6 +82,8 @@ export interface Arte {
    */
   readonly obraNivel2: Animacao;
   readonly obraNivel3: HTMLImageElement;
+  /** O minotauro parado ao lado de cada tesouraria — ver `desenho.ts`. */
+  readonly guardaDaTesouraria: Animacao;
   /** O ícone do abate no registro de eventos — um quadro só, congelado. */
   readonly explosaoDoRegistro: HTMLImageElement;
   /**
@@ -240,6 +242,7 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
   }
   pede('obra_nivel2', 'buildings/oficina_nivel2.png');
   pede('obra_nivel3', 'buildings/oficina_nivel3.png');
+  pede('guarda_tesouraria', 'buildings/guarda_tesouraria.png');
   pede('explosao_registro', 'fx/explosao_registro.png');
   pede('ovelha_parada', 'recursos/ovelha_parada.png');
   pede('ovelha_andando', 'recursos/ovelha_andando.png');
@@ -347,6 +350,7 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
     ossos: [1, 2, 3].map((i) => img(`osso${i}`)),
     obraNivel2: animacao(img('obra_nivel2'), 8),
     obraNivel3: img('obra_nivel3'),
+    guardaDaTesouraria: animacao(img('guarda_tesouraria'), 6),
     explosaoDoRegistro: img('explosao_registro'),
     predios,
     fogo: animacao(img('fogo'), 12),
