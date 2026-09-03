@@ -456,7 +456,7 @@ function laco(agora: number): void {
     }
   }
   if (emCampo.length > 0) {
-    desenharHud(ctx, rede, emCampo, entrada, largura, altura, tempo, ajustes);
+    desenharHud(ctx, rede, emCampo, entrada, largura, altura, tempo, ajustes, arte);
     // O minimapa é desenhado daqui, e não de dentro do HUD, porque precisa da
     // câmera: o retângulo do que está na tela é metade do que ele serve, e a
     // câmera é coisa deste arquivo.

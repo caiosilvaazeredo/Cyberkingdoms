@@ -9,6 +9,7 @@ import {
   type Time,
 } from '../shared/regras';
 import type { Ajustes } from './ajustes';
+import type { Arte } from './arte';
 import { COR_DA_VAGA } from './desenho';
 import type { Entrada } from './entrada';
 import { caixaDoMinimapa } from './minimapa';
@@ -75,6 +76,7 @@ export function desenharHud(
   altura: number,
   tempo: number,
   ajustes: Ajustes,
+  arte: Arte,
 ): void {
   const estado = rede.estado;
   const eu = locais[0]?.unidade ?? null;
@@ -83,7 +85,7 @@ export function desenharHud(
   // procurar um baú que ainda não chegou.
   if (!estado || estado.baus.length < 2) return;
 
-  balanca(ctx, estado, largura, eu?.time ?? 'azul');
+  balanca(ctx, estado, largura, eu?.time ?? 'azul', arte);
   placar(ctx, estado, largura);
   cabecalho(ctx, rede, largura);
   if (locais.length > 1) {
@@ -168,8 +170,24 @@ function cartoesDoSofa(
   }
 }
 
+/**
+ * Abaixo desta diferença entre os dois lados, nenhuma caveira aparece.
+ *
+ * Sem piso, a caveira piscaria de um lado para o outro a cada troca de
+ * décimo de quilo perto do empate — um aviso que troca de lado a cada
+ * segundo não avisa nada, só pisca. Ela só nasce quando dá para dizer, sem
+ * dúvida, qual lado está atrás.
+ */
+const LIMIAR_DA_CAVEIRA = 0.08;
+
 /** A barra que dá nome ao jogo. */
-function balanca(ctx: CanvasRenderingContext2D, estado: Estado, largura: number, meu: Time): void {
+function balanca(
+  ctx: CanvasRenderingContext2D,
+  estado: Estado,
+  largura: number,
+  meu: Time,
+  arte: Arte,
+): void {
   const azulTemNoCofre = bauDe(estado, 'vermelho').peso;
   const vermelhoTemNoCofre = bauDe(estado, 'azul').peso;
   const l = Math.min(560, largura - 80);
@@ -199,6 +217,19 @@ function balanca(ctx: CanvasRenderingContext2D, estado: Estado, largura: number,
   ctx.strokeStyle = 'rgba(0,0,0,0.6)';
   ctx.lineWidth = 2;
   ctx.strokeRect(x, y, l, a);
+
+  // A caveira-espeto do lado que está perdendo, pendurada fora da placa —
+  // nunca em cima da barra ou da legenda, que já são a leitura exata. Ela é
+  // só o "isto está ruim" que se vê antes de ler o número.
+  const diferenca = fracaoAzul - 0.5;
+  if (Math.abs(diferenca) >= LIMIAR_DA_CAVEIRA) {
+    const perdedor: Time = diferenca > 0 ? 'vermelho' : 'azul';
+    const alturaCaveira = a * 1.6;
+    const larguraCaveira = alturaCaveira * (arte.caveiraAtras.width / arte.caveiraAtras.height);
+    const topoCaveira = y + a / 2 - alturaCaveira / 2;
+    const esquerdaCaveira = perdedor === 'azul' ? x - 12 - larguraCaveira : x + l + 12;
+    ctx.drawImage(arte.caveiraAtras, esquerdaCaveira, topoCaveira, larguraCaveira, alturaCaveira);
+  }
 
   // Estreito, as duas legendas se encontrariam no meio e virariam uma linha
   // ilegível. Aí a palavra "carregadores" some e fica o número, que é a

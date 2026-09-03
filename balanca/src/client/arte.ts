@@ -98,6 +98,8 @@ export interface Arte {
   >;
   readonly jazidaOuro: HTMLImageElement;
   readonly jazidaOuroVazia: HTMLImageElement;
+  /** A caveira-espeto do Enemy Pack, no lado que está perdendo a balança do HUD. */
+  readonly caveiraAtras: HTMLImageElement;
 }
 
 async function carregar(caminho: string): Promise<HTMLImageElement> {
@@ -233,6 +235,7 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
   pede('recurso_ouro', 'recursos/ouro.png');
   pede('jazida_ouro', 'recursos/jazida_ouro.png');
   pede('jazida_ouro_vazia', 'recursos/jazida_ouro_vazia.png');
+  pede('caveira_atras', 'fx/caveira_atras.png');
 
   for (const time of TIMES) {
     for (const classe of CLASSES) {
@@ -326,6 +329,7 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
     },
     jazidaOuro: img('jazida_ouro'),
     jazidaOuroVazia: img('jazida_ouro_vazia'),
+    caveiraAtras: img('caveira_atras'),
     // As folhas de efeito são tiras horizontais de quadros quadrados: a poeira
     // e a labareda em sessenta e quatro, o estouro e o respingo em cento e
     // noventa e dois. `animacao` deduz o lado pela altura, então basta dizer a
