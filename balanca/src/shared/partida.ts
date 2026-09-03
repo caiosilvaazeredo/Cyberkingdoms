@@ -14,7 +14,7 @@ import {
   type Arena,
   type TipoDeEstrutura,
 } from './arena';
-import { MAPA_PADRAO, type IdDoMapa } from './mapas';
+import { MAPA_PADRAO, mapaDe, type IdDoMapa, type Mapa } from './mapas';
 import { MODO_PADRAO, modoDe, type IdDoModo } from './modos';
 import {
   CARGA_DO_OFICIO,
@@ -378,6 +378,39 @@ function tick(
  * peso dela e da escolta encostada — e essas duas coisas o cliente já tem no
  * último retrato, então a previsão continua batendo.
  */
+/**
+ * Até onde um time pode andar durante o aquecimento: dentro do próprio
+ * castelo, e não o mapa inteiro.
+ *
+ * ## Por que uma coluna fechada, e não a coordenada exata do gesto
+ *
+ * O aquecimento existe para escolher chapéu, não para escolher informação. Sem
+ * um limite, os cinco segundos de antes do apito virariam corrida até o meio
+ * do mapa: quem chega primeiro vê onde o inimigo decidiu ficar, e o apito
+ * deixa de ser o início da partida para ser o fim de uma espiada. Fechado, o
+ * primeiro passo de todo mundo é o mesmo — dado às cegas, ao mesmo tempo,
+ * porque é isso que o apito passa a significar.
+ *
+ * A fronteira é a **coluna do próprio portão** — o mesmo `portoes[0]` que o
+ * teste de arena já usa para garantir que o mapa estrangula onde promete — e
+ * não um raio em torno do nascedouro. Um raio cortaria a chapelaria fora do
+ * alcance em qualquer mapa onde ela não fica colada ao ninho, e o aquecimento
+ * existe **exatamente** para vestir um chapéu antes da partida começar.
+ *
+ * O Vau não tem portão — é a proposta dele, castelo aberto. Sem gate para
+ * ler, a fronteira cai no eixo do espelho, que é a única linha que ainda faz
+ * o mesmo sentido dos dois lados: o rio que já divide o mapa ao meio.
+ */
+function fronteiraDoAquecimento(mapa: Mapa, time: Time): number {
+  const portao = mapa.portoes[0];
+  const colunaTx = portao ? portao.coluna : (mapa.largura - 1) / 2;
+  const colunaMundo = (colunaTx + 0.5) * TILE;
+  return time === 'azul' ? colunaMundo : mapa.largura * TILE - colunaMundo;
+}
+
+/** Meio tile de folga: perto o bastante da fronteira sem grudar nela. */
+const FOLGA_DO_AQUECIMENTO = TILE * 0.6;
+
 export function moverUnidade(
   arena: Arena,
   estado: Estado,
@@ -426,6 +459,22 @@ export function moverUnidade(
   );
   u.x = novo.x;
   u.y = novo.y;
+
+  // A parede fechada do aquecimento. Só nesta fase: no meio da partida (a
+  // pausa de `ponto` inclusive) o time já provou que sabe onde é o mapa, e
+  // uma parede reaparecendo ali seria um bug, não uma regra.
+  if (estado.fase === 'aquecimento') {
+    const fronteira = fronteiraDoAquecimento(mapaDe(arena.mapa), u.time);
+    const preso =
+      u.time === 'azul'
+        ? Math.min(u.x, fronteira - FOLGA_DO_AQUECIMENTO)
+        : Math.max(u.x, fronteira + FOLGA_DO_AQUECIMENTO);
+    if (preso !== u.x) {
+      const ajustado = resolverColisao(arena, preso, u.y, RAIO_UNIDADE);
+      u.x = ajustado.x;
+      u.y = ajustado.y;
+    }
+  }
 }
 
 // --- ação de contexto ------------------------------------------------------

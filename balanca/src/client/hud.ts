@@ -474,9 +474,17 @@ function faixaDeFase(
   altura: number,
   tempo: number,
 ): void {
+  if (estado.fase === 'aquecimento') {
+    contagemRegressiva(ctx, estado, largura, altura, tempo);
+    return;
+  }
+  if (estado.fase === 'jogando') {
+    vaiSeAcabouDeComecar(ctx, largura, altura, tempo);
+    return;
+  }
+
   let texto: string | null = null;
   let cor = '#f2e6c9';
-  if (estado.fase === 'aquecimento') texto = `preparar… ${Math.ceil(estado.faseEm)}`;
   if (estado.fase === 'ponto') texto = 'baú em casa!';
   if (estado.fase === 'fim') {
     texto = estado.vencedor ? `${NOME_DO_TIME[estado.vencedor]} vence` : 'empate';
@@ -495,6 +503,101 @@ function faixaDeFase(
     ctx.globalAlpha = 0.9;
     ctx.fillText('a próxima partida começa em instantes', largura / 2, altura / 2 - 20);
   }
+  ctx.restore();
+}
+
+/**
+ * A contagem regressiva do aquecimento — a mesma promessa do "champion
+ * select": todo mundo se prepara atrás de uma parede fechada, e os últimos
+ * instantes antes dela sumir são o momento mais visível da tela.
+ *
+ * ## Dois estágios, e não um número que só encolhe
+ *
+ * Do início até faltarem três segundos, o aviso é uma frase — "o portão abre
+ * em N" — pequena o bastante para não brigar com o resto do HUD enquanto a
+ * pessoa ainda está escolhendo chapéu. Nos três segundos finais ele vira o
+ * numeral gigante, pulsando, no centro da tela: é o instante em que ninguém
+ * devia estar fazendo mais nada além de olhar para o relógio.
+ *
+ * O "VAI!" não é um terceiro estágio, é um quadro só — `faseEm` chega a zero
+ * e no próximo retrato a fase já é `jogando`, então ele é desenhado a partir
+ * do tempo de parede (`tempo`) medido contra o instante em que a fase virou,
+ * e não a partir de `estado.faseEm`, que já não existe mais para contar.
+ */
+let apitouEm: number | null = null;
+
+function contagemRegressiva(
+  ctx: CanvasRenderingContext2D,
+  estado: Estado,
+  largura: number,
+  altura: number,
+  tempo: number,
+): void {
+  const faltam = estado.faseEm;
+  const cx = largura / 2;
+  const cy = altura / 2 - 60;
+  apitouEm = null;
+
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  if (faltam > 3) {
+    ctx.font = '700 30px "Trebuchet MS", system-ui, sans-serif';
+    ctx.fillStyle = '#f2e6c9';
+    ctx.globalAlpha = 0.9;
+    ctx.fillText(`o portão abre em ${Math.ceil(faltam)}`, cx, cy);
+    ctx.restore();
+    return;
+  }
+
+  // Os três segundos finais: o numeral cresce e pulsa mais forte quanto mais
+  // perto do zero, para o olho ser puxado para o centro sem precisar ler. O
+  // pulso usa `tempo` — relógio de parede do quadro, e não `faseEm` — porque
+  // `faseEm` só muda quando um retrato novo chega; animado por ele, o pulso
+  // teria a cadência da rede, não a de sessenta quadros por segundo.
+  const n = Math.max(1, Math.ceil(faltam));
+  const pulso = 1 + (0.5 + Math.sin(tempo * 6) * 0.5) * 0.3;
+  ctx.font = `900 ${Math.round(120 * pulso)}px "Trebuchet MS", system-ui, sans-serif`;
+  ctx.fillStyle = n === 1 ? '#ff9c8f' : '#ffd479';
+  ctx.globalAlpha = 0.75 + Math.sin(tempo * 6) * 0.25;
+  ctx.shadowColor = 'rgba(0,0,0,0.6)';
+  ctx.shadowBlur = 18;
+  ctx.fillText(String(n), cx, cy);
+  ctx.restore();
+}
+
+/**
+ * O "VAI!" que estoura no quadro em que o portão abre.
+ *
+ * Chamado toda vez que a fase é `jogando` — a função decide sozinha se ainda
+ * vale a pena desenhar, comparando o relógio de parede com o instante em que
+ * ela **notou** a virada. `apitouEm` é zerado por `contagemRegressiva`
+ * sempre que o aquecimento ainda está rodando, então o primeiro quadro de
+ * `jogando` é sempre o primeiro a marcar o instante — não há como este
+ * "VAI!" disparar tarde ou sobreviver a uma nova partida.
+ */
+function vaiSeAcabouDeComecar(
+  ctx: CanvasRenderingContext2D,
+  largura: number,
+  altura: number,
+  tempo: number,
+): void {
+  if (apitouEm === null) apitouEm = tempo;
+  const desde = tempo - apitouEm;
+  const DURACAO = 0.9;
+  if (desde >= DURACAO) return;
+
+  const t = desde / DURACAO;
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.globalAlpha = 1 - t;
+  ctx.font = `900 ${Math.round(130 + t * 40)}px "Trebuchet MS", system-ui, sans-serif`;
+  ctx.fillStyle = '#ffd479';
+  ctx.shadowColor = 'rgba(0,0,0,0.6)';
+  ctx.shadowBlur = 22;
+  ctx.fillText('VAI!', largura / 2, altura / 2 - 60);
   ctx.restore();
 }
 

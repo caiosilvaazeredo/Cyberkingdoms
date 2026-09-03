@@ -84,8 +84,17 @@ export const PONTOS_PARA_VENCER = 3;
 /** Duração máxima, em segundos. Empate no tempo vai para a balança. */
 export const DURACAO_DA_PARTIDA = 12 * 60;
 
-/** Aquecimento antes do apito, em segundos. */
-export const AQUECIMENTO = 5;
+/**
+ * Aquecimento antes do apito, em segundos.
+ *
+ * Cinco segundos bastavam quando o aquecimento só segurava o combate — dava
+ * para vestir um chapéu e pronto. Virou também uma parede fechada (o time não
+ * sai do próprio castelo) e uma contagem regressiva grande na tela, e as duas
+ * coisas precisam de tempo para serem **lidas**, não só cumpridas. Oito
+ * segundos dão um "vestir o chapéu" com folga e um "3, 2, 1" que não estoura
+ * antes de a pessoa erguer os olhos para o relógio.
+ */
+export const AQUECIMENTO = 8;
 
 /** Pausa depois de um ponto, antes do reposicionamento. */
 export const PAUSA_APOS_PONTO = 4;
