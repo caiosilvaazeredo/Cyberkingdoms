@@ -77,8 +77,12 @@ type Receita = {
 const RECEITAS = {
   /** A troca de classe: o efeito grande, porque é a mudança que mais importa. */
   chapeu: { folha: 'estouro', escala: 0.62, acima: 26 },
-  /** O roubo do chapéu do inimigo: o mesmo gesto, e o dobro do tamanho. */
-  roubo: { folha: 'estouro', escala: 0.85, acima: 26 },
+  /**
+   * O roubo do chapéu do inimigo: o golpe do ladrão do Enemy Pack, e não o
+   * mesmo estouro genérico da troca comum — roubar é notícia, e a receita já
+   * dizia isso pelo tamanho; agora diz pelo gesto também.
+   */
+  roubo: { folha: 'furto', escala: 1.05, acima: 26 },
   abate: { folha: 'poeirada', escala: 0.9, acima: 6 },
   /** O bafo sob os pés de quem corre. Pequeno e no chão, ou vira fumaça. */
   passo: { folha: 'poeira', escala: 0.42, acima: -6 },

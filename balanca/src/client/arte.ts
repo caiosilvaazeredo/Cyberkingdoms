@@ -78,7 +78,9 @@ export interface Arte {
    * chamam `estouro` e `poeira`. É o mesmo motivo de `NOME_DA_CARGA` no HUD: o
    * nome do arquivo é do desenhista, e o nome que o código usa é do jogo.
    */
-  readonly efeitos: Readonly<Record<'poeira' | 'poeirada' | 'labareda' | 'estouro' | 'agua', Animacao>>;
+  readonly efeitos: Readonly<
+    Record<'poeira' | 'poeirada' | 'labareda' | 'estouro' | 'agua' | 'furto', Animacao>
+  >;
   /** Ícones de interface, por nome do que eles marcam. */
   readonly icones: Readonly<Record<IconeDaObra, HTMLImageElement>>;
   /** Unidades, por time e por chave de folha. */
@@ -219,6 +221,9 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
     ['fx:labareda', 'labareda'],
     ['fx:estouro', 'estouro'],
     ['fx:agua', 'agua'],
+    // O golpe do ladrão do Enemy Pack, emprestado para o roubo de chapéu: ver
+    // `efeitos.furto` e a receita `roubo` em particulas.ts.
+    ['fx:furto', 'furto'],
   ] as const) {
     pede(chave, `fx/${arquivo}.png`);
   }
@@ -332,6 +337,7 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
       labareda: animacao(img('fx:labareda'), 20),
       estouro: animacao(img('fx:estouro'), 18),
       agua: animacao(img('fx:agua'), 16),
+      furto: animacao(img('fx:furto'), 18),
     },
     icones: Object.fromEntries(ICONES.map((n) => [n, img(`icone:${n}`)])) as Record<
       IconeDaObra,
