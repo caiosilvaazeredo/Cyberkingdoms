@@ -827,6 +827,31 @@
         font-size: 13px;
         color: rgba(20, 17, 15, 0.65);
       }
+      /*
+        O confronto. Uma faixa dourada, e não texto solto: é a mesma cor da
+        placa "obra II" e do estoque do HUD, então quando a partida começa a
+        pessoa reconhece a cor antes de reler a frase — é o mesmo "isto é
+        informação de jogo" falado duas vezes.
+      */
+      .confronto {
+        margin: 0 0 clamp(8px, 1.4vw, 14px);
+        padding: 6px 12px;
+        background: rgba(60, 44, 12, 0.12);
+        border: 1px solid rgba(201, 162, 39, 0.4);
+        border-radius: 6px;
+        font-size: clamp(12px, 1.3vw, 14px);
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        color: #6b4f14;
+      }
+      .confronto small {
+        display: block;
+        margin-top: 2px;
+        font-size: 0.82em;
+        font-weight: 500;
+        letter-spacing: normal;
+        color: rgba(20, 17, 15, 0.6);
+      }
       .lados {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
@@ -1452,6 +1477,13 @@
           <h2>escolha o seu lado</h2>
           <span class="dica" id="escolha-status"></span>
         </div>
+        <!--
+          O confronto: modo, campo e formato desta partida. Quem cai numa sala
+          pública ou entra em "Jogo Online" está entrando numa configuração que
+          outra pessoa escolheu, e sem esta linha o primeiro lugar em que ela
+          descobre o que vai jogar é o meio da partida.
+        -->
+        <p class="confronto" id="confronto-da-escolha"></p>
         <div class="lados">
           <div class="lado" data-time="azul" aria-selected="true">
             <h3>Reino Azul</h3>

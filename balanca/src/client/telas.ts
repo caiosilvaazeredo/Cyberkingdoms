@@ -120,6 +120,16 @@ export interface DadosDaEscolha {
   relogio: number;
   /** Quantas pessoas do sofá vão entrar juntas neste lado. */
   quantosLocais: number;
+  /**
+   * O modo e o mapa desta partida.
+   *
+   * Sem isto a tela de escolha de lado nunca dizia **o que** a pessoa estava
+   * prestes a jogar — só de que lado. Quem entra numa sala pública ou "Jogo
+   * Online" cai numa configuração que outra pessoa escolheu, e o primeiro
+   * lugar em que ela descobre o modo e o mapa não pode ser o meio da partida.
+   */
+  modo: IdDoModo;
+  mapa: IdDoMapa;
 }
 
 export interface EstadoDoServidor {
@@ -776,6 +786,23 @@ export class Telas {
 
   private pintarEscolha(): void {
     const dados = this.ultimosDados;
+    const confronto = document.querySelector<HTMLElement>('#confronto-da-escolha');
+    if (confronto) {
+      if (!dados) {
+        confronto.textContent = '';
+      } else {
+        const modo = MODOS[dados.modo];
+        const mapa = MAPAS[dados.mapa];
+        confronto.replaceChildren(
+          document.createTextNode(
+            `${modo.nome} · ${mapa.nome} · ${dados.porTime} × ${dados.porTime}`,
+          ),
+        );
+        const lema = document.createElement('small');
+        lema.textContent = modo.lema;
+        confronto.append(lema);
+      }
+    }
     for (const time of TIMES) {
       const painel = document.querySelector<HTMLElement>(`.lado[data-time="${time}"]`);
       if (!painel) continue;

@@ -1,4 +1,6 @@
 import { GRAMA } from '../shared/arena';
+import { MAPA_PADRAO } from '../shared/mapas';
+import { MODO_PADRAO } from '../shared/modos';
 import { TILE } from '../shared/regras';
 import { alvoDaAtracao, aproximar } from './atracao';
 import { carregarArte, type Arte } from './arte';
@@ -320,6 +322,8 @@ function laco(agora: number): void {
       placar: estado?.placar ?? { azul: 0, vermelho: 0 },
       relogio: estado?.relogio ?? 0,
       quantosLocais: sofa.quantosLocais,
+      modo: rede?.modo ?? MODO_PADRAO,
+      mapa: rede?.mapa ?? MAPA_PADRAO,
     });
     const recusa = sofa.recusa;
     if (recusa) {
