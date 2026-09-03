@@ -111,6 +111,14 @@ export interface Arte {
    */
   readonly porco: Readonly<Record<'parado' | 'andando', Animacao>>;
   /**
+   * O mesmo porco, mas montado por um goblin de lança — o easter egg.
+   *
+   * Uma em vinte arenas, decidido pela semente (ver `posicaoDoPorco`), o
+   * pasto do meio ganha este lugar do porco comum, e não os dois juntos: é
+   * uma raridade, não uma segunda atração.
+   */
+  readonly porcoMontado: Animacao;
+  /**
    * O ícone de cada carga no chão.
    *
    * `HTMLCanvasElement` entra na união porque o minério é repintado no
@@ -249,6 +257,7 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
   pede('ovelha_pastando', 'recursos/ovelha_pastando.png');
   pede('porco_parado', 'recursos/porco_parado.png');
   pede('porco_andando', 'recursos/porco_andando.png');
+  pede('porco_montado', 'recursos/porco_montado.png');
   for (const [chave, arquivo] of [
     ['fx:poeira', 'poeira'],
     ['fx:poeirada', 'poeirada'],
@@ -365,6 +374,7 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
       parado: animacao(img('porco_parado'), 6),
       andando: animacao(img('porco_andando'), 8),
     },
+    porcoMontado: animacao(img('porco_montado'), 8),
     recursos: {
       minerio: img('recurso_minerio'),
       madeira: img('recurso_madeira'),

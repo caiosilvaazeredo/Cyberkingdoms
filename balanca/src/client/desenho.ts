@@ -575,11 +575,16 @@ export function desenharMundo(
     const p = posicaoDoPorco(arena, tempo);
     const px = v.paraTelaX(p.x);
     const py = v.paraTelaY(p.y) + RAIO_UNIDADE * escala * 0.6;
+    // Uma em vinte arenas — a mesma conta de `montado`, para o desenho e a
+    // decisão nunca discordarem — o porco vem com cavaleiro. É maior porque
+    // carrega alguém em cima, não porque é um bicho diferente.
+    const anim = p.montado ? arte.porcoMontado : arte.porco.andando;
+    const escalaDoPorco = escala * (p.montado ? 0.9 : 0.8);
     pinturas.push({
       y: p.y,
       pintar: () => {
         espelhado(ctx, px, p.paraEsquerda, () =>
-          quadro(ctx, arte.porco.andando, quadroEm(arte.porco.andando, tempo), px, py, escala * 0.8, 'centro'),
+          quadro(ctx, anim, quadroEm(anim, tempo), px, py, escalaDoPorco, 'centro'),
         );
       },
     });
@@ -792,14 +797,17 @@ function posicaoDoAnimal(a: Animal, alfa: number): { x: number; y: number } {
  * desenharem o mesmo passeio idêntico, o que pareceria um sprite colado à
  * câmera em vez de um bicho andando por conta própria.
  */
-function posicaoDoPorco(arena: Arena, tempo: number): { x: number; y: number; paraEsquerda: boolean } {
+function posicaoDoPorco(
+  arena: Arena,
+  tempo: number,
+): { x: number; y: number; paraEsquerda: boolean; montado: boolean } {
   // Ancorado num pasto do meio — chão já garantido seco e limpo de decoração
   // — e não no centro geométrico do mapa, que em todo relevo cai dentro do
   // lago central (ver o `elipse` de cada mapa em mapas.ts). Sem pasto
   // nenhum, o que não deveria acontecer em nenhum mapa da lista, ele some em
   // vez de nadar.
   const ancora = arena.pastos.find((p) => p.lado === null) ?? arena.pastos[0];
-  if (!ancora) return { x: -9999, y: -9999, paraEsquerda: false };
+  if (!ancora) return { x: -9999, y: -9999, paraEsquerda: false, montado: false };
 
   const fase = (arena.seed % 1000) * 0.01;
   const angulo = tempo * 0.25 + fase;
@@ -809,6 +817,9 @@ function posicaoDoPorco(arena: Arena, tempo: number): { x: number; y: number; pa
     x: ancora.x + dx,
     y: ancora.y + Math.sin(angulo * 1.7) * raio * 0.6,
     paraEsquerda: -Math.sin(angulo) < 0,
+    // Uma em vinte: raro o bastante para ser notícia quando alguém vê, comum
+    // o bastante para não virar lenda urbana de "ninguém nunca viu isso".
+    montado: Math.abs(arena.seed) % 20 === 0,
   };
 }
 
