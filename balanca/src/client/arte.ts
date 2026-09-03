@@ -100,6 +100,15 @@ export interface Arte {
   readonly unidades: Readonly<Record<Time, Folhas>>;
   readonly ovelha: Readonly<Record<'parada' | 'andando' | 'pastando', Animacao>>;
   /**
+   * O porco decorativo do pátio — puro clima, não é `estado.animais`.
+   *
+   * Ele não entra na simulação: não tem dono, não morre, não rende minério.
+   * `desenharPorco` em desenho.ts computa o passeio dele a partir da hora do
+   * relógio de parede e da semente da arena, então cada tela mostra o mesmo
+   * porco no mesmo lugar sem gastar um byte de rede — o mesmo truque do mato.
+   */
+  readonly porco: Readonly<Record<'parado' | 'andando', Animacao>>;
+  /**
    * O ícone de cada carga no chão.
    *
    * `HTMLCanvasElement` entra na união porque o minério é repintado no
@@ -235,6 +244,8 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
   pede('ovelha_parada', 'recursos/ovelha_parada.png');
   pede('ovelha_andando', 'recursos/ovelha_andando.png');
   pede('ovelha_pastando', 'recursos/ovelha_pastando.png');
+  pede('porco_parado', 'recursos/porco_parado.png');
+  pede('porco_andando', 'recursos/porco_andando.png');
   for (const [chave, arquivo] of [
     ['fx:poeira', 'poeira'],
     ['fx:poeirada', 'poeirada'],
@@ -345,6 +356,10 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
       parada: animacao(img('ovelha_parada'), 8),
       andando: animacao(img('ovelha_andando'), 10),
       pastando: animacao(img('ovelha_pastando'), 8),
+    },
+    porco: {
+      parado: animacao(img('porco_parado'), 6),
+      andando: animacao(img('porco_andando'), 8),
     },
     recursos: {
       minerio: img('recurso_minerio'),

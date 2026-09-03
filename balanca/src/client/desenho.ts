@@ -560,6 +560,21 @@ export function desenharMundo(
     });
   }
 
+  // --- porco decorativo ----------------------------------------------
+  {
+    const p = posicaoDoPorco(arena, tempo);
+    const px = v.paraTelaX(p.x);
+    const py = v.paraTelaY(p.y) + RAIO_UNIDADE * escala * 0.6;
+    pinturas.push({
+      y: p.y,
+      pintar: () => {
+        espelhado(ctx, px, p.paraEsquerda, () =>
+          quadro(ctx, arte.porco.andando, quadroEm(arte.porco.andando, tempo), px, py, escala * 0.8, 'centro'),
+        );
+      },
+    });
+  }
+
   // --- baús ----------------------------------------------------------
   for (const p of estado.baus) {
     if (p.onde === 'resgatado') continue;
@@ -754,6 +769,36 @@ function posicaoDoAnimal(a: Animal, alfa: number): { x: number; y: number } {
   return {
     x: a.destinoX + (a.x - a.destinoX) * alfa,
     y: a.destinoY + (a.y - a.destinoY) * alfa,
+  };
+}
+
+/**
+ * O passeio do porco decorativo: uma volta lenta em torno do centro do mapa.
+ *
+ * Não é física, é um relógio — `Math.sin`/`Math.cos` do tempo de parede — e
+ * por isso não precisa de rede, colisão ou estado nenhum: qualquer tela que
+ * olhe para o mesmo instante mostra o mesmo porco no mesmo lugar. A fase
+ * (`arena.seed`) só existe para duas arenas em telas diferentes não
+ * desenharem o mesmo passeio idêntico, o que pareceria um sprite colado à
+ * câmera em vez de um bicho andando por conta própria.
+ */
+function posicaoDoPorco(arena: Arena, tempo: number): { x: number; y: number; paraEsquerda: boolean } {
+  // Ancorado num pasto do meio — chão já garantido seco e limpo de decoração
+  // — e não no centro geométrico do mapa, que em todo relevo cai dentro do
+  // lago central (ver o `elipse` de cada mapa em mapas.ts). Sem pasto
+  // nenhum, o que não deveria acontecer em nenhum mapa da lista, ele some em
+  // vez de nadar.
+  const ancora = arena.pastos.find((p) => p.lado === null) ?? arena.pastos[0];
+  if (!ancora) return { x: -9999, y: -9999, paraEsquerda: false };
+
+  const fase = (arena.seed % 1000) * 0.01;
+  const angulo = tempo * 0.25 + fase;
+  const raio = 2.2 * TILE;
+  const dx = Math.cos(angulo) * raio;
+  return {
+    x: ancora.x + dx,
+    y: ancora.y + Math.sin(angulo * 1.7) * raio * 0.6,
+    paraEsquerda: -Math.sin(angulo) < 0,
   };
 }
 
