@@ -33,30 +33,105 @@
         num nome de três letras a setenta pixels, e ilegível em tudo o mais.
         "Assistir" escrito nela num botão de dezoito pixels vira mancha, e um
         menu que exige esforço para ser lido é um menu que atrasa quem quer
-        jogar. O resto da interface usa a mesma sem-serifa do jogo, em peso
-        alto — que é como um jogo de sofá escreve os seus botões.
+        jogar.
+
+        ## Duas fontes para o resto, e não uma só
+
+        A Cinzel é a voz dos **rótulos** — título de tela, texto de botão, nome
+        de faixa, o "12:00" do relógio. É a mesma família de letra de pedra que
+        a arte de referência do menu usa para "MY DEAR KING" e "PLAY ONLINE":
+        maiúscula, espaçada, feita para ser vista de relance e não lida devagar.
+
+        Um parágrafo inteiro nela cansa — é desenhada para dez caracteres, não
+        para uma dica de sessenta. Por isso o corpo do texto (dicas, listas de
+        regra, o "conselho" da tela de espera) usa a Spectral, uma serifada de
+        leitura. As duas têm a mesma temperatura — nenhuma é uma sem-serifa de
+        interface de sistema — e é essa temperatura comum que faz o menu parecer
+        um livro e não um formulário.
+
+        A interface **do jogo** — o HUD desenhado no canvas, por cima da
+        partida — continua em Trebuchet MS. Trocá-la exigiria reescrever cada
+        `ctx.font` de `hud.ts` e `desenho.ts`, e o HUD é lido em decisão de
+        meio segundo: é o único lugar da interface onde legibilidade imediata
+        vale mais do que a voz do menu.
       */
       @font-face {
         font-family: 'BlackFlag';
         src: url('/fontes/blackflag.ttf') format('truetype');
         font-display: swap;
       }
+      /*
+        Cinzel e Spectral, hospedadas aqui — não no Google Fonts. O resto do
+        jogo não depende de nenhum serviço de fora (a BlackFlag já vinha assim),
+        e um `<link>` para fora seria a única exceção: alguém jogando sem a
+        internet enxergar aquele domínio veria a gótica sumir e nada mais.
+        Cortadas para o alfabeto latino só — nenhuma letra em português passa
+        de `U+00FF` — os quatro arquivos somam menos de cem quilobytes.
+      */
+      @font-face {
+        font-family: 'Cinzel';
+        src: url('/fontes/cinzel.woff2') format('woff2');
+        font-weight: 400 900;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'Spectral';
+        src: url('/fontes/spectral-400.woff2') format('woff2');
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'Spectral';
+        src: url('/fontes/spectral-600.woff2') format('woff2');
+        font-weight: 600;
+        font-style: normal;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'Spectral';
+        src: url('/fontes/spectral-400i.woff2') format('woff2');
+        font-weight: 400;
+        font-style: italic;
+        font-display: swap;
+      }
       :root {
         color-scheme: dark;
-        --papel: #f4f2ee;
-        --tinta: #14110f;
+        --papel: #ede4d0;
+        --tinta: #241a10;
         --acento: #e4002b;
         --azul: #2f6fd0;
         --azul-claro: #8fc0ff;
         --vermelho: #cf3b2f;
         --vermelho-claro: #ff9c8f;
         --ouro: #ffd479;
+        /* O dourado da moldura — placas, bordas, o realce de "escolhido". */
+        --ouro-forte: #c9a227;
+        --ouro-fraco: #8a6a2f;
+        --madeira: #6b4a2a;
+        --madeira-escura: #4a3218;
         /* Só o nome do jogo. Ver o comentário acima antes de reaproveitar. */
         --titulo: 'BlackFlag', 'Trebuchet MS', system-ui, sans-serif;
-        --texto: 'Trebuchet MS', system-ui, sans-serif;
+        /* Rótulos: títulos, botões, faixas. Nunca um parágrafo inteiro. */
+        --rotulo: 'Cinzel', Georgia, serif;
+        /* Corpo: dicas, listas, texto de ler. */
+        --texto: 'Spectral', Georgia, serif;
       }
       * {
         box-sizing: border-box;
+      }
+      /*
+        A regra de tipografia inteira em duas linhas: rótulo é Cinzel, corpo é
+        o que `body` já define (Spectral). Um seletor global aqui — e não um
+        por botão, por `h2`, por faixa — é o que garante que a próxima tela
+        nasça na voz certa sem ninguém lembrar de repetir a regra.
+      */
+      h2,
+      h3,
+      button,
+      .rotulo {
+        font-family: var(--rotulo);
+        letter-spacing: 0.02em;
       }
       html,
       body {
@@ -231,23 +306,31 @@
       }
 
       /*
-        Os botões gordos.
+        Os botões gordos, agora como placa e não como retângulo colorido.
 
-        Cada item tem a sua cor e o seu peso, e a ordem é a das intenções: o
-        que a maioria quer fazer fica no alto e é o mais quente. A borda de
-        baixo mais escura é o que dá o volume de botão de fliperama sem
-        depender de imagem nenhuma.
+        A arte de referência não desenha um botão, desenha uma **placa**: um
+        bloco de madeira ou metal com o canto arredondado e um brilho na
+        diagonal, como se tivesse sido lixada. É esse brilho — uma segunda
+        camada de fundo, por cima da cor — que faz a diferença entre "botão do
+        sistema pintado de laranja" e "placa pendurada na parede". A borda de
+        baixo mais escura continua fazendo o volume, como antes.
+
+        As duas rebites nos cantos de cima (`::before`/`::after`) são a
+        assinatura mais barata do "isto é metal preso em algo": um ponto
+        dourado com uma sombra por baixo, repetido em todo botão sem custar
+        mais nada por cor.
       */
       .coluna button.item {
+        position: relative;
         appearance: none;
-        border: 3px solid rgba(0, 0, 0, 0.55);
+        border: 3px solid rgba(0, 0, 0, 0.6);
         border-bottom-width: 6px;
         border-radius: 10px;
         color: #fff;
-        font-family: var(--texto);
-        font-weight: 800;
+        font-family: var(--rotulo);
+        font-weight: 700;
         font-size: clamp(14px, 1.5vw, 19px);
-        letter-spacing: 0.04em;
+        letter-spacing: 0.06em;
         text-align: center;
         /*
           O alvo de toque tem um piso: dedo não acerta botão de vinte pixels, e
@@ -256,9 +339,29 @@
         min-height: 44px;
         padding: clamp(8px, 1.4vh, 12px) 10px clamp(6px, 1.1vh, 10px);
         cursor: pointer;
-        text-shadow: 1px 2px 0 rgba(0, 0, 0, 0.4);
-        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+        text-shadow: 1px 2px 0 rgba(0, 0, 0, 0.5);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.35),
+          inset 0 -3px 6px rgba(0, 0, 0, 0.25),
+          0 6px 18px rgba(0, 0, 0, 0.45);
         transition: transform 0.08s ease;
+      }
+      .coluna button.item::before,
+      .coluna button.item::after {
+        content: '';
+        position: absolute;
+        top: 6px;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 35% 30%, #fff3c9, var(--ouro-forte) 70%);
+        box-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+      }
+      .coluna button.item::before {
+        left: 8px;
+      }
+      .coluna button.item::after {
+        right: 8px;
       }
       .coluna button.item small {
         display: block;
@@ -285,23 +388,39 @@
         transform: translateY(3px);
         border-bottom-width: 3px;
       }
+      /*
+        A diagonal clara por cima da cor é o "lixado" da placa — a mesma
+        camada em todo botão, só a cor de baixo muda por item.
+      */
       .item.laranja {
-        background: linear-gradient(#f7a733, #e2842a);
+        background:
+          linear-gradient(120deg, rgba(255, 255, 255, 0.28) 0%, transparent 45%),
+          linear-gradient(#f0a53a, #c96f1c);
       }
       .item.azul {
-        background: linear-gradient(#5b9bf0, #3b6fd0);
+        background:
+          linear-gradient(120deg, rgba(255, 255, 255, 0.28) 0%, transparent 45%),
+          linear-gradient(#5b9bf0, #2f5fb8);
       }
       .item.verde {
-        background: linear-gradient(#6fc46a, #4c9a49);
+        background:
+          linear-gradient(120deg, rgba(255, 255, 255, 0.28) 0%, transparent 45%),
+          linear-gradient(#6fc46a, #3c8a3a);
       }
       .item.roxo {
-        background: linear-gradient(#a97ee0, #7f52bd);
+        background:
+          linear-gradient(120deg, rgba(255, 255, 255, 0.28) 0%, transparent 45%),
+          linear-gradient(#a97ee0, #6c42a8);
       }
       .item.rubro {
-        background: linear-gradient(#e2564b, #bf3128);
+        background:
+          linear-gradient(120deg, rgba(255, 255, 255, 0.28) 0%, transparent 45%),
+          linear-gradient(#e2564b, #a3271f);
       }
       .item.ciano {
-        background: linear-gradient(#48b6c4, #2c8a99);
+        background:
+          linear-gradient(120deg, rgba(255, 255, 255, 0.28) 0%, transparent 45%),
+          linear-gradient(#48b6c4, #206b78);
       }
       /*
         `minmax(0, 1fr)` e não `1fr`.
@@ -407,6 +526,26 @@
         color: var(--tinta);
         padding: clamp(16px, 2.4vw, 28px);
         box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+      }
+      /*
+        A faixa dos dois castelos, no topo de todo painel de papel.
+
+        `::before` — e não uma `<div>` marcada à mão em cada folha — porque a
+        regra é do **tipo** `.folha`, não de cada tela em particular. A próxima
+        folha que alguém escrever herda a faixa de graça, sem lembrar de
+        colar a marcação de novo. As margens negativas sangram a imagem até a
+        borda do papel, que tem padding — sem elas, a faixa ficaria com uma
+        moldura branca em volta, que é exatamente a costura que ela existe
+        para esconder.
+      */
+      .folha::before {
+        content: '';
+        display: block;
+        height: clamp(46px, 8vw, 84px);
+        margin: calc(-1 * clamp(16px, 2.4vw, 28px)) calc(-1 * clamp(16px, 2.4vw, 28px))
+          clamp(10px, 1.6vw, 16px);
+        background: url('/artes/faixa-castelos.jpg') center 38% / cover;
+        border-bottom: 3px solid var(--ouro-forte);
       }
       /*
         Estreito: a coluna vira a tela inteira e o painel ocupa o mesmo lugar.
@@ -810,6 +949,25 @@
         color: var(--tinta);
         padding: clamp(14px, 2.4vw, 26px);
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+      }
+      /*
+        A mesma faixa dos dois castelos do `.folha::before`, refeita aqui à
+        mão em vez de virar `.folha` — esta caixa já é `overflow: hidden` e
+        `flex: column` por causa da lista que rola por dentro dela, e herdar
+        a classe traria regras de `.folha` (largura, alinhamento) que essa
+        tela não usa. `flex-shrink: 0` é o que falta no `::before` genérico:
+        sem ele, o flexbox tenta encolher a faixa para abrir espaço para o
+        elenco que rola, e ela murcha em vez do elenco.
+      */
+      .escolha-caixa::before {
+        content: '';
+        display: block;
+        flex-shrink: 0;
+        height: clamp(46px, 8vw, 84px);
+        margin: calc(-1 * clamp(14px, 2.4vw, 26px)) calc(-1 * clamp(14px, 2.4vw, 26px))
+          clamp(10px, 1.6vw, 16px);
+        background: url('/artes/faixa-castelos.jpg') center 38% / cover;
+        border-bottom: 3px solid var(--ouro-forte);
       }
       .escolha-topo {
         display: flex;
