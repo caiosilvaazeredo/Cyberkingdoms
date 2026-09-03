@@ -314,6 +314,8 @@ export interface Retrato {
   jz: number[][];
   /** Os bichos. */
   an: number[][];
+  /** Os goblins da invasão. */
+  iv: number[][];
   cz: number[][];
   /** A obra de cada time. */
   of: number[][];
@@ -412,6 +414,8 @@ export function empacotar(estado: Estado): Retrato {
       a.vivo ? 1 : 0,
       a.fugindo > 0 ? 1 : 0,
     ]),
+    // `[id, time, x, y]`
+    iv: estado.invasores.map((i) => [i.id, idxTime(i.time), arred(i.x), arred(i.y)]),
     // `[time, minério, cunhando*10, bolsas]`
     cz: estado.casasDaMoeda.map((c) => [idxTime(c.time), c.minerio, arred(c.cunhando * 10), c.bolsas]),
     // `[time, madeira, ouro, nivel]`
@@ -559,6 +563,13 @@ export function desempacotar(r: Retrato, base: Estado): Estado {
     a.fugindo = l[4]! === 1 ? 1 : 0;
     return a;
   });
+
+  base.invasores = r.iv.map((l) => ({
+    id: l[0]!,
+    time: timePorIdx(l[1]!),
+    x: l[2]!,
+    y: l[3]!,
+  }));
 
   base.casasDaMoeda = r.cz.map((l) => ({
     time: timePorIdx(l[0]!),

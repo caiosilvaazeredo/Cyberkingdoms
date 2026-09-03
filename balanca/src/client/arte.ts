@@ -128,6 +128,14 @@ export interface Arte {
   readonly urso: Animacao;
   readonly abelhao: Animacao;
   /**
+   * O goblin da invasão — folha só, sem cor: ele não tem time.
+   *
+   * Diferente do resto da vida selvagem, este vem de `estado.invasores`, o
+   * servidor que decide quando ele nasce e quando some. Ver `moverInvasores`
+   * em partida.ts e a seção de invasão em desenho.ts.
+   */
+  readonly invasor: Animacao;
+  /**
    * O ícone de cada carga no chão.
    *
    * `HTMLCanvasElement` entra na união porque o minério é repintado no
@@ -270,6 +278,7 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
   pede('tartaruga_andando', 'recursos/tartaruga_andando.png');
   pede('urso_andando', 'recursos/urso_andando.png');
   pede('abelhao_voando', 'recursos/abelhao_voando.png');
+  pede('goblin_invasor', 'recursos/goblin_invasor.png');
   for (const [chave, arquivo] of [
     ['fx:poeira', 'poeira'],
     ['fx:poeirada', 'poeirada'],
@@ -390,6 +399,7 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
     tartaruga: animacao(img('tartaruga_andando'), 6),
     urso: animacao(img('urso_andando'), 8),
     abelhao: animacao(img('abelhao_voando'), 10),
+    invasor: animacao(img('goblin_invasor'), 8),
     recursos: {
       minerio: img('recurso_minerio'),
       madeira: img('recurso_madeira'),

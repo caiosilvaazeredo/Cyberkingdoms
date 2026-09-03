@@ -482,6 +482,8 @@ function estadoVazio(modo: IdDoModo, porTime: number): Estado {
     itens: [],
     jazidas: [],
     animais: [],
+    invasores: [],
+    proximaInvasaoEm: 0,
     casasDaMoeda: [],
     oficinas: [],
     estoque,

@@ -153,6 +153,24 @@ export interface Animal {
   fugindo: number;
 }
 
+/**
+ * Um goblin da invasão — nem time, nem `Unidade`.
+ *
+ * Ele não briga: não tem vida, não ataca, não é alvo de golpe. Duas coisas
+ * só podem acontecer com ele — chegar na chapelaria e roubar um chapéu, ou
+ * alguém do jogo chegar perto primeiro e afugentá-lo — e as duas o tiram do
+ * array (`estado.invasores = estado.invasores.filter(...)`), do mesmo jeito
+ * que um item catado do chão some da lista de itens. Não precisa de `vivo`
+ * porque não existe um invasor morto: ele só deixa de existir.
+ */
+export interface Invasor {
+  id: number;
+  /** De qual chapelaria ele veio roubar. */
+  time: Time;
+  x: number;
+  y: number;
+}
+
 export interface CasaDaMoeda {
   time: Time;
   minerio: number;
@@ -187,6 +205,9 @@ export type Evento =
   | { tipo: 'saque'; unidade: number }
   | { tipo: 'cura'; clerigo: number; alvo: number }
   | { tipo: 'nivel'; time: Time; nivel: number }
+  | { tipo: 'invasaoAvisada'; time: Time }
+  | { tipo: 'invasaoRoubou'; time: Time; classe: Classe | null }
+  | { tipo: 'invasaoAfugentada'; time: Time }
   | { tipo: 'fim'; vencedor: Time | null };
 
 export interface Estado {
@@ -228,6 +249,9 @@ export interface Estado {
   itens: Item[];
   jazidas: Jazida[];
   animais: Animal[];
+  invasores: Invasor[];
+  /** Segundos até a próxima onda de goblins. Ver `moverInvasores`. */
+  proximaInvasaoEm: number;
   casasDaMoeda: CasaDaMoeda[];
   oficinas: Oficina[];
   /** Chapéus ainda guardados, por time e classe. */

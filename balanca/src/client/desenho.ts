@@ -570,6 +570,25 @@ export function desenharMundo(
     });
   }
 
+  // --- invasão --------------------------------------------------------
+  // Sem interpolação entre retratos, ao contrário da ovelha: a velocidade do
+  // goblin é baixa (`INVASAO_VELOCIDADE`) de propósito, e o passo dele entre
+  // dois pacotes já é pequeno o bastante para não valer a conta a mais.
+  for (const inv of estado.invasores) {
+    const px = v.paraTelaX(inv.x);
+    const py = v.paraTelaY(inv.y) + RAIO_UNIDADE * escala * 0.6;
+    const chapelaria = arena.estrutura('chapelaria', inv.time);
+    const paraEsquerda = chapelaria.x - inv.x < 0;
+    pinturas.push({
+      y: inv.y,
+      pintar: () => {
+        espelhado(ctx, px, paraEsquerda, () =>
+          quadro(ctx, arte.invasor, quadroEm(arte.invasor, tempo, inv.id * 5), px, py, escala * 0.85, 'centro'),
+        );
+      },
+    });
+  }
+
   // --- porco decorativo ----------------------------------------------
   {
     const p = posicaoDoPorco(arena, tempo);

@@ -312,6 +312,35 @@ export const ANIMAL_FUGINDO = 205;
 /** Segundos de pânico depois de apanhar. */
 export const ANIMAL_PANICO = 3;
 
+// --- a invasão ---------------------------------------------------------------
+
+/**
+ * A invasão de goblins: uma ameaça de fora, sem time, que ronda a chapelaria.
+ *
+ * Não é a briga do jogo — é uma segunda coisa para perder de vista enquanto
+ * a primeira acontece. Fica pior quando ninguém está de olho: quem está
+ * ocupado brigando ou carregando o baú tem de decidir se vale a pena parar
+ * para afugentar, e essa decisão é o jogo novo que a invasão traz.
+ */
+
+/** Segundos entre uma onda e a seguinte, por reino. */
+export const INVASAO_INTERVALO = 75;
+
+/** Segundos de aviso antes da onda chegar de verdade. */
+export const INVASAO_AVISO_ANTES = 4;
+
+/** Quantos goblins numa onda, por reino. */
+export const INVASAO_TAMANHO = 2;
+
+/** Mais lento que qualquer classe — dá tempo de alguém voltar correndo. */
+export const INVASAO_VELOCIDADE = 120;
+
+/** A que distância um jogador afugenta um goblin, só de chegar perto. */
+export const INVASAO_RAIO_DE_AFUGENTAR = 50;
+
+/** A que distância da chapelaria o goblin consuma o roubo. */
+export const INVASAO_RAIO_DO_SAQUE = 40;
+
 /** Segundos até outro bicho aparecer no lugar do que morreu. */
 export const ANIMAL_VOLTA_EM = 18;
 

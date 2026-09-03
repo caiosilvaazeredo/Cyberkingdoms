@@ -798,6 +798,24 @@ export function narrar(
         texto: `a obra do ${NOME_DO_TIME[evento.time]} chegou ao nível ${'I'.repeat(evento.nivel)}`,
         cor: COR_CLARA[evento.time],
       };
+    case 'invasaoAvisada':
+      return {
+        texto: `goblins avançam sobre a chapelaria do ${NOME_DO_TIME[evento.time]}!`,
+        cor: '#ff9c4a',
+      };
+    case 'invasaoRoubou':
+      return {
+        texto:
+          evento.classe === null
+            ? `os goblins vasculharam a chapelaria do ${NOME_DO_TIME[evento.time]} e não acharam nada`
+            : `os goblins roubaram um chapéu de ${perfil(evento.classe).nome} do ${NOME_DO_TIME[evento.time]}`,
+        cor: '#ff9c4a',
+      };
+    case 'invasaoAfugentada':
+      return {
+        texto: `o ${NOME_DO_TIME[evento.time]} afugentou os goblins`,
+        cor: COR_CLARA[evento.time],
+      };
     case 'saque':
       return null;
     case 'cura':

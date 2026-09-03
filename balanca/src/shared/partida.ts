@@ -26,6 +26,7 @@ import {
   type Animal,
   type Carga,
   type Estado,
+  type Invasor,
   type Item,
   type Bau,
   type Unidade,
@@ -50,6 +51,12 @@ import {
   CUSTO_DO_NIVEL,
   DT,
   EMPURRAO_DO_BAU,
+  INVASAO_AVISO_ANTES,
+  INVASAO_INTERVALO,
+  INVASAO_RAIO_DE_AFUGENTAR,
+  INVASAO_RAIO_DO_SAQUE,
+  INVASAO_TAMANHO,
+  INVASAO_VELOCIDADE,
   JAZIDA_VOLTA_EM,
   NIVEL_MAXIMO,
   PAUSA_APOS_PONTO,
@@ -259,6 +266,11 @@ function estadoInicial(arena: Arena, id: IdDoModo, porTime: number): Estado {
       pensaEm: 0,
       fugindo: 0,
     })),
+    invasores: [],
+    // Metade do intervalo normal: a primeira onda chega mais cedo que as
+    // seguintes, porque a partida inteira já esperou o aquecimento antes de
+    // este relógio começar a andar.
+    proximaInvasaoEm: INVASAO_INTERVALO / 2,
     casasDaMoeda: TIMES.map((time) => ({ time, minerio: 0, cunhando: 0, bolsas: 1 })),
     oficinas: TIMES.map((time) => ({ time, madeira: 0, ouro: 0, nivel: 1 })),
     estoque,
@@ -363,6 +375,7 @@ function tick(
   moverProjeteis(arena, estado);
   if (jogando) {
     moverAnimais(arena, estado);
+    moverInvasores(arena, estado);
     cuidarDosBaus(arena, estado);
     cunhar(estado);
     recomporJazidas(estado);
@@ -857,6 +870,111 @@ function moverAnimais(arena: Arena, estado: Estado): void {
     a.x = passo.x;
     a.y = passo.y;
   }
+}
+
+// --- a invasão ---------------------------------------------------------------
+
+/**
+ * A onda de goblins: nasce perto da própria chapelaria do reino que rouba,
+ * anda até ela, e some — roubada ou afugentada.
+ *
+ * ## Por que perto da chapelaria, e não do lado de fora do mapa
+ *
+ * Um goblin que precisasse atravessar o castelo inteiro precisaria de
+ * caminho de verdade — o mesmo `Navegador` que os bots usam, que vive na
+ * sala e não na partida, de propósito: é caro, e a simulação pura não pode
+ * depender dele. Nascendo a poucos tiles da própria chapelaria, em terreno
+ * que já é pátio limpo (nenhuma decoração nasce perto de estrutura, ver
+ * `calcularDecoracao`), uma linha reta com `resolverColisao` — o mesmo
+ * empurrão que tira a ovelha de cima de pedra — basta. O aviso de
+ * `INVASAO_AVISO_ANTES` segundos é quem devolve o tempo de reação que a
+ * distância curta tira.
+ *
+ * ## Por que afugentar é só chegar perto
+ *
+ * O goblin não tem vida nem golpe — ele não é alvo do sistema de combate,
+ * que só conhece dois times. Se fosse, cada classe precisaria de uma conta
+ * de dano contra um terceiro lado que não existe em lugar nenhum do resto do
+ * jogo. Chegar perto já é a decisão que importa: parar de fazer o que se
+ * estava fazendo para proteger a chapelaria.
+ */
+function moverInvasores(arena: Arena, estado: Estado): void {
+  estado.proximaInvasaoEm -= DT;
+
+  // O aviso dispara uma vez só, no tick em que o relógio cruza a marca — e
+  // não "enquanto está dentro da janela", que dispararia em todo tick dela.
+  if (
+    estado.proximaInvasaoEm <= INVASAO_AVISO_ANTES &&
+    estado.proximaInvasaoEm + DT > INVASAO_AVISO_ANTES
+  ) {
+    for (const time of TIMES) estado.eventos.push({ tipo: 'invasaoAvisada', time });
+  }
+
+  if (estado.proximaInvasaoEm <= 0) {
+    estado.proximaInvasaoEm += INVASAO_INTERVALO;
+    for (const time of TIMES) {
+      const chapelaria = arena.estrutura('chapelaria', time);
+      // O lado de fora: o mesmo lado que o anexo da obra e o guarda da
+      // tesouraria usam no desenho, só para não nascer colado na porta.
+      const ladoDeFora = time === 'azul' ? -1 : 1;
+      for (let i = 0; i < INVASAO_TAMANHO; i++) {
+        estado.invasores.push({
+          id: estado.proximoId++,
+          time,
+          x: chapelaria.x + ladoDeFora * TILE * 3.5,
+          y: chapelaria.y + (i - (INVASAO_TAMANHO - 1) / 2) * TILE,
+        });
+      }
+    }
+  }
+
+  const restantes: Invasor[] = [];
+  for (const inv of estado.invasores) {
+    let afugentado = false;
+    for (const u of estado.unidades) {
+      if (u.vivo && perto(u, inv, INVASAO_RAIO_DE_AFUGENTAR)) {
+        afugentado = true;
+        break;
+      }
+    }
+    if (afugentado) {
+      estado.eventos.push({ tipo: 'invasaoAfugentada', time: inv.time });
+      continue;
+    }
+
+    const chapelaria = arena.estrutura('chapelaria', inv.time);
+    if (perto(inv, chapelaria, INVASAO_RAIO_DO_SAQUE)) {
+      const estoque = estado.estoque[inv.time];
+      const comEstoque = CLASSES_COM_CHAPEU.filter((c) => estoque[c] > 0);
+      let roubada: Classe | null = null;
+      if (comEstoque.length > 0) {
+        // Semeado pelo id do goblin e o tick — o mesmo compromisso do sorteio
+        // da ovelha: dois servidores rodando a mesma partida roubam o mesmo
+        // chapéu.
+        const dado = new DeterministicRandom(((inv.id + 1) * 2654435761 + estado.tick) >>> 0);
+        roubada = comEstoque[dado.nextIntBelow(comEstoque.length)]!;
+        estoque[roubada]--;
+      }
+      estado.eventos.push({ tipo: 'invasaoRoubou', time: inv.time, classe: roubada });
+      continue;
+    }
+
+    const dx = chapelaria.x - inv.x;
+    const dy = chapelaria.y - inv.y;
+    const d = Math.hypot(dx, dy);
+    if (d > 1) {
+      const passo = resolverColisao(
+        arena,
+        inv.x + (dx / d) * INVASAO_VELOCIDADE * DT,
+        inv.y + (dy / d) * INVASAO_VELOCIDADE * DT,
+        RAIO_UNIDADE * 0.8,
+      );
+      inv.x = passo.x;
+      inv.y = passo.y;
+    }
+    restantes.push(inv);
+  }
+  estado.invasores = restantes;
 }
 
 /**

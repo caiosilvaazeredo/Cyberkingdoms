@@ -579,6 +579,20 @@ estão em maioria no meio do mapa: a economia mínima é segura, a economia que
 Longe do cofre, a bolsa vira o que todo dinheiro é: você gasta consigo, e isso
 cura 45.
 
+### A invasão: uma terceira ameaça, sem time
+
+A cada 75 segundos de jogo, os dois reinos recebem um aviso — "goblins
+avançam sobre a chapelaria!" — e quatro segundos depois uma pequena onda
+nasce perto da própria chapelaria e anda até ela. Não são unidades: não têm
+vida, não atacam, não são alvo de golpe nenhum. Só duas coisas os tiram do
+jogo — chegar na porta e roubar um chapéu do estoque, ou alguém do time
+chegar perto primeiro, o que basta para afugentá-los.
+
+É a única ameaça do jogo sem dono. Ela existe para dar ao jogador ocupado
+demais — brigando na ponte, escoltando o baú — uma segunda coisa para
+perder de vista, e a decisão real que ela cobra é justamente essa: vale a
+pena parar o que se está fazendo para defender a casa?
+
 ### Os efeitos: o que aconteceu, e o que a construção faz
 
 O jogo mudava de estado sem avisar. Um aldeão virava arqueiro e o único sinal

@@ -453,6 +453,18 @@ function laco(agora: number): void {
         const chapelaria = rede.arena.estrutura('chapelaria', evento.time);
         particulas.obraSubiu(arte, chapelaria.x, chapelaria.y, tempo, evento.time, evento.nivel);
       }
+      // O roubo e a fuga também não são de uma unidade — são da chapelaria
+      // que perdeu (ou não) o chapéu. Reaproveita as folhas do furto e do
+      // saque: são o mesmo gesto, só que na porta do prédio em vez de em
+      // cima de gente.
+      if (evento.tipo === 'invasaoRoubou' && evento.classe !== null) {
+        const chapelaria = rede.arena.estrutura('chapelaria', evento.time);
+        particulas.acender(arte, 'roubo', chapelaria.x, chapelaria.y, tempo);
+      }
+      if (evento.tipo === 'invasaoAfugentada') {
+        const chapelaria = rede.arena.estrutura('chapelaria', evento.time);
+        particulas.acender(arte, 'saque', chapelaria.x, chapelaria.y, tempo);
+      }
     }
   }
   if (emCampo.length > 0) {

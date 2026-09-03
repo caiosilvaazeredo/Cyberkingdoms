@@ -33,6 +33,8 @@ function estadoVazio(): Estado {
     itens: [],
     jazidas: [],
     animais: [],
+    invasores: [],
+    proximaInvasaoEm: 0,
     casasDaMoeda: [],
     oficinas: [],
     estoque,
