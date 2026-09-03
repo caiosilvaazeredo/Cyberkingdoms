@@ -672,6 +672,31 @@
         padding: 8px 10px;
         font-size: 13px;
       }
+      /*
+        O bestiário: medalhões pequenos, numa fileira que quebra sozinha. Sem
+        moldura própria — cada retrato do Enemy Pack já vem com a dele, a
+        placa de couro entalhada — então aqui é só o tamanho e o respiro entre
+        um e outro; por baixo do papel eles ficam soltos, do jeito que uma
+        prateleira de bugigangas fica.
+      */
+      .bestiario {
+        list-style: none;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 14px 0 0;
+        padding: 0;
+      }
+      .bestiario img {
+        width: clamp(36px, 5vw, 52px);
+        height: auto;
+        image-rendering: pixelated;
+        opacity: 0.88;
+        transition: opacity 120ms ease;
+      }
+      .bestiario img:hover {
+        opacity: 1;
+      }
       .classes b {
         display: block;
         color: var(--acento);
@@ -1639,19 +1664,40 @@
           gerador determinístico, o jeito de escrever e a arte.
         </p>
         <p>
-          Arte: <b>Tiny Swords</b>, de
+          Arte: <b>Tiny Swords</b> e o <b>Enemy Pack</b>, de
           <a href="https://pixelfrog-assets.itch.io/tiny-swords" target="_blank" rel="noreferrer">
             Pixel Frog</a
-          >. Unidades, prédios, terreno e rebanho são do pacote; a bolsa de moedas, os chapéus no chão
-          e o baú refém são desenhados no próprio jogo.
+          >. Unidades, prédios, terreno e rebanho são do pacote principal; o golpe do ladrão no
+          roubo de chapéu vem do Enemy Pack. A bolsa de moedas, os chapéus no chão e o baú refém
+          são desenhados no próprio jogo.
         </p>
-        <p>Tipografia do menu: <b>BlackFlag</b>, usada só na moldura.</p>
+        <p>Tipografia: <b>BlackFlag</b> no nome do jogo; <b>Cinzel</b> nos títulos e botões;
+          <b>Spectral</b> no corpo de texto — as duas últimas de Google Fonts, hospedadas aqui.</p>
         <p>
           Inspiração declarada: <b>Fat Princess</b> (Titan Studios, 2009) — o esqueleto do resgate
           por times. A balança conservada, os ofícios e o chapéu que se rouba são deste jogo. O
           menu em coluna e a cabine de quatro vagas vêm do <b>Castle Crashers</b> (The Behemoth,
           2008), que é como um jogo de sofá se apresenta.
         </p>
+        <!--
+          O bestiário: uma fileira de retratos do Enemy Pack que nunca aparecem em
+          jogo, só aqui. Não é decoração gratuita — é a assinatura de quem
+          desenhou, do mesmo jeito que um filme fecha com o nome de quem fez cada
+          parte. `alt=""` porque a fileira inteira já é descrita pelo parágrafo
+          acima: um leitor de tela não precisa de dez nomes de bicho em inglês.
+        -->
+        <ul class="bestiario" aria-hidden="true">
+          <li><img src="/artes/bestiario/caveira.png" alt="" /></li>
+          <li><img src="/artes/bestiario/goblin.png" alt="" /></li>
+          <li><img src="/artes/bestiario/troll.png" alt="" /></li>
+          <li><img src="/artes/bestiario/minotauro.png" alt="" /></li>
+          <li><img src="/artes/bestiario/urso.png" alt="" /></li>
+          <li><img src="/artes/bestiario/panda.png" alt="" /></li>
+          <li><img src="/artes/bestiario/aranha.png" alt="" /></li>
+          <li><img src="/artes/bestiario/xama.png" alt="" /></li>
+          <li><img src="/artes/bestiario/morcego.png" alt="" /></li>
+          <li><img src="/artes/bestiario/ladrao.png" alt="" /></li>
+        </ul>
       </div>
     </section>
 
