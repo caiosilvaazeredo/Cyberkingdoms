@@ -358,7 +358,7 @@ export function linhaLivre(
   return true;
 }
 
-export type Decoracao = 'arvore' | 'arbusto' | 'pedra';
+export type Decoracao = 'arvore' | 'arbusto' | 'pedra' | 'ossos';
 
 export interface DecoracaoNoChao {
   tipo: Decoracao;
@@ -413,5 +413,14 @@ function calcularDecoracao(arena: Arena, tx: number, ty: number): DecoracaoNoCha
   if (sorte < 0.07) return { tipo: 'arvore', variante, deslocamento };
   if (sorte < 0.12) return { tipo: 'arbusto', variante, deslocamento };
   if (sorte < 0.15) return { tipo: 'pedra', variante, deslocamento };
+  // O Desfiladeiro é o único mapa com uma única ponte por castelo — a
+  // travessia mais disputada da lista — e é o único que ganha ossos no chão
+  // por isso: o resto do mato é o mesmo em todo mapa de propósito (um jogador
+  // que decorou onde fica árvore não pode ser traído por outro relevo), mas um
+  // biome por mapa também é o que a arte pede, e o Desfiladeiro é onde a
+  // leitura "aqui já morreu muita gente" faz sentido sem confundir ninguém.
+  if (arena.mapa === 'desfiladeiro' && sorte < 0.19) {
+    return { tipo: 'ossos', variante: variante % 3, deslocamento };
+  }
   return null;
 }

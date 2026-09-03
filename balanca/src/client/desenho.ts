@@ -350,17 +350,23 @@ export function desenharMundo(
         if (!deco) continue;
         const px = telaX(tx) + passo / 2;
         const py = telaY(ty) + passo;
-        if (deco.tipo === 'pedra') {
-          const im = arte.pedras[deco.variante % arte.pedras.length]!;
+        if (deco.tipo === 'pedra' || deco.tipo === 'ossos') {
+          const im =
+            deco.tipo === 'pedra'
+              ? arte.pedras[deco.variante % arte.pedras.length]!
+              : arte.ossos[deco.variante % arte.ossos.length]!;
+          // Osso deitado é mais baixo que pedra em pé — do contrário parece
+          // flutuar acima do chão, e não largado nele.
+          const lado = deco.tipo === 'pedra' ? passo : passo * 0.7;
           pinturas.push({
             y: ty * TILE,
             pintar: () =>
               ctx.drawImage(
                 im,
-                Math.round(px - passo / 2),
-                Math.round(py - passo),
-                Math.ceil(passo),
-                Math.ceil(passo),
+                Math.round(px - lado / 2),
+                Math.round(py - lado),
+                Math.ceil(lado),
+                Math.ceil(lado),
               ),
           });
           continue;

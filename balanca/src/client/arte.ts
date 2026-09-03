@@ -68,6 +68,8 @@ export interface Arte {
   readonly tocos: readonly HTMLImageElement[];
   readonly arbustos: readonly Animacao[];
   readonly pedras: readonly HTMLImageElement[];
+  /** O mato do Desfiladeiro, e só dele — ver `calcularDecoracao`. */
+  readonly ossos: readonly HTMLImageElement[];
   readonly predios: Readonly<Record<string, HTMLImageElement>>;
   readonly fogo: Animacao;
   readonly fumaca: Animacao;
@@ -209,6 +211,8 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
     pede(`arbusto${i}`, `deco/Bushe${i}.png`);
     pede(`pedra${i}`, `deco/Rock${i}.png`);
   }
+  // Só três variantes — é o que o Enemy Pack traz de ossos soltos.
+  for (let i = 1; i <= 3; i++) pede(`osso${i}`, `deco/Bones${i}.png`);
   for (const cor of ['blue', 'red']) {
     for (const forma of ['Castle', 'Tower', 'Monastery', 'Barracks', 'House1']) {
       pede(`predio:${cor}/${forma}`, `buildings/${cor}/${forma}.png`);
@@ -313,6 +317,7 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
     tocos: [1, 2, 3, 4].map((i) => img(`toco${i}`)),
     arbustos: [1, 2, 3, 4].map((i) => animacao(img(`arbusto${i}`), 6)),
     pedras: [1, 2, 3, 4].map((i) => img(`pedra${i}`)),
+    ossos: [1, 2, 3].map((i) => img(`osso${i}`)),
     predios,
     fogo: animacao(img('fogo'), 12),
     fumaca: animacao(img('fumaca'), 10),
