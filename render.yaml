@@ -1,6 +1,10 @@
 # Publicação no Render.
 #
-# O jogo é um site estático: todo o estado vive no `localStorage` do navegador e
+# Dois serviços, porque são dois jogos com naturezas diferentes: o CyberKingdoms
+# é um site estático, e A Balança do Reino precisa de um processo Node no ar —
+# num jogo em rede, o estado que vale é o do servidor.
+#
+# O CyberKingdoms é um site estático: todo o estado vive no `localStorage` do navegador e
 # não há servidor por trás. Por isso o tipo é `static`, que no Render é grátis e
 # não hiberna — um serviço web no plano gratuito dorme depois de quinze minutos
 # sem acesso e leva quase um minuto para acordar, o que num jogo é a diferença
@@ -54,3 +58,29 @@ services:
       - path: /art3d/*
         name: Cache-Control
         value: public, max-age=3600
+
+  # ---------------------------------------------------------------------------
+  # Reino de Migalhas: jogo multiplayer de resgate, em `balanca/`. (O nome do
+  # serviço e da pasta são anteriores ao nome do jogo, e ficam: trocar o
+  # `rootDir` ou o `name` de um serviço já publicado é derrubar o que está no ar
+  # para arrumar uma etiqueta.)
+  #
+  # Aqui o tipo é `web`, e não `static`, porque existe simulação rodando: a
+  # partida acontece no servidor, a trinta ticks por segundo, e o mesmo processo
+  # serve o site e aceita o WebSocket. Mesma origem, nenhum problema de CORS.
+  #
+  # Atenção ao plano: um serviço web gratuito no Render hiberna depois de quinze
+  # minutos sem acesso e leva quase um minuto para acordar. Para um site isso é
+  # um incômodo; para um jogo em que a primeira coisa que se faz é entrar numa
+  # partida, é a diferença entre jogar e fechar a aba.
+  - type: web
+    runtime: node
+    name: balanca-do-reino
+    rootDir: balanca
+    # `--include=dev` não é decorativo: o Render define `NODE_ENV=production`, e
+    # sem isso o `npm ci` pularia TypeScript, Vite e tsx — que são exatamente o
+    # que o build e o `start` usam.
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    # O servidor lê `PORT` do ambiente; o Render o define sozinho.
+    healthCheckPath: /saude

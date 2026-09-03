@@ -33,6 +33,28 @@ test.
 
 ---
 
+## Outro jogo na mesma base: Reino de Migalhas
+
+Em `balanca/` vive um segundo jogo, feito com as peças deste repositório — a
+arte Tiny Swords, o gerador determinístico, o mesmo estilo de TypeScript. É um
+jogo de resgate por times, **só multiplayer**, inspirado no Fat Princess do PS3.
+
+O diferencial: as duas princesas dividem **uma balança só**. Cada fatia de bolo
+dada à refém que o seu reino guarda tira exatamente aquele peso da sua própria
+princesa, presa do outro lado do mapa — então engordar a refém do inimigo é
+defender e atacar no mesmo gesto, e o peso do reino nunca aumenta, só muda de
+lado.
+
+Sete classes com as animações do pacote Tiny Swords (guerreiro, lanceiro,
+arqueiro e clérigo brigam; minerador, lenhador e caçador sustentam), servidor
+autoritativo em Node a 30 ticks por segundo, menu com a partida rodando ao vivo
+atrás do título, escolha de lado no estilo do Smash sobre o jogo em curso, bots
+que completam os times quando falta gente e cedem o lugar assim que alguém
+chega, e 71 testes. Detalhes, regras e como rodar:
+[`balanca/README.md`](balanca/README.md).
+
+---
+
 ## Arquitetura
 
 ```

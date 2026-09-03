@@ -1,0 +1,658 @@
+import { PRAZO_DA_VOTACAO, apurar, type Votacao } from './comando';
+import { Bots } from '../shared/bots';
+import { Navegador } from '../shared/navegacao';
+import { CLASSES_COM_CHAPEU, type Classe } from '../shared/classes';
+import { mapaDe, mapaSorteado, type IdDoMapa } from '../shared/mapas';
+import { modoDe, type IdDoModo } from '../shared/modos';
+import { criarPartida, type Partida } from '../shared/partida';
+import { empacotar, type Comando, type DoServidor, type FichaDeJogador } from '../shared/protocolo';
+import {
+  DT,
+  ESPERA_POR_JOGADORES,
+  MAX_COMANDOS_POR_PACOTE,
+  POR_TIME,
+  TICKS_POR_ENVIO,
+  TIMEOUT_DO_CLIENTE,
+  TIMES,
+  type Time,
+} from '../shared/regras';
+
+/**
+ * Uma sala: uma partida rodando, os jogadores conectados e os bots que
+ * completam o time.
+ *
+ * ## O jogo é só multiplayer, e é por isso que existe bot
+ *
+ * Não há modo de um jogador. Toda partida acontece nesta sala, no servidor, com
+ * o mesmo tick para todo mundo — quem entra sozinho não joga um jogo diferente,
+ * joga o mesmo jogo com companhia emprestada.
+ *
+ * A prioridade é gente. A sala **espera** `ESPERA_POR_JOGADORES` segundos antes
+ * de chamar o primeiro bot: doze segundos é tempo de os amigos de alguém
+ * chegarem, e chamar bot na hora garantiria que ninguém nunca esperasse por
+ * ninguém. Passado esse tempo, bots completam os times, porque uma partida de
+ * um contra zero não é partida.
+ *
+ * E, ao contrário do que costuma acontecer, o bot **cede o lugar**: quando uma
+ * pessoa entra numa sala cheia de bots, o bot do time que precisa é dispensado
+ * na mesma hora. Um humano nunca fica na fila atrás de uma máquina.
+ *
+ * ## Por que a sala simula mesmo sem ninguém olhando
+ *
+ * Não simula. Sem nenhum humano conectado, o loop para e a sala é recolhida
+ * pelo lobby. Bots jogando sozinhos num servidor vazio é conta de nuvem paga
+ * para ninguém ver.
+ */
+
+export interface Cliente {
+  /** Identidade da conexão, antes de virar unidade. */
+  readonly chave: string;
+  nome: string;
+  /**
+   * A unidade que este cliente controla, ou `null` enquanto ele só assiste.
+   *
+   * Espectador não é um estado de erro: é por onde todo mundo entra. Quem
+   * acabou de conectar está na tela de escolha de time, vendo a partida correr
+   * e decidindo de que lado entra.
+   */
+  unidade: number | null;
+  /** O lado escolhido. Sobrevive ao fim da partida e vale na próxima. */
+  time: Time | null;
+  /**
+   * Está só olhando: chegou pelo menu, que mostra a partida ao vivo atrás do
+   * título. Quem assiste **não ocupa vaga** — uma aba esquecida aberta não pode
+   * tirar o lugar de quem quer jogar. Deixa de assistir ao escolher um lado.
+   */
+  assistindo: boolean;
+  /** Segundos desde a última mensagem recebida. */
+  silencio: number;
+  enviar(msg: DoServidor): void;
+  fechar(): void;
+}
+
+/** Espectadores por sala. Plateia também custa banda: um retrato cada. */
+const TETO_DE_ESPECTADORES = 24;
+
+export interface OpcoesDaSala {
+  nome: string;
+  seed: number;
+  /**
+   * Sala do sofá: o lobby não manda estranhos para cá.
+   *
+   * A sala não muda de comportamento por ser privada — os bots completam os
+   * times do mesmo jeito. O que muda é só quem o lobby deixa entrar, e por isso
+   * a marca vive aqui em vez de virar um segundo tipo de sala.
+   */
+  privada?: boolean;
+  porTime?: number;
+  /** O modo desta sala. Vale para todas as partidas que ela montar. */
+  modo?: IdDoModo;
+  /**
+   * O mapa desta sala, ou `'sorteio'` para trocar a cada partida.
+   *
+   * Fixo, a sala é sempre o mesmo campo — que é o que quem treina quer. Em
+   * sorteio, cada partida nova tira um mapa da seed dela, e como a seed já é
+   * derivada da anterior, a sequência inteira é reproduzível a partir da
+   * primeira. Um `Math.random` aqui seria a única coisa do jogo que o servidor
+   * não conseguiria repetir ao investigar um defeito.
+   */
+  mapa?: IdDoMapa | 'sorteio';
+  /**
+   * Npcs fixos por time, quando o anfitrião escolheu quantos quer.
+   *
+   * `undefined` mantém a política do lobby: bot é tapa-buraco, entra para
+   * completar o time e sai quando chega gente. Um número muda o contrato — os
+   * npcs passam a fazer parte da sala, e as vagas de gente que sobram ficam
+   * **abertas** em vez de preenchidas por máquina.
+   *
+   * A diferença importa: numa sala de dois contra dois com um npc de cada lado,
+   * o segundo amigo que ainda não chegou tem uma vaga esperando por ele, e não
+   * um bot que ele vai ter de expulsar.
+   */
+  botsPorTime?: number;
+  /** Segundos antes de completar com bots. Os testes usam zero. */
+  esperaPorJogadores?: number;
+  /** Relógio injetável, para o teste não depender de `Date.now`. */
+  agora?: () => number;
+}
+
+export class Sala {
+  readonly nome: string;
+  readonly privada: boolean;
+  readonly modo: IdDoModo;
+  /** O que o anfitrião pediu: um mapa, ou sorteio a cada partida. */
+  readonly escolhaDeMapa: IdDoMapa | 'sorteio';
+  /** O mapa da partida que está rodando agora. */
+  private mapaAtual: IdDoMapa;
+  /** Vagas de gente por time. */
+  readonly porTime: number;
+  /** Npcs fixos por time, ou `null` quando o bot é tapa-buraco do lobby. */
+  readonly botsFixos: number | null;
+  private partida: Partida;
+  private navegador: Navegador;
+  private bots: Bots;
+  private readonly clientes = new Map<string, Cliente>();
+  private readonly espera: number;
+  /** Segundos sem lotação humana. É o que dispara o backfill. */
+  private esperando = 0;
+  private elencoSujo = true;
+  private ticksAteEnviar = 0;
+  private seed: number;
+  /**
+   * A ordem de chegada de cada time, por chave de cliente.
+   *
+   * O líder é o primeiro da fila que ainda está aqui. Uma lista e não um "quem
+   * é o líder": guardando só o nome do líder, a saída dele exigiria eleger
+   * outro na hora e a regra viraria "o próximo que o mapa devolver", que muda
+   * conforme a implementação do `Map`. Com a fila, a sucessão é a chegada, e
+   * ela é a mesma para todo mundo.
+   */
+  private readonly fila: Record<Time, string[]> = { azul: [], vermelho: [] };
+  /** A votação em curso de cada time, se houver. */
+  private readonly votacoes = new Map<Time, Votacao>();
+  /** A classe que o time pediu a cada npc e que ele ainda não vestiu. */
+  private readonly pedidas = new Map<number, Classe>();
+
+  constructor(opcoes: OpcoesDaSala) {
+    this.nome = opcoes.nome;
+    this.privada = opcoes.privada ?? false;
+    this.seed = opcoes.seed;
+    this.modo = modoDe(opcoes.modo).id;
+    this.escolhaDeMapa = opcoes.mapa === 'sorteio' ? 'sorteio' : mapaDe(opcoes.mapa).id;
+    this.mapaAtual =
+      this.escolhaDeMapa === 'sorteio' ? mapaSorteado(opcoes.seed) : this.escolhaDeMapa;
+    this.porTime = opcoes.porTime ?? POR_TIME;
+    this.botsFixos = opcoes.botsPorTime ?? null;
+    this.espera = opcoes.esperaPorJogadores ?? ESPERA_POR_JOGADORES;
+    this.partida = criarPartida(this.seed, this.modo, this.mapaAtual, this.porTime);
+    this.navegador = new Navegador(this.partida.arena);
+    this.bots = new Bots(this.partida.arena, this.navegador);
+  }
+
+  /** Quantos npcs cada time deve ter agora. Ver `cuidarDosBots`. */
+  private alvoDeBots(time: Time): number {
+    if (this.botsFixos !== null) return this.botsFixos;
+    return Math.max(0, this.porTime - this.contarHumanos(time));
+  }
+
+  get estado() {
+    return this.partida.estado;
+  }
+
+  get humanos(): number {
+    return this.clientes.size;
+  }
+
+  /**
+   * Vagas de **gente**, contando quem já está em campo e quem está escolhendo.
+   *
+   * Espectador ocupa vaga. Sem isso, vinte pessoas entrariam numa sala de doze,
+   * escolheriam o lado e onze seriam recusadas depois de já terem visto a tela
+   * de escolha — que é o pior momento possível para dizer "não cabe".
+   */
+  get vagas(): number {
+    const emCampo = this.partida.estado.unidades.filter((u) => !u.bot).length;
+    const escolhendo = [...this.clientes.values()].filter(
+      (c) => c.unidade === null && !c.assistindo,
+    ).length;
+    return this.porTime * 2 - emCampo - escolhendo;
+  }
+
+  /** Quantos estão só olhando o menu. Diagnóstico e o teto de espectadores. */
+  get assistindo(): number {
+    return [...this.clientes.values()].filter((c) => c.assistindo).length;
+  }
+
+  get cheiaDeGente(): boolean {
+    return this.vagas <= 0;
+  }
+
+  /**
+   * Quem manda no time: o primeiro da fila que ainda está conectado.
+   *
+   * Devolve `null` num time sem gente — e um time sem gente não tem o que
+   * decidir, porque não há npc para mandar em nome de ninguém.
+   */
+  lider(time: Time): string | null {
+    for (const chave of this.fila[time]) {
+      const c = this.clientes.get(chave);
+      if (c && c.time === time) return chave;
+    }
+    return null;
+  }
+
+  /** Quantos humanos cada lado tem, para a tela de escolha mostrar. */
+  vagasDoTime(time: Time): number {
+    return this.porTime - this.contarHumanos(time);
+  }
+
+  // --- entrada e saída ----------------------------------------------------
+
+  /**
+   * Aceita a conexão como espectador. A unidade só nasce em `escolher`.
+   *
+   * Quem chega assistindo entra mesmo com a sala cheia de jogadores — é o menu
+   * mostrando a partida, e recusar isso deixaria um fundo cinza no lugar do
+   * jogo. O teto de espectadores existe porque simular para plateia custa banda:
+   * cada um recebe quinze retratos por segundo como qualquer jogador.
+   */
+  entrar(cliente: Cliente, assistindo = false): boolean {
+    if (assistindo && this.assistindo >= TETO_DE_ESPECTADORES) {
+      cliente.enviar({ t: 'recusado', motivo: 'plateia cheia' });
+      return false;
+    }
+    if (!assistindo && this.cheiaDeGente) {
+      cliente.enviar({ t: 'recusado', motivo: 'sala cheia' });
+      return false;
+    }
+    cliente.unidade = null;
+    cliente.time = null;
+    cliente.assistindo = assistindo;
+    cliente.silencio = 0;
+    this.clientes.set(cliente.chave, cliente);
+    cliente.enviar(this.boasVindas());
+    // O elenco vai na hora: a tela de escolha precisa saber quem já está de que
+    // lado antes do primeiro retrato chegar.
+    cliente.enviar({ t: 'elenco', jogadores: this.elenco() });
+    return true;
+  }
+
+  /**
+   * O espectador escolhe o lado e entra em campo.
+   *
+   * O time pedido é respeitado sempre que couber gente nele. Não cabendo, a
+   * escolha é recusada com o motivo — e não silenciosamente trocada pelo outro
+   * lado, que é a forma mais rápida de alguém achar que o jogo ignorou o clique.
+   */
+  escolher(chave: string, time: Time): boolean {
+    const cliente = this.clientes.get(chave);
+    if (!cliente) return false;
+    if (cliente.unidade !== null) return false;
+    // Escolher um lado é parar de assistir: a partir daqui a pessoa ocupa vaga.
+    cliente.assistindo = false;
+    if (this.contarHumanos(time) >= this.porTime) {
+      cliente.assistindo = true;
+      cliente.enviar({ t: 'recusado', motivo: 'esse lado está cheio de gente' });
+      return false;
+    }
+    // O humano tem preferência sobre o bot, e a preferência é imediata: se o
+    // time escolhido está lotado de bots, um deles sai agora.
+    //
+    // Numa sala com npcs fixos, não: ali os npcs foram pedidos, e a vaga que a
+    // pessoa está ocupando é uma das de gente. Expulsar um bot faria a sala
+    // encolher a cada amigo que chegasse, que é o oposto do que o anfitrião
+    // configurou.
+    if (this.botsFixos === null && this.contar(time) >= this.porTime) {
+      this.dispensarUmBot(time);
+    }
+
+    const u = this.partida.entrar({ nome: cliente.nome, bot: false, time });
+    cliente.unidade = u.id;
+    cliente.time = time;
+    // Entra no fim da fila do time. Quem já esteve nela mantém o lugar: sair e
+    // voltar não deveria promover ninguém a líder na frente de quem ficou.
+    if (!this.fila[time].includes(chave)) this.fila[time].push(chave);
+    this.elencoSujo = true;
+    cliente.enviar({ t: 'nasceu', voce: u.id, time });
+    return true;
+  }
+
+  // --- o time manda nos npcs ----------------------------------------------
+
+  /**
+   * O líder manda um npc vestir uma classe, ou abre a decisão para o time.
+   *
+   * Recusa em silêncio quase tudo: quem não é líder, alvo que não é npc, alvo
+   * de outro time, classe que não existe. São todos casos em que a mensagem só
+   * chega por cliente adulterado, e responder a cada um com um motivo seria
+   * escrever uma tela de erro para um jogador que não existe.
+   */
+  mandar(chave: string, alvo: number, classe: Classe, votar: boolean): boolean {
+    const cliente = this.clientes.get(chave);
+    if (!cliente || cliente.time === null) return false;
+    const time = cliente.time;
+    if (this.lider(time) !== chave) return false;
+
+    const npc = this.partida.estado.unidades.find((u) => u.id === alvo);
+    if (!npc || !npc.bot || npc.time !== time) return false;
+
+    if (!votar) {
+      this.pedir(npc.id, classe);
+      this.recado(time, `${cliente.nome} mandou ${npc.nome} virar ${classe}.`);
+      return true;
+    }
+
+    // Votação com um humano só é uma ordem com etapas a mais. Resolver na hora
+    // é mais honesto do que abrir uma urna para uma pessoa e esperar vinte
+    // segundos pelo voto que ela já deu ao propor.
+    if (this.contarHumanos(time) < 2) {
+      this.pedir(npc.id, classe);
+      this.recado(time, `${cliente.nome} mandou ${npc.nome} virar ${classe}.`);
+      return true;
+    }
+
+    const votacao: Votacao = {
+      alvo: npc.id,
+      proposta: classe,
+      time,
+      restante: PRAZO_DA_VOTACAO,
+      votos: new Map([[chave, classe]]),
+    };
+    this.votacoes.set(time, votacao);
+    this.recado(time, `${cliente.nome} abriu votação: ${npc.nome} vira o quê?`);
+    this.espalharVotacao(time);
+    return true;
+  }
+
+  /** Um voto. O último de cada pessoa é o que vale. */
+  votar(chave: string, classe: Classe): boolean {
+    const cliente = this.clientes.get(chave);
+    if (!cliente || cliente.time === null) return false;
+    const votacao = this.votacoes.get(cliente.time);
+    if (!votacao) return false;
+    votacao.votos.set(chave, classe);
+    this.espalharVotacao(cliente.time);
+    return true;
+  }
+
+  /** Guarda o pedido; quem obedece é o bot, quando chegar à chapelaria. */
+  private pedir(alvo: number, classe: Classe): void {
+    this.pedidas.set(alvo, classe);
+    this.bots.mandarVestir(alvo, classe);
+    this.elencoSujo = true;
+  }
+
+  /**
+   * Corre o relógio das votações e apura as que venceram o prazo.
+   *
+   * O silêncio é uma resposta: sem prazo, uma votação que ninguém responde
+   * trava o pedido para sempre e o npc segue de aldeão — que é o defeito que
+   * tudo isto existe para resolver.
+   */
+  private cuidarDasVotacoes(): void {
+    for (const [time, v] of [...this.votacoes]) {
+      v.restante -= DT;
+      if (v.restante > 0) continue;
+      this.votacoes.delete(time);
+      const r = apurar(v);
+      const npc = this.partida.estado.unidades.find((u) => u.id === r.alvo);
+      // O alvo pode ter saído no meio da votação: um bot dispensado quando
+      // alguém entrou, por exemplo. Aí a apuração não tem em quem valer.
+      if (npc && npc.bot && npc.time === time) {
+        this.pedir(r.alvo, r.classe);
+        this.recado(time, `Votação: ${npc.nome} vira ${r.classe} (${r.votos} de ${r.total}).`);
+      }
+      this.espalharVotacao(time);
+    }
+  }
+
+  /** Esquece o pedido quando o bot obedeceu. */
+  private conferirPedidos(): void {
+    for (const [id, classe] of [...this.pedidas]) {
+      const u = this.partida.estado.unidades.find((x) => x.id === id);
+      if (!u || u.classe === classe) {
+        this.pedidas.delete(id);
+        this.elencoSujo = true;
+      }
+    }
+  }
+
+  private espalharVotacao(time: Time): void {
+    const v = this.votacoes.get(time) ?? null;
+    const npc = v ? this.partida.estado.unidades.find((u) => u.id === v.alvo) : null;
+    for (const c of this.clientes.values()) {
+      if (c.time !== time) continue;
+      c.enviar({
+        t: 'votacao',
+        v:
+          v === null
+            ? null
+            : {
+                alvo: v.alvo,
+                alvoNome: npc?.nome ?? '—',
+                proposta: v.proposta,
+                restante: Math.ceil(v.restante),
+                votos: CLASSES_COM_CHAPEU.map(
+                  (classe) => [...v.votos.values()].filter((x) => x === classe).length,
+                ),
+                ...(v.votos.has(c.chave) ? { meuVoto: v.votos.get(c.chave)! } : {}),
+              },
+      });
+    }
+  }
+
+  private recado(time: Time, texto: string): void {
+    for (const c of this.clientes.values()) {
+      if (c.time === time) c.enviar({ t: 'recadoDoTime', texto });
+    }
+  }
+
+  sair(chave: string): void {
+    const cliente = this.clientes.get(chave);
+    if (!cliente) return;
+    if (cliente.unidade !== null) this.partida.sair(cliente.unidade);
+    this.clientes.delete(chave);
+    this.elencoSujo = true;
+  }
+
+  receber(chave: string, comando: Comando): void {
+    const cliente = this.clientes.get(chave);
+    if (!cliente || cliente.unidade === null) return;
+    cliente.silencio = 0;
+    this.partida.comandar(cliente.unidade, saneado(comando));
+  }
+
+  tocar(chave: string): void {
+    const cliente = this.clientes.get(chave);
+    if (cliente) cliente.silencio = 0;
+  }
+
+  // --- o loop -------------------------------------------------------------
+
+  /** Um tick de simulação. O servidor chama trinta vezes por segundo. */
+  passo(): void {
+    this.expirarClientes();
+    this.cuidarDasVotacoes();
+    this.conferirPedidos();
+    this.cuidarDosBots();
+    this.bots.pensar(this.partida);
+    this.partida.passo();
+    this.reiniciarSeAcabou();
+
+    if (this.elencoSujo) {
+      this.transmitir({ t: 'elenco', jogadores: this.elenco() });
+      this.elencoSujo = false;
+    }
+    if (--this.ticksAteEnviar <= 0) {
+      this.ticksAteEnviar = TICKS_POR_ENVIO;
+      this.transmitir({ t: 'retrato', r: empacotar(this.partida.estado) });
+    }
+  }
+
+  private expirarClientes(): void {
+    for (const [chave, c] of [...this.clientes]) {
+      c.silencio += DT;
+      if (c.silencio <= TIMEOUT_DO_CLIENTE) continue;
+      c.fechar();
+      this.sair(chave);
+    }
+  }
+
+  /**
+   * Chama bot quando falta gente, e dispensa bot quando gente chega.
+   *
+   * A contagem é por time, não por sala: seis contra três com o total certo
+   * ainda é uma partida quebrada, e é o erro que aparece quando se conta só o
+   * tamanho da sala.
+   */
+  private cuidarDosBots(): void {
+    const faltaHumano = this.vagas > 0;
+    this.esperando = faltaHumano ? this.esperando + DT : 0;
+
+    for (const time of TIMES) {
+      const humanos = this.contarHumanos(time);
+      const bots = this.contar(time) - humanos;
+      const alvo = this.alvoDeBots(time);
+
+      // Bot a mais: alguém sai. Numa sala do lobby isso é o humano que chegou
+      // tomando o lugar; numa sala montada, é o anfitrião tendo pedido menos
+      // npcs do que já havia em campo.
+      if (bots > alvo) {
+        this.dispensarUmBot(time);
+        continue;
+      }
+      if (bots >= alvo) continue;
+      // Ninguém jogando neste servidor: não há partida para completar.
+      if (this.clientes.size === 0) continue;
+      // Numa sala com npcs fixos a espera não se aplica: o anfitrião já disse
+      // quantos quer, e segurar doze segundos seria esperar por uma pessoa que
+      // não vai ocupar aquela vaga — ela é do npc.
+      //
+      // Sem npcs fixos, a espera é a política do lobby: a vaga fica aberta para
+      // gente. A exceção é o time sem nenhum humano, porque um jogador sozinho
+      // contra o vazio não tem jogo nenhum, e esperar ali é só tela parada.
+      if (this.botsFixos === null && this.esperando < this.espera && humanos > 0) continue;
+
+      const u = this.partida.entrar({
+        nome: nomeDeBot(this.partida.estado.proximoId),
+        bot: true,
+        time,
+      });
+      this.bots.adotar(u.id, time, this.modo);
+      this.elencoSujo = true;
+    }
+  }
+
+  private dispensarUmBot(time: Time): void {
+    // Sai o bot que menos vai fazer falta: nunca o que está com o baú no
+    // colo, e de preferência um que esteja morto — assim ninguém vê alguém
+    // sumir no meio do campo.
+    const candidatos = this.partida.estado.unidades.filter(
+      (u) => u.bot && u.time === time && u.carga !== 'bau',
+    );
+    if (candidatos.length === 0) return;
+    const escolhido = candidatos.find((u) => !u.vivo) ?? candidatos[0]!;
+    this.bots.esquecer(escolhido.id);
+    this.partida.sair(escolhido.id);
+    this.elencoSujo = true;
+  }
+
+
+  private contar(time: Time): number {
+    return this.partida.estado.unidades.filter((u) => u.time === time).length;
+  }
+
+  private contarHumanos(time: Time): number {
+    return this.partida.estado.unidades.filter((u) => u.time === time && !u.bot).length;
+  }
+
+  /**
+   * Depois do fim, a sala não morre: monta a próxima partida com quem ficou.
+   *
+   * Voltar para um menu esvazia servidor. O que segura uma sala viva é o
+   * próximo jogo já estar começando quando o placar apaga.
+   */
+  private reiniciarSeAcabou(): void {
+    const estado = this.partida.estado;
+    if (estado.fase !== 'fim') return;
+    // Deixa o placar final na tela por alguns segundos antes de recomeçar.
+    estado.faseEm -= DT;
+    if (estado.faseEm > -8) return;
+
+    const antigos = [...this.clientes.values()];
+    this.seed = (this.seed * 1103515245 + 12345) >>> 0;
+    // Sorteio: o mapa da próxima partida sai da seed nova. Fixo: o mesmo campo
+    // de novo, que é o que quem escolheu um mapa está esperando.
+    if (this.escolhaDeMapa === 'sorteio') this.mapaAtual = mapaSorteado(this.seed);
+    this.partida = criarPartida(this.seed, this.modo, this.mapaAtual, this.porTime);
+    this.navegador = new Navegador(this.partida.arena);
+    this.bots = new Bots(this.partida.arena, this.navegador);
+    this.esperando = 0;
+
+    for (const c of antigos) {
+      c.enviar(this.boasVindas());
+      // Quem estava jogando volta para o mesmo lado, sem passar pela tela de
+      // escolha de novo: trocar de time entre partidas é decisão do jogador,
+      // não uma pergunta que o servidor faz a cada dez minutos.
+      if (c.time === null) {
+        c.unidade = null;
+        continue;
+      }
+      const u = this.partida.entrar({ nome: c.nome, bot: false, time: c.time });
+      c.unidade = u.id;
+      c.enviar({ t: 'nasceu', voce: u.id, time: c.time });
+    }
+    this.elencoSujo = true;
+  }
+
+  /**
+   * O cartão de visita da sala, mandado ao entrar e a cada partida nova.
+   *
+   * Numa função só porque são dois lugares que precisam mandar exatamente a
+   * mesma coisa, e "exatamente a mesma coisa" escrita duas vezes é a forma
+   * conhecida de a segunda esquecer um campo — o cliente montaria a próxima
+   * partida com o modo da anterior e ninguém entenderia por quê.
+   */
+  private boasVindas(): DoServidor {
+    return {
+      t: 'bemvindo',
+      seed: this.seed,
+      sala: this.nome,
+      porTime: this.porTime,
+      modo: this.modo,
+      botsPorTime: this.botsFixos ?? 0,
+      mapa: this.mapaAtual,
+    };
+  }
+
+  private elenco(): FichaDeJogador[] {
+    const lideres = new Map<Time, number | null>();
+    for (const time of TIMES) {
+      const chave = this.lider(time);
+      lideres.set(time, chave === null ? null : (this.clientes.get(chave)?.unidade ?? null));
+    }
+    return this.partida.estado.unidades.map((u) => {
+      const pedida = this.pedidas.get(u.id);
+      return {
+        id: u.id,
+        nome: u.nome,
+        time: u.time,
+        bot: u.bot,
+        lider: lideres.get(u.time) === u.id,
+        ...(pedida ? { pedida } : {}),
+      };
+    });
+  }
+
+  private transmitir(msg: DoServidor): void {
+    for (const c of this.clientes.values()) c.enviar(msg);
+  }
+}
+
+/** Um comando de fora nunca é confiado: tudo é cortado para a faixa válida. */
+function saneado(c: Comando): Comando {
+  const num = (v: unknown): number => {
+    const n = typeof v === 'number' && Number.isFinite(v) ? v : 0;
+    return Math.max(-1, Math.min(1, n));
+  };
+  return {
+    seq: Math.max(0, Math.min(2 ** 31, Math.trunc(Number(c.seq) || 0))),
+    mx: num(c.mx),
+    my: num(c.my),
+    ax: num(c.ax),
+    ay: num(c.ay),
+    atacar: c.atacar === true,
+    usar: c.usar === true,
+  };
+}
+
+export { MAX_COMANDOS_POR_PACOTE };
+
+const NOMES_DE_BOT = [
+  'Bartolomeu', 'Genoveva', 'Ludovico', 'Filipa', 'Anselmo', 'Berengária',
+  'Godofredo', 'Urraca', 'Teobaldo', 'Sancha', 'Rodolfo', 'Ermesinda',
+];
+
+function nomeDeBot(n: number): string {
+  return NOMES_DE_BOT[n % NOMES_DE_BOT.length]!;
+}

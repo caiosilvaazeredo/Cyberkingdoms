@@ -1,0 +1,7 @@
+node_modules/
+dist/
+# As capturas que o teste de fumaça gera. A barra é obrigatória: sem ela o
+# padrão casaria também com `public/tiny/fx/fumaca.png`, que é arte do jogo.
+/fumaca*.png
+# As capturas do roteiro de tamanhos de tela.
+/tamanho-*.png

@@ -1,0 +1,1479 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <title>Meu Querido Rei</title>
+    <!--
+      Ícone embutido como SVG: uma balança de dois pratos, um cheio e um vazio.
+      Vai por `data:` para não custar um pedido — e para o navegador parar de
+      procurar `/favicon.ico`, cujo 404 aparecia no console de erro e escondia
+      os erros que importam.
+    -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2310121a'/%3E%3Crect x='4' y='13' width='11' height='7' fill='%233b7fe0'/%3E%3Crect x='17' y='13' width='11' height='7' fill='%23e04b3b'/%3E%3Crect x='15' y='8' width='2' height='17' fill='%23ffd479'/%3E%3C/svg%3E"
+    />
+    <style>
+      /*
+        Duas peles, e elas não se misturam.
+
+        O jogo é colorido e escuro, porque é pixel art sobre grama. A moldura —
+        menu, painéis, escolha de lado — é a coluna de botões gordos do lado
+        esquerdo, cada um da sua cor, no traço dos jogos de sofá: o item mais
+        importante é o mais alto e o mais quente, e a partida ao vivo continua
+        correndo atrás de tudo.
+
+        ## A gótica é do nome, e de mais nada
+
+        A BlackFlag desenha **o título** e para por aí. Ela é uma gótica: bonita
+        num nome de três letras a setenta pixels, e ilegível em tudo o mais.
+        "Assistir" escrito nela num botão de dezoito pixels vira mancha, e um
+        menu que exige esforço para ser lido é um menu que atrasa quem quer
+        jogar. O resto da interface usa a mesma sem-serifa do jogo, em peso
+        alto — que é como um jogo de sofá escreve os seus botões.
+      */
+      @font-face {
+        font-family: 'BlackFlag';
+        src: url('/fontes/blackflag.ttf') format('truetype');
+        font-display: swap;
+      }
+      :root {
+        color-scheme: dark;
+        --papel: #f4f2ee;
+        --tinta: #14110f;
+        --acento: #e4002b;
+        --azul: #2f6fd0;
+        --azul-claro: #8fc0ff;
+        --vermelho: #cf3b2f;
+        --vermelho-claro: #ff9c8f;
+        --ouro: #ffd479;
+        /* Só o nome do jogo. Ver o comentário acima antes de reaproveitar. */
+        --titulo: 'BlackFlag', 'Trebuchet MS', system-ui, sans-serif;
+        --texto: 'Trebuchet MS', system-ui, sans-serif;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        /*
+          `dvh` porque no celular a barra do navegador aparece e some, e `100vh`
+          é a altura **sem** ela: com a barra à mostra, a última linha do menu
+          fica embaixo dela e o botão de jogar não recebe o toque.
+        */
+        height: 100%;
+        height: 100dvh;
+        overflow: hidden;
+        background: #10121a;
+        font-family: var(--texto);
+        color: var(--papel);
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      #tela {
+        display: block;
+        touch-action: none;
+        cursor: crosshair;
+      }
+      .tela {
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+      }
+      /*
+        Esconder precisa vencer o `display` que cada tela define para si.
+        `.tela.oculta` tem peso 20 e `#menu` tem peso 100: sem repetir os ids
+        aqui, a tela "escondida" continuava desenhada por cima do jogo,
+        engolindo todo clique do menu. Foi assim que a primeira versão quebrou.
+      */
+      #menu.oculta,
+      #carregando.oculta,
+      #escolha.oculta,
+      #cabine.oculta {
+        display: none;
+      }
+
+      /* ------------------------------------------------------ menu inicial */
+      /*
+        O menu ocupa uma coluna da esquerda e mais nada: o resto da tela é a
+        partida ao vivo, e é ela que vende o jogo. A sombra existe só para o
+        texto continuar legível quando a briga passar por trás dos botões.
+      */
+      #menu {
+        display: grid;
+        /*
+          A coluna cresce com a tela até um teto e nunca abaixo de um piso: com
+          `27vw` puro, um monitor ultralargo dava uma coluna de meio metro e um
+          notebook de 1024 dava uma coluna estreita demais para "Como se joga"
+          caber numa linha.
+        */
+        grid-template-columns: clamp(232px, 26vw, 340px) 1fr;
+        pointer-events: none;
+        background: linear-gradient(
+          to right,
+          rgba(10, 12, 18, 0.72) 0%,
+          rgba(10, 12, 18, 0.45) 60%,
+          rgba(10, 12, 18, 0) 100%
+        );
+      }
+      .coluna {
+        pointer-events: auto;
+        display: flex;
+        flex-direction: column;
+        gap: clamp(5px, 1vh, 10px);
+        padding: clamp(10px, 2vw, 24px);
+        min-height: 0;
+        overflow-y: auto;
+      }
+      .marca {
+        width: fit-content;
+        margin-bottom: 6px;
+      }
+      /*
+        A tira de classes e a fita de números, do desenho do menu.
+
+        Elas ficam **depois** dos botões na ordem do documento de propósito: o
+        teclado chega primeiro ao que se aperta, e só depois ao que se lê. Um
+        menu que obriga a tabular por oito avatares antes de chegar em "Jogo
+        Local" é um menu que atrapalha quem não usa mouse.
+      */
+      .elenco {
+        list-style: none;
+        display: flex;
+        flex-wrap: wrap;
+        gap: clamp(2px, 0.6vw, 6px);
+        margin: clamp(6px, 1.4vh, 14px) 0 0;
+        padding: 0;
+      }
+      /*
+        A moldura se ajusta ao **nome**, e não a uma largura escolhida a olho.
+        A primeira versão fixava a largura e "Saqueador" saía cortado em todos
+        os cinco tamanhos de tela — o verificador acusou setenta e dois casos do
+        mesmo defeito. Com `min-width` e `nowrap`, o dia em que alguém criar uma
+        classe de nome comprido a tira acomoda sozinha.
+      */
+      .elenco li {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1px;
+        min-width: clamp(34px, 4.6vw, 52px);
+        padding: 3px 5px 4px;
+        border: 2px solid rgba(0, 0, 0, 0.5);
+        border-radius: 8px;
+        background: rgba(12, 14, 20, 0.6);
+        transition:
+          transform 120ms ease,
+          background 120ms ease;
+      }
+      /* O realce é do `li` inteiro e não do avatar: crescer só a imagem dentro
+         de uma moldura parada faz o rosto vazar pela borda. */
+      .elenco li:hover {
+        transform: translateY(-3px);
+        background: rgba(60, 44, 12, 0.85);
+      }
+      .elenco img {
+        width: clamp(22px, 3vw, 34px);
+        height: auto;
+        image-rendering: pixelated;
+      }
+      .elenco span {
+        font-size: clamp(7px, 0.75vw, 9px);
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+        color: rgba(255, 255, 255, 0.75);
+      }
+      .fita {
+        margin: clamp(4px, 1vh, 10px) 0 0;
+        font-size: clamp(9px, 1vw, 11px);
+        letter-spacing: 0.08em;
+        color: rgba(255, 255, 255, 0.6);
+      }
+      /*
+        O rótulo continua em fonte de texto: a BlackFlag é gótica, e gótica em
+        maiúsculas de dez pixels não se lê — vira textura. Ela fica onde presta,
+        que é o nome grande.
+      */
+      .marca .kicker {
+        display: inline-block;
+        background: var(--acento);
+        color: #fff;
+        font-size: clamp(9px, 1.1vw, 12px);
+        font-weight: 700;
+        letter-spacing: 0.22em;
+        /* Sem uma entrelinha explícita, a caixa vermelha se cola às maiúsculas
+           e o topo das letras encosta na borda. */
+        line-height: 1.5;
+        padding: 2px clamp(8px, 1.2vw, 12px);
+      }
+      .marca h1 {
+        margin: 2px 0 0;
+        font-family: var(--titulo);
+        /*
+          O tamanho é limitado pela **coluna**, e não pela tela: com `vw` puro a
+          gótica, que é larga, saía do quadro e o fim do nome era cortado. A
+          altura entra na conta por causa do celular deitado, em que sobra
+          largura e não sobra altura nenhuma.
+        */
+        font-size: clamp(34px, min(6vw, 9vh), 68px);
+        line-height: 0.95;
+        letter-spacing: 0.01em;
+        color: #fff;
+        text-shadow:
+          3px 3px 0 var(--tinta),
+          0 8px 26px rgba(0, 0, 0, 0.8);
+      }
+
+      /*
+        Os botões gordos.
+
+        Cada item tem a sua cor e o seu peso, e a ordem é a das intenções: o
+        que a maioria quer fazer fica no alto e é o mais quente. A borda de
+        baixo mais escura é o que dá o volume de botão de fliperama sem
+        depender de imagem nenhuma.
+      */
+      .coluna button.item {
+        appearance: none;
+        border: 3px solid rgba(0, 0, 0, 0.55);
+        border-bottom-width: 6px;
+        border-radius: 10px;
+        color: #fff;
+        font-family: var(--texto);
+        font-weight: 800;
+        font-size: clamp(14px, 1.5vw, 19px);
+        letter-spacing: 0.04em;
+        text-align: center;
+        /*
+          O alvo de toque tem um piso: dedo não acerta botão de vinte pixels, e
+          é justamente no celular que a coluna fica mais apertada.
+        */
+        min-height: 44px;
+        padding: clamp(8px, 1.4vh, 12px) 10px clamp(6px, 1.1vh, 10px);
+        cursor: pointer;
+        text-shadow: 1px 2px 0 rgba(0, 0, 0, 0.4);
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+        transition: transform 0.08s ease;
+      }
+      .coluna button.item small {
+        display: block;
+        font-weight: 400;
+        font-size: clamp(10px, 1vw, 12px);
+        letter-spacing: 0.02em;
+        opacity: 0.86;
+        text-shadow: none;
+        margin-top: 3px;
+      }
+      /*
+        O realce sobe, não anda para o lado.
+
+        `translateX(4px)` empurrava o botão 4 px além da coluna, e como a coluna
+        rola (`overflow-y: auto` liga a rolagem nos dois eixos), o hover passava
+        a criar rolagem lateral e a cortar a beira do botão. Subir não custa
+        largura nenhuma, e ainda combina com o `:active`, que afunda.
+      */
+      .coluna button.item:hover {
+        transform: translateY(-2px);
+        filter: brightness(1.1);
+      }
+      .coluna button.item:active {
+        transform: translateY(3px);
+        border-bottom-width: 3px;
+      }
+      .item.laranja {
+        background: linear-gradient(#f7a733, #e2842a);
+      }
+      .item.azul {
+        background: linear-gradient(#5b9bf0, #3b6fd0);
+      }
+      .item.verde {
+        background: linear-gradient(#6fc46a, #4c9a49);
+      }
+      .item.roxo {
+        background: linear-gradient(#a97ee0, #7f52bd);
+      }
+      .item.rubro {
+        background: linear-gradient(#e2564b, #bf3128);
+      }
+      .item.ciano {
+        background: linear-gradient(#48b6c4, #2c8a99);
+      }
+      /*
+        `minmax(0, 1fr)` e não `1fr`.
+
+        `1fr` é `minmax(auto, 1fr)`, e esse `auto` é o **mínimo de conteúdo**:
+        três botões com palavras que não quebram se recusam a encolher, a
+        fileira fica mais larga que a coluna e o último — "Créditos" — é cortado
+        pela borda. Com o mínimo zerado, as colunas cedem e a palavra é que
+        precisa caber; daí a fonte menor e a quebra de emergência.
+      */
+      .miudos {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+      }
+      /*
+        `nowrap` de propósito, e não `overflow-wrap: anywhere`.
+
+        Quebrar a palavra faz o defeito virar "Crédit / os" — feio, e invisível
+        para qualquer teste, porque texto quebrado não é transbordo. Proibindo a
+        quebra, um rótulo que não couber **sai da caixa**, e aí o roteiro de
+        tamanhos acusa em vez de a feiura chegar ao jogador.
+      */
+      .miudos button.item {
+        font-size: clamp(10px, 1.1vw, 13px);
+        letter-spacing: 0;
+        padding: 9px 2px 7px;
+        white-space: nowrap;
+      }
+      /*
+        Painel aberto: brilho e um anel **por dentro**.
+
+        O anel é `inset` de propósito. Contorno por fora e deslocamento saem da
+        coluna e são cortados — foi o que acontecia com "Créditos", o último da
+        fileira de três, que encostava na borda.
+      */
+      .coluna button.item[aria-expanded='true'] {
+        filter: brightness(1.25);
+        box-shadow:
+          inset 0 0 0 2px rgba(255, 255, 255, 0.85),
+          0 6px 18px rgba(0, 0, 0, 0.45);
+      }
+      .assinatura {
+        margin: 4px 0 0;
+        font-size: 11px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.7);
+        text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+      }
+
+      /*
+        A caixa de estado, no lugar do letreiro de notícias da referência.
+        Num jogo só multiplayer, "tem gente jogando agora?" é a notícia.
+      */
+      .estado {
+        margin-top: auto;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(0, 0, 0, 0.55);
+        border: 2px solid rgba(255, 255, 255, 0.16);
+        border-radius: 8px;
+        padding: 9px 11px;
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.82);
+      }
+      .pulso {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #b9b6b0;
+      }
+      .pulso.vivo {
+        background: #35a35a;
+        box-shadow: 0 0 0 0 rgba(53, 163, 90, 0.6);
+        animation: bater 2s infinite;
+      }
+      @keyframes bater {
+        70% {
+          box-shadow: 0 0 0 7px rgba(53, 163, 90, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(53, 163, 90, 0);
+        }
+      }
+
+      /*
+        Painéis de papel, abertos ao lado da coluna — nunca por cima dela.
+        Ler as regras não pode esconder o botão de jogar.
+      */
+      .folha {
+        grid-column: 2;
+        grid-row: 1;
+        align-self: center;
+        justify-self: start;
+        pointer-events: auto;
+        width: min(620px, calc(100% - 2 * clamp(14px, 3vw, 34px)));
+        margin: clamp(14px, 3vw, 34px);
+        max-height: min(78vh, 620px);
+        overflow-y: auto;
+        background: var(--papel);
+        color: var(--tinta);
+        padding: clamp(16px, 2.4vw, 28px);
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+      }
+      /*
+        Estreito: a coluna vira a tela inteira e o painel ocupa o mesmo lugar.
+
+        Não dá para insistir na coluna aqui — ela ficaria com metade de um
+        celular em pé, e "até 4 no mesmo aparelho · sem estranhos" quebraria em
+        cinco linhas. O jogo continua atrás; o gradiente é que passa a descer em
+        vez de atravessar, para o texto ter contraste no alto e no rodapé.
+      */
+      @media (max-width: 700px) {
+        #menu {
+          grid-template-columns: 1fr;
+          background: linear-gradient(
+            to bottom,
+            rgba(10, 12, 18, 0.78) 0%,
+            rgba(10, 12, 18, 0.35) 55%,
+            rgba(10, 12, 18, 0.78) 100%
+          );
+        }
+        .coluna {
+          /* Numa tela larga de tablet, a coluna esticada daria botões de um
+             palmo. Ela para de crescer e fica encostada à esquerda. */
+          max-width: 460px;
+        }
+        .folha {
+          grid-column: 1;
+          grid-row: 1;
+          justify-self: stretch;
+          margin: 10px;
+          width: auto;
+          max-height: calc(100dvh - 20px);
+        }
+      }
+
+      /*
+        Baixo: celular deitado, e é aí que o sofá acontece de verdade.
+
+        Sobra largura e não sobra altura nenhuma. O que sai são os subtítulos
+        dos botões e a assinatura — texto que explica, e explicação é a primeira
+        coisa a ceder quando não cabe o que se clica.
+      */
+      @media (max-height: 520px) {
+        .coluna button.item small,
+        .assinatura {
+          display: none;
+        }
+        .coluna button.item {
+          /* Encolhe, mas não abaixo do que um dedo acerta: quarenta pixels é o
+             piso, e um botão que não recebe o toque é pior que um botão feio. */
+          min-height: 40px;
+          padding: 6px 10px 5px;
+        }
+        /* Os miúdos ficam com a margem lateral deles: com os dez pixels da
+           regra acima sobram trinta e sete de texto, e "Créditos" quebra ao
+           meio. Vem depois de propósito — a regra genérica é que é a exceção. */
+        .miudos button.item {
+          padding: 6px 2px 5px;
+        }
+        .marca {
+          margin-bottom: 2px;
+        }
+        .estado {
+          padding: 6px 10px;
+        }
+        /*
+          No painel de salas, quem cede são os **contadores**, e não as frases
+          que explicam os modos. Empilhados, os dois custam duas linhas cada e
+          empurram "abrir a sala" para baixo da dobra; lado a lado, com o rótulo
+          acima do controle, custam uma. As frases ficam porque são elas que
+          fazem alguém escolher um modo — esconder o que explica a escolha para
+          caber o que a executa seria caber pelo motivo errado.
+        */
+        #formato {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+        }
+        #formato .ajuste {
+          display: block;
+          padding: 4px 0;
+          border-bottom: none;
+        }
+        #formato .contador {
+          margin-top: 4px;
+        }
+        .folha[data-folha='sala'] h2 {
+          font-size: 16px;
+          margin-bottom: 6px;
+        }
+        .titulo-com-acao {
+          margin-top: 10px;
+        }
+      }
+      .folha[hidden] {
+        display: none;
+      }
+      .folha h2 {
+        margin: 0 0 10px;
+        font-size: clamp(18px, 2.4vw, 24px);
+      }
+      .folha p,
+      .folha li {
+        line-height: 1.5;
+        font-size: 14px;
+      }
+      .folha a {
+        color: var(--acento);
+      }
+      .folha .regras {
+        margin: 0;
+        padding-left: 18px;
+      }
+      .folha .regras b {
+        color: var(--acento);
+      }
+      .classes {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .classes div {
+        background: rgba(0, 0, 0, 0.05);
+        padding: 8px 10px;
+        font-size: 13px;
+      }
+      .classes b {
+        display: block;
+        color: var(--acento);
+      }
+      .teclas {
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+        margin-top: 14px;
+        font-size: 13px;
+        color: rgba(20, 17, 15, 0.7);
+      }
+      kbd {
+        background: rgba(0, 0, 0, 0.07);
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        border-radius: 4px;
+        padding: 2px 7px;
+        font-family: inherit;
+      }
+      /* --- montar sala --- */
+      .folha h3.subtitulo {
+        margin: 14px 0 6px;
+        font-size: 13px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: rgba(20, 17, 15, 0.5);
+      }
+      /*
+        Os quatro modos são cartões, e não uma lista de rádios.
+
+        O que decide a escolha é a frase embaixo do nome — "a balança vence",
+        "um resgate decide" — e um rádio não tem lugar para ela. Com o cartão, a
+        frase está sempre à vista e ninguém precisa escolher um modo pelo nome
+        para descobrir o que ele faz.
+      */
+      .modos {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr));
+        gap: 8px;
+        margin-bottom: 6px;
+      }
+      button.modo {
+        display: block;
+        text-align: left;
+        background: rgba(0, 0, 0, 0.04);
+        border: 2px solid rgba(0, 0, 0, 0.16);
+        color: var(--tinta);
+        font: inherit;
+        padding: 10px 12px;
+        min-height: 44px;
+        cursor: pointer;
+      }
+      button.modo b {
+        display: block;
+        font-size: 15px;
+      }
+      button.modo small {
+        display: block;
+        margin-top: 2px;
+        font-size: 12px;
+        line-height: 1.35;
+        opacity: 0.7;
+      }
+      button.modo[aria-pressed='true'] {
+        background: rgba(228, 0, 43, 0.08);
+        border-color: var(--acento);
+      }
+      button.modo[aria-pressed='true'] b {
+        color: var(--acento);
+      }
+      /* Menos, número, mais. Ver o comentário em `montarPainelDeSalas`. */
+      .contador {
+        display: flex;
+        align-items: stretch;
+        gap: 6px;
+        flex: 0 0 auto;
+      }
+      .contador button {
+        width: 44px;
+        min-height: 40px;
+        font-size: 18px;
+        line-height: 1;
+        background: transparent;
+        color: var(--tinta);
+        border: 1px solid rgba(0, 0, 0, 0.25);
+        cursor: pointer;
+      }
+      .contador button:hover {
+        background: rgba(0, 0, 0, 0.06);
+      }
+      .contador output {
+        display: grid;
+        place-items: center;
+        min-width: 34px;
+        font-weight: 700;
+        font-size: 16px;
+        font-variant-numeric: tabular-nums;
+      }
+      .titulo-com-acao {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 18px;
+      }
+      .titulo-com-acao h2 {
+        margin: 0;
+      }
+      .sala-aberta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        background: rgba(0, 0, 0, 0.05);
+        padding: 8px 10px;
+        margin-top: 6px;
+      }
+      .sala-aberta b {
+        display: block;
+        font-size: 14px;
+      }
+      .sala-aberta small {
+        display: block;
+        font-size: 12px;
+        opacity: 0.65;
+      }
+      .folha p.vazio {
+        margin: 8px 0 0;
+        font-size: 13px;
+        opacity: 0.65;
+        font-style: italic;
+      }
+
+      /* --- ajustes --- */
+      .ajuste {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 9px 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        font-size: 15px;
+      }
+      .ajuste span small {
+        display: block;
+        opacity: 0.55;
+        font-size: 12px;
+      }
+      .opcoes {
+        display: flex;
+        gap: 4px;
+        flex: 0 0 auto;
+      }
+      /*
+        Os botões dos ajustes também são alvo de dedo.
+
+        Eles nasceram com 29 px de altura, que é a altura natural de um botão de
+        formulário — e um alvo que o polegar erra. Quarenta é o piso, aqui como
+        no menu: a tela de ajustes é onde a pessoa vai justamente porque alguma
+        coisa está incomodando, e errar o toque três vezes ali é o caminho mais
+        curto para ela desistir.
+      */
+      .opcoes button,
+      .folha button.pequeno {
+        background: transparent;
+        color: var(--tinta);
+        border: 1px solid rgba(0, 0, 0, 0.25);
+        padding: 6px 12px;
+        min-height: 40px;
+        font: inherit;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .opcoes button[aria-pressed='true'] {
+        background: var(--acento);
+        border-color: var(--acento);
+        color: #fff;
+        font-weight: 700;
+      }
+      .linha {
+        display: flex;
+        gap: 10px;
+        margin: 14px 0 4px;
+        flex-wrap: wrap;
+      }
+      input[type='text'] {
+        flex: 1 1 220px;
+        min-width: 0;
+        padding: 12px 14px;
+        font: inherit;
+        font-size: 16px;
+        color: var(--tinta);
+        background: #fff;
+        border: 1px solid rgba(0, 0, 0, 0.25);
+      }
+      button.grande {
+        padding: 12px 22px;
+        font: inherit;
+        font-size: clamp(14px, 1.5vw, 16px);
+        font-weight: 700;
+        min-height: 44px;
+        color: #fff;
+        background: var(--acento);
+        border: none;
+        cursor: pointer;
+      }
+      button.grande:disabled {
+        opacity: 0.5;
+        cursor: progress;
+      }
+      .recado {
+        margin: 8px 0 0;
+        min-height: 18px;
+        font-size: 13px;
+        color: rgba(20, 17, 15, 0.7);
+      }
+
+      /* ----------------------------------------------------- tela de espera */
+      #carregando {
+        display: grid;
+        place-items: center;
+        background:
+          radial-gradient(circle at 50% 20%, rgba(90, 130, 200, 0.25), transparent 60%),
+          linear-gradient(160deg, #10121a, #1c1a26 55%, #2a1a1a);
+      }
+      .centro {
+        text-align: center;
+        max-width: 540px;
+        padding: 20px;
+      }
+      .barra-progresso {
+        width: min(420px, 80vw);
+        height: 12px;
+        background: rgba(255, 255, 255, 0.12);
+        overflow: hidden;
+        margin: 18px auto 10px;
+      }
+      .barra-progresso i {
+        display: block;
+        height: 100%;
+        width: 0;
+        background: var(--acento);
+        transition: width 0.15s linear;
+      }
+      .conselho {
+        font-size: 14px;
+        opacity: 0.72;
+        min-height: 46px;
+      }
+
+      /* --------------------------------------------------- escolha de lado */
+      #escolha {
+        display: grid;
+        place-items: center;
+        padding: clamp(10px, 2vw, 20px);
+        background: rgba(8, 10, 16, 0.72);
+        backdrop-filter: blur(2px);
+        overflow-y: auto;
+      }
+      /*
+        A caixa não rola: **a lista de vagas** é que rola dentro dela.
+
+        Rolar a caixa inteira empurra o botão de entrar para baixo da dobra num
+        celular deitado — e a ação principal de uma tela nunca pode exigir
+        rolagem para aparecer. Assim o título fica no alto, o botão no rodapé, e
+        o que cede é o elenco, que é o que a pessoa lê e não o que ela aperta.
+      */
+      .escolha-caixa {
+        width: min(920px, 100%);
+        max-height: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        background: var(--papel);
+        color: var(--tinta);
+        padding: clamp(14px, 2.4vw, 26px);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+      }
+      .escolha-topo {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 12px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+      }
+      .escolha-topo h2 {
+        margin: 0;
+        font-size: clamp(19px, 3vw, 28px);
+      }
+      .escolha-topo .dica {
+        font-size: 13px;
+        color: rgba(20, 17, 15, 0.65);
+      }
+      .lados {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+        gap: clamp(8px, 1.4vw, 14px);
+        min-height: 0;
+        overflow-y: auto;
+        /* Espaço para o realce de "lado escolhido", que sobe quatro pixels. */
+        padding: 4px 2px;
+      }
+      .lado {
+        border: 3px solid rgba(0, 0, 0, 0.12);
+        padding: 12px;
+        background: #fff;
+        cursor: pointer;
+        transition:
+          transform 0.12s ease,
+          border-color 0.12s ease;
+      }
+      .lado[aria-selected='true'] {
+        transform: translateY(-4px);
+      }
+      .lado[data-time='azul'][aria-selected='true'] {
+        border-color: var(--azul);
+      }
+      .lado[data-time='vermelho'][aria-selected='true'] {
+        border-color: var(--vermelho);
+      }
+      .lado h3 {
+        margin: 0 0 2px;
+        font-size: 19px;
+      }
+      .lado[data-time='azul'] h3 {
+        color: var(--azul);
+      }
+      .lado[data-time='vermelho'] h3 {
+        color: var(--vermelho);
+      }
+      .lado .sub {
+        font-size: 12px;
+        color: rgba(20, 17, 15, 0.6);
+        margin-bottom: 10px;
+      }
+      .vagas {
+        display: grid;
+        gap: 4px;
+      }
+      .vaga {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(0, 0, 0, 0.05);
+        padding: 6px 9px;
+        font-size: 14px;
+        min-height: 32px;
+      }
+      .vaga.livre {
+        opacity: 0.45;
+        font-style: italic;
+      }
+      .vaga.bot {
+        opacity: 0.7;
+      }
+      .ficha {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        flex: 0 0 auto;
+      }
+      .lado[data-time='azul'] .ficha {
+        background: var(--azul);
+      }
+      .lado[data-time='vermelho'] .ficha {
+        background: var(--vermelho);
+      }
+      .escolha-rodape {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-top: 14px;
+        flex-wrap: wrap;
+      }
+      .escolha-rodape .dica {
+        font-size: 13px;
+        color: rgba(20, 17, 15, 0.65);
+      }
+
+      /* ------------------------------------------------------------ cabine */
+      /*
+        Quem está no sofá.
+
+        Quatro molduras lado a lado, como nos jogos de quatro: vaga vazia diz
+        qual tecla ou botão apertar para entrar, vaga ocupada mostra quem é e
+        com o que está jogando. A cor de cada moldura é a mesma da seta que vai
+        aparecer sobre a cabeça do boneco — é esse par que faz alguém achar o
+        próprio personagem numa tela dividida por quatro.
+      */
+      #cabine {
+        display: grid;
+        /* `minmax(0, 1fr)` no meio: sem isso a fileira de vagas se recusa a
+           encolher e empurra o rodapé — com o botão de continuar — para fora
+           da tela num celular deitado. */
+        grid-template-rows: auto minmax(0, 1fr) auto;
+        gap: clamp(8px, 1.6vh, 14px);
+        padding: clamp(10px, 3vw, 30px);
+        background: rgba(8, 10, 16, 0.78);
+        backdrop-filter: blur(2px);
+      }
+      #cabine h2 {
+        margin: 0;
+        font-size: clamp(17px, 2.6vw, 28px);
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        text-align: center;
+        color: #fff;
+        text-shadow: 2px 2px 0 var(--tinta);
+      }
+      #cabine .dica {
+        display: block;
+        font-size: clamp(11px, 1.2vw, 13px);
+        font-weight: 400;
+        letter-spacing: 0;
+        text-shadow: none;
+        color: rgba(255, 255, 255, 0.7);
+        margin-top: 5px;
+      }
+      /*
+        As vagas se acomodam sozinhas: quatro numa tela de computador, duas num
+        celular em pé, uma num aparelho muito estreito. `auto-fit` faz isso sem
+        uma escada de breakpoints que sempre erra o tamanho de alguém.
+      */
+      .vagas-sofa {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
+        gap: clamp(6px, 1.4vw, 16px);
+        align-content: center;
+        min-height: 0;
+        overflow-y: auto;
+      }
+      .vaga-sofa {
+        border: 4px solid rgba(255, 255, 255, 0.18);
+        border-radius: 12px;
+        background: rgba(0, 0, 0, 0.4);
+        min-height: clamp(110px, 34vh, 300px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 10px;
+        text-align: center;
+      }
+      .vaga-sofa[data-cheia='true'] {
+        background: rgba(0, 0, 0, 0.62);
+      }
+      .vaga-sofa .numero {
+        font-weight: 800;
+        font-size: clamp(26px, 4vw, 46px);
+        letter-spacing: 0.02em;
+        line-height: 1;
+        text-shadow: 2px 3px 0 rgba(0, 0, 0, 0.6);
+      }
+      .vaga-sofa .quem {
+        font-weight: 700;
+        font-size: clamp(13px, 1.3vw, 15px);
+        overflow-wrap: anywhere;
+      }
+      .vaga-sofa .fonte {
+        font-size: clamp(11px, 1.1vw, 12px);
+        color: rgba(255, 255, 255, 0.66);
+      }
+      .vaga-sofa .convite {
+        font-size: clamp(11px, 1.2vw, 13px);
+        color: rgba(255, 255, 255, 0.6);
+        line-height: 1.55;
+      }
+      .vaga-sofa .convite b {
+        display: inline-block;
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 4px;
+        padding: 1px 7px;
+        color: #fff;
+      }
+      .cabine-rodape {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .cabine-rodape .dica {
+        margin: 0;
+        flex: 1 1 200px;
+        font-size: clamp(11px, 1.2vw, 13px);
+        color: rgba(255, 255, 255, 0.7);
+      }
+      #cabine .linha {
+        flex: 0 0 auto;
+      }
+      #cabine button.pequeno {
+        background: transparent;
+        color: rgba(255, 255, 255, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        padding: 11px 14px;
+        font: inherit;
+        font-size: 14px;
+        min-height: 44px;
+        cursor: pointer;
+      }
+      #cabine button.grande:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
+      /* ---------------------------------------------------- painel do time */
+      /*
+        Encostado à esquerda, durante a partida. Fundo escuro e translúcido como
+        o resto do HUD — este painel é da mesma família dos cartões desenhados no
+        `canvas`, e não da moldura de papel do menu.
+      */
+      #equipe {
+        position: fixed;
+        left: 10px;
+        top: 96px;
+        z-index: 8;
+        width: clamp(184px, 17vw, 232px);
+        max-height: calc(100dvh - 220px);
+        overflow-y: auto;
+        background: rgba(12, 14, 20, 0.78);
+        border-left: 4px solid var(--azul);
+        border-radius: 0 10px 10px 0;
+        padding: 8px 10px 10px;
+        font-size: 13px;
+      }
+      #equipe[data-time='vermelho'] {
+        border-left-color: var(--vermelho);
+      }
+      #equipe[hidden] {
+        display: none;
+      }
+      #equipe h2 {
+        margin: 0 0 6px;
+        font-size: 11px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.55);
+      }
+      .membro {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 3px 0;
+      }
+      /* Caído continua na lista, apagado: sumir faria parecer que a pessoa saiu
+         do time, quando ela só está esperando renascer. */
+      .membro.caido {
+        opacity: 0.42;
+      }
+      .membro.eu .quem b {
+        color: var(--ouro);
+      }
+      .membro .retrato {
+        width: 34px;
+        height: 34px;
+        flex: 0 0 auto;
+        image-rendering: pixelated;
+      }
+      .quem {
+        min-width: 0;
+        flex: 1 1 auto;
+      }
+      .quem b {
+        display: block;
+        font-size: 13px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .quem small {
+        display: block;
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.6);
+      }
+      .vida {
+        display: block;
+        height: 4px;
+        margin-top: 3px;
+        background: rgba(255, 255, 255, 0.16);
+        border-radius: 2px;
+        overflow: hidden;
+      }
+      .vida i {
+        display: block;
+        height: 100%;
+        width: 100%;
+        background: #6ac46a;
+      }
+      .vida i[data-baixa='true'] {
+        background: #d9534f;
+      }
+      button.mandar {
+        flex: 0 0 auto;
+        width: 28px;
+        min-height: 28px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 6px;
+        color: #fff;
+        font: inherit;
+        cursor: pointer;
+      }
+      button.mandar:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+      .ordens {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 3px;
+        margin: 4px 0 8px;
+      }
+      button.ordem {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 6px;
+        color: #fff;
+        font: inherit;
+        font-size: 11px;
+        padding: 3px 4px;
+        cursor: pointer;
+        text-align: left;
+      }
+      button.ordem img {
+        width: 22px;
+        height: 22px;
+        image-rendering: pixelated;
+      }
+      button.ordem:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+      button.ordem.meu-voto {
+        border-color: var(--ouro);
+        background: rgba(255, 212, 121, 0.18);
+      }
+      .dica-ordem {
+        grid-column: 1 / -1;
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.5);
+      }
+      .equipe-urna {
+        border-top: 1px solid rgba(255, 255, 255, 0.14);
+        margin-top: 6px;
+        padding-top: 6px;
+      }
+      .equipe-urna > b {
+        display: block;
+        font-size: 12px;
+        color: var(--ouro);
+        margin-bottom: 4px;
+      }
+      .equipe-recado {
+        margin: 4px 0 0;
+        font-size: 11px;
+        line-height: 1.4;
+        color: rgba(255, 255, 255, 0.72);
+      }
+      .equipe-recado[hidden] {
+        display: none;
+      }
+      /* Numa tela estreita o painel viraria metade do campo. Ele sai, e o
+         cartão da classe no rodapé continua dizendo o essencial. */
+      @media (max-width: 760px), (max-height: 520px) {
+        #equipe {
+          display: none;
+        }
+      }
+
+      /* ------------------------------------------------- crachá de plateia */
+      #plateia {
+        position: fixed;
+        top: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 9;
+        background: var(--papel);
+        color: var(--tinta);
+        font-size: 13px;
+        font-weight: 700;
+        padding: 7px 14px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+      }
+      #plateia[hidden] {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="tela"></canvas>
+
+    <div id="plateia" hidden>assistindo · <kbd>Esc</kbd> volta ao menu</div>
+
+    <!--
+      O painel do time, durante a partida.
+
+      Fica fora das `section.tela` de propósito: as telas se escondem umas às
+      outras, e este painel convive com o jogo em vez de substituí-lo. Quem o
+      liga e desliga é o laço de quadro.
+    -->
+    <aside id="equipe" hidden>
+      <h2>O seu reino</h2>
+      <div class="equipe-lista"></div>
+      <div class="equipe-urna" hidden></div>
+      <p class="equipe-recado" hidden></p>
+    </aside>
+
+    <!-- ------------------------------------------------------- menu inicial -->
+    <section id="menu" class="tela">
+      <div class="coluna">
+        <div class="marca">
+          <span class="kicker">MEU QUERIDO</span>
+          <h1>Rei</h1>
+        </div>
+
+        <button id="jogar-local" class="item laranja">
+          Jogo Local
+          <small>até 4 aqui · ninguém de fora</small>
+        </button>
+        <button id="jogar-online" class="item azul">
+          Jogo Online
+          <small>até 4 aqui + gente da rede</small>
+        </button>
+        <button class="item ciano" data-folha="sala" aria-expanded="false">
+          Salas
+          <small>monte a sua ou entre numa aberta</small>
+        </button>
+        <button class="item verde" data-folha="regras" aria-expanded="false">Como se joga</button>
+        <button id="assistir" class="item roxo">Assistir</button>
+
+        <div class="miudos">
+          <button class="item rubro" data-folha="apelido" aria-expanded="false">Apelido</button>
+          <button class="item rubro" data-folha="ajustes" aria-expanded="false">Ajustes</button>
+          <button class="item rubro" data-folha="creditos" aria-expanded="false">Créditos</button>
+        </div>
+
+        <p class="assinatura">um cerco a ouro · dois baús · uma balança só</p>
+
+        <!--
+          A tira de classes, do desenho do menu. Ela não é enfeite: é a resposta
+          visual a "o que dá para ser neste jogo?", que é a primeira pergunta de
+          quem chega e a que os cinco botões não respondem. O nome aparece no
+          `title` e embaixo do avatar — sem nome, oito rostinhos iguais em
+          quarenta pixels não informam nada.
+        -->
+        <ul class="elenco" id="elenco-do-menu" aria-label="as classes do jogo"></ul>
+        <p class="fita" id="fita-do-menu"></p>
+
+        <span class="estado"
+          ><i class="pulso" id="pulso"></i><span id="estado-servidor">ligando…</span></span
+        >
+      </div>
+
+      <!-- painéis de papel -->
+      <div class="folha" data-folha="apelido" hidden>
+        <h2>Como querem te chamar?</h2>
+        <div class="linha">
+          <input id="nome" type="text" maxlength="16" placeholder="seu apelido" autocomplete="off" />
+          <button class="grande" data-acao="jogar">entrar na batalha</button>
+        </div>
+        <p class="recado" id="recado"></p>
+      </div>
+
+      <!--
+        Montar sala e entrar numa sala são a mesma folha de propósito. São a
+        mesma pergunta ("onde eu vou jogar?") e separá-las em dois painéis faria
+        quem quer jogar com um amigo abrir os dois para descobrir em qual está a
+        resposta. A lista vem primeiro na leitura de quem só quer entrar, e por
+        isso o formulário é o que fica embaixo do título.
+      -->
+      <div class="folha" data-folha="sala" hidden>
+        <h2>Montar uma sala</h2>
+        <h3 class="subtitulo">Modo</h3>
+        <div id="modos" class="modos"></div>
+        <h3 class="subtitulo">Campo de batalha</h3>
+        <div id="mapas" class="modos"></div>
+        <h3 class="subtitulo">Tamanho</h3>
+        <div id="formatos" class="modos"></div>
+        <div id="formato"></div>
+        <p class="recado" id="recado-sala"></p>
+        <div class="linha">
+          <button class="grande" id="abrir-sala">abrir a sala</button>
+        </div>
+
+        <div class="titulo-com-acao">
+          <h2>Salas abertas</h2>
+          <button class="pequeno" id="atualizar-salas">atualizar</button>
+        </div>
+        <div id="salas-abertas"></div>
+      </div>
+
+      <div class="folha" data-folha="regras" hidden>
+        <h2>Como se joga</h2>
+        <ul class="regras">
+          <li>
+            O <b>seu</b> baú está trancado no cofre inimigo. Traga-o à tesouraria: três resgates
+            vencem.
+          </li>
+          <li>
+            Cada bolsa entulhada no baú refém que você guarda <b>pesa nele e alivia o seu</b>, na
+            mesma hora e na mesma medida — o peso do reino não aumenta, só muda de lado.
+          </li>
+          <li>Baú pesada precisa de até <b>três carregadores</b> e anda devagar.</li>
+          <li>Moeda sai de <b>minério</b>, e minério sai de <b>ovelha de carga derrubada</b> no meio do mapa.</li>
+          <li>
+            <b>Madeira e ouro</b> entregues na chapelaria sobem a obra: mais vida e mais dano para o
+            time inteiro.
+          </li>
+          <li>A classe vem do chapéu, e o chapéu <b>cai no chão</b> quando o dono morre.</li>
+          <li>Só multiplayer. Entrou sozinho? <b>Bots completam o time</b> e saem quando chega gente.</li>
+        </ul>
+        <div class="classes">
+          <div><b>Guerreiro</b>espada em arco, acerta tudo à frente</div>
+          <div><b>Lanceiro</b>estocada que fura a fila</div>
+          <div><b>Arqueiro</b>flecha de longe, frágil de perto</div>
+          <div><b>Clérigo</b>cura quem carrega o baú</div>
+          <div><b>Minerador</b>picareta: ouro para a obra</div>
+          <div><b>Lenhador</b>machado: madeira para a obra</div>
+          <div><b>Saqueador</b>derruba a ovelha de carga e leva o minério</div>
+          <div><b>Aldeão</b>sem chapéu: faz de tudo, devagar</div>
+        </div>
+        <h2 style="margin-top: 18px">Controles</h2>
+        <div class="classes">
+          <div>
+            <b>Jogador 1 · teclado</b>
+            <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> andar · <kbd>mouse</kbd> mirar ·
+            <kbd>clique</kbd> ou <kbd>F</kbd> atacar · <kbd>E</kbd> usar
+          </div>
+          <div>
+            <b>Jogador 2 · teclado</b>
+            <kbd>setas</kbd> andar e mirar · <kbd>.</kbd> atacar · <kbd>,</kbd> usar
+          </div>
+          <div>
+            <b>Jogadores 1 a 4 · controle</b>
+            analógico esquerdo anda, direito mira · <kbd>A</kbd> usar ·
+            <kbd>X</kbd> ou <kbd>RT</kbd> atacar
+          </div>
+          <div><b>Celular</b> manche de um lado, botões do outro · uma pessoa por aparelho</div>
+        </div>
+        <div class="teclas">
+          <span><kbd>Tab</kbd> placar</span>
+          <span
+            >sem mouse nem analógico direito, o golpe sai <b>para onde você está indo</b></span
+          >
+        </div>
+      </div>
+
+      <div class="folha" data-folha="ajustes" hidden>
+        <h2>Ajustes</h2>
+        <div id="ajustes"></div>
+        <div class="linha"><button id="padroes" class="pequeno">restaurar padrões</button></div>
+      </div>
+
+      <div class="folha" data-folha="creditos" hidden>
+        <h2>Créditos</h2>
+        <p>
+          <b>Meu Querido Rei</b> nasceu dentro do CyberKingdoms, e reaproveita a base dele: o
+          gerador determinístico, o jeito de escrever e a arte.
+        </p>
+        <p>
+          Arte: <b>Tiny Swords</b>, de
+          <a href="https://pixelfrog-assets.itch.io/tiny-swords" target="_blank" rel="noreferrer">
+            Pixel Frog</a
+          >. Unidades, prédios, terreno e rebanho são do pacote; a bolsa de moedas, os chapéus no chão
+          e o baú refém são desenhados no próprio jogo.
+        </p>
+        <p>Tipografia do menu: <b>BlackFlag</b>, usada só na moldura.</p>
+        <p>
+          Inspiração declarada: <b>Fat Princess</b> (Titan Studios, 2009) — o esqueleto do resgate
+          por times. A balança conservada, os ofícios e o chapéu que se rouba são deste jogo. O
+          menu em coluna e a cabine de quatro vagas vêm do <b>Castle Crashers</b> (The Behemoth,
+          2008), que é como um jogo de sofá se apresenta.
+        </p>
+      </div>
+    </section>
+
+    <!-- --------------------------------------------------------- a cabine -->
+    <section id="cabine" class="tela oculta">
+      <h2>
+        Quem está jogando?
+        <span class="dica">
+          até quatro pessoas neste aparelho · todo mundo entra no mesmo reino
+        </span>
+      </h2>
+      <div class="vagas-sofa" id="vagas-sofa"></div>
+      <div class="cabine-rodape">
+        <p class="dica" id="cabine-recado"></p>
+        <div class="linha" style="margin: 0">
+          <button id="cabine-voltar" class="pequeno">voltar ao menu</button>
+          <button id="cabine-seguir" class="grande" data-acao-final>escolher o lado</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------------------------------------------------- tela de espera -->
+    <section id="carregando" class="tela oculta">
+      <div class="centro">
+        <div class="marca" style="margin: 0 auto 10px">
+          <span class="kicker">MEU QUERIDO</span>
+          <h1>Rei</h1>
+        </div>
+        <div class="barra-progresso"><i id="progresso"></i></div>
+        <p class="recado" id="etapa" style="color: rgba(244, 242, 238, 0.8)">carregando a arte…</p>
+        <p class="conselho" id="conselho"></p>
+      </div>
+    </section>
+
+    <!-- -------------------------------------------------- escolha de lado -->
+    <section id="escolha" class="tela oculta">
+      <div class="escolha-caixa">
+        <div class="escolha-topo">
+          <h2>escolha o seu lado</h2>
+          <span class="dica" id="escolha-status"></span>
+        </div>
+        <div class="lados">
+          <div class="lado" data-time="azul" aria-selected="true">
+            <h3>Reino Azul</h3>
+            <div class="sub" id="sub-azul"></div>
+            <div class="vagas" id="vagas-azul"></div>
+          </div>
+          <div class="lado" data-time="vermelho" aria-selected="false">
+            <h3>Reino Vermelho</h3>
+            <div class="sub" id="sub-vermelho"></div>
+            <div class="vagas" id="vagas-vermelho"></div>
+          </div>
+        </div>
+        <div class="escolha-rodape">
+          <span class="dica">
+            <kbd>A</kbd> <kbd>D</kbd> ou clique para trocar de lado · <kbd>Enter</kbd> para entrar ·
+            <kbd>Esc</kbd> volta ao menu
+          </span>
+          <button id="confirmar" class="grande" data-acao-final>entrar no Reino Azul</button>
+        </div>
+      </div>
+    </section>
+
+    <script type="module" src="/src/client/main.ts"></script>
+  </body>
+</html>
