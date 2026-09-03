@@ -581,7 +581,26 @@ export function desenharMundo(
     const gordura = 0.9 + cheio;
     pinturas.push({
       y: base.y + (carregado ? 1 : TILE * 0.6),
-      pintar: () => desenharBau(ctx, px, py, escala * gordura, p.time, cheio, tempo),
+      pintar: () => {
+        desenharBau(ctx, px, py, escala * gordura, p.time, cheio, tempo);
+        // A bomba de pavio aceso: só quando o baú está em trânsito, que é a
+        // única hora em que ele pode ser perdido — parado no cofre ou já em
+        // casa, não há nada a perder. Ela pulsa (`Math.sin`) para não virar
+        // papel de parede num cortejo que demora minutos.
+        if (carregado) {
+          const anim = arte.efeitos.bomba;
+          const flutua = Math.sin(tempo * 2) * 3 * escala;
+          quadro(
+            ctx,
+            anim,
+            quadroEm(anim, tempo),
+            px,
+            py - 30 * escala * gordura + flutua,
+            escala * 0.5,
+            'centro',
+          );
+        }
+      },
     });
   }
 

@@ -92,7 +92,7 @@ export interface Arte {
    * nome do arquivo é do desenhista, e o nome que o código usa é do jogo.
    */
   readonly efeitos: Readonly<
-    Record<'poeira' | 'poeirada' | 'labareda' | 'estouro' | 'agua' | 'furto', Animacao>
+    Record<'poeira' | 'poeirada' | 'labareda' | 'estouro' | 'agua' | 'furto' | 'bomba', Animacao>
   >;
   /** Ícones de interface, por nome do que eles marcam. */
   readonly icones: Readonly<Record<IconeDaObra, HTMLImageElement>>;
@@ -244,6 +244,8 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
     // O golpe do ladrão do Enemy Pack, emprestado para o roubo de chapéu: ver
     // `efeitos.furto` e a receita `roubo` em particulas.ts.
     ['fx:furto', 'furto'],
+    // A bomba de pavio aceso, sobre o baú refém em trânsito — ver `desenho.ts`.
+    ['fx:bomba', 'bomba'],
   ] as const) {
     pede(chave, `fx/${arquivo}.png`);
   }
@@ -364,6 +366,7 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
       estouro: animacao(img('fx:estouro'), 18),
       agua: animacao(img('fx:agua'), 16),
       furto: animacao(img('fx:furto'), 18),
+      bomba: animacao(img('fx:bomba'), 6),
     },
     icones: Object.fromEntries(ICONES.map((n) => [n, img(`icone:${n}`)])) as Record<
       IconeDaObra,
