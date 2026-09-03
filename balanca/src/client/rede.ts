@@ -47,6 +47,8 @@ export interface Aviso {
   /** Momento em que apareceu, em milissegundos. */
   quando: number;
   cor?: string;
+  /** Só o abate tem, por ora — ver `narrar` em hud.ts. */
+  icone?: 'abate';
 }
 
 interface Retratada {
@@ -450,8 +452,13 @@ export class Rede {
     return Math.min(1.4, (agora - this.recebidoEm) / INTERVALO_DE_ENVIO);
   }
 
-  avisar(texto: string, cor?: string): void {
-    this.avisos.unshift({ texto, quando: performance.now(), ...(cor ? { cor } : {}) });
+  avisar(texto: string, cor?: string, icone?: Aviso['icone']): void {
+    this.avisos.unshift({
+      texto,
+      quando: performance.now(),
+      ...(cor ? { cor } : {}),
+      ...(icone ? { icone } : {}),
+    });
     if (this.avisos.length > 6) this.avisos.pop();
   }
 }

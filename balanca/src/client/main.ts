@@ -446,7 +446,7 @@ function laco(agora: number): void {
   if (estado) {
     for (const evento of rede.eventosNovos.splice(0)) {
       const linha = narrar(evento, estado, eu?.time ?? null);
-      if (linha && ajustes.registro) rede.avisar(linha.texto, linha.cor);
+      if (linha && ajustes.registro) rede.avisar(linha.texto, linha.cor, linha.icone);
       // A obra é o único acontecimento cujo lugar não é uma unidade: ela sobe
       // no prédio, e é lá que o estouro tem de nascer.
       if (evento.tipo === 'nivel') {

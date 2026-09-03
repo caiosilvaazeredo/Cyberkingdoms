@@ -82,6 +82,8 @@ export interface Arte {
    */
   readonly obraNivel2: Animacao;
   readonly obraNivel3: HTMLImageElement;
+  /** O ícone do abate no registro de eventos — um quadro só, congelado. */
+  readonly explosaoDoRegistro: HTMLImageElement;
   /**
    * As folhas de efeito, por nome do que elas significam.
    *
@@ -229,6 +231,7 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
   }
   pede('obra_nivel2', 'buildings/oficina_nivel2.png');
   pede('obra_nivel3', 'buildings/oficina_nivel3.png');
+  pede('explosao_registro', 'fx/explosao_registro.png');
   pede('ovelha_parada', 'recursos/ovelha_parada.png');
   pede('ovelha_andando', 'recursos/ovelha_andando.png');
   pede('ovelha_pastando', 'recursos/ovelha_pastando.png');
@@ -331,6 +334,7 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
     ossos: [1, 2, 3].map((i) => img(`osso${i}`)),
     obraNivel2: animacao(img('obra_nivel2'), 8),
     obraNivel3: img('obra_nivel3'),
+    explosaoDoRegistro: img('explosao_registro'),
     predios,
     fogo: animacao(img('fogo'), 12),
     fumaca: animacao(img('fumaca'), 10),

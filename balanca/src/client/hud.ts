@@ -96,7 +96,7 @@ export function desenharHud(
   // O aviso do meio da tela é do dono do aparelho: quatro avisos empilhados no
   // centro tapariam a briga que eles mandam resolver.
   if (eu) avisosDoCentro(ctx, estado, eu, largura, altura, tempo);
-  if (ajustes.registro) registro(ctx, rede, largura, altura, ajustes);
+  if (ajustes.registro) registro(ctx, rede, largura, altura, ajustes, arte);
   faixaDeFase(ctx, estado, largura, altura, tempo);
   if (entrada.placarAberto) tabela(ctx, estado, largura, altura);
   botoesDeToque(ctx, entrada, largura, altura);
@@ -476,6 +476,7 @@ function registro(
   largura: number,
   altura: number,
   ajustes: Ajustes,
+  arte: Arte,
 ): void {
   const agora = performance.now();
   ctx.save();
@@ -491,7 +492,16 @@ function registro(
     if (idade > 8) continue;
     ctx.globalAlpha = Math.max(0, Math.min(1, (8 - idade) / 2));
     ctx.fillStyle = aviso.cor ?? 'rgba(255,255,255,0.9)';
-    ctx.fillText(aviso.texto, largura - 14, y);
+    // O ícone empurra o texto: sem isto, a explosão ficaria por cima da
+    // primeira letra em vez de ao lado dela.
+    const reservado = aviso.icone ? 18 : 0;
+    ctx.fillText(aviso.texto, largura - 14 - reservado, y);
+    if (aviso.icone === 'abate') {
+      const im = arte.explosaoDoRegistro;
+      const alturaIcone = 16;
+      const larguraIcone = alturaIcone * (im.width / im.height);
+      ctx.drawImage(im, largura - 14 - reservado, y - 1, larguraIcone, alturaIcone);
+    }
     y += 18;
   }
   ctx.restore();
@@ -760,11 +770,13 @@ export function narrar(
   evento: Evento,
   estado: Estado,
   meuTime: Time | null,
-): { texto: string; cor?: string } | null {
+): { texto: string; cor?: string; icone?: 'abate' } | null {
   const nome = (id: number): string => estado.unidades.find((u) => u.id === id)?.nome ?? 'alguém';
   switch (evento.tipo) {
     case 'abate':
-      return { texto: `${nome(evento.algoz)} derrubou ${nome(evento.vitima)}` };
+      // A única linha do registro com ícone: é a mais violenta das notícias,
+      // e a explosão do Hex Shaman (Enemy Pack) diz isso antes da frase.
+      return { texto: `${nome(evento.algoz)} derrubou ${nome(evento.vitima)}`, icone: 'abate' };
     case 'deposito': {
       const quemGanhou = outroTime(evento.bau);
       return {
