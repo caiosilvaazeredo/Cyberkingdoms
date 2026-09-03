@@ -447,7 +447,19 @@ comprido antes de ela existir.
 
 ### As telas
 
-Menu → cabine → escolha de lado → jogo.
+Menu → cabine → escolha de lado → carregando → jogo.
+
+Fora o menu — que continua sobre a partida ao vivo, ver abaixo — toda tela é
+de pergaminho e ouro: papel claro, tinta escura, uma faixa com os dois
+castelos no topo de cada painel (`.folha::before`, `.escolha-caixa::before`),
+arte extraída das referências e não redesenhada à mão. É uma regra de
+**classe**, não uma marcação por tela: a próxima folha que alguém escrever já
+nasce com a faixa.
+
+A tela de **carregando** troca o fundo escuro genérico pela balança com os
+dois baús cobrindo a tela inteira, o cartão de pergaminho — nome, barra,
+conselho — no centro, e um medalhão de ouro à esquerda e outro de ampulheta à
+direita (somem abaixo de 900 px, onde a barra já conta a história sozinha).
 
 **O menu não tem fundo: o fundo é o jogo.** A página conecta ao servidor assim
 que abre, entra como plateia numa sala que já está rodando e desenha a partida
@@ -487,14 +499,25 @@ motivo escrito. A lista de vagas rola por dentro da caixa e o botão de entrar
 fica fixo no rodapé: a ação principal de uma tela nunca pode exigir rolagem para
 aparecer.
 
-### A tipografia: a gótica é do nome
+Ao entrar em jogo, os dois times começam presos do próprio lado do portão — a
+**zona de aquecimento**, como uma seleção de campeões: dá tempo de escolher
+chapéu sem que ninguém já esteja correndo para o ouro do adversário. Uma
+contagem regressiva no HUD marca o tempo até o apito, e os dois lados são
+soltos ao mesmo tempo.
 
-O título usa a **BlackFlag**, e ela para aí. É uma gótica: bonita num nome de
-três letras a setenta pixels, e ilegível em tudo o mais — "Assistir" escrito nela
-num botão de dezoito pixels vira mancha, e um menu que exige esforço para ser
-lido é um menu que atrasa quem quer jogar. O resto da interface usa a mesma
-sem-serifa do jogo, em peso alto, que é como um jogo de sofá escreve os seus
-botões.
+### A tipografia: Cinzel nos rótulos, Spectral no corpo, gótica só no nome
+
+O título do jogo usa a **BlackFlag**, e ela para aí: é bonita num nome de três
+letras a setenta pixels e ilegível em tudo o mais. O resto da interface — títulos
+de tela, botões, rótulos — usa a **Cinzel**, uma serifada de letras largas e
+maiúsculas marcadas, no traço de brasão que o tema de pergaminho pede; o corpo
+de texto (parágrafos de regra, o conselho da tela de espera) usa a **Spectral**,
+uma serifada de leitura mais leve, para o texto longo não cansar. As duas são
+hospedadas localmente (`public/fontes/`), só no corte "latin" — é tudo que o
+português usa — porque foi assim que as demais fontes do jogo já eram servidas.
+O HUD desenhado em `canvas` continua com a fonte de sistema (Trebuchet MS): é
+texto redesenhado a cada quadro, e trocar a fonte ali é problema de
+desempenho, não de estilo.
 
 ### Caber em qualquer tela
 
