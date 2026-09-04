@@ -148,6 +148,13 @@ export interface Arte {
   readonly gnomoTorre: HTMLImageElement;
   readonly gnomo: Animacao;
   /**
+   * O barco e o cavalo-marinho — só no Arquipélago, balançando na água que
+   * cerca a ilha do meio. Ver `posicaoDoBarco`/`posicaoDoCavaloMarinho` em
+   * desenho.ts.
+   */
+  readonly barco: Animacao;
+  readonly cavaloMarinho: Animacao;
+  /**
    * As folhas da fera — Troll e Minotauro, sem cor de time.
    *
    * `folhaDaUnidade` em desenho.ts olha `Unidade.fera` antes de olhar a
@@ -327,6 +334,8 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
   pede('gnomo_choupana', 'recursos/gnomo_choupana.png');
   pede('gnomo_torre', 'recursos/gnomo_torre.png');
   pede('gnomo_andando', 'recursos/gnomo_andando.png');
+  pede('barco_arquipelago', 'recursos/barco_arquipelago.png');
+  pede('cavalo_marinho', 'recursos/cavalo_marinho.png');
   pede('goblin_invasor', 'recursos/goblin_invasor.png');
   pede('torch_goblin_invasor', 'recursos/torch_goblin_invasor.png');
   for (const fera of ['troll', 'minotauro'] as const) {
@@ -465,6 +474,8 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
     gnomoChoupana: img('gnomo_choupana'),
     gnomoTorre: img('gnomo_torre'),
     gnomo: animacao(img('gnomo_andando'), 8),
+    barco: animacao(img('barco_arquipelago'), 6),
+    cavaloMarinho: animacao(img('cavalo_marinho'), 6),
     invasor: animacao(img('goblin_invasor'), 8),
     invasorTocha: animacao(img('torch_goblin_invasor'), 8),
     feras: {

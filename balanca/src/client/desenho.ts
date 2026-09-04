@@ -744,6 +744,40 @@ export function desenharMundo(
     });
   }
 
+  const cavaloMarinho = posicaoDoCavaloMarinho(arena, tempo);
+  if (cavaloMarinho) {
+    const px = v.paraTelaX(cavaloMarinho.x);
+    const py = v.paraTelaY(cavaloMarinho.y);
+    pinturas.push({
+      y: cavaloMarinho.y,
+      pintar: () => {
+        espelhado(ctx, px, cavaloMarinho.paraEsquerda, () =>
+          quadro(
+            ctx,
+            arte.cavaloMarinho,
+            quadroEm(arte.cavaloMarinho, tempo),
+            px,
+            py,
+            escala * 0.45,
+            'centro',
+          ),
+        );
+      },
+    });
+  }
+
+  const barco = posicaoDoBarco(arena);
+  if (barco) {
+    const px = v.paraTelaX(barco.x);
+    const py = v.paraTelaY(barco.y);
+    pinturas.push({
+      y: barco.y,
+      pintar: () => {
+        quadro(ctx, arte.barco, quadroEm(arte.barco, tempo), px, py, escala * 0.7, 'centro');
+      },
+    });
+  }
+
   // --- vila de gnomos --------------------------------------------------
   const vila = posicaoDaVilaDeGnomos(arena);
   if (vila) {
@@ -1137,6 +1171,41 @@ export function posicaoDoTubarao(
   // tile já bate numa ponte ou na margem antes de completar a volta —
   // conferido tile a tile nos dois mapas, não só de olho.
   return passeioCircular(ancora, tempo, fase, 0.4 * TILE, 0.35, 0.6);
+}
+
+/**
+ * O cavalo-marinho: a mesma água do tubarão, só no Arquipélago — o Vau fica
+ * só com o predador, porque um cavalo-marinho pastando ao lado de um
+ * tubarão de patrulha lia estranho. Mesmo raio medido do tubarão, fase
+ * diferente para os dois não nascerem grudados, e bem mais devagar: é
+ * decoração parada, não um predador de ronda.
+ */
+export function posicaoDoCavaloMarinho(
+  arena: Arena,
+  tempo: number,
+): { x: number; y: number; paraEsquerda: boolean } | null {
+  if (arena.mapa !== 'arquipelago') return null;
+  const ancora = aguaCentralDe(arena);
+  if (!ancora) return null;
+  const fase = (arena.seed % 600) * 0.017 + 4;
+  return passeioCircular(ancora, tempo, fase, 0.4 * TILE, 0.12, 0.6);
+}
+
+/**
+ * O barco: parado na mesma água, balançando no lugar — a folha do pacote já
+ * é o balanço, não precisa de `passeioCircular` em cima. Estático como a
+ * vila de gnomos, e pela mesma razão, cacheado por arena.
+ */
+const CACHE_BARCO = new WeakMap<Arena, { x: number; y: number } | null>();
+
+export function posicaoDoBarco(arena: Arena): { x: number; y: number } | null {
+  if (arena.mapa !== 'arquipelago') return null;
+  const cache = CACHE_BARCO.get(arena);
+  if (cache !== undefined) return cache;
+  const ancora = aguaCentralDe(arena);
+  const achado = ancora ? { x: ancora.x + TILE * 0.3, y: ancora.y - TILE * 0.3 } : null;
+  CACHE_BARCO.set(arena, achado);
+  return achado;
 }
 
 /**
