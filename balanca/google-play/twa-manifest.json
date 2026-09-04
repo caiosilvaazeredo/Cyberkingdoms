@@ -1,0 +1,33 @@
+{
+  "//": "Config do Bubblewrap para gerar o projeto Android (TWA). Veja LEIA-ME.md — isto é um ponto de partida, não algo para rodar direto: falta o domínio real e a chave de assinatura, que só existem depois que você gerar o keystore.",
+
+  "packageId": "com.reinodemigalhas.jogo",
+  "host": "balanca-do-reino.onrender.com",
+  "name": "Meu Querido Rei",
+  "launcherName": "Meu Rei",
+  "themeColor": "#10121a",
+  "navigationColor": "#10121a",
+  "navigationColorDark": "#10121a",
+  "backgroundColor": "#10121a",
+  "backgroundColorDark": "#10121a",
+  "display": "standalone",
+  "orientation": "any",
+  "startUrl": "/",
+  "iconUrl": "https://balanca-do-reino.onrender.com/pwa/icone-512.png",
+  "maskableIconUrl": "https://balanca-do-reino.onrender.com/pwa/icone-maskable-512.png",
+  "webManifestUrl": "https://balanca-do-reino.onrender.com/manifest.webmanifest",
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "features": {
+    "playBilling": { "enabled": false }
+  },
+  "alphaDependencies": { "enabled": false },
+  "enableNotifications": false,
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "reino-de-migalhas"
+  }
+}
