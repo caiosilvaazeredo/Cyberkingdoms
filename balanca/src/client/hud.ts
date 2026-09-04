@@ -390,6 +390,17 @@ function cabecalho(ctx: CanvasRenderingContext2D, rede: Rede, largura: number): 
   // nome da sala.
   const curta = `${nomeDoModo} · ${nomeDoMapa} · ${rede.ping} ms`;
   ctx.fillText(ctx.measureText(inteira).width <= cabe ? inteira : curta, 12, 10);
+
+  // A Regência mostra a corrente na própria tela, e não só no recado que passa
+  // e some: nível e reforços são o placar da campanha, tão permanentes quanto
+  // o placar de resgates — sem a linha fixa, quem chegou no meio de um nível
+  // alto não tem como saber o que já conquistou.
+  if (rede.campanha) {
+    ctx.font = '700 13px "Trebuchet MS", system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(255, 212, 121, 0.92)';
+    const reforcos = rede.campanha.perks.length > 0 ? rede.campanha.perks.join(', ') : 'nenhum ainda';
+    ctx.fillText(`Regência · nível ${rede.campanha.nivel} · reforços: ${reforcos}`, 12, 26);
+  }
   ctx.restore();
 }
 

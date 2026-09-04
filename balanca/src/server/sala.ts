@@ -1,6 +1,7 @@
 import { PRAZO_DA_VOTACAO, apurar, type Votacao } from './comando';
 import { Bots } from '../shared/bots';
 import { Navegador } from '../shared/navegacao';
+import { BONUS_DO_PERK, perkDaClasse, perkDoNivel } from '../shared/campanha';
 import { CLASSES_COM_CHAPEU, type Classe } from '../shared/classes';
 import { mapaDe, mapaSorteado, type IdDoMapa } from '../shared/mapas';
 import { modoDe, type IdDoModo } from '../shared/modos';
@@ -115,6 +116,11 @@ export interface OpcoesDaSala {
   esperaPorJogadores?: number;
   /** Relógio injetável, para o teste não depender de `Date.now`. */
   agora?: () => number;
+  /**
+   * A Regência: vermelho vira reino bandido, sempre de bots — `escolher`
+   * recusa qualquer humano que peça esse lado. Ver `shared/campanha.ts`.
+   */
+  campanha?: boolean;
 }
 
 export class Sala {
@@ -159,6 +165,14 @@ export class Sala {
    * ignorasse o cooldown do próprio botão ainda esbarraria aqui.
    */
   private readonly ultimaMarca = new Map<string, number>();
+  /** A Regência: vermelho é sempre reino bandido, nunca aceita humano. */
+  readonly campanha: boolean;
+  /** O nível atual da Regência. Sobe a cada vitória, volta a 1 em cada derrota. */
+  private nivelDaCampanha = 1;
+  /** Os reforços que o time já ganhou, na ordem em que vieram — cada um soma
+   * de novo no estoque a cada partida nova, então uma campanha de dez
+   * vitórias empilha dez reforços, não um só. */
+  private perksDoTime: Classe[] = [];
 
   constructor(opcoes: OpcoesDaSala) {
     this.nome = opcoes.nome;
@@ -169,7 +183,15 @@ export class Sala {
     this.mapaAtual =
       this.escolhaDeMapa === 'sorteio' ? mapaSorteado(opcoes.seed) : this.escolhaDeMapa;
     this.porTime = opcoes.porTime ?? POR_TIME;
-    this.botsFixos = opcoes.botsPorTime ?? null;
+    this.campanha = opcoes.campanha ?? false;
+    // A Regência tem a própria regra de composição — vermelho é sempre time
+    // cheio de bot, porque `escolher` barra qualquer humano ali — e essa
+    // regra só funciona no modo "tapa-buraco" (`null`): com um número fixo,
+    // os dois times ficariam presos no mesmo tamanho e vermelho nunca
+    // chegaria a `porTime` sozinho. Uma sala montada sempre traz um número
+    // concreto (`salaConfiguravel` nunca deixa `bots` indefinido), então sem
+    // este caso especial toda Regência nasceria com o backfill desligado.
+    this.botsFixos = this.campanha ? null : (opcoes.botsPorTime ?? null);
     this.espera = opcoes.esperaPorJogadores ?? ESPERA_POR_JOGADORES;
     this.partida = criarPartida(this.seed, this.modo, this.mapaAtual, this.porTime);
     this.navegador = new Navegador(this.partida.arena);
@@ -275,6 +297,10 @@ export class Sala {
     const cliente = this.clientes.get(chave);
     if (!cliente) return false;
     if (cliente.unidade !== null) return false;
+    if (this.campanha && time === 'vermelho') {
+      cliente.enviar({ t: 'recusado', motivo: 'na Regência o reino bandido é sempre a máquina' });
+      return false;
+    }
     // Escolher um lado é parar de assistir: a partir daqui a pessoa ocupa vaga.
     cliente.assistindo = false;
     if (this.contarHumanos(time) >= this.porTime) {
@@ -595,6 +621,8 @@ export class Sala {
     estado.faseEm -= DT;
     if (estado.faseEm > -8) return;
 
+    if (this.campanha) this.avancarCampanha(estado.vencedor);
+
     const antigos = [...this.clientes.values()];
     this.seed = (this.seed * 1103515245 + 12345) >>> 0;
     // Sorteio: o mapa da próxima partida sai da seed nova. Fixo: o mesmo campo
@@ -604,6 +632,7 @@ export class Sala {
     this.navegador = new Navegador(this.partida.arena);
     this.bots = new Bots(this.partida.arena, this.navegador);
     this.esperando = 0;
+    if (this.campanha) this.aplicarCampanha();
 
     for (const c of antigos) {
       c.enviar(this.boasVindas());
@@ -619,6 +648,49 @@ export class Sala {
       c.enviar({ t: 'nasceu', voce: u.id, time: c.time });
     }
     this.elencoSujo = true;
+  }
+
+  /**
+   * A Regência entre uma partida e a próxima: vencer sobe de nível e dá um
+   * reforço automático à chapelaria; perder zera a corrente inteira.
+   *
+   * Sem tela de escolha nesta primeira versão — o reforço é sempre o
+   * próximo da lista (`perkDoNivel`), o que deixa a campanha reproduzível a
+   * partir da seed da sala e evita abrir um protocolo novo de decisão só
+   * para isto. O time sabe o que vem a seguir olhando o próprio nível.
+   */
+  private avancarCampanha(vencedor: Time | null): void {
+    if (vencedor === 'azul') {
+      this.nivelDaCampanha++;
+      const perk = perkDoNivel(this.nivelDaCampanha);
+      this.perksDoTime.push(perk.classe);
+      this.recado('azul', `Nível ${this.nivelDaCampanha}! ${perk.nome} — ${perk.descricao}`);
+    } else {
+      this.recado(
+        'azul',
+        this.nivelDaCampanha > 1
+          ? `A campanha caiu no nível ${this.nivelDaCampanha}. Recomeçando do nível 1.`
+          : 'A campanha caiu logo na primeira. Recomeçando.',
+      );
+      this.nivelDaCampanha = 1;
+      this.perksDoTime = [];
+    }
+  }
+
+  /**
+   * Aplica os reforços acumulados no estoque da partida nova — do time, e do
+   * reino bandido, que cresce pela mesma tabela sempre um nível atrás. Sem
+   * isso a Regência ficaria mais fácil a cada vitória, nunca mais difícil.
+   */
+  private aplicarCampanha(): void {
+    const estoque = this.partida.estado.estoque;
+    for (const classe of this.perksDoTime) estoque.azul[classe] += BONUS_DO_PERK;
+    // Estritamente menor: no nível em que o time recebe o primeiro reforço
+    // (nível 2), o bandido ainda não tem nenhum — só alcança de verdade se a
+    // pessoa continuar vencendo depois disso.
+    for (let n = 2; n < this.nivelDaCampanha; n++) {
+      estoque.vermelho[perkDoNivel(n).classe] += BONUS_DO_PERK;
+    }
   }
 
   /**
@@ -638,6 +710,14 @@ export class Sala {
       modo: this.modo,
       botsPorTime: this.botsFixos ?? 0,
       mapa: this.mapaAtual,
+      ...(this.campanha
+        ? {
+            campanha: {
+              nivel: this.nivelDaCampanha,
+              perks: this.perksDoTime.map((c) => perkDaClasse(c).nome),
+            },
+          }
+        : {}),
     };
   }
 

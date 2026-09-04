@@ -52,6 +52,7 @@ describe('a mensagem de entrada', () => {
       porTime: 2,
       bots: 3,
       privada: false,
+      campanha: false,
     });
   });
 

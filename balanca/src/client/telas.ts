@@ -661,6 +661,25 @@ export class Telas {
     pegar<HTMLButtonElement>('#jogar-local').addEventListener('click', entrar('local'));
     pegar<HTMLButtonElement>('#jogar-online').addEventListener('click', entrar('online'));
 
+    // A Regência é uma sala montada com a configuração já decidida — o
+    // jogador não escolhe modo, mapa nem npcs, então não passa pelo painel
+    // de `montarPainelDeSalas`. `porTime: 4` é o teto de gente que ela serve
+    // sem sobrar bot vazio quando joga só uma pessoa: `botsFixos` nasce nulo
+    // para toda sala de campanha (ver `Sala`), e por isso o `bots` daqui
+    // nunca é o número que vale — quem decide é sempre `campanha: true`.
+    pegar<HTMLButtonElement>('#jogar-campanha').addEventListener('click', () => {
+      const criar = salaConfiguravel({
+        modo: 'resgate',
+        mapa: 'sorteio',
+        porTime: 4,
+        bots: 0,
+        privada: true,
+        campanha: true,
+      });
+      this.montagemPendente = criar;
+      this.pedirParaJogar('montada', criar);
+    });
+
     pegar<HTMLButtonElement>('#assistir').addEventListener('click', () => {
       this.fecharFolhas();
       this.acoes.assistir();

@@ -189,6 +189,7 @@ export class Lobby {
             mapa: feita.mapa,
             porTime: feita.porTime,
             botsPorTime: feita.bots,
+            campanha: feita.campanha,
           }
         : {}),
       ...(this.porTime !== undefined && !feita ? { porTime: this.porTime } : {}),

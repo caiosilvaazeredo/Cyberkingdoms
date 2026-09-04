@@ -430,6 +430,11 @@
           linear-gradient(120deg, rgba(255, 255, 255, 0.28) 0%, transparent 45%),
           linear-gradient(#48b6c4, #206b78);
       }
+      .item.dourado {
+        background:
+          linear-gradient(120deg, rgba(255, 255, 255, 0.28) 0%, transparent 45%),
+          linear-gradient(var(--ouro), var(--ouro-forte));
+      }
       /*
         `minmax(0, 1fr)` e não `1fr`.
 
@@ -915,11 +920,77 @@
         opacity: 0.5;
         cursor: progress;
       }
+      button.grande.dourado {
+        background: var(--ouro-forte);
+        color: #2a1c07;
+      }
       .recado {
         margin: 8px 0 0;
         min-height: 18px;
         font-size: 13px;
         color: rgba(20, 17, 15, 0.7);
+      }
+
+      /*
+        A Campanha reaproveita as faixas douradas do Tiny Swords como título de
+        cada modo, em vez de uma cor de fundo lisa: são três pedaços — ponta,
+        meio, ponta — e o meio repete (`repeat-x`) até preencher a largura do
+        cartão, que é o único jeito de uma faixa desenhada para um tamanho
+        servir a qualquer largura de tela sem esticar o desenho.
+      */
+      .campanha-lista {
+        list-style: none;
+        margin: 14px 0 0;
+        padding: 0;
+        display: grid;
+        gap: 10px;
+      }
+      .campanha-modo {
+        background: rgba(0, 0, 0, 0.04);
+        border: 2px solid rgba(0, 0, 0, 0.16);
+        padding: 10px 12px 12px;
+      }
+      .campanha-modo.bloqueado {
+        opacity: 0.6;
+      }
+      .campanha-faixa {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 34px;
+        padding: 0 16px;
+        margin: -2px -2px 6px;
+        background-image: url('/tiny/ui/faixa_esq.png'), url('/tiny/ui/faixa_dir.png'),
+          url('/tiny/ui/faixa_meio.png');
+        background-repeat: no-repeat, no-repeat, repeat-x;
+        background-position: left center, right center, center;
+        background-size:
+          20px 100%,
+          20px 100%,
+          auto 100%;
+        image-rendering: pixelated;
+      }
+      .campanha-faixa b {
+        color: #3a2a06;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+        font-size: 14px;
+      }
+      .campanha-cadeado {
+        width: 18px;
+        height: 18px;
+        image-rendering: pixelated;
+      }
+      .campanha-modo > p {
+        margin: 0 0 8px;
+        font-size: 13px;
+        opacity: 0.8;
+      }
+      .campanha-bandido {
+        float: left;
+        width: 32px;
+        height: auto;
+        margin: 0 8px 4px 0;
+        image-rendering: pixelated;
       }
 
       /*
@@ -1540,6 +1611,10 @@
           <small>monte a sua ou entre numa aberta</small>
         </button>
         <button class="item verde" data-folha="regras" aria-expanded="false">Como se joga</button>
+        <button class="item dourado" data-folha="campanha" aria-expanded="false">
+          Campanha
+          <small>sozinho ou em grupo · cresce com quem chegar</small>
+        </button>
         <button id="assistir" class="item roxo">Assistir</button>
 
         <div class="miudos">
@@ -1657,6 +1732,56 @@
             >sem mouse nem analógico direito, o golpe sai <b>para onde você está indo</b></span
           >
         </div>
+      </div>
+
+      <!--
+        A Campanha: quatro modos numa lista só, e não quatro folhas.
+
+        Só a Regência joga por enquanto — o resto é a mesma promessa que o
+        rodapé do jogo já faz ("um cerco a ouro, dois baús") em forma de
+        roteiro: quem olha aqui sabe o que vem a seguir, e não só o que já dá
+        para jogar. O cadeado é o mesmo dos modos ainda não escolhidos — não
+        precisa de uma palavra a mais que "em breve" para dizer isso.
+      -->
+      <div class="folha" data-folha="campanha" hidden>
+        <h2>Campanha</h2>
+        <p>
+          Vença e a chapelaria do seu reino cresce; perca e ela volta ao começo. O reino bandido
+          cresce pela mesma tabela, sempre um passo atrás — e é sempre a máquina: ninguém escolhe
+          jogar de bandido.
+        </p>
+        <ul class="campanha-lista">
+          <li class="campanha-modo pronto">
+            <div class="campanha-faixa"><b>Regência</b></div>
+            <p>
+              <img class="campanha-bandido" src="/tiny/ui/bandido.png" alt="" aria-hidden="true" />
+              Segure o cofre contra o reino bandido. Cada vitória reforça um ofício; cada derrota
+              zera.
+            </p>
+            <button class="grande dourado" id="jogar-campanha">jogar</button>
+          </li>
+          <li class="campanha-modo bloqueado">
+            <div class="campanha-faixa">
+              <img class="campanha-cadeado" src="/tiny/ui/cadeado.png" alt="" aria-hidden="true" />
+              <b>O Cerco ao Reino de Migalhas</b>
+            </div>
+            <p>em breve</p>
+          </li>
+          <li class="campanha-modo bloqueado">
+            <div class="campanha-faixa">
+              <img class="campanha-cadeado" src="/tiny/ui/cadeado.png" alt="" aria-hidden="true" />
+              <b>A Fuga do Menino Rei</b>
+            </div>
+            <p>em breve</p>
+          </li>
+          <li class="campanha-modo bloqueado">
+            <div class="campanha-faixa">
+              <img class="campanha-cadeado" src="/tiny/ui/cadeado.png" alt="" aria-hidden="true" />
+              <b>???</b>
+            </div>
+            <p>em breve</p>
+          </li>
+        </ul>
       </div>
 
       <div class="folha" data-folha="ajustes" hidden>

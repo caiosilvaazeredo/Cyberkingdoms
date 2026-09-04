@@ -129,6 +129,8 @@ export class Rede {
   botsPorTime = 0;
   /** O mapa desta partida. É dele que a arena local nasce. */
   mapa: IdDoMapa = MAPA_PADRAO;
+  /** O nível e os reforços da Regência — `null` fora dela. */
+  campanha: { nivel: number; perks: readonly string[] } | null = null;
   /** Verdadeiro entre conectar e escolher o lado. */
   get espectador(): boolean {
     return this.meuId === null && this.arena !== null;
@@ -316,6 +318,7 @@ export class Rede {
         this.modo = modoDe(msg.modo).id;
         this.botsPorTime = msg.botsPorTime;
         this.mapa = mapaDe(msg.mapa).id;
+        this.campanha = msg.campanha ?? null;
         // Chega como espectador: a unidade só existe depois de escolher o lado,
         // e numa partida nova ela é outra. Zerar aqui evita desenhar o boneco
         // da partida passada por um quadro.

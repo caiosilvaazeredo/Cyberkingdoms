@@ -83,6 +83,11 @@ export interface ConfiguracaoDeSala {
   bots?: number;
   /** Sala reservada: o lobby não manda estranhos para ela. */
   privada?: boolean;
+  /**
+   * A Regência: o lado vermelho vira reino bandido, sempre de bots — quem
+   * entra só escolhe azul. Ver `Sala.escolher` e `shared/campanha.ts`.
+   */
+  campanha?: boolean;
 }
 
 /** Vagas de gente por time: pelo menos uma, no máximo o que o campo comporta. */
@@ -131,6 +136,7 @@ export function salaConfiguravel(bruta: unknown): Required<ConfiguracaoDeSala> {
     porTime,
     bots: Math.min(bots, teto - porTime),
     privada: c.privada === true,
+    campanha: c.campanha === true,
   };
 }
 
@@ -286,6 +292,12 @@ export type DoServidor =
        * partida seguinte — traz o que de fato saiu.
        */
       mapa: IdDoMapa;
+      /**
+       * Presente só nas salas de Regência — o nível atual e os reforços que
+       * o time já tem. Vem no `bemvindo` porque, como o modo e o mapa, vale
+       * pela partida inteira e a sala manda de novo a cada nível.
+       */
+      campanha?: { nivel: number; perks: readonly string[] };
     }
   /**
    * O espectador virou jogador. Chega depois de `escolherTime`, e de novo a
