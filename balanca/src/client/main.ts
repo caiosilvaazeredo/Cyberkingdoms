@@ -22,10 +22,11 @@ import {
   COR_DA_VAGA,
 } from './desenho';
 import { Entrada } from './entrada';
-import { desenharDica, desenharHud, narrar } from './hud';
+import { botaoDeRecolher, desenharDica, desenharHud, dispositivoTemToque, narrar } from './hud';
 import { Rede } from './rede';
 import { PainelDaEquipe } from './equipe';
-import { Minimapa } from './minimapa';
+import { salvarAjustes } from './ajustes';
+import { caixaDoMinimapa, Minimapa } from './minimapa';
 import { Particulas } from './particulas';
 import { criarFiel, desenharVitrine, moverFiel } from './vitrine';
 import { Sofa, type Porta } from './sofa';
@@ -301,6 +302,19 @@ function laco(agora: number): void {
   const altura = tela.height / dpr;
   const ajustes = telas.preferencias;
   entrada.ladoDoManche = ajustes.manche;
+  // Os nós de recolher (`hud.ts`, `main.ts`) só desenham e registram o toque;
+  // quem decide o que um toque neles significa é aqui, porque é aqui que
+  // `ajustes` mora de verdade — os painéis não sabem uns dos outros, só dos
+  // seus próprios nomes de botão.
+  if (entrada.toquesDeRecolher.length > 0) {
+    for (const nome of entrada.toquesDeRecolher) {
+      if (nome === 'recolher-cartao') ajustes.cartao = !ajustes.cartao;
+      else if (nome === 'recolher-registro') ajustes.registro = !ajustes.registro;
+      else if (nome === 'recolher-minimapa') ajustes.minimapa = !ajustes.minimapa;
+    }
+    entrada.toquesDeRecolher = [];
+    salvarAjustes(ajustes);
+  }
 
   const estado = rede?.estado ?? null;
   // Quem está em campo, deste aparelho, em ordem de vaga. É a lista que decide
@@ -515,14 +529,23 @@ function laco(agora: number): void {
     desenharHud(ctx, rede, emCampo, entrada, largura, altura, tempo, ajustes, arte);
     // O minimapa é desenhado daqui, e não de dentro do HUD, porque precisa da
     // câmera: o retângulo do que está na tela é metade do que ele serve, e a
-    // câmera é coisa deste arquivo.
-    if (ajustes.minimapa && rede.estado) {
-      minimapa.desenhar(ctx, rede.arena, rede.estado, emCampo[0]!.unidade.time, {
-        x: camera.x,
-        y: camera.y,
-        largura: largura / camera.zoom,
-        altura: altura / camera.zoom,
-      }, largura);
+    // câmera é coisa deste arquivo. O nó de recolher segue a mesma caixa que o
+    // minimapa usa para si mesmo — `caixaDoMinimapa` é a única fonte da
+    // posição, ligado ou não, para o nó nunca aparecer num canto diferente do
+    // que o minimapa ocupava um instante antes.
+    if (rede.estado && rede.arena) {
+      const caixa = caixaDoMinimapa(largura, rede.arena);
+      if (ajustes.minimapa) {
+        minimapa.desenhar(ctx, rede.arena, rede.estado, emCampo[0]!.unidade.time, {
+          x: camera.x,
+          y: camera.y,
+          largura: largura / camera.zoom,
+          altura: altura / camera.zoom,
+        }, largura);
+      }
+      if (dispositivoTemToque()) {
+        botaoDeRecolher(ctx, entrada, 'minimapa', caixa.x + caixa.l - 13, caixa.y + 13, ajustes.minimapa);
+      }
     }
   }
 

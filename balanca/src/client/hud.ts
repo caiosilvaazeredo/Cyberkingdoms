@@ -131,6 +131,13 @@ export function desenharHud(
   ajustes: Ajustes,
   arte: Arte,
 ): void {
+  // Zerado aqui, uma vez por quadro, e daí em diante só ganha chaves — nunca
+  // mais é reatribuído inteiro. `botoesDeToque`, os cartões e o minimapa (que
+  // desenha depois, de `main.ts`) escrevem cada um a sua própria chave no
+  // mesmo objeto; se algum deles reatribuísse `entrada.botoes = {...}` do
+  // zero, apagaria os botões dos outros que já tivessem desenhado antes.
+  entrada.botoes = {};
+
   const estado = rede.estado;
   const eu = locais[0]?.unidade ?? null;
   // Entre o "bem-vindo" e o primeiro retrato existe um punhado de quadros em
@@ -144,12 +151,12 @@ export function desenharHud(
   if (locais.length > 1) {
     cartoesDoSofa(ctx, estado, locais, largura, altura);
   } else if (eu) {
-    cartaoDaClasse(ctx, estado, eu, largura, altura);
+    cartaoDaClasse(ctx, estado, eu, largura, altura, entrada, ajustes);
   }
   // O aviso do meio da tela é do dono do aparelho: quatro avisos empilhados no
   // centro tapariam a briga que eles mandam resolver.
   if (eu) avisosDoCentro(ctx, estado, eu, largura, altura, tempo);
-  if (ajustes.registro) registro(ctx, rede, largura, altura, ajustes, arte);
+  registro(ctx, rede, largura, altura, ajustes, arte, entrada);
   faixaDeFase(ctx, estado, largura, altura, tempo);
   if (entrada.placarAberto) tabela(ctx, estado, largura, altura);
   botoesDeToque(ctx, entrada, largura, altura);
@@ -392,10 +399,9 @@ function cartaoDaClasse(
   eu: Unidade,
   largura: number,
   altura: number,
+  entrada: Entrada,
+  ajustes: Ajustes,
 ): void {
-  const p = perfil(eu.classe);
-  const nivel = nivelDe(estado, eu.time);
-  const max = vidaMaximaDe(eu.classe, nivel, eu.fera);
   const x = 12;
   // Num celular estreito o cartão não pode ser mais largo que a tela: 272 fixos
   // deixavam a linha da obra saindo pela direita.
@@ -409,6 +415,26 @@ function cartaoDaClasse(
     ? altura - CENTRO_DOS_CONTROLES_DA_BASE - RAIO_DO_ANEL_DO_MANCHE - 10
     : altura - 12;
   const TOPO_SEGURO = 150;
+  // O nó mora sempre no mesmo canto — o pé do cartão, que é o mesmo esteja
+  // ele aberto ou fechado — para o segundo toque acertar onde o primeiro
+  // acertou. Um nó que pulasse de canto ao recolher pediria caçada, não toque.
+  const xNo = x + l - 16;
+  const yNo = pisoDoCartao - 16;
+
+  // No celular, recolhido é só o nó — não o cartão inteiro sumindo sem deixar
+  // rastro. É o que "tudo precisa ser recolhível" pede: quem não quer ver o
+  // extrato de vida toca e ele volta a ser um ponto pequeno no canto, não uma
+  // viagem até os Ajustes para trazê-lo de volta. Fora do celular, sem mouse
+  // ganhando nada por recolher um cartão que não atrapalha ninguém, a chave
+  // já resolve sozinha — ligada ou desligada, sem nó.
+  if (!ajustes.cartao) {
+    if (dispositivoTemToque()) botaoDeRecolher(ctx, entrada, 'cartao', xNo, yNo, false);
+    return;
+  }
+
+  const p = perfil(eu.classe);
+  const nivel = nivelDe(estado, eu.time);
+  const max = vidaMaximaDe(eu.classe, nivel, eu.fera);
 
   // Numa tela baixa (celular deitado) não cabem as quatro linhas entre o topo
   // e o manche — coube o comprido e sobrou o alto. O cartão perde chapelaria,
@@ -425,6 +451,7 @@ function cartaoDaClasse(
   ctx.fillStyle = 'rgba(12, 14, 20, 0.72)';
   arredondado(ctx, x, y, l, alturaCartao, 10);
   ctx.fill();
+  botaoDeRecolher(ctx, entrada, 'cartao', xNo, yNo, true);
 
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
@@ -552,16 +579,25 @@ function registro(
   altura: number,
   ajustes: Ajustes,
   arte: Arte,
+  entrada: Entrada,
 ): void {
+  // O mural começa abaixo do minimapa quando ele está ligado: os dois moram no
+  // canto de cima à direita, e sobrepostos nenhum dos dois se lê.
+  const caixa = ajustes.minimapa && rede.arena ? caixaDoMinimapa(largura, rede.arena) : null;
+  const y0 = caixa ? caixa.y + caixa.a + 14 : 110;
+
+  if (!ajustes.registro) {
+    if (dispositivoTemToque()) botaoDeRecolher(ctx, entrada, 'registro', largura - 27, y0 + 13, false);
+    return;
+  }
+
   const agora = performance.now();
   ctx.save();
   ctx.textAlign = 'right';
   ctx.textBaseline = 'top';
   ctx.font = '500 13px "Trebuchet MS", system-ui, sans-serif';
-  // O mural começa abaixo do minimapa quando ele está ligado: os dois moram no
-  // canto de cima à direita, e sobrepostos nenhum dos dois se lê.
-  const caixa = ajustes.minimapa && rede.arena ? caixaDoMinimapa(largura, rede.arena) : null;
-  let y = caixa ? caixa.y + caixa.a + 14 : 110;
+  botaoDeRecolher(ctx, entrada, 'registro', largura - 27, y0 + 13, true);
+  let y = y0 + 34;
   for (const aviso of rede.avisos) {
     const idade = (agora - aviso.quando) / 1000;
     if (idade > 8) continue;
@@ -775,7 +811,7 @@ const pad = (n: number): string => String(n).padStart(2, ' ');
 
 /** Há dedo na tela? Aparelho, não jogador — a mesma pergunta que `entrada.ts`
  * faz para decidir se liga o manche virtual. */
-function dispositivoTemToque(): boolean {
+export function dispositivoTemToque(): boolean {
   return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 }
 
@@ -787,29 +823,76 @@ function dispositivoTemToque(): boolean {
 const CENTRO_DOS_CONTROLES_DA_BASE = 130;
 const RAIO_DO_ANEL_DO_MANCHE = 56;
 
+/**
+ * O botão pequeno que recolhe ou reabre um painel do HUD — só existe no
+ * celular, onde tela é o recurso escasso; no mouse, os Ajustes já fazem esse
+ * papel sem precisar de um nó espremido num canto. Desenha o nó e registra o
+ * retângulo em `entrada.botoes['recolher-<nome>']` — uma chave a mais no
+ * mesmo objeto que `botoesDeToque` usa, nunca uma reatribuição, porque três
+ * painéis diferentes chamam esta função no mesmo quadro.
+ *
+ * `entrada.toquesDeRecolher` acumula o nome a cada toque; quem esvazia a
+ * fila e decide o que fazer com ela é `main.ts`, que é dono de `ajustes` —
+ * este arquivo só desenha, nunca liga ou desliga um painel sozinho.
+ */
+export function botaoDeRecolher(
+  ctx: CanvasRenderingContext2D,
+  entrada: Entrada,
+  nome: string,
+  x: number,
+  y: number,
+  aberto: boolean,
+): void {
+  if (!dispositivoTemToque()) return;
+  const r = 13;
+  entrada.botoes[`recolher-${nome}`] = { x: x - r, y: y - r, largura: r * 2, altura: r * 2 };
+  ctx.save();
+  ctx.fillStyle = 'rgba(20, 22, 30, 0.78)';
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  // Um chevron: para cima quando aberto (toque para recolher), para baixo
+  // quando recolhido (toque para reabrir) — a mesma seta que qualquer
+  // acordeão usa, sem precisar de texto num círculo de 26 px.
+  ctx.strokeStyle = '#ffe9a8';
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  const s = 4;
+  const sinal = aberto ? -1 : 1;
+  ctx.moveTo(x - s, y - s * 0.5 * sinal);
+  ctx.lineTo(x, y + s * 0.5 * sinal);
+  ctx.lineTo(x + s, y - s * 0.5 * sinal);
+  ctx.stroke();
+  ctx.restore();
+}
+
 function botoesDeToque(
   ctx: CanvasRenderingContext2D,
   entrada: Entrada,
   largura: number,
   altura: number,
 ): void {
-  if (!dispositivoTemToque()) {
-    entrada.botoes = {};
-    return;
-  }
+  if (!dispositivoTemToque()) return;
   const r = 46;
   // Os botões ficam do lado **oposto** ao manche: é a mão que sobra.
   const aDireita = entrada.ladoDoManche === 'esquerda';
   const bx = (recuo: number): number => (aDireita ? largura - recuo : recuo - r * 2);
-  entrada.botoes = {
+  const acoes = {
     atacar: { x: bx(150), y: altura - CENTRO_DOS_CONTROLES_DA_BASE, largura: r * 2, altura: r * 2 },
     usar: { x: bx(240), y: altura - 80, largura: r * 2, altura: r * 2 },
   };
+  entrada.botoes.atacar = acoes.atacar;
+  entrada.botoes.usar = acoes.usar;
   ctx.save();
   ctx.font = '600 14px "Trebuchet MS", system-ui, sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  for (const [nome, b] of Object.entries(entrada.botoes)) {
+  for (const [nome, b] of Object.entries(acoes)) {
     ctx.fillStyle = 'rgba(20, 22, 30, 0.55)';
     ctx.beginPath();
     ctx.arc(b.x + r, b.y + r, r, 0, Math.PI * 2);

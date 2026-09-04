@@ -41,6 +41,8 @@ export interface Ajustes {
    * caro. Não é vantagem: ele mostra o que o time já sabe.
    */
   minimapa: boolean;
+  /** O cartão de vida e classe, no canto de baixo. */
+  cartao: boolean;
   /** De que lado da tela fica o manche, no celular. */
   manche: Lado;
 }
@@ -52,6 +54,7 @@ export const PADROES: Ajustes = {
   mato: true,
   registro: true,
   minimapa: true,
+  cartao: true,
   manche: 'esquerda',
 };
 
@@ -99,6 +102,7 @@ export function sanear(bruto: unknown): Ajustes {
     mato: booleano(o.mato, PADROES.mato),
     registro: booleano(o.registro, PADROES.registro),
     minimapa: booleano(o.minimapa, PADROES.minimapa),
+    cartao: booleano(o.cartao, PADROES.cartao),
     manche: entre(o.manche, ['esquerda', 'direita'] as const, PADROES.manche),
   };
 }

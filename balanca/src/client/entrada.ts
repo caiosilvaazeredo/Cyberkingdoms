@@ -59,6 +59,14 @@ export class Entrada {
   /** Retângulos dos botões de tela, redesenhados pelo HUD a cada quadro. */
   botoes: Record<string, Retangulo> = {};
   /**
+   * Nomes dos botões "recolher-*" tocados desde a última leitura — quem lê
+   * (`main.ts`) esvazia a cada quadro. Um toque nesses nomes de `botoes` não
+   * vira manche nem mira, e dispara uma vez só, no instante em que o dedo
+   * pousa: são botões de alternar, não de segurar, e a mesma tela que os
+   * desenha (`hud.ts`) não sabe nada de `ajustes` — só quem lê a fila sabe.
+   */
+  toquesDeRecolher: string[] = [];
+  /**
    * De que lado da tela fica o manche, no celular.
    *
    * Vem dos ajustes e é lido a cada toque em vez de guardado: quem troca a
@@ -125,6 +133,7 @@ export class Entrada {
       const botao = Object.entries(this.botoes).find(([, b]) => dentro(b, x, y));
       if (botao && !this.toqueDeMover && this.toqueDeMirar?.id !== t.identifier) {
         this.toquesEmBotao.set(t.identifier, botao[0]);
+        if (botao[0].startsWith('recolher-')) this.toquesDeRecolher.push(botao[0]);
         continue;
       }
       if (this.toqueDeMover?.id === t.identifier) {

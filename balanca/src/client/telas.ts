@@ -924,6 +924,15 @@ export class Telas {
         ],
       },
       {
+        chave: 'cartao',
+        rotulo: 'Cartão de vida e classe',
+        explica: 'nome, vida e o que você carrega',
+        opcoes: [
+          { valor: true, texto: 'mostrar' },
+          { valor: false, texto: 'esconder' },
+        ],
+      },
+      {
         chave: 'manche',
         rotulo: 'Manche no celular',
         explica: 'de que lado fica o controle de andar',
