@@ -42,7 +42,9 @@ export type IdDoModo =
   | 'chapelaria'
   | 'veiaseca'
   | 'obra'
-  | 'abate';
+  | 'abate'
+  | 'covil'
+  | 'caca';
 
 export interface Modo {
   readonly id: IdDoModo;
@@ -103,6 +105,18 @@ export interface Modo {
    * jogo só para brigar — e o único em que o baú é cenário.
    */
   readonly abatesParaVencer: number | null;
+  /**
+   * O Guardião nasce no meio do mapa: um chefe neutro, cuja queda dá ao time
+   * que baixou a vida dele um tempo de velocidade extra. Ver `pve.ts` e
+   * `GUARDIAO_*` em regras.ts.
+   */
+  readonly temGuardiao: boolean;
+  /**
+   * A Presa nasce sozinha, sem dono, com frequência bem maior que o
+   * Guardião: derrubá-la dá um buff de dano curto pro time. Ver `pve.ts` e
+   * `PRESA_*` em regras.ts.
+   */
+  readonly temCaca: boolean;
 }
 
 /**
@@ -136,6 +150,8 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     vitoriaPorObra: false,
     abatesParaVencer: null,
     pesoQueVence: PESO_MINIMO,
+    temGuardiao: false,
+    temCaca: false,
   },
   assalto: {
     id: 'assalto',
@@ -150,6 +166,8 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     vitoriaPorObra: false,
     abatesParaVencer: null,
     pesoQueVence: PESO_MINIMO,
+    temGuardiao: false,
+    temCaca: false,
   },
   cofrecheio: {
     id: 'cofrecheio',
@@ -169,6 +187,8 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     // balança e seis por resgate — os dois caminhos vivos, que é o que o lema
     // promete.
     pesoQueVence: 70,
+    temGuardiao: false,
+    temCaca: false,
   },
   chapelaria: {
     id: 'chapelaria',
@@ -183,6 +203,8 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     vitoriaPorObra: false,
     abatesParaVencer: null,
     pesoQueVence: PESO_MINIMO,
+    temGuardiao: false,
+    temCaca: false,
   },
   veiaseca: {
     id: 'veiaseca',
@@ -197,6 +219,8 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     vitoriaPorObra: false,
     abatesParaVencer: null,
     pesoQueVence: PESO_MINIMO,
+    temGuardiao: false,
+    temCaca: false,
   },
   obra: {
     id: 'obra',
@@ -211,6 +235,8 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     vitoriaPorObra: true,
     abatesParaVencer: null,
     pesoQueVence: PESO_MINIMO,
+    temGuardiao: false,
+    temCaca: false,
   },
   abate: {
     id: 'abate',
@@ -229,6 +255,40 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     vitoriaPorObra: false,
     abatesParaVencer: 30,
     pesoQueVence: PESO_MINIMO,
+    temGuardiao: false,
+    temCaca: false,
+  },
+  covil: {
+    id: 'covil',
+    nome: 'Covil',
+    lema: 'um Guardião nasce no meio do mapa · derrubá-lo acelera o time inteiro',
+    pontosParaVencer: PONTOS_PARA_VENCER,
+    duracao: DURACAO_DA_PARTIDA,
+    renascimentoBase: RENASCIMENTO_BASE,
+    vitoriaPorBalanca: false,
+    chapeusInfinitos: false,
+    animaisVoltam: true,
+    vitoriaPorObra: false,
+    abatesParaVencer: null,
+    pesoQueVence: PESO_MINIMO,
+    temGuardiao: true,
+    temCaca: false,
+  },
+  caca: {
+    id: 'caca',
+    nome: 'Caça',
+    lema: 'uma Presa nasce sem parar no meio do mapa · derrubá-la turbina o dano do time por um tempo',
+    pontosParaVencer: PONTOS_PARA_VENCER,
+    duracao: DURACAO_DA_PARTIDA,
+    renascimentoBase: RENASCIMENTO_BASE,
+    vitoriaPorBalanca: false,
+    chapeusInfinitos: false,
+    animaisVoltam: true,
+    vitoriaPorObra: false,
+    abatesParaVencer: null,
+    pesoQueVence: PESO_MINIMO,
+    temGuardiao: false,
+    temCaca: true,
   },
 };
 
@@ -243,6 +303,8 @@ export const IDS_DOS_MODOS: readonly IdDoModo[] = [
   'veiaseca',
   'obra',
   'abate',
+  'covil',
+  'caca',
 ];
 
 /**

@@ -261,6 +261,8 @@ const espia = { quadros: 0, comandos: 0 };
   tela: () => telas.atual,
   relogio: () => rede?.estado?.relogio ?? null,
   totem: () => rede?.estado?.totem ?? null,
+  guardiao: () => rede?.estado?.guardiao ?? null,
+  presa: () => rede?.estado?.presa ?? null,
   canhao: (time: Time) => (rede?.arena ? canhaoDe(rede.arena, time) : null),
   euEstou: () => (sofa?.jogadores[0]?.rede.eu ? { x: sofa.jogadores[0].rede.eu.x, y: sofa.jogadores[0].rede.eu.y } : null),
   ping: () => rede?.ping ?? null,
@@ -487,6 +489,12 @@ function laco(agora: number): void {
         } else if (evento.classe !== null) {
           particulas.acender(arte, 'roubo', chapelaria.x, chapelaria.y, tempo);
         }
+      }
+      if (evento.tipo === 'guardiaoCaiu') {
+        particulas.acender(arte, 'guardiaoCaiu', evento.x, evento.y, tempo);
+      }
+      if (evento.tipo === 'presaCaiu') {
+        particulas.acender(arte, 'presaCaiu', evento.x, evento.y, tempo);
       }
       if (evento.tipo === 'invasaoAfugentada') {
         const chapelaria = rede.arena.estrutura('chapelaria', evento.time);

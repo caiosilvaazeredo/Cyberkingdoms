@@ -40,6 +40,12 @@ function estadoVazio(): Estado {
     casasDaMoeda: [],
     oficinas: [],
     canhoes: [],
+    guardiao: null,
+    proximoGuardiaoEm: 0,
+    buffDoGuardiao: { azul: 0, vermelho: 0 },
+    presa: null,
+    proximaPresaEm: 0,
+    buffDaPresa: { azul: 0, vermelho: 0 },
     estoque,
     eventos: [],
     vencedor: null,
@@ -107,6 +113,68 @@ describe('o retrato', () => {
     const bau = copia.baus.find((p) => p.time === 'azul')!;
     expect(bau.onde).toBe('carregado');
     expect(bau.portador).toBe(heroi.id);
+  });
+
+  it('leva o Guardião e o buff dele, no Modo Covil', () => {
+    const partida = criarPartida(34, 'covil');
+    for (let i = 0; i < Math.ceil(AQUECIMENTO * TICKS_POR_SEGUNDO) + 2; i++) partida.passo();
+
+    partida.estado.guardiao = {
+      id: 99,
+      tipo: 'panda',
+      x: 1000,
+      y: 900,
+      vida: 500,
+      vidaMaxima: 1800,
+      golpeEm: 1.5,
+    };
+    partida.estado.buffDoGuardiao = { azul: 12, vermelho: 0 };
+
+    const copia = desempacotar(empacotar(partida.estado), estadoVazio());
+    expect(copia.guardiao).toEqual({
+      id: 99,
+      tipo: 'panda',
+      x: 1000,
+      y: 900,
+      vida: 500,
+      vidaMaxima: 1800,
+      golpeEm: 0, // não viaja — é relógio interno do servidor, não previsão.
+    });
+    expect(copia.buffDoGuardiao).toEqual({ azul: 12, vermelho: 0 });
+
+    partida.estado.guardiao = null;
+    const semGuardiao = desempacotar(empacotar(partida.estado), estadoVazio());
+    expect(semGuardiao.guardiao).toBeNull();
+  });
+
+  it('leva a Presa e o buff dela, no Modo Caça', () => {
+    const partida = criarPartida(34, 'caca');
+    for (let i = 0; i < Math.ceil(AQUECIMENTO * TICKS_POR_SEGUNDO) + 2; i++) partida.passo();
+
+    partida.estado.presa = {
+      id: 77,
+      x: 800,
+      y: 650,
+      vida: 90,
+      vidaMaxima: 260,
+      mordeEm: 0.8,
+    };
+    partida.estado.buffDaPresa = { azul: 0, vermelho: 7 };
+
+    const copia = desempacotar(empacotar(partida.estado), estadoVazio());
+    expect(copia.presa).toEqual({
+      id: 77,
+      x: 800,
+      y: 650,
+      vida: 90,
+      vidaMaxima: 260,
+      mordeEm: 0, // não viaja — é relógio interno do servidor, não previsão.
+    });
+    expect(copia.buffDaPresa).toEqual({ azul: 0, vermelho: 7 });
+
+    partida.estado.presa = null;
+    const semPresa = desempacotar(empacotar(partida.estado), estadoVazio());
+    expect(semPresa.presa).toBeNull();
   });
 
   it('cabe num pacote pequeno o bastante para quinze envios por segundo', () => {

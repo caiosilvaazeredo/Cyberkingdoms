@@ -112,6 +112,10 @@ const RECEITAS = {
   trollCaido: { folha: 'trollCaido', escala: 1.15, acima: 8, segura: 6 },
   /** A onda rara do Slingshot Gnome: rouba de longe, e a bolota é o gesto. */
   saqueDeLonge: { folha: 'bolota', escala: 1.3, acima: 20 },
+  /** O Guardião do Modo Covil caindo: o mesmo estouro do resgate, maior — é o abate que mais pesa no jogo inteiro. */
+  guardiaoCaiu: { folha: 'estouro', escala: 1.6, acima: 24 },
+  /** A Presa do Modo Caça caindo: o mesmo estouro, no tamanho normal — ela cai o dobro das vezes que o Guardião. */
+  presaCaiu: { folha: 'estouro', escala: 1.1, acima: 16 },
 } as const satisfies Record<string, Receita>;
 
 /**

@@ -413,6 +413,80 @@ export const CANHAO_DANO = 14;
 /** Velocidade da bala, em unidades de mundo por segundo. */
 export const CANHAO_VELOCIDADE_DA_BOLA = 480;
 
+// --- o guardião (Modo Covil) -------------------------------------------------
+
+/**
+ * O Guardião: um chefe neutro no meio do mapa, exclusivo do Modo Covil — a
+ * alavanca que dá nome ao modo. Vida alta, dói em quem chega perto demais,
+ * e cai para o time que baixar toda a vida dele; a queda dá um tempo de
+ * velocidade extra pro time inteiro, o equivalente daqui ao Baron/Dragão de
+ * um MOBA: força a jogada, não decide a partida sozinho.
+ *
+ * Não mata — a área dele para em 1 de vida, o mesmo compromisso do canhão de
+ * cerco: dissuasão de verdade sem virar uma segunda fonte de abate gratuito
+ * pra quem só fica rondando o covil.
+ */
+
+/** Segundos até o primeiro Guardião nascer, contados do fim do aquecimento. */
+export const GUARDIAO_ATRASO_INICIAL = 180;
+
+/** Segundos entre o Guardião cair (ou o covil ficar vazio) e o próximo nascer. */
+export const GUARDIAO_INTERVALO = 90;
+
+/** Vida do Guardião — o bastante para exigir mais de uma pessoa. */
+export const GUARDIAO_VIDA = 1800;
+
+/** Raio da área que ele bate a cada golpe. */
+export const GUARDIAO_RAIO_DE_ATAQUE = 90;
+
+/** Segundos entre um golpe de área e o próximo. */
+export const GUARDIAO_CADENCIA_DE_ATAQUE = 2;
+
+/** Quanto o golpe de área tira, sem nunca derrubar quem leva. */
+export const GUARDIAO_DANO = 10;
+
+/** Segundos de velocidade extra pro time que derrubou o Guardião. */
+export const GUARDIAO_BUFF_DURACAO = 40;
+
+/** Multiplicador de velocidade do buff — o empurrão que força a jogada. */
+export const GUARDIAO_BUFF_VELOCIDADE = 1.25;
+
+// --- a presa (Modo Caça) -----------------------------------------------------
+
+/**
+ * A Presa: uma aranha neutra, menor e bem mais frequente que o Guardião —
+ * o equivalente daqui aos dragões de um MOBA, em vez do Baron. Exclusiva do
+ * Modo Caça — a alavanca que dá nome a ele.
+ *
+ * A diferença de propósito em relação ao Guardião: o buff é de **dano**, não
+ * de velocidade, e dura menos — várias janelas curtas de vantagem ao longo
+ * da partida, em vez de um empurrão raro e grande.
+ */
+
+/** Segundos até a primeira Presa nascer, contados do fim do aquecimento. */
+export const PRESA_ATRASO_INICIAL = 30;
+
+/** Segundos entre a Presa cair (ou a toca ficar vazia) e a próxima nascer. */
+export const PRESA_INTERVALO = 45;
+
+/** Vida da Presa — baixa: uma pessoa sozinha já dá conta. */
+export const PRESA_VIDA = 260;
+
+/** Raio da mordida da Presa. */
+export const PRESA_RAIO_DE_ATAQUE = 50;
+
+/** Segundos entre uma mordida e a próxima. */
+export const PRESA_CADENCIA_DE_ATAQUE = 1.4;
+
+/** Quanto a mordida tira, sem nunca derrubar quem leva. */
+export const PRESA_DANO = 4;
+
+/** Segundos de dano extra pro time que derrubou a Presa. */
+export const PRESA_BUFF_DURACAO = 20;
+
+/** Multiplicador de dano do buff — janela curta, vantagem real. */
+export const PRESA_BUFF_DANO = 1.2;
+
 /** Segundos até outro bicho aparecer no lugar do que morreu. */
 export const ANIMAL_VOLTA_EM = 18;
 

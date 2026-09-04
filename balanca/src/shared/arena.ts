@@ -413,6 +413,67 @@ export function canhaoDe(arena: Arena, time: Time): { x: number; y: number } {
 }
 
 /**
+ * Onde o Guardião do Modo Covil nasce: perto do centro do mapa, longe o
+ * bastante do totem do Modo Fera (que usa a mesma âncora do pasto do meio)
+ * para os dois nunca ocuparem o mesmo tile.
+ *
+ * Mesma garantia do canhão — busca em candidatos, não coordenada escrita à
+ * mão — e nunca devolve `null`: sem nenhum candidato livre, cai de volta na
+ * própria âncora, que já é chão. Um Guardião faltando quebraria o modo
+ * inteiro; um Guardião num canto ruim só é feio.
+ */
+export function covilDe(arena: Arena): { x: number; y: number } {
+  const ancora = arena.pastos.find((p) => p.lado === null) ?? arena.pastos[0];
+  if (!ancora) return { x: (arena.largura * TILE) / 2, y: (arena.altura * TILE) / 2 };
+  const tx0 = Math.floor(ancora.x / TILE);
+  const ty0 = Math.floor(ancora.y / TILE);
+  const candidatos: readonly (readonly [number, number])[] = [
+    [tx0 + 6, ty0],
+    [tx0 - 6, ty0],
+    [tx0, ty0 + 6],
+    [tx0, ty0 - 6],
+    [tx0 + 5, ty0 + 3],
+    [tx0 - 5, ty0 - 3],
+    [tx0 + 4, ty0 - 4],
+    [tx0 - 4, ty0 + 4],
+  ];
+  for (const [tx, ty] of candidatos) {
+    if (arena.ehChao(tx, ty) && !arena.bloqueado(tx, ty) && arena.tile(tx, ty) !== PONTE) {
+      return { x: tx * TILE + TILE / 2, y: ty * TILE + TILE / 2 };
+    }
+  }
+  return { x: ancora.x, y: ancora.y };
+}
+
+/**
+ * Onde a Presa do Modo Caça nasce: a mesma âncora do Guardião — o pasto do
+ * meio, comprovadamente presente e seco nos cinco mapas —, num quadrante
+ * diferente. Nunca precisam dividir mapa (Covil e Caça são modos
+ * separados), mas usar candidatos distintos do Guardião deixa os dois
+ * livres para um dia coexistir sem se sobrepor.
+ */
+export function tocaDaPresaDe(arena: Arena): { x: number; y: number } {
+  const ancora = arena.pastos.find((p) => p.lado === null) ?? arena.pastos[0];
+  if (!ancora) return { x: (arena.largura * TILE) / 2, y: (arena.altura * TILE) / 2 };
+  const tx0 = Math.floor(ancora.x / TILE);
+  const ty0 = Math.floor(ancora.y / TILE);
+  const candidatos: readonly (readonly [number, number])[] = [
+    [tx0 + 3, ty0 + 5],
+    [tx0 - 3, ty0 + 5],
+    [tx0 + 5, ty0 - 3],
+    [tx0 - 5, ty0 - 3],
+    [tx0 + 2, ty0 - 5],
+    [tx0 - 2, ty0 - 5],
+  ];
+  for (const [tx, ty] of candidatos) {
+    if (arena.ehChao(tx, ty) && !arena.bloqueado(tx, ty) && arena.tile(tx, ty) !== PONTE) {
+      return { x: tx * TILE + TILE / 2, y: ty * TILE + TILE / 2 };
+    }
+  }
+  return { x: ancora.x, y: ancora.y };
+}
+
+/**
  * A conta do mato: onde ele pode nascer, e o que nasce.
  *
  * Chamada só por `criarArena`, uma vez por tile. As exclusões são de jogo, não

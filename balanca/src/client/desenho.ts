@@ -659,6 +659,68 @@ export function desenharMundo(
     });
   }
 
+  // --- guardião do Modo Covil ------------------------------------------
+  // Sem cor de time — ele não briga por nenhum dos dois reinos — e com a
+  // vida sempre visível: diferente do boneco de jogador, cuja barra some
+  // quando ele está cheio, um chefe de vida alta é justamente o que vale a
+  // pena olhar o tempo inteiro.
+  if (estado.guardiao) {
+    const g = estado.guardiao;
+    const px = v.paraTelaX(g.x);
+    const py = v.paraTelaY(g.y);
+    const anim = arte.guardioes[g.tipo];
+    pinturas.push({
+      y: g.y,
+      pintar: () => {
+        quadro(ctx, anim, quadroEm(anim, tempo, g.id * 3), px, py, escala * 1.3, 'centro');
+
+        const larguraBarra = 60 * escala;
+        const topo = py - anim.lado * escala * 0.62;
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.fillRect(px - larguraBarra / 2, topo - 6 * escala, larguraBarra, 6 * escala);
+        ctx.fillStyle = g.vida / g.vidaMaxima > 0.35 ? '#e0a23c' : '#d9534f';
+        ctx.fillRect(
+          px - larguraBarra / 2,
+          topo - 6 * escala,
+          (larguraBarra * g.vida) / g.vidaMaxima,
+          6 * escala,
+        );
+        rotulo(ctx, 'guardião', px, topo - 10 * escala, escala, '#e0a23c');
+      },
+    });
+  }
+
+  // --- presa do Modo Caça ----------------------------------------------
+  // Mesmo tratamento do Guardião — sem time, vida sempre visível — só que
+  // menor na tela e num tom diferente de barra, para não confundir as duas
+  // ameaças caso um mapa um dia misture as duas (não é o caso hoje, mas o
+  // desenho de uma não deveria depender de a outra não existir).
+  if (estado.presa) {
+    const p = estado.presa;
+    const px = v.paraTelaX(p.x);
+    const py = v.paraTelaY(p.y);
+    const anim = arte.presa;
+    pinturas.push({
+      y: p.y,
+      pintar: () => {
+        quadro(ctx, anim, quadroEm(anim, tempo, p.id * 3), px, py, escala, 'centro');
+
+        const larguraBarra = 44 * escala;
+        const topo = py - anim.lado * escala * 0.55;
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.fillRect(px - larguraBarra / 2, topo - 6 * escala, larguraBarra, 6 * escala);
+        ctx.fillStyle = p.vida / p.vidaMaxima > 0.35 ? '#7ec850' : '#d9534f';
+        ctx.fillRect(
+          px - larguraBarra / 2,
+          topo - 6 * escala,
+          (larguraBarra * p.vida) / p.vidaMaxima,
+          6 * escala,
+        );
+        rotulo(ctx, 'presa', px, topo - 10 * escala, escala, '#7ec850');
+      },
+    });
+  }
+
   // --- porco decorativo ----------------------------------------------
   {
     const p = posicaoDoPorco(arena, tempo);

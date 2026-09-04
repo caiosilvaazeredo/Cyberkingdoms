@@ -97,6 +97,12 @@ const VIDA_PARA_COMER = 0.35;
 /** Distância a partir da qual o totem do Modo Fera deixa de valer o desvio. */
 const RAIO_DE_INTERESSE_NO_TOTEM = 700;
 
+/** Distância a partir da qual o Guardião do Modo Covil deixa de valer o desvio. */
+const RAIO_DE_INTERESSE_NO_GUARDIAO = 900;
+
+/** Distância a partir da qual a Presa do Modo Caça deixa de valer o desvio — menor que o Guardião: ela nasce o dobro das vezes e recompensa menos. */
+const RAIO_DE_INTERESSE_NA_PRESA = 650;
+
 interface Memoria {
   papel: Papel;
   /** A classe que este bot quer vestir. `null` para quem briga. */
@@ -404,6 +410,26 @@ export class Bots {
       }
     }
 
+    // O Guardião do Modo Covil: raio maior que o do totem — ele nasce bem
+    // mais raro e recompensa o time inteiro, não só quem chega primeiro, e
+    // por isso vale um desvio maior. `combater` mira nele sozinho quando o
+    // bot já está perto o bastante (ver `guardiaoNaMira`).
+    if (estado.guardiao && m.papel !== 'cozinheiro') {
+      const g = estado.guardiao;
+      if (Math.hypot(g.x - u.x, g.y - u.y) < RAIO_DE_INTERESSE_NO_GUARDIAO) {
+        return ir(g, false, 0, true);
+      }
+    }
+
+    // A Presa do Modo Caça: mesma lógica do Guardião, raio menor — ver o
+    // comentário de `RAIO_DE_INTERESSE_NA_PRESA`.
+    if (estado.presa && m.papel !== 'cozinheiro') {
+      const presa = estado.presa;
+      if (Math.hypot(presa.x - u.x, presa.y - u.y) < RAIO_DE_INTERESSE_NA_PRESA) {
+        return ir(presa, false, 0, true);
+      }
+    }
+
     // --- papel ------------------------------------------------------------
 
     if (m.papel === 'cozinheiro') return this.planoDoCozinheiro(estado, u, m, ir);
@@ -574,7 +600,11 @@ export class Bots {
     // o bot parar de andar para nada.
     if (u.carga === 'bau') return null;
 
-    const alvo = this.alvoDeAtaque(estado, u, p.alcance) ?? this.bichoNaMira(estado, u, m, p.alcance);
+    const alvo =
+      this.alvoDeAtaque(estado, u, p.alcance) ??
+      this.bichoNaMira(estado, u, m, p.alcance) ??
+      this.guardiaoNaMira(estado, u, p.alcance) ??
+      this.presaNaMira(estado, u, p.alcance);
     if (!alvo) {
       m.alvo = null;
       m.mirando = 0;
@@ -642,6 +672,37 @@ export class Bots {
       return { id: -1000 - a.id, x: a.x, y: a.y, carga: 'nada' };
     }
     return null;
+  }
+
+  /**
+   * O Guardião do Modo Covil, quando um bot já chegou perto o bastante para
+   * bater nele. `planejar` é quem decide ir até lá; isto é só o "e agora que
+   * cheguei, ataco" — o mesmo papel que `bichoNaMira` tem para a ovelha.
+   */
+  private guardiaoNaMira(
+    estado: Estado,
+    u: Unidade,
+    alcance: number,
+  ): { id: number; x: number; y: number; carga: string } | null {
+    const g = estado.guardiao;
+    if (!g || u.carga !== 'nada') return null;
+    if (Math.hypot(g.x - u.x, g.y - u.y) > alcance) return null;
+    // Id negativo, na faixa própria do Guardião — não pode colidir com o do
+    // bicho (-1000-id) nem com o de unidade nenhuma.
+    return { id: -2000 - g.id, x: g.x, y: g.y, carga: 'nada' };
+  }
+
+  /** A Presa do Modo Caça, quando um bot já chegou perto o bastante para bater nela — mesmo papel de `guardiaoNaMira`. */
+  private presaNaMira(
+    estado: Estado,
+    u: Unidade,
+    alcance: number,
+  ): { id: number; x: number; y: number; carga: string } | null {
+    const p = estado.presa;
+    if (!p || u.carga !== 'nada') return null;
+    if (Math.hypot(p.x - u.x, p.y - u.y) > alcance) return null;
+    // Faixa própria da Presa, na mesma família de ids negativos do Guardião.
+    return { id: -3000 - p.id, x: p.x, y: p.y, carga: 'nada' };
   }
 
   /** O bicho mais perto que ainda está de pé. O saqueador vive disso. */

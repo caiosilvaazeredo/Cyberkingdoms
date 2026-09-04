@@ -7,6 +7,7 @@ import type {
   Item,
   Bau,
   Projetil,
+  TipoDeGuardiao,
   TipoDeItem,
   TipoDeProjetil,
   Unidade,
@@ -320,6 +321,17 @@ export interface Retrato {
   iv: number[][];
   /** O totem do Modo Fera — `[id, x, y]`, ou vazio quando não há nenhum. */
   tm: number[];
+  /**
+   * O Guardião do Modo Covil — `[id, tipoIdx, x, y, vida, vidaMaxima]`, ou
+   * vazio quando não há nenhum (nos outros modos, sempre).
+   */
+  gd: number[];
+  /** Segundos restantes do buff de velocidade, `[azul, vermelho]`. */
+  gb: number[];
+  /** A Presa do Modo Caça — `[id, x, y, vida, vidaMaxima]`, ou vazio quando não há nenhuma. */
+  pz: number[];
+  /** Segundos restantes do buff de dano da Presa, `[azul, vermelho]`. */
+  pb: number[];
   cz: number[][];
   /** A obra de cada time. */
   of: number[][];
@@ -335,6 +347,7 @@ const ONDES: readonly Bau['onde'][] = ['cofre', 'carregado', 'chao', 'resgatado'
 const FERAS: readonly Fera[] = ['troll', 'minotauro'];
 const PROJETEIS: readonly TipoDeProjetil[] = ['flecha', 'bolaDeCanhao'];
 const VARIANTES: readonly VarianteDaInvasao[] = ['comum', 'tocha', 'slingshot'];
+const TIPOS_DE_GUARDIAO: readonly TipoDeGuardiao[] = ['minotauro', 'panda', 'tartaruga', 'caveira'];
 
 const idxTime = (t: Time): number => TIMES.indexOf(t);
 const timePorIdx = (i: number): Time => TIMES[i]!;
@@ -435,6 +448,27 @@ export function empacotar(estado: Estado): Retrato {
       VARIANTES.indexOf(i.variante),
     ]),
     tm: estado.totem ? [estado.totem.id, arred(estado.totem.x), arred(estado.totem.y)] : [],
+    gd: estado.guardiao
+      ? [
+          estado.guardiao.id,
+          TIPOS_DE_GUARDIAO.indexOf(estado.guardiao.tipo),
+          arred(estado.guardiao.x),
+          arred(estado.guardiao.y),
+          arred(estado.guardiao.vida),
+          arred(estado.guardiao.vidaMaxima),
+        ]
+      : [],
+    gb: TIMES.map((t) => arred(estado.buffDoGuardiao[t])),
+    pz: estado.presa
+      ? [
+          estado.presa.id,
+          arred(estado.presa.x),
+          arred(estado.presa.y),
+          arred(estado.presa.vida),
+          arred(estado.presa.vidaMaxima),
+        ]
+      : [],
+    pb: TIMES.map((t) => arred(estado.buffDaPresa[t])),
     // `[time, minério, cunhando*10, bolsas]`
     cz: estado.casasDaMoeda.map((c) => [idxTime(c.time), c.minerio, arred(c.cunhando * 10), c.bolsas]),
     // `[time, madeira, ouro, nivel]`
@@ -596,6 +630,33 @@ export function desempacotar(r: Retrato, base: Estado): Estado {
   }));
 
   base.totem = r.tm.length === 0 ? null : { id: r.tm[0]!, x: r.tm[1]!, y: r.tm[2]! };
+
+  base.guardiao =
+    r.gd.length === 0
+      ? null
+      : {
+          id: r.gd[0]!,
+          tipo: TIPOS_DE_GUARDIAO[r.gd[1]!] ?? 'minotauro',
+          x: r.gd[2]!,
+          y: r.gd[3]!,
+          vida: r.gd[4]!,
+          vidaMaxima: r.gd[5]!,
+          golpeEm: 0,
+        };
+  base.buffDoGuardiao = { azul: r.gb[0] ?? 0, vermelho: r.gb[1] ?? 0 };
+
+  base.presa =
+    r.pz.length === 0
+      ? null
+      : {
+          id: r.pz[0]!,
+          x: r.pz[1]!,
+          y: r.pz[2]!,
+          vida: r.pz[3]!,
+          vidaMaxima: r.pz[4]!,
+          mordeEm: 0,
+        };
+  base.buffDaPresa = { azul: r.pb[0] ?? 0, vermelho: r.pb[1] ?? 0 };
 
   base.casasDaMoeda = r.cz.map((l) => ({
     time: timePorIdx(l[0]!),

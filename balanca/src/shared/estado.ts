@@ -214,6 +214,44 @@ export interface Totem {
   y: number;
 }
 
+/**
+ * O visual do Guardião — um por bioma, para o chefe do Modo Covil combinar
+ * com o mapa em vez de ser o mesmo boneco em todo lugar. Ver
+ * `tipoDoGuardiaoPara` em pve.ts.
+ */
+export type TipoDeGuardiao = 'minotauro' | 'panda' | 'tartaruga' | 'caveira';
+
+/**
+ * O Guardião do Modo Covil — um chefe neutro, sem dono até alguém derrubar.
+ *
+ * `golpeEm` não viaja pela rede: é só o relógio do ataque de área, interno
+ * ao servidor, do mesmo jeito que a recarga do canhão também não viaja — o
+ * cliente não prevê o golpe, só recebe o resultado dele no próximo retrato.
+ */
+export interface Guardiao {
+  id: number;
+  tipo: TipoDeGuardiao;
+  x: number;
+  y: number;
+  vida: number;
+  vidaMaxima: number;
+  golpeEm: number;
+}
+
+/**
+ * A Presa do Modo Caça — uma aranha neutra, sem dono até alguém derrubar.
+ * `mordeEm` não viaja pela rede, pelo mesmo motivo do `golpeEm` do
+ * Guardião: é relógio interno do servidor.
+ */
+export interface Presa {
+  id: number;
+  x: number;
+  y: number;
+  vida: number;
+  vidaMaxima: number;
+  mordeEm: number;
+}
+
 export interface CasaDaMoeda {
   time: Time;
   minerio: number;
@@ -263,6 +301,9 @@ export type Evento =
   | { tipo: 'invasaoAfugentada'; time: Time; variante: VarianteDaInvasao }
   | { tipo: 'virouFera'; unidade: number; fera: Fera }
   | { tipo: 'voltouAoNormal'; unidade: number }
+  | { tipo: 'guardiaoNasceu'; tipoDoGuardiao: TipoDeGuardiao }
+  | { tipo: 'guardiaoCaiu'; time: Time; x: number; y: number }
+  | { tipo: 'presaCaiu'; time: Time; x: number; y: number }
   | { tipo: 'fim'; vencedor: Time | null };
 
 export interface Estado {
@@ -314,6 +355,18 @@ export interface Estado {
   casasDaMoeda: CasaDaMoeda[];
   oficinas: Oficina[];
   canhoes: Canhao[];
+  /** O chefe do Modo Covil, quando existe um esperando ser derrubado. */
+  guardiao: Guardiao | null;
+  /** Segundos até o próximo Guardião nascer. Ver `moverGuardiao`. */
+  proximoGuardiaoEm: number;
+  /** Segundos restantes do buff de velocidade por derrubar o Guardião. */
+  buffDoGuardiao: Record<Time, number>;
+  /** A Presa do Modo Caça, quando existe uma esperando ser derrubada. */
+  presa: Presa | null;
+  /** Segundos até a próxima Presa nascer. Ver `moverPresa`. */
+  proximaPresaEm: number;
+  /** Segundos restantes do buff de dano por derrubar a Presa. */
+  buffDaPresa: Record<Time, number>;
   /** Chapéus ainda guardados, por time e classe. */
   estoque: Record<Time, Record<Classe, number>>;
   /** Zerado a cada tick; o servidor despacha e esquece. */

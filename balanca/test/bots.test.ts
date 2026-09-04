@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { Sala, type Cliente } from '../src/server/sala';
 import { bauDe } from '../src/shared/estado';
+import type { IdDoModo } from '../src/shared/modos';
 import { PESO_TOTAL, TICKS_POR_SEGUNDO, TILE } from '../src/shared/regras';
 
 /**
@@ -28,8 +29,8 @@ function clienteMudo(nome: string): Cliente {
 }
 
 /** Roda a sala e junta o que aconteceu no caminho. */
-function jogar(segundos: number, seed: number) {
-  const sala = new Sala({ nome: 'teste', seed, porTime: 6, esperaPorJogadores: 0 });
+function jogar(segundos: number, seed: number, modo?: IdDoModo) {
+  const sala = new Sala({ nome: 'teste', seed, porTime: 6, esperaPorJogadores: 0, modo });
   // Um espectador basta para a sala existir; os bots jogam a partida.
   sala.entrar(clienteMudo('Observador'));
   const eventos: string[] = [];
@@ -84,6 +85,23 @@ describe('os bots', () => {
     // sobra para um bot notá-lo dentro do raio de interesse e pegá-lo.
     const { eventos } = jogar(90, 21);
     expect(eventos.filter((e) => e === 'virouFera').length).toBeGreaterThan(0);
+  });
+
+  it('no Modo Covil, derrubam o Guardião pelo menos uma vez', () => {
+    // Ele nasce tarde de propósito (180s depois do aquecimento) e tem vida
+    // alta — 280s dá tempo de nascer, os bots notarem (raio de 900) e
+    // baixarem a vida toda dele.
+    const { eventos } = jogar(280, 51, 'covil');
+    expect(eventos.filter((e) => e === 'guardiaoNasceu').length).toBeGreaterThan(0);
+    expect(eventos.filter((e) => e === 'guardiaoCaiu').length).toBeGreaterThan(0);
+  });
+
+  it('no Modo Caça, derrubam a Presa pelo menos uma vez', () => {
+    // Ela nasce cedo (30s depois do aquecimento) e renasce sem parar a cada
+    // 45s — 150s dá várias chances de os bots notarem (raio de 650) e
+    // baixarem a vida toda dela.
+    const { eventos } = jogar(150, 51, 'caca');
+    expect(eventos.filter((e) => e === 'presaCaiu').length).toBeGreaterThan(0);
   });
 
   it('nunca ficam presos dentro da água', () => {

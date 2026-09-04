@@ -1,10 +1,12 @@
-import { canhaoDe, resolverColisao, type Arena } from './arena';
+import { canhaoDe, covilDe, resolverColisao, tocaDaPresaDe, type Arena } from './arena';
 import { CLASSES_COM_CHAPEU, PERFIS_DE_FERA, type Classe, type Fera } from './classes';
 import { semeadoPor } from './rng';
+import type { IdDoMapa } from './mapas';
 import {
   VARIANTES_RARAS_DA_INVASAO,
   type Estado,
   type Invasor,
+  type TipoDeGuardiao,
   type Unidade,
   type VarianteDaInvasao,
 } from './estado';
@@ -15,6 +17,12 @@ import {
   CANHAO_VELOCIDADE_DA_BOLA,
   DT,
   FERA_DURACAO,
+  GUARDIAO_BUFF_DURACAO,
+  GUARDIAO_CADENCIA_DE_ATAQUE,
+  GUARDIAO_DANO,
+  GUARDIAO_INTERVALO,
+  GUARDIAO_RAIO_DE_ATAQUE,
+  GUARDIAO_VIDA,
   INVASAO_AVISO_ANTES,
   INVASAO_INTERVALO,
   INVASAO_RAIO_DE_AFUGENTAR,
@@ -22,6 +30,12 @@ import {
   INVASAO_RAIO_DO_SAQUE_SLINGSHOT,
   INVASAO_TAMANHO,
   INVASAO_VELOCIDADE,
+  PRESA_BUFF_DURACAO,
+  PRESA_CADENCIA_DE_ATAQUE,
+  PRESA_DANO,
+  PRESA_INTERVALO,
+  PRESA_RAIO_DE_ATAQUE,
+  PRESA_VIDA,
   RAIO_UNIDADE,
   TILE,
   TIMES,
@@ -31,14 +45,14 @@ import {
 } from './regras';
 
 /**
- * As três ameaças e prêmios sem dono de time: a invasão de goblins, o totem
- * do Modo Fera, e o canhão de cerco.
+ * As ameaças e prêmios sem dono de time: a invasão de goblins, o totem do
+ * Modo Fera, o canhão de cerco, e o Guardião do Modo Covil.
  *
- * Separado de `partida.ts` porque as três são um sistema à parte do resto do
- * tick — nenhuma delas depende de comando de jogador nem participa da
- * economia — e porque `partida.ts` tinha crescido demais para caber numa
- * leitura só. `tick()` continua chamando as três funções daqui na mesma
- * ordem de antes; nada no comportamento muda, só onde o código mora.
+ * Separado de `partida.ts` porque cada uma é um sistema à parte do resto do
+ * tick — nenhuma depende de comando de jogador nem participa da economia —
+ * e porque `partida.ts` tinha crescido demais para caber numa leitura só.
+ * `tick()` continua chamando as funções daqui na mesma ordem de antes; nada
+ * no comportamento muda, só onde o código mora.
  */
 
 // --- a invasão ---------------------------------------------------------------
@@ -255,4 +269,152 @@ export function moverCanhoes(arena: Arena, estado: Estado): void {
     });
     canhao.recarga = CANHAO_CADENCIA;
   }
+}
+
+// --- o guardião (Modo Covil) -------------------------------------------------
+
+/** O visual do Guardião, por mapa — o mesmo compromisso dos biomas: cada relevo tem a sua cara. */
+const GUARDIAO_DO_MAPA: Readonly<Record<IdDoMapa, TipoDeGuardiao>> = {
+  corte: 'minotauro',
+  planicie: 'panda',
+  vau: 'tartaruga',
+  arquipelago: 'caveira',
+  desfiladeiro: 'minotauro',
+};
+
+/** Qual Guardião nasce neste mapa. Exportado para o desenho escolher a folha certa. */
+export function tipoDoGuardiaoPara(mapa: IdDoMapa): TipoDeGuardiao {
+  return GUARDIAO_DO_MAPA[mapa];
+}
+
+/**
+ * O Guardião: nasce, bate em quem chega perto, e cai para quem baixar toda
+ * a vida dele — dando ao time da queda um tempo de velocidade extra.
+ *
+ * ## Por que ele tem uma vida própria, e não é um `Animal` maior
+ *
+ * Um `Animal` foge, pasta e solta minério ao morrer — três comportamentos
+ * que o Guardião não tem nenhum. Encaixá-lo ali seria herdar um `if` a mais
+ * em cada lugar que já lê `estado.animais` para "achar a ovelha mais
+ * perto", só para excluir o chefe da conta. Um tipo à parte, como o totem e
+ * o canhão já são, é menos código no total, não mais.
+ */
+export function moverGuardiao(arena: Arena, estado: Estado): void {
+  estado.proximoGuardiaoEm -= DT;
+  if (!estado.guardiao && estado.proximoGuardiaoEm <= 0) {
+    const local = covilDe(arena);
+    const tipo = tipoDoGuardiaoPara(arena.mapa);
+    estado.guardiao = {
+      id: estado.proximoId++,
+      tipo,
+      x: local.x,
+      y: local.y,
+      vida: GUARDIAO_VIDA,
+      vidaMaxima: GUARDIAO_VIDA,
+      golpeEm: GUARDIAO_CADENCIA_DE_ATAQUE,
+    };
+    estado.eventos.push({ tipo: 'guardiaoNasceu', tipoDoGuardiao: tipo });
+  }
+
+  const g = estado.guardiao;
+  if (g) {
+    g.golpeEm -= DT;
+    if (g.golpeEm <= 0) {
+      g.golpeEm = GUARDIAO_CADENCIA_DE_ATAQUE;
+      // Não mata — o mesmo compromisso do canhão: dissuade sem virar uma
+      // segunda fonte de abate de graça pra quem só ronda o covil.
+      for (const u of estado.unidades) {
+        if (u.vivo && perto(u, g, GUARDIAO_RAIO_DE_ATAQUE)) {
+          u.vida = Math.max(1, u.vida - GUARDIAO_DANO);
+        }
+      }
+    }
+  }
+
+  for (const time of TIMES) {
+    if (estado.buffDoGuardiao[time] > 0) {
+      estado.buffDoGuardiao[time] = Math.max(0, estado.buffDoGuardiao[time] - DT);
+    }
+  }
+}
+
+/** O dano que um jogador causa ao Guardião — chamado dos três caminhos de combate. */
+export function ferirGuardiao(estado: Estado, algoz: Unidade, dano: number): void {
+  const g = estado.guardiao;
+  if (!g) return;
+  g.vida -= dano;
+  if (g.vida > 0) return;
+  estado.guardiao = null;
+  estado.proximoGuardiaoEm = GUARDIAO_INTERVALO;
+  estado.buffDoGuardiao[algoz.time] = GUARDIAO_BUFF_DURACAO;
+  estado.eventos.push({ tipo: 'guardiaoCaiu', time: algoz.time, x: g.x, y: g.y });
+}
+
+// --- a presa (Modo Caça) ------------------------------------------------------
+
+/**
+ * A Presa: nasce sem parar no meio do mapa, bate em quem chega perto, e cai
+ * para quem baixar toda a vida dela — dando ao time da queda um tempo de
+ * dano extra.
+ *
+ * ## Por que ela não tem tipo por bioma, ao contrário do Guardião
+ *
+ * O Guardião é um chefe único por partida — vale a pena uma tabela de visual
+ * por mapa, o mesmo compromisso dos biomas. A Presa nasce de novo a cada
+ * `PRESA_INTERVALO`, várias vezes por partida: uma cara só (a aranha) é o
+ * que deixa reconhecível de relance, sem exigir que quem joga aprenda quatro
+ * bichos diferentes para uma mecânica que já é rápida por natureza.
+ *
+ * ## Por que não existe evento de nascimento
+ *
+ * O Guardião nasce uma vez a cada `GUARDIAO_INTERVALO` (90s) — vale avisar.
+ * A Presa nasce a cada `PRESA_INTERVALO` (45s), o dobro da frequência: um
+ * evento a cada nascimento viraria log constante no HUD sem ajudar ninguém a
+ * decidir nada. A queda continua avisando — é ela que dá o buff.
+ */
+export function moverPresa(arena: Arena, estado: Estado): void {
+  estado.proximaPresaEm -= DT;
+  if (!estado.presa && estado.proximaPresaEm <= 0) {
+    const local = tocaDaPresaDe(arena);
+    estado.presa = {
+      id: estado.proximoId++,
+      x: local.x,
+      y: local.y,
+      vida: PRESA_VIDA,
+      vidaMaxima: PRESA_VIDA,
+      mordeEm: PRESA_CADENCIA_DE_ATAQUE,
+    };
+  }
+
+  const p = estado.presa;
+  if (p) {
+    p.mordeEm -= DT;
+    if (p.mordeEm <= 0) {
+      p.mordeEm = PRESA_CADENCIA_DE_ATAQUE;
+      // Não mata — o mesmo compromisso do Guardião e do canhão.
+      for (const u of estado.unidades) {
+        if (u.vivo && perto(u, p, PRESA_RAIO_DE_ATAQUE)) {
+          u.vida = Math.max(1, u.vida - PRESA_DANO);
+        }
+      }
+    }
+  }
+
+  for (const time of TIMES) {
+    if (estado.buffDaPresa[time] > 0) {
+      estado.buffDaPresa[time] = Math.max(0, estado.buffDaPresa[time] - DT);
+    }
+  }
+}
+
+/** O dano que um jogador causa à Presa — chamado dos três caminhos de combate. */
+export function ferirPresa(estado: Estado, algoz: Unidade, dano: number): void {
+  const p = estado.presa;
+  if (!p) return;
+  p.vida -= dano;
+  if (p.vida > 0) return;
+  estado.presa = null;
+  estado.proximaPresaEm = PRESA_INTERVALO;
+  estado.buffDaPresa[algoz.time] = PRESA_BUFF_DURACAO;
+  estado.eventos.push({ tipo: 'presaCaiu', time: algoz.time, x: p.x, y: p.y });
 }

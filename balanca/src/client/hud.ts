@@ -5,6 +5,7 @@ import {
   type Carga,
   type Estado,
   type Evento,
+  type TipoDeGuardiao,
   type Unidade,
   type VarianteDaInvasao,
 } from '../shared/estado';
@@ -50,6 +51,12 @@ import type { Rede } from './rede';
 const COR: Record<Time, string> = { azul: '#3b7fe0', vermelho: '#e04b3b' };
 const COR_CLARA: Record<Time, string> = { azul: '#8fc0ff', vermelho: '#ff9c8f' };
 const NOME_DO_TIME: Record<Time, string> = { azul: 'Azul', vermelho: 'Vermelho' };
+const NOME_DO_GUARDIAO: Record<TipoDeGuardiao, string> = {
+  minotauro: 'Minotauro',
+  panda: 'Panda',
+  tartaruga: 'Tartaruga',
+  caveira: 'Caveira',
+};
 
 /**
  * Como cada variante da invasão se narra — o nome da onda pro texto de
@@ -892,6 +899,21 @@ export function narrar(
       };
     case 'voltouAoNormal':
       return { texto: `${nome(evento.unidade)} voltou ao normal` };
+    case 'guardiaoNasceu':
+      return {
+        texto: `o Guardião ${NOME_DO_GUARDIAO[evento.tipoDoGuardiao]} nasceu no covil`,
+        cor: '#e0a23c',
+      };
+    case 'guardiaoCaiu':
+      return {
+        texto: `o ${NOME_DO_TIME[evento.time]} derrubou o Guardião — velocidade extra por um tempo!`,
+        cor: COR_CLARA[evento.time],
+      };
+    case 'presaCaiu':
+      return {
+        texto: `o ${NOME_DO_TIME[evento.time]} derrubou a Presa — dano extra por um tempo!`,
+        cor: COR_CLARA[evento.time],
+      };
     case 'fim':
       return {
         texto: evento.vencedor ? `fim — ${NOME_DO_TIME[evento.vencedor]} vence` : 'fim — empate',

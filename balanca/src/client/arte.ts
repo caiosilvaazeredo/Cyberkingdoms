@@ -1,4 +1,5 @@
 import { CLASSES, type Classe, type Fera } from '../shared/classes';
+import type { TipoDeGuardiao } from '../shared/estado';
 import { TIMES, type Time } from '../shared/regras';
 
 /**
@@ -188,6 +189,16 @@ export interface Arte {
   readonly invasorTocha: Animacao;
   readonly invasorSlingshot: Animacao;
   /**
+   * O Guardião do Modo Covil — um por bioma, sem cor de time: ele não briga
+   * por nenhum dos dois reinos. Ver `tipoDoGuardiaoPara` em shared/pve.ts.
+   */
+  readonly guardioes: Readonly<Record<TipoDeGuardiao, Animacao>>;
+  /**
+   * A Presa do Modo Caça — uma aranha neutra, a mesma cara em todo mapa. Ver
+   * `moverPresa` em shared/pve.ts.
+   */
+  readonly presa: Animacao;
+  /**
    * O ícone de cada carga no chão.
    *
    * `HTMLCanvasElement` entra na união porque o minério é repintado no
@@ -348,6 +359,11 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
   pede('cavalo_marinho', 'recursos/cavalo_marinho.png');
   pede('goblin_invasor', 'recursos/goblin_invasor.png');
   pede('torch_goblin_invasor', 'recursos/torch_goblin_invasor.png');
+  pede('guardiao_minotauro', 'recursos/guardiao_minotauro.png');
+  pede('guardiao_panda', 'recursos/guardiao_panda.png');
+  pede('guardiao_tartaruga', 'recursos/guardiao_tartaruga.png');
+  pede('guardiao_caveira', 'recursos/guardiao_caveira.png');
+  pede('aranha_andando', 'recursos/aranha_andando.png');
   pede('slingshot_gnome_invasor', 'recursos/slingshot_gnome_invasor.png');
   for (const fera of ['troll', 'minotauro'] as const) {
     for (const estado of ['parado', 'andando', 'golpe'] as const) {
@@ -493,6 +509,13 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
     invasor: animacao(img('goblin_invasor'), 8),
     invasorTocha: animacao(img('torch_goblin_invasor'), 8),
     invasorSlingshot: animacao(img('slingshot_gnome_invasor'), 8),
+    guardioes: {
+      minotauro: animacao(img('guardiao_minotauro'), 8),
+      panda: animacao(img('guardiao_panda'), 8),
+      tartaruga: animacao(img('guardiao_tartaruga'), 5),
+      caveira: animacao(img('guardiao_caveira'), 8),
+    },
+    presa: animacao(img('aranha_andando'), 5),
     feras: {
       troll: {
         parado: animacao(img('fera_troll_parado'), 6),

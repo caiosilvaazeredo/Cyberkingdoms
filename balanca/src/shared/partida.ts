@@ -26,7 +26,15 @@ import {
   type Bau,
   type Unidade,
 } from './estado';
-import { moverCanhoes, moverInvasores, moverTotem } from './pve';
+import {
+  ferirGuardiao,
+  ferirPresa,
+  moverCanhoes,
+  moverGuardiao,
+  moverInvasores,
+  moverPresa,
+  moverTotem,
+} from './pve';
 import type { Comando } from './protocolo';
 import { semeadoPor } from './rng';
 import {
@@ -47,11 +55,15 @@ import {
   CUSTO_DO_NIVEL,
   DT,
   EMPURRAO_DO_BAU,
+  GUARDIAO_ATRASO_INICIAL,
+  GUARDIAO_BUFF_VELOCIDADE,
   INVASAO_INTERVALO,
   JAZIDA_VOLTA_EM,
   NIVEL_MAXIMO,
   PAUSA_APOS_PONTO,
   POR_TIME,
+  PRESA_ATRASO_INICIAL,
+  PRESA_BUFF_DANO,
   TOTEM_INTERVALO,
   chapeusDe,
   custoDaObraDe,
@@ -272,6 +284,12 @@ function estadoInicial(arena: Arena, id: IdDoModo, porTime: number): Estado {
     casasDaMoeda: TIMES.map((time) => ({ time, minerio: 0, cunhando: 0, bolsas: 1 })),
     oficinas: TIMES.map((time) => ({ time, madeira: 0, ouro: 0, nivel: 1 })),
     canhoes: TIMES.map((time) => ({ time, recarga: CANHAO_CADENCIA / 2 })),
+    guardiao: null,
+    proximoGuardiaoEm: GUARDIAO_ATRASO_INICIAL,
+    buffDoGuardiao: { azul: 0, vermelho: 0 },
+    presa: null,
+    proximaPresaEm: PRESA_ATRASO_INICIAL,
+    buffDaPresa: { azul: 0, vermelho: 0 },
     estoque,
     eventos: [],
     vencedor: null,
@@ -388,6 +406,12 @@ function tick(
     moverInvasores(arena, estado);
     moverTotem(arena, estado);
     moverCanhoes(arena, estado);
+    // Só no Covil: a alavanca que dá nome ao modo. Nos outros, o Guardião
+    // simplesmente nunca nasce — `estado.guardiao` fica `null` a partida
+    // inteira, e todo o resto deste arquivo que olha para ele é um no-op.
+    if (modoDe(estado.modo).temGuardiao) moverGuardiao(arena, estado);
+    // Só na Caça: a mesma alavanca de nome único, agora para a Presa.
+    if (modoDe(estado.modo).temCaca) moverPresa(arena, estado);
     cuidarDosBaus(arena, estado);
     cunhar(estado);
     recomporJazidas(estado);
@@ -464,6 +488,10 @@ export function moverUnidade(
   }
 
   let velocidade = u.fera ? PERFIS_DE_FERA[u.fera].velocidade : perfil(u.classe).velocidade;
+  // O buff do Guardião (Modo Covil): empurra o cortejo do baú do mesmo jeito
+  // que empurra qualquer corrida — multiplica antes das outras contas de
+  // velocidade, não depois, para valer também pra escolta do baú.
+  if (estado.buffDoGuardiao[u.time] > 0) velocidade *= GUARDIAO_BUFF_VELOCIDADE;
   if (u.carga !== 'nada' && u.carga !== 'bau') velocidade *= 0.95;
   if (u.carga === 'bau') {
     const p = estado.baus.find((x) => x.portador === u.id);
@@ -1145,6 +1173,12 @@ function golpearCorpoATodos(estado: Estado, u: Unidade, alcance: number, dano: n
     ferir(estado, u, alvo, dano);
   }
   ferirBichosNoAlcance(estado, u, alcance + RAIO_UNIDADE, dano);
+  if (estado.guardiao && perto(u, estado.guardiao, alcance + RAIO_UNIDADE)) {
+    ferirGuardiao(estado, u, dano);
+  }
+  if (estado.presa && perto(u, estado.presa, alcance + RAIO_UNIDADE)) {
+    ferirPresa(estado, u, dano);
+  }
 }
 
 function atacar(arena: Arena, estado: Estado, u: Unidade): void {
@@ -1171,7 +1205,12 @@ function atacar(arena: Arena, estado: Estado, u: Unidade): void {
     return;
   }
 
-  const dano = danoDe(u.classe, nivelDe(estado, u.time));
+  // O buff da Presa (Modo Caça): multiplica o dano de ataque, não a fera nem
+  // a cura — é o mesmo ponto único por onde `atacar` já calcula o dano de
+  // qualquer classe, então a Presa não precisa saber quem está batendo.
+  const dano =
+    danoDe(u.classe, nivelDe(estado, u.time)) *
+    (estado.buffDaPresa[u.time] > 0 ? PRESA_BUFF_DANO : 1);
 
   if (p.ataque === 'corpo') {
     golpearCorpoATodos(estado, u, p.alcance, dano);
@@ -1188,6 +1227,12 @@ function atacar(arena: Arena, estado: Estado, u: Unidade): void {
     }
     for (const a of estado.animais) {
       if (a.vivo && naLinha(u, a, p.alcance)) ferirAnimal(estado, u, a, dano);
+    }
+    if (estado.guardiao && naLinha(u, estado.guardiao, p.alcance)) {
+      ferirGuardiao(estado, u, dano);
+    }
+    if (estado.presa && naLinha(u, estado.presa, p.alcance)) {
+      ferirPresa(estado, u, dano);
     }
     return;
   }
@@ -1294,6 +1339,14 @@ function moverProjeteis(arena: Arena, estado: Estado): void {
           acabou = true;
           break;
         }
+      }
+      if (!acabou && dono && estado.guardiao && perto(estado.guardiao, pj, RAIO_UNIDADE + 6)) {
+        ferirGuardiao(estado, dono, pj.dano);
+        acabou = true;
+      }
+      if (!acabou && dono && estado.presa && perto(estado.presa, pj, RAIO_UNIDADE + 6)) {
+        ferirPresa(estado, dono, pj.dano);
+        acabou = true;
       }
     }
 

@@ -155,11 +155,11 @@ diferentes, cada uma vendo uma partida na mesma tela.
 ela e o resto do time vem de bot. *Jogo Online* usa a sala pública mais
 movimentada, e aí o sofá entra junto de quem estiver na rede.
 
-### Os sete modos
+### Os nove modos
 
 Um modo muda **uma** alavanca em relação ao clássico, e a alavanca que ele muda
 é a que dá nome a ele. É o que permite explicá-lo numa linha na hora de escolher,
-e o que impede a lista de virar sete variações indistinguíveis.
+e o que impede a lista de virar nove variações indistinguíveis.
 
 | modo | o que muda | mediana com bots |
 |---|---|---|
@@ -170,10 +170,12 @@ e o que impede a lista de virar sete variações indistinguíveis.
 | **Veia Seca** | a ovelha derrubada não volta: o minério do mapa é tudo o que existe | 372 s |
 | **Obra** | vence quem terminar a chapelaria: picareta e machado decidem | 229 s |
 | **Abate** | trinta baixas vencem · sem cortejo, sem moeda, só briga | 166 s |
+| **Covil** | um Guardião nasce no meio do mapa · derrubá-lo acelera o time inteiro | 508 s |
+| **Caça** | uma Presa nasce sem parar no meio do mapa · derrubá-la turbina o dano do time por um tempo | 451 s |
 
 A coluna da direita é medida, não estimada: doze seeds por modo, salas só de
-bots. Todas as oitenta e quatro partidas terminaram, e o placar por lado ficou
-equilibrado em todos os sete.
+bots. Todas as cento e oito partidas terminaram, e o placar por lado ficou
+equilibrado em todos os nove.
 
 Por dentro, um modo é **dado** e não caminho de código: uma linha em
 `shared/modos.ts` que o tick lê no lugar das constantes. A tentação era escrever
@@ -642,6 +644,45 @@ perto da própria casa; um canhão que só dói é dissuasão de verdade sem
 tirar o abate de ninguém — e sem precisar inventar um "algoz" para um
 disparo que nenhum jogador apertou o gatilho.
 
+### O Guardião: o Baron do Reino de Migalhas, só no Modo Covil
+
+Exclusivo do modo **Covil** — é a alavanca que dá nome a ele. Um chefe neutro
+nasce sozinho no meio do mapa, tarde de propósito (três minutos depois do
+fim do aquecimento), com vida alta o bastante para exigir mais de uma
+pessoa. O visual muda por bioma — Minotauro no Corte e no Desfiladeiro,
+Panda na Planície, Tartaruga no Vau, Caveira no Arquipélago — a mesma ideia
+das decorações por mapa, aplicada a um chefe.
+
+Ele bate em quem chega perto demais, dos dois reinos, sem escolher lado — e
+sem nunca derrubar: o golpe de área pesa, mas para em 1 de vida, o mesmo
+compromisso do canhão de cerco. Quem for atrás dele sozinho sai machucado,
+não morto; quem for com o time inteiro tira a vida dele mais rápido do que
+o golpe de área consegue repor.
+
+Derrubá-lo — baixar toda a vida, por qualquer caminho de combate — dá ao
+time que bateu o último golpe um tempo de velocidade extra pro time
+**inteiro**, não só pra quem estava lá. É o mesmo papel do Baron ou dos
+dragões de um MOBA: força a jogada, sem decidir a partida sozinho. Passado
+o tempo do buff, ou se ninguém for atrás, ele volta a nascer noventa
+segundos depois — o covil nunca fica vazio por muito tempo.
+
+### A Presa: o dragão do Reino de Migalhas, só no Modo Caça
+
+Exclusiva do modo **Caça** — a mesma ideia do Guardião, com o outro papel
+que dragões e arautos fazem num MOBA: menor, mais frequente, e um buff que
+dura menos. Uma aranha neutra nasce cedo (meio minuto depois do fim do
+aquecimento, contra os três minutos do Guardião) e sozinha, sem visual por
+bioma — uma cara só de propósito, para ficar reconhecível de relance numa
+disputa que já é rápida por natureza.
+
+Ela bate em quem chega perto, dos dois reinos, e nunca derruba — o mesmo
+compromisso do Guardião e do canhão de cerco. Derrubá-la dá ao time que
+bateu o último golpe um tempo de **dano** extra, não de velocidade: é o que
+diferencia mecanicamente as duas ameaças, além do tamanho e da frequência —
+o buff de uma acelera o cabo de guerra, o da outra encurta a próxima briga.
+Passado o tempo do buff, ou derrubada, ela renasce quarenta e cinco segundos
+depois — metade do intervalo do Guardião, porque vale menos por vez.
+
 ### Os efeitos: o que aconteceu, e o que a construção faz
 
 O jogo mudava de estado sem avisar. Um aldeão virava arqueiro e o único sinal
@@ -658,6 +699,8 @@ nenhum.
 | resgate | estouro grande em quem trouxe |
 | a obra subir de nível | labareda na chapelaria e "obra II" na cor do reino |
 | tocar o totem | vira Troll ou Minotauro na tela, e o nome sobe em vermelho |
+| derrubar o Guardião (Covil) | estouro grande no covil, e o aviso de quem ganhou o buff |
+| derrubar a Presa (Caça) | o mesmo estouro, no tamanho normal, e o aviso de quem ganhou o buff de dano |
 | correr | um bafo de poeira sob os pés — respingo, se for na beira d'água |
 
 Os efeitos nascem de **eventos do servidor**, e não de o desenho comparar dois
@@ -759,7 +802,7 @@ despercebido justamente porque quem programa olha no monitor em que tudo cabe.
 src/
   shared/       a simulação, e ela é a mesma dos dois lados
     regras.ts     todos os números do jogo, num arquivo só
-    modos.ts      os sete modos, como dado e não como caminho de código
+    modos.ts      os nove modos, como dado e não como caminho de código
     mapas.ts      os quatro campos de batalha, idem
     classes.ts    as oito classes, o estoque de chapéus e os ofícios
     arena.ts      o mapa como função pura da seed
