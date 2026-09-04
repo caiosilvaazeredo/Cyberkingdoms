@@ -911,6 +911,22 @@ function moverAnimais(arena: Arena, estado: Estado): void {
   }
 }
 
+/**
+ * Semente estável de um par `(a, b)` — mesmo par, mesmo sorteio, em
+ * qualquer servidor rodando a mesma partida.
+ *
+ * É o compromisso repetido do roubo da invasão, da fera do totem e do
+ * destino do animal: cada chamada alimenta `a`/`b` com o par que faz
+ * sentido pra ela — id e tick, ou tick e um extra — mas a mistura de bits é
+ * sempre esta, escrita uma vez só. As quatro cópias manuais que existiam
+ * antes são exatamente o tipo de duplicação que já causou um bug real: o
+ * sorteio da variante da invasão esqueceu de somar `arena.seed` numa das
+ * cópias, e toda partida no mesmo tick via a mesma onda.
+ */
+function semeadoPor(a: number, b: number): DeterministicRandom {
+  return new DeterministicRandom(((a + 1) * 2654435761 + b) >>> 0);
+}
+
 // --- a invasão ---------------------------------------------------------------
 
 /**
@@ -960,9 +976,7 @@ function moverInvasores(arena: Arena, estado: Estado): void {
       // fera e do saque: semeado pelo tick e por um número que separa os dois
       // reinos, para dois servidores rodando a mesma partida verem a mesma
       // onda pegar fogo (ou não).
-      const dado = new DeterministicRandom(
-        ((estado.tick + 1) * 2654435761 + arena.seed * 97 + (time === 'azul' ? 11 : 17)) >>> 0,
-      );
+      const dado = semeadoPor(estado.tick, arena.seed * 97 + (time === 'azul' ? 11 : 17));
       const sorteio = dado.nextDouble();
       const variante =
         sorteio < INVASAO_CHANCE_DE_TOCHA
@@ -1007,7 +1021,7 @@ function moverInvasores(arena: Arena, estado: Estado): void {
         // Semeado pelo id do goblin e o tick — o mesmo compromisso do sorteio
         // da ovelha: dois servidores rodando a mesma partida roubam o mesmo
         // chapéu.
-        const dado = new DeterministicRandom(((inv.id + 1) * 2654435761 + estado.tick) >>> 0);
+        const dado = semeadoPor(inv.id, estado.tick);
         roubada = comEstoque[dado.nextIntBelow(comEstoque.length)]!;
         estoque[roubada]--;
       }
@@ -1068,7 +1082,7 @@ function moverTotem(arena: Arena, estado: Estado): void {
 
     // Semeado pelo id de quem pegou e o tick — o mesmo compromisso do
     // sorteio da ovelha e do roubo da invasão.
-    const dado = new DeterministicRandom(((u.id + 1) * 2654435761 + estado.tick) >>> 0);
+    const dado = semeadoPor(u.id, estado.tick);
     const fera: Fera = dado.nextDouble() < 0.5 ? 'troll' : 'minotauro';
     u.fera = fera;
     u.feraAte = FERA_DURACAO;
@@ -1133,7 +1147,7 @@ function moverCanhoes(arena: Arena, estado: Estado): void {
  */
 function escolherDestino(arena: Arena, estado: Estado, a: Animal): void {
   const pasto = arena.pastos.find((p) => p.id === a.id);
-  const dado = new DeterministicRandom(((a.id + 1) * 2654435761 + estado.tick) >>> 0);
+  const dado = semeadoPor(a.id, estado.tick);
   const angulo = dado.nextDouble() * Math.PI * 2;
   const raio = ANIMAL_PASTO * (0.3 + dado.nextDouble() * 0.7);
   const centroX = a.fugindo > 0 ? a.x : (pasto?.x ?? a.x);
