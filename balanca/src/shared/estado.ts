@@ -91,7 +91,7 @@ export interface Bau {
   ajudantes: number;
 }
 
-export type TipoDeProjetil = 'flecha';
+export type TipoDeProjetil = 'flecha' | 'bolaDeCanhao';
 
 export interface Projetil {
   id: number;
@@ -211,6 +211,16 @@ export interface Oficina {
   nivel: number;
 }
 
+/**
+ * O canhão de cerco: um por reino, parado junto da tesouraria, vigiando por
+ * conta própria. Ver `CANHAO_RAIO` e companhia em regras.ts.
+ */
+export interface Canhao {
+  time: Time;
+  /** Segundos até o próximo disparo ser possível. */
+  recarga: number;
+}
+
 export type Evento =
   | { tipo: 'abate'; algoz: number; vitima: number }
   | { tipo: 'deposito'; unidade: number; bau: Time; peso: number }
@@ -276,6 +286,7 @@ export interface Estado {
   proximoTotemEm: number;
   casasDaMoeda: CasaDaMoeda[];
   oficinas: Oficina[];
+  canhoes: Canhao[];
   /** Chapéus ainda guardados, por time e classe. */
   estoque: Record<Time, Record<Classe, number>>;
   /** Zerado a cada tick; o servidor despacha e esquece. */

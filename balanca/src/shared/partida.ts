@@ -11,6 +11,7 @@ import {
   type Fera,
 } from './classes';
 import {
+  canhaoDe,
   criarArena,
   linhaLivre,
   resolverColisao,
@@ -74,6 +75,10 @@ import {
   pesoMinimoDe,
   PESO_POR_BOLSA,
   BAU_VOLTA_EM,
+  CANHAO_CADENCIA,
+  CANHAO_DANO,
+  CANHAO_RAIO,
+  CANHAO_VELOCIDADE_DA_BOLA,
   RAIO_UNIDADE,
   RENASCIMENTO_POR_PONTO,
   TEMPO_DE_CUNHAGEM,
@@ -283,6 +288,7 @@ function estadoInicial(arena: Arena, id: IdDoModo, porTime: number): Estado {
     proximoTotemEm: TOTEM_INTERVALO / 3,
     casasDaMoeda: TIMES.map((time) => ({ time, minerio: 0, cunhando: 0, bolsas: 1 })),
     oficinas: TIMES.map((time) => ({ time, madeira: 0, ouro: 0, nivel: 1 })),
+    canhoes: TIMES.map((time) => ({ time, recarga: CANHAO_CADENCIA / 2 })),
     estoque,
     eventos: [],
     vencedor: null,
@@ -398,6 +404,7 @@ function tick(
     moverAnimais(arena, estado);
     moverInvasores(arena, estado);
     moverTotem(arena, estado);
+    moverCanhoes(arena, estado);
     cuidarDosBaus(arena, estado);
     cunhar(estado);
     recomporJazidas(estado);
@@ -1054,6 +1061,50 @@ function moverTotem(arena: Arena, estado: Estado): void {
 }
 
 /**
+ * O canhão de cerco: vigia o entorno da própria tesouraria e atira em quem
+ * do outro time se aproxima demais.
+ *
+ * Ele mira em quem já está mais perto — não no primeiro que entrou no raio
+ * — porque é a leitura que um jogador faria olhando o canhão de fora: atira
+ * em quem está mais na cara dele agora, não em quem chegou primeiro.
+ */
+function moverCanhoes(arena: Arena, estado: Estado): void {
+  for (const canhao of estado.canhoes) {
+    canhao.recarga -= DT;
+    if (canhao.recarga > 0) continue;
+
+    const posto = canhaoDe(arena, canhao.time);
+    let alvo: Unidade | null = null;
+    let maisPerto = CANHAO_RAIO;
+    for (const u of estado.unidades) {
+      if (!u.vivo || u.time === canhao.time) continue;
+      const d = Math.hypot(u.x - posto.x, u.y - posto.y);
+      if (d > maisPerto) continue;
+      maisPerto = d;
+      alvo = u;
+    }
+    if (!alvo) continue;
+
+    const dx = alvo.x - posto.x;
+    const dy = alvo.y - posto.y;
+    const d = Math.hypot(dx, dy) || 1;
+    estado.projeteis.push({
+      id: estado.proximoId++,
+      tipo: 'bolaDeCanhao',
+      time: canhao.time,
+      dono: -1,
+      x: posto.x,
+      y: posto.y,
+      vx: (dx / d) * CANHAO_VELOCIDADE_DA_BOLA,
+      vy: (dy / d) * CANHAO_VELOCIDADE_DA_BOLA,
+      dano: CANHAO_DANO,
+      vida: d / CANHAO_VELOCIDADE_DA_BOLA + 0.2,
+    });
+    canhao.recarga = CANHAO_CADENCIA;
+  }
+}
+
+/**
  * Para onde o bicho vai — com sorteio semeado, não aleatório.
  *
  * A semente junta o id do animal e o tick, então dois servidores rodando a
@@ -1431,7 +1482,19 @@ function moverProjeteis(arena: Arena, estado: Estado): void {
       acabou = true;
     }
 
-    if (!acabou) {
+    if (!acabou && pj.tipo === 'bolaDeCanhao') {
+      // A bala do canhão dói, mas não mata: é dissuasão de estrutura, não um
+      // atirador com abate no nome. Deixar em 1 de vida em vez de zero poupa
+      // o canhão inteiro de precisar de um `algoz` — não há unidade nenhuma
+      // para carregar a culpa de um disparo que ninguém apertou o gatilho.
+      for (const alvo of estado.unidades) {
+        if (!alvo.vivo || alvo.time === pj.time) continue;
+        if (!perto(alvo, pj, RAIO_UNIDADE + 6)) continue;
+        alvo.vida = Math.max(1, alvo.vida - pj.dano);
+        acabou = true;
+        break;
+      }
+    } else if (!acabou) {
       const dono = unidade(estado, pj.dono);
       for (const alvo of estado.unidades) {
         if (!alvo.vivo || alvo.time === pj.time) continue;

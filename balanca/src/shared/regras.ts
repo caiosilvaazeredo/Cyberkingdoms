@@ -360,6 +360,29 @@ export const FERA_DURACAO = 25;
 /** A que distância do totem uma unidade o pega, só de chegar perto. */
 export const TOTEM_RAIO_DE_PEGAR = 40;
 
+// --- o canhão de cerco -------------------------------------------------------
+
+/**
+ * O canhão: uma estrutura de defesa parada junto de cada tesouraria, que
+ * atira sozinha em quem do outro time se aproxima demais.
+ *
+ * Não mata — o disparo pesa, mas para em 1 de vida. Um canhão que farma
+ * abate sozinho premiaria quem fica parado perto da própria casa; um canhão
+ * que dói é dissuasão de verdade sem roubar o abate de ninguém.
+ */
+
+/** Raio de vigia do canhão, a partir da posição dele. */
+export const CANHAO_RAIO = 260;
+
+/** Segundos entre um disparo e o próximo. */
+export const CANHAO_CADENCIA = 4.5;
+
+/** Quanto a bala tira, sem nunca derrubar quem leva o tiro. */
+export const CANHAO_DANO = 14;
+
+/** Velocidade da bala, em unidades de mundo por segundo. */
+export const CANHAO_VELOCIDADE_DA_BOLA = 480;
+
 /** Segundos até outro bicho aparecer no lugar do que morreu. */
 export const ANIMAL_VOLTA_EM = 18;
 

@@ -157,6 +157,14 @@ export interface Arte {
   readonly jazidaOuroVazia: HTMLImageElement;
   /** A caveira-espeto do Enemy Pack, no lado que está perdendo a balança do HUD. */
   readonly caveiraAtras: HTMLImageElement;
+  /**
+   * O canhão de cerco, parado junto da própria tesouraria — ver `canhaoDe`
+   * em shared/arena.ts. Uma folha estática só, espelhada por time no
+   * desenho; não precisa de mais que isso porque ele não anda.
+   */
+  readonly canhaoCorpo: HTMLImageElement;
+  /** A bala do canhão, em voo — ver `TipoDeProjetil` em shared/estado.ts. */
+  readonly canhaoBola: HTMLImageElement;
 }
 
 async function carregar(caminho: string): Promise<HTMLImageElement> {
@@ -313,6 +321,8 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
   pede('jazida_ouro', 'recursos/jazida_ouro.png');
   pede('jazida_ouro_vazia', 'recursos/jazida_ouro_vazia.png');
   pede('caveira_atras', 'fx/caveira_atras.png');
+  pede('canhao_corpo', 'canhao/corpo.png');
+  pede('canhao_bola', 'canhao/bola.png');
 
   for (const time of TIMES) {
     for (const classe of CLASSES) {
@@ -433,6 +443,8 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
     jazidaOuro: img('jazida_ouro'),
     jazidaOuroVazia: img('jazida_ouro_vazia'),
     caveiraAtras: img('caveira_atras'),
+    canhaoCorpo: img('canhao_corpo'),
+    canhaoBola: img('canhao_bola'),
     // As folhas de efeito são tiras horizontais de quadros quadrados: a poeira
     // e a labareda em sessenta e quatro, o estouro e o respingo em cento e
     // noventa e dois. `animacao` deduz o lado pela altura, então basta dizer a

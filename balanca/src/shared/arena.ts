@@ -383,6 +383,36 @@ export function decoracaoEm(arena: Arena, tx: number, ty: number): DecoracaoNoCh
 }
 
 /**
+ * Onde o canhão de cada reino mora: perto da tesouraria, na primeira terra
+ * seca e sem ponte por perto.
+ *
+ * Não é coordenada escrita à mão em cada um dos cinco campos — é calculada
+ * aqui, e por isso sai igual nos dois lados da rede sem precisar viajar na
+ * rede. A busca em candidatos, em vez de um deslocamento fixo, é o que
+ * segura a garantia: um deslocamento fixo que caiu em terra seca no Corte
+ * pode cair n'água no Arquipélago, e o canhão flutuando é pior do que o
+ * canhão faltando.
+ */
+export function canhaoDe(arena: Arena, time: Time): { x: number; y: number } {
+  const t = arena.estrutura('tesouraria', time);
+  const sinal = time === 'azul' ? 1 : -1;
+  const candidatos: readonly (readonly [number, number])[] = [
+    [t.tx + sinal * 3, t.ty + 3],
+    [t.tx + sinal * 3, t.ty - 1],
+    [t.tx - sinal, t.ty + 3],
+    [t.tx + sinal * 4, t.ty + 1],
+    [t.tx + sinal * 2, t.ty + 4],
+    [t.tx + sinal * 2, t.ty - 2],
+  ];
+  for (const [tx, ty] of candidatos) {
+    if (arena.ehChao(tx, ty) && arena.tile(tx, ty) !== PONTE) {
+      return { x: tx * TILE + TILE / 2, y: ty * TILE + TILE / 2 };
+    }
+  }
+  return { x: t.x + sinal * TILE, y: t.y };
+}
+
+/**
  * A conta do mato: onde ele pode nascer, e o que nasce.
  *
  * Chamada só por `criarArena`, uma vez por tile. As exclusões são de jogo, não

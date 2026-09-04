@@ -8,6 +8,7 @@ import type {
   Bau,
   Projetil,
   TipoDeItem,
+  TipoDeProjetil,
   Unidade,
 } from './estado';
 import { IDS_DOS_MAPAS, MAPAS, mapaDe, porTimeMaximo, type IdDoMapa } from './mapas';
@@ -331,6 +332,7 @@ const CARGAS: readonly Carga[] = ['nada', 'madeira', 'ouro', 'minerio', 'bolsa',
 const ITENS: readonly TipoDeItem[] = ['chapeu', 'bolsa', 'minerio', 'madeira', 'ouro'];
 const ONDES: readonly Bau['onde'][] = ['cofre', 'carregado', 'chao', 'resgatado'];
 const FERAS: readonly Fera[] = ['troll', 'minotauro'];
+const PROJETEIS: readonly TipoDeProjetil[] = ['flecha', 'bolaDeCanhao'];
 
 const idxTime = (t: Time): number => TIMES.indexOf(t);
 const timePorIdx = (i: number): Time => TIMES[i]!;
@@ -394,7 +396,7 @@ export function empacotar(estado: Estado): Retrato {
       p.ajudantes,
       arred(p.voltaEm),
     ]),
-    // `[id, time, x, y, vx, vy]`
+    // `[id, time, x, y, vx, vy, tipo]`
     pj: estado.projeteis.map((p) => [
       p.id,
       idxTime(p.time),
@@ -402,6 +404,7 @@ export function empacotar(estado: Estado): Retrato {
       arred(p.y),
       arred(p.vx),
       arred(p.vy),
+      PROJETEIS.indexOf(p.tipo),
     ]),
     // `[id, tipo, classe, origem, x, y]`
     it: estado.itens.map((i) => [
@@ -519,7 +522,7 @@ export function desempacotar(r: Retrato, base: Estado): Estado {
   base.projeteis = r.pj.map(
     (l): Projetil => ({
       id: l[0]!,
-      tipo: 'flecha',
+      tipo: PROJETEIS[l[6]!] ?? 'flecha',
       time: timePorIdx(l[1]!),
       dono: -1,
       x: l[2]!,

@@ -609,6 +609,21 @@ escolhe a fera, ninguém escolhe se vira — o totem escolhe por sorteio
 semeado, e é raro o bastante para continuar sendo notícia toda vez que
 acontece.
 
+### O canhão de cerco: a tesouraria não fica desguarnecida
+
+Um canhão fica parado junto de cada tesouraria, virado para o meio do
+campo, e atira sozinho em quem do outro time se aproxima demais — sem
+pedir comando de ninguém. A posição não é uma coordenada escrita à mão:
+`canhaoDe` calcula, a partir da tesouraria, a primeira terra seca e sem
+ponte por perto, e sai igual nos dois lados da rede porque servidor e
+cliente correm a mesma conta sobre a mesma arena.
+
+Ele dói, mas não mata — o disparo pesa e o alvo nunca cai abaixo de 1 de
+vida. Um canhão que farmasse abate sozinho premiaria quem fica parado
+perto da própria casa; um canhão que só dói é dissuasão de verdade sem
+tirar o abate de ninguém — e sem precisar inventar um "algoz" para um
+disparo que nenhum jogador apertou o gatilho.
+
 ### Os efeitos: o que aconteceu, e o que a construção faz
 
 O jogo mudava de estado sem avisar. Um aldeão virava arqueiro e o único sinal

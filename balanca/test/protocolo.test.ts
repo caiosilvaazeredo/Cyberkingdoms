@@ -39,6 +39,7 @@ function estadoVazio(): Estado {
     proximoTotemEm: 0,
     casasDaMoeda: [],
     oficinas: [],
+    canhoes: [],
     estoque,
     eventos: [],
     vencedor: null,

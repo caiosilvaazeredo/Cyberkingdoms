@@ -1,4 +1,4 @@
-import { AGUA, PONTE, decoracaoEm, type Arena, type Estrutura } from '../shared/arena';
+import { AGUA, PONTE, canhaoDe, decoracaoEm, type Arena, type Estrutura } from '../shared/arena';
 import { perfil, vidaMaximaDe, PERFIS_DE_FERA, type Classe } from '../shared/classes';
 import { nivelDe, type Animal, type Estado, type Unidade } from '../shared/estado';
 import {
@@ -457,6 +457,25 @@ export function desenharMundo(
           const ladoDoGuarda = e.time === 'azul' ? 1 : -1;
           const pxGuarda = v.paraTelaX(e.x) + ladoDoGuarda * largo * 0.6;
           quadro(ctx, anim, quadroEm(anim, tempo, e.tx * 3), pxGuarda, py, escala * 0.6);
+
+          // O canhão de cerco: parado no posto que `canhaoDe` calcula, virado
+          // para o meio do campo — a folha do pacote olha para a direita, e
+          // é por isso que só o Vermelho precisa do espelho.
+          const canhao = arte.canhaoCorpo;
+          const posto = canhaoDe(arena, e.time);
+          const pxCanhao = v.paraTelaX(posto.x);
+          const pyCanhao = v.paraTelaY(posto.y);
+          const lCanhao = canhao.width * escala * 0.55;
+          const aCanhao = canhao.height * escala * 0.55;
+          espelhado(ctx, pxCanhao, e.time === 'vermelho', () =>
+            ctx.drawImage(
+              canhao,
+              Math.round(pxCanhao - lCanhao / 2),
+              Math.round(pyCanhao - aCanhao / 2),
+              Math.ceil(lCanhao),
+              Math.ceil(aCanhao),
+            ),
+          );
         }
         if (e.tipo === 'casaDaMoeda' && estado) {
           const forno = estado.casasDaMoeda.find((c) => c.time === e.time);
@@ -785,6 +804,17 @@ export function desenharMundo(
   for (const pj of estado.projeteis) {
     const px = v.paraTelaX(pj.x + pj.vx * adianta);
     const py = v.paraTelaY(pj.y + pj.vy * adianta);
+
+    if (pj.tipo === 'bolaDeCanhao') {
+      // Uma bala é redonda: não precisa girar para a direção do voo, e
+      // arredondar o desenho evita o serrilhado que uma escala não-inteira
+      // deixaria numa imagem pequena.
+      const bola = arte.canhaoBola;
+      const l = Math.round(bola.width * escala * 0.5);
+      ctx.drawImage(bola, Math.round(px - l / 2), Math.round(py - l / 2), l, l);
+      continue;
+    }
+
     const flecha = arte.unidades[pj.time]['flecha'];
     ctx.save();
     ctx.translate(px, py);

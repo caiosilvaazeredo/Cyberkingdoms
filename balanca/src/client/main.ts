@@ -1,4 +1,4 @@
-import { GRAMA } from '../shared/arena';
+import { canhaoDe, GRAMA } from '../shared/arena';
 import { MAPA_PADRAO } from '../shared/mapas';
 import { MODO_PADRAO } from '../shared/modos';
 import { TILE } from '../shared/regras';
@@ -32,7 +32,7 @@ import { Sofa, type Porta } from './sofa';
 import type { ConfiguracaoDeSala } from '../shared/protocolo';
 import { Telas, type SalaAberta } from './telas';
 import { bauDe, type Unidade } from '../shared/estado';
-import { DT } from '../shared/regras';
+import { DT, type Time } from '../shared/regras';
 
 /**
  * A montagem do cliente: telas, laço de quadro e a ponte entre eles.
@@ -261,6 +261,8 @@ const espia = { quadros: 0, comandos: 0 };
   tela: () => telas.atual,
   relogio: () => rede?.estado?.relogio ?? null,
   totem: () => rede?.estado?.totem ?? null,
+  canhao: (time: Time) => (rede?.arena ? canhaoDe(rede.arena, time) : null),
+  euEstou: () => (sofa?.jogadores[0]?.rede.eu ? { x: sofa.jogadores[0].rede.eu.x, y: sofa.jogadores[0].rede.eu.y } : null),
   ping: () => rede?.ping ?? null,
   sala: () => rede?.sala ?? null,
   sofa: () =>

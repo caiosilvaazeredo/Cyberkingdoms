@@ -488,6 +488,7 @@ function estadoVazio(modo: IdDoModo, porTime: number): Estado {
     proximoTotemEm: 0,
     casasDaMoeda: [],
     oficinas: [],
+    canhoes: [],
     estoque,
     eventos: [],
     vencedor: null,
