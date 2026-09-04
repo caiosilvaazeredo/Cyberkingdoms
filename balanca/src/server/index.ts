@@ -31,6 +31,17 @@ import {
 const PORTA = Number(process.env.PORT ?? 8787);
 
 /**
+ * Quantas mensagens um único socket pode mandar por segundo antes de
+ * começar a ser ignorado.
+ *
+ * O cliente de verdade manda no máximo um `comando` por tick (trinta por
+ * segundo) mais um `ping` ocasional — cem é folga de sobra para rajadas
+ * legítimas (reconexão, várias trocas de classe seguidas) sem abrir a porta
+ * para um socket malicioso gastar CPU do servidor em `JSON.parse` de graça.
+ */
+const LIMITE_DE_MENSAGENS_POR_SEGUNDO = 100;
+
+/**
  * A pasta publicada, achada a partir **deste arquivo** e não do diretório de
  * trabalho.
  *
@@ -145,7 +156,22 @@ wss.on('connection', (ws: WebSocket) => {
     },
   };
 
+  // Janela fixa de um segundo: mais simples que balde furado, e a diferença
+  // não importa aqui — o objetivo é frear um flood, não policiar o milésimo
+  // de segundo exato em que a mensagem chegou.
+  let mensagensNaJanela = 0;
+  let inicioDaJanela = Date.now();
+
   ws.on('message', (bruto) => {
+    const agora = Date.now();
+    if (agora - inicioDaJanela >= 1000) {
+      inicioDaJanela = agora;
+      mensagensNaJanela = 0;
+    }
+    // Descartado antes do parse: é exatamente o custo que o limite existe
+    // para evitar.
+    if (++mensagensNaJanela > LIMITE_DE_MENSAGENS_POR_SEGUNDO) return;
+
     let msg: DoCliente;
     try {
       msg = JSON.parse(String(bruto)) as DoCliente;
