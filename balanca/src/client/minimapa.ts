@@ -37,10 +37,16 @@ const COR_DO_TIME: Readonly<Record<Time, string>> = {
   vermelho: '#e2564b',
 };
 
-/** Cores do relevo, no tamanho em que ele é só forma. */
-const COR_AGUA = '#2d6d7d';
-const COR_CHAO = '#5b8f3f';
-const COR_PONTE = '#a8703c';
+/** Cores do relevo, no tamanho em que ele é só forma — mais vivas que o
+ * tileset de verdade, porque em duzentos pixels é a cor que carrega a forma. */
+const COR_AGUA = '#3f8fae';
+const COR_CHAO = '#6bab46';
+const COR_PONTE = '#c9903f';
+
+/** A moldura: bronze por fora, ouro fino por dentro — o mesmo par de cores
+ * do resto do chrome do jogo, só que fino o bastante para caber num canto. */
+const COR_MOLDURA_EXTERNA = '#2a1d10';
+const COR_MOLDURA_INTERNA = 'rgba(217, 164, 65, 0.85)';
 
 export interface Enquadramento {
   /** Centro da câmera, em unidades de mundo. */
@@ -87,6 +93,7 @@ export class Minimapa {
     largura: number,
   ): void {
     const { x, y, l, a } = caixaDoMinimapa(largura, arena);
+    const b = 5; // a borda da moldura, por fora do relevo
 
     const mundoL = arena.largura * TILE;
     const mundoA = arena.altura * TILE;
@@ -94,16 +101,59 @@ export class Minimapa {
     const paraY = (my: number): number => y + (my / mundoA) * a;
 
     ctx.save();
-    ctx.fillStyle = 'rgba(12, 14, 20, 0.72)';
-    ctx.fillRect(x - 4, y - 4, l + 8, a + 8);
+
+    // A moldura: painel escuro arredondado, bronze por fora e um fio de ouro
+    // por dentro — o mesmo par de cores do resto do chrome do jogo, só que
+    // fino o bastante para caber num canto. Sem ela o minimapa era só um
+    // retângulo de cor solta no canto da tela, sem pertencer ao resto da HUD.
+    arredondado(ctx, x - b, y - b, l + b * 2, a + b * 2, 9);
+    ctx.fillStyle = 'rgba(10, 12, 17, 0.82)';
+    ctx.fill();
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = COR_MOLDURA_EXTERNA;
+    ctx.stroke();
+    arredondado(ctx, x - b + 2, y - b + 2, l + b * 2 - 4, a + b * 2 - 4, 7);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = COR_MOLDURA_INTERNA;
+    ctx.stroke();
+
+    ctx.save();
+    arredondado(ctx, x, y, l, a, 3);
+    ctx.clip();
     ctx.drawImage(this.terrenoDe(arena), x, y, l, a);
 
     // As construções antes de todo mundo: elas são o mapa, e os pontos passam
-    // por cima delas.
+    // por cima delas. Formas diferentes, e não só cor, porque a tesouraria e o
+    // cofre também mudam para dourado quando avistados no mundo — a mesma
+    // leitura vale aqui.
     for (const e of arena.estruturas) {
       if (e.tipo !== 'tesouraria' && e.tipo !== 'cofre') continue;
-      ctx.fillStyle = e.tipo === 'tesouraria' ? '#f2e6c9' : 'rgba(0,0,0,0.55)';
-      ctx.fillRect(paraX(e.x) - 2, paraY(e.y) - 2, 4, 4);
+      const px = paraX(e.x);
+      const py = paraY(e.y);
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(0,0,0,0.65)';
+      if (e.tipo === 'tesouraria') {
+        // Um losango dourado: é onde o ouro do reino descansa.
+        ctx.fillStyle = '#f2c869';
+        ctx.beginPath();
+        ctx.moveTo(px, py - 3.5);
+        ctx.lineTo(px + 3.5, py);
+        ctx.lineTo(px, py + 3.5);
+        ctx.lineTo(px - 3.5, py);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      } else {
+        // Um cofre escuro com friso: é onde o refém do inimigo é entulhado.
+        ctx.fillStyle = '#2a2f3d';
+        ctx.fillRect(px - 3, py - 3, 6, 6);
+        ctx.strokeRect(px - 3, py - 3, 6, 6);
+        ctx.strokeStyle = 'rgba(242, 200, 105, 0.85)';
+        ctx.beginPath();
+        ctx.moveTo(px - 3, py);
+        ctx.lineTo(px + 3, py);
+        ctx.stroke();
+      }
     }
 
     const inimigo = outroTime(meuTime);
@@ -118,35 +168,45 @@ export class Minimapa {
       ctx.beginPath();
       ctx.arc(paraX(p.x), paraY(p.y), 3.5, 0, Math.PI * 2);
       ctx.fill();
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+      ctx.stroke();
     }
 
     for (const u of estado.unidades) {
       if (!u.vivo) continue;
       const meu = u.time === meuTime;
       if (!meu && !vistos.has(u.id)) continue;
-      ctx.fillStyle = meu ? COR_DO_TIME[meuTime] : COR_DO_TIME[inimigo];
       // Quem carrega o baú é o que decide a partida: um ponto maior é a
       // diferença entre olhar o mapa e entender o mapa.
       const raio = u.carga === 'bau' ? 3.5 : 2.2;
       ctx.beginPath();
       ctx.arc(paraX(u.x), paraY(u.y), raio, 0, Math.PI * 2);
+      ctx.fillStyle = meu ? COR_DO_TIME[meuTime] : COR_DO_TIME[inimigo];
       ctx.fill();
+      // Um fio escuro em volta: sem ele o azul do próprio time sobre a água
+      // do mapa vira quase invisível — a cor que devia saltar aos olhos some
+      // no fundo que mais se parece com ela.
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+      ctx.stroke();
     }
 
-    // O que está na sua tela, agora.
+    ctx.restore(); // fecha o recorte do relevo
+
+    // O que está na sua tela, agora — um fio escuro por baixo do claro, para
+    // aparecer tanto sobre a água quanto sobre o chão.
     const cl = (enquadramento.largura / mundoL) * l;
     const ca = (enquadramento.altura / mundoA) * a;
-    ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+    const cx = Math.round(paraX(enquadramento.x) - cl / 2) + 0.5;
+    const cy = Math.round(paraY(enquadramento.y) - ca / 2) + 0.5;
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+    ctx.strokeRect(cx, cy, Math.round(cl), Math.round(ca));
     ctx.lineWidth = 1;
-    ctx.strokeRect(
-      Math.round(paraX(enquadramento.x) - cl / 2) + 0.5,
-      Math.round(paraY(enquadramento.y) - ca / 2) + 0.5,
-      Math.round(cl),
-      Math.round(ca),
-    );
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+    ctx.strokeRect(cx, cy, Math.round(cl), Math.round(ca));
 
-    ctx.strokeStyle = 'rgba(255,255,255,0.28)';
-    ctx.strokeRect(x - 0.5, y - 0.5, l + 1, a + 1);
     ctx.restore();
   }
 
@@ -173,4 +233,21 @@ export class Minimapa {
     this.chave = chave;
     return tela;
   }
+}
+
+function arredondado(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  l: number,
+  a: number,
+  r: number,
+): void {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + l, y, x + l, y + a, r);
+  ctx.arcTo(x + l, y + a, x, y + a, r);
+  ctx.arcTo(x, y + a, x, y, r);
+  ctx.arcTo(x, y, x + l, y, r);
+  ctx.closePath();
 }
