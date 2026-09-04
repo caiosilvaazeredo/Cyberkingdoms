@@ -15,7 +15,6 @@
   "build": {
     "appId": "com.reinodemigalhas.jogo",
     "productName": "Meu Querido Rei",
-    "files": ["main.js", "package.json"],
     "directories": {
       "output": "dist-electron"
     },
@@ -32,5 +31,8 @@
       "target": "AppImage",
       "category": "Game"
     }
+  },
+  "optionalDependencies": {
+    "steamworks.js": "^0.4.0"
   }
 }

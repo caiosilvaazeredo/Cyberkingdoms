@@ -925,3 +925,14 @@ tem partida, e fingir que dá seria pior que não ter cache nenhum. A estratégi
 é *stale-while-revalidate*: serve do cache na hora (carregamento instantâneo
 numa segunda visita) e atualiza em paralelo, então uma versão nova do jogo
 aparece sozinha na próxima abertura.
+
+### Google Play e Steam
+
+`google-play/` e `electron/` trazem, cada um, um `LEIA-ME.md` com o passo a
+passo específico da plataforma — contas, taxas, chaves de assinatura, o que
+só dá pra fazer de dentro do Play Console ou do Steamworks. Os dois partem
+do mesmo princípio: nenhum embrulha uma cópia do jogo, os dois carregam o
+site de sempre (TWA aponta o navegador do Android pro domínio; o Electron
+abre a mesma URL numa janela própria), então uma atualização publicada no
+servidor já vale para o navegador, o Android e a Steam ao mesmo tempo — sem
+precisar gerar um build novo para cada loja.

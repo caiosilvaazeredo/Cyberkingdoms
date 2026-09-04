@@ -19,6 +19,34 @@ const path = require('node:path');
 // sempre a de produção.
 const URL_DO_JOGO = process.env.MEU_QUERIDO_REI_URL ?? 'https://balanca-do-reino.onrender.com';
 
+// steamworks.js é opcional e roda só aqui no processo principal — a janela
+// continua sem nodeIntegration, então nada disto fica exposto ao site
+// carregado. Sem o pacote instalado, sem steam_appid.txt ou sem o cliente
+// Steam aberto, tudo aqui vira no-op e o jogo segue normal (ver LEIA-ME.md).
+let steamworks = null;
+try {
+  steamworks = require('steamworks.js');
+} catch {
+  steamworks = null;
+}
+
+let steamClient = null;
+
+function iniciarSteam() {
+  if (!steamworks) return;
+  try {
+    // Precisa vir antes de app ficar "ready": é quem liga o overlay
+    // (Shift+Tab) sobre a janela do Electron.
+    steamworks.electronEnableSteamOverlay();
+    steamClient = steamworks.init();
+    steamClient.localplayer.setRichPresence('status', 'No Reino de Migalhas');
+  } catch {
+    steamClient = null;
+  }
+}
+
+iniciarSteam();
+
 function criarJanela() {
   const janela = new BrowserWindow({
     width: 1280,
