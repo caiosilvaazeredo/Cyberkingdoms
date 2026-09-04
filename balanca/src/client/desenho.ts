@@ -721,6 +721,35 @@ export function desenharMundo(
     });
   }
 
+  // --- cajado do Modo Xamã ----------------------------------------------
+  // O mesmo círculo tracejado do totem: um prêmio no chão, sem time, que
+  // qualquer um dos dois reinos pode chegar primeiro.
+  if (estado.cajado) {
+    const cajado = estado.cajado;
+    const px = v.paraTelaX(cajado.x);
+    const py = v.paraTelaY(cajado.y);
+    pinturas.push({
+      y: cajado.y,
+      pintar: () => {
+        const raio = (18 + Math.sin(tempo * 3) * 4) * escala;
+        ctx.save();
+        ctx.strokeStyle = 'rgba(170, 120, 230, 0.9)';
+        ctx.lineWidth = Math.max(2, 3 * escala);
+        ctx.setLineDash([7 * escala, 5 * escala]);
+        ctx.beginPath();
+        ctx.ellipse(px, py, raio, raio * 0.55, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+        const av = arte.xamaAvatar;
+        const l = av.width * escala * 0.45;
+        const a = av.height * escala * 0.45;
+        const flutua = Math.sin(tempo * 2.4) * 3 * escala;
+        ctx.drawImage(av, Math.round(px - l / 2), Math.round(py - a - RAIO_UNIDADE * escala * 0.5 + flutua), Math.ceil(l), Math.ceil(a));
+        rotulo(ctx, 'cajado', px, py + 16 * escala, escala, '#c9a6f5');
+      },
+    });
+  }
+
   // --- porco decorativo ----------------------------------------------
   {
     const p = posicaoDoPorco(arena, tempo);
@@ -979,7 +1008,7 @@ export function desenharMundo(
     const vaga = olhar.vagaDe(visivel.id);
     pinturas.push({
       y: pos.y,
-      pintar: () =>
+      pintar: () => {
         desenharUnidade(
           ctx,
           estado,
@@ -992,7 +1021,25 @@ export function desenharMundo(
           vaga,
           olhar.quantosLocais,
           ajustes,
-        ),
+        );
+        // O feitiço carregado (Modo Xamã): o mesmo retrato do cajado no
+        // chão, agora sobre a cabeça de quem está com ele — é o único jeito
+        // de quem está por perto saber, antes do golpe, que aquele boneco
+        // pode virar alguém porco.
+        if (visivel.xamaAte > 0) {
+          const av = arte.xamaAvatar;
+          const l = av.width * escala * 0.32;
+          const a = av.height * escala * 0.32;
+          const flutua = Math.sin(tempo * 3 + visivel.id) * 2 * escala;
+          ctx.drawImage(
+            av,
+            Math.round(px - l / 2),
+            Math.round(py - 58 * escala + flutua),
+            Math.ceil(l),
+            Math.ceil(a),
+          );
+        }
+      },
     });
   }
 
@@ -1141,6 +1188,14 @@ export function folhaDaUnidade(
   andando: boolean,
 ): FolhaEscolhida {
   const espelhar = u.olharX < -0.1;
+
+  if (u.porco > 0) {
+    // O porco (Modo Xamã) ignora a classe por baixo do mesmo jeito que a
+    // fera — só que aqui a folha nem é nova: é o mesmo porco decorativo do
+    // pátio, o que sela a piada sem gastar um sprite a mais.
+    const anim = andando ? arte.porco.andando : arte.porco.parado;
+    return { anim, indice: quadroEm(anim, performance.now() / 1000, u.id * 3), espelhar };
+  }
 
   if (u.fera) {
     // A fera ignora a classe por baixo inteiramente: enquanto dura a

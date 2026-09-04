@@ -1,4 +1,4 @@
-import { canhaoDe, covilDe, resolverColisao, tocaDaPresaDe, type Arena } from './arena';
+import { cajadoDe, canhaoDe, covilDe, resolverColisao, tocaDaPresaDe, type Arena } from './arena';
 import { CLASSES_COM_CHAPEU, PERFIS_DE_FERA, type Classe, type Fera } from './classes';
 import { semeadoPor } from './rng';
 import type { IdDoMapa } from './mapas';
@@ -11,6 +11,7 @@ import {
   type VarianteDaInvasao,
 } from './estado';
 import {
+  CAJADO_INTERVALO,
   CANHAO_CADENCIA,
   CANHAO_DANO,
   CANHAO_RAIO,
@@ -41,6 +42,7 @@ import {
   TIMES,
   TOTEM_RAIO_DE_PEGAR,
   TOTEM_INTERVALO,
+  XAMA_CARGA_DURACAO,
   perto,
 } from './regras';
 
@@ -417,4 +419,38 @@ export function ferirPresa(estado: Estado, algoz: Unidade, dano: number): void {
   estado.proximaPresaEm = PRESA_INTERVALO;
   estado.buffDaPresa[algoz.time] = PRESA_BUFF_DURACAO;
   estado.eventos.push({ tipo: 'presaCaiu', time: algoz.time, x: p.x, y: p.y });
+}
+
+// --- o cajado (Modo Xamã) -----------------------------------------------------
+
+/**
+ * O cajado: nasce, e o primeiro que chegar perto pega — a mesma mecânica do
+ * totem, com um prêmio diferente. Não briga, não tem vida: tocar já basta.
+ *
+ * ## Por que não é um "combate" como o Guardião e a Presa
+ *
+ * O cajado não ameaça ninguém — ele é só um prêmio no chão, do mesmo jeito
+ * que o totem do Modo Fera é. Dar a ele vida e ataque para reaproveitar o
+ * padrão do Guardião seria inventar uma ameaça que o modo não promete: o
+ * lema é "quem pega pode transformar", não "quem derrubar o guardião do
+ * cajado pode transformar".
+ */
+export function moverCajado(arena: Arena, estado: Estado): void {
+  estado.proximoCajadoEm -= DT;
+  if (!estado.cajado && estado.proximoCajadoEm <= 0) {
+    const local = cajadoDe(arena);
+    estado.cajado = { id: estado.proximoId++, x: local.x, y: local.y };
+  }
+  if (!estado.cajado) return;
+
+  for (const u of estado.unidades) {
+    if (!u.vivo || u.porco > 0) continue;
+    if (!perto(u, estado.cajado, TOTEM_RAIO_DE_PEGAR)) continue;
+
+    u.xamaAte = XAMA_CARGA_DURACAO;
+    estado.eventos.push({ tipo: 'cajadoPego', unidade: u.id, time: u.time });
+    estado.cajado = null;
+    estado.proximoCajadoEm = CAJADO_INTERVALO;
+    break;
+  }
 }

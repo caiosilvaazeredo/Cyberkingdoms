@@ -474,6 +474,34 @@ export function tocaDaPresaDe(arena: Arena): { x: number; y: number } {
 }
 
 /**
+ * Onde o cajado do Modo Xamã nasce: a mesma âncora do Guardião e da Presa,
+ * num terceiro quadrante — o mesmo raciocínio de `tocaDaPresaDe`, e pelo
+ * mesmo motivo: nenhum dos três modos coexiste, mas candidatos distintos
+ * custam nada e deixam a porta aberta.
+ */
+export function cajadoDe(arena: Arena): { x: number; y: number } {
+  const ancora = arena.pastos.find((p) => p.lado === null) ?? arena.pastos[0];
+  if (!ancora) return { x: (arena.largura * TILE) / 2, y: (arena.altura * TILE) / 2 };
+  const tx0 = Math.floor(ancora.x / TILE);
+  const ty0 = Math.floor(ancora.y / TILE);
+  const candidatos: readonly (readonly [number, number])[] = [
+    [tx0, ty0],
+    [tx0 + 4, ty0 + 2],
+    [tx0 - 4, ty0 + 2],
+    [tx0 + 4, ty0 - 2],
+    [tx0 - 4, ty0 - 2],
+    [tx0 + 1, ty0 + 4],
+    [tx0 - 1, ty0 - 4],
+  ];
+  for (const [tx, ty] of candidatos) {
+    if (arena.ehChao(tx, ty) && !arena.bloqueado(tx, ty) && arena.tile(tx, ty) !== PONTE) {
+      return { x: tx * TILE + TILE / 2, y: ty * TILE + TILE / 2 };
+    }
+  }
+  return { x: ancora.x, y: ancora.y };
+}
+
+/**
  * A conta do mato: onde ele pode nascer, e o que nasce.
  *
  * Chamada só por `criarArena`, uma vez por tile. As exclusões são de jogo, não

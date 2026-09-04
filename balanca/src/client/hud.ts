@@ -914,6 +914,16 @@ export function narrar(
         texto: `o ${NOME_DO_TIME[evento.time]} derrubou a Presa — dano extra por um tempo!`,
         cor: COR_CLARA[evento.time],
       };
+    case 'cajadoPego':
+      return {
+        texto: `${nome(evento.unidade)} pegou o cajado do Xamã`,
+        cor: '#c9a6f5',
+      };
+    case 'virouPorco':
+      return {
+        texto: `o ${NOME_DO_TIME[evento.algoz]} transformou alguém em porco!`,
+        cor: COR_CLARA[evento.algoz],
+      };
     case 'fim':
       return {
         texto: evento.vencedor ? `fim — ${NOME_DO_TIME[evento.vencedor]} vence` : 'fim — empate',

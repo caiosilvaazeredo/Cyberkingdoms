@@ -29,6 +29,7 @@ import {
 import {
   ferirGuardiao,
   ferirPresa,
+  moverCajado,
   moverCanhoes,
   moverGuardiao,
   moverInvasores,
@@ -50,6 +51,7 @@ import {
   AQUECIMENTO,
   BOLSAS_NA_CASA,
   MINERIO_POR_BOLSA,
+  CAJADO_INTERVALO,
   CHAPEU_VOLTA_EM,
   CURA_DA_BOLSA,
   CUSTO_DO_NIVEL,
@@ -62,9 +64,12 @@ import {
   NIVEL_MAXIMO,
   PAUSA_APOS_PONTO,
   POR_TIME,
+  PORCO_DURACAO,
+  PORCO_VELOCIDADE_MULT,
   PRESA_ATRASO_INICIAL,
   PRESA_BUFF_DANO,
   TOTEM_INTERVALO,
+  XAMA_ALCANCE,
   chapeusDe,
   custoDaObraDe,
   pesoMaximoDe,
@@ -184,6 +189,8 @@ export function criarPartida(
         ultimoComando: 0,
         fera: null,
         feraAte: 0,
+        xamaAte: 0,
+        porco: 0,
       };
       estado.unidades.push(u);
       porNoNascedouro(arena, estado, u);
@@ -290,6 +297,8 @@ function estadoInicial(arena: Arena, id: IdDoModo, porTime: number): Estado {
     presa: null,
     proximaPresaEm: PRESA_ATRASO_INICIAL,
     buffDaPresa: { azul: 0, vermelho: 0 },
+    cajado: null,
+    proximoCajadoEm: CAJADO_INTERVALO / 3,
     estoque,
     eventos: [],
     vencedor: null,
@@ -370,6 +379,17 @@ function tick(
       }
     }
 
+    // O feitiço não gasto a tempo (Modo Xamã) some sozinho, sem aviso — o
+    // ícone sobre a cabeça já é o aviso de quem está com ele.
+    if (u.xamaAte > 0) u.xamaAte = Math.max(0, u.xamaAte - DT);
+
+    if (u.porco > 0) {
+      u.porco = Math.max(0, u.porco - DT);
+      // `voltouAoNormal` é o mesmo evento do fim da fera: a frase serve para
+      // as duas transformações sem precisar dizer qual foi.
+      if (u.porco === 0) estado.eventos.push({ tipo: 'voltouAoNormal', unidade: u.id });
+    }
+
     if (!u.vivo) {
       u.renasceEm -= DT;
       if (u.renasceEm <= 0) reviver(arena, estado, u);
@@ -395,9 +415,13 @@ function tick(
       }
       continue;
     }
-    if (apertouUsar) usar(arena, estado, u);
-    if (c.atacar) atacar(arena, estado, u);
-    trabalhar(arena, estado, u, c);
+    // O porco (Modo Xamã) não age: só anda. É o que faz o feitiço doer —
+    // sem isto, "virar porco" mudaria só o desenho.
+    if (u.porco === 0) {
+      if (apertouUsar) usar(arena, estado, u);
+      if (c.atacar) atacar(arena, estado, u);
+      trabalhar(arena, estado, u, c);
+    }
   }
 
   moverProjeteis(arena, estado);
@@ -412,6 +436,8 @@ function tick(
     if (modoDe(estado.modo).temGuardiao) moverGuardiao(arena, estado);
     // Só na Caça: a mesma alavanca de nome único, agora para a Presa.
     if (modoDe(estado.modo).temCaca) moverPresa(arena, estado);
+    // Só no Xamã: o cajado nasce, e tocar já basta — ver `moverCajado`.
+    if (modoDe(estado.modo).temCajado) moverCajado(arena, estado);
     cuidarDosBaus(arena, estado);
     cunhar(estado);
     recomporJazidas(estado);
@@ -492,6 +518,10 @@ export function moverUnidade(
   // que empurra qualquer corrida — multiplica antes das outras contas de
   // velocidade, não depois, para valer também pra escolta do baú.
   if (estado.buffDoGuardiao[u.time] > 0) velocidade *= GUARDIAO_BUFF_VELOCIDADE;
+  // O porco (Modo Xamã) anda mais devagar que a própria classe por baixo —
+  // o mesmo ponto único de velocidade, agora puxando para baixo em vez de
+  // para cima.
+  if (u.porco > 0) velocidade *= PORCO_VELOCIDADE_MULT;
   if (u.carga !== 'nada' && u.carga !== 'bau') velocidade *= 0.95;
   if (u.carga === 'bau') {
     const p = estado.baus.find((x) => x.portador === u.id);
@@ -602,6 +632,18 @@ function usar(arena: Arena, estado: Estado, u: Unidade): void {
     return;
   }
 
+  // Mãos vazias, e com o feitiço do cajado carregado (Modo Xamã): antes de
+  // qualquer outra coisa que "E" possa fazer de mãos vazias, porque a carga
+  // do feitiço tem prazo — deixar um chapéu no chão decidir por ela seria
+  // desperdiçar um poder raro por acidente.
+  if (u.xamaAte > 0) {
+    const alvo = inimigoParaTransformar(estado, u, XAMA_ALCANCE);
+    if (alvo) {
+      transformarEmPorco(estado, u, alvo);
+      return;
+    }
+  }
+
   // Mãos vazias. Primeiro o que está no chão, que é o que o jogador vê embaixo
   // do próprio personagem.
   const item = itemMaisPerto(estado, u);
@@ -636,6 +678,35 @@ function usar(arena: Arena, estado: Estado, u: Unidade): void {
   }
 
   comecarTrabalho(arena, estado, u);
+}
+
+/** O inimigo vivo mais perto, ao alcance do feitiço — e ainda não porco: transformar de novo não soma nada. */
+function inimigoParaTransformar(estado: Estado, u: Unidade, alcance: number): Unidade | null {
+  let melhor: Unidade | null = null;
+  let menor = alcance;
+  for (const o of estado.unidades) {
+    if (!o.vivo || o.time === u.time || o.porco > 0) continue;
+    const d = Math.hypot(o.x - u.x, o.y - u.y);
+    if (d > menor) continue;
+    menor = d;
+    melhor = o;
+  }
+  return melhor;
+}
+
+/**
+ * O feitiço de transformação (Modo Xamã): gasta a carga do cajado e vira o
+ * alvo porco por `PORCO_DURACAO`.
+ *
+ * `soltarTudo` é o mesmo que `morrer` usa para largar o que a vítima segurava
+ * — um porco não carrega baú nem bolsa, e reaproveitar essa função evita
+ * escrever de novo a mesma conta de "devolver ao mundo o que estava na mão".
+ */
+function transformarEmPorco(estado: Estado, algoz: Unidade, alvo: Unidade): void {
+  algoz.xamaAte = 0;
+  soltarTudo(estado, alvo);
+  alvo.porco = PORCO_DURACAO;
+  estado.eventos.push({ tipo: 'virouPorco', unidade: alvo.id, algoz: algoz.time });
 }
 
 function itemMaisPerto(estado: Estado, u: Unidade): Item | null {
@@ -1373,6 +1444,11 @@ function morrer(estado: Estado, algoz: Unidade, alvo: Unidade): void {
     alvo.fera = null;
     estado.eventos.push({ tipo: 'voltouAoNormal', unidade: alvo.id });
   }
+  // Cair também acaba o porco e perde o feitiço não gasto (Modo Xamã) — sem
+  // aviso à parte, pelo mesmo motivo de `xamaAte` nunca avisar: quem morreu
+  // já viu a própria tela dizer isso.
+  alvo.porco = 0;
+  alvo.xamaAte = 0;
   if (algoz.id !== alvo.id && algoz.time !== alvo.time) {
     algoz.abates++;
     // A contagem é do **time**, e não a soma dos abates de quem está em campo:

@@ -116,6 +116,10 @@ const RECEITAS = {
   guardiaoCaiu: { folha: 'estouro', escala: 1.6, acima: 24 },
   /** A Presa do Modo Caça caindo: o mesmo estouro, no tamanho normal — ela cai o dobro das vezes que o Guardião. */
   presaCaiu: { folha: 'estouro', escala: 1.1, acima: 16 },
+  /** Pegar o cajado (Modo Xamã): o mesmo estouro de vestir chapéu — é a mesma notícia, "ganhou um poder novo". */
+  cajadoPego: { folha: 'estouro', escala: 0.9, acima: 26 },
+  /** O feitiço do Xamã acertando: o instante em que vira porco, com a folha do próprio feitiço. */
+  virouPorco: { folha: 'transformacao', escala: 1.2, acima: 10 },
 } as const satisfies Record<string, Receita>;
 
 /**
@@ -212,6 +216,16 @@ export class Particulas {
       case 'saque': {
         const p = onde(e.unidade);
         if (p) this.acender(arte, 'saque', p.x, p.y, agora);
+        return;
+      }
+      case 'cajadoPego': {
+        const p = onde(e.unidade);
+        if (p) this.acender(arte, 'cajadoPego', p.x, p.y, agora);
+        return;
+      }
+      case 'virouPorco': {
+        const p = onde(e.unidade);
+        if (p) this.acender(arte, 'virouPorco', p.x, p.y, agora);
         return;
       }
       default:

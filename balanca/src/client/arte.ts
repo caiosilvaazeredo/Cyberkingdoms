@@ -104,7 +104,8 @@ export interface Arte {
       | 'furto'
       | 'bomba'
       | 'trollCaido'
-      | 'bolota',
+      | 'bolota'
+      | 'transformacao',
       Animacao
     >
   >;
@@ -198,6 +199,13 @@ export interface Arte {
    * `moverPresa` em shared/pve.ts.
    */
   readonly presa: Animacao;
+  /**
+   * O cajado do Modo Xamã: o retrato do Hex Shaman do Enemy Pack, usado
+   * como ícone — sobre o pingente no chão, e sobre a cabeça de quem está
+   * com o feitiço carregado. Ver `Unidade.xamaAte` e `moverCajado` em
+   * shared/pve.ts.
+   */
+  readonly xamaAvatar: HTMLImageElement;
   /**
    * O ícone de cada carga no chão.
    *
@@ -364,6 +372,7 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
   pede('guardiao_tartaruga', 'recursos/guardiao_tartaruga.png');
   pede('guardiao_caveira', 'recursos/guardiao_caveira.png');
   pede('aranha_andando', 'recursos/aranha_andando.png');
+  pede('xama_avatar', 'recursos/xama_avatar.png');
   pede('slingshot_gnome_invasor', 'recursos/slingshot_gnome_invasor.png');
   for (const fera of ['troll', 'minotauro'] as const) {
     for (const estado of ['parado', 'andando', 'golpe'] as const) {
@@ -387,6 +396,10 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
     // A bolota do Slingshot Gnome, no lugar do golpe do ladrão quando quem
     // rouba atira de longe — ver a receita `saqueDeLonge` em particulas.ts.
     ['fx:bolota', 'flecha_bolota'],
+    // O feitiço de transformação do Hex Shaman (Enemy Pack), no instante em
+    // que a Modo Xamã vira alguém porco — ver a receita `virouPorco` em
+    // particulas.ts.
+    ['fx:transformacao', 'transformacao'],
   ] as const) {
     pede(chave, `fx/${arquivo}.png`);
   }
@@ -516,6 +529,7 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
       caveira: animacao(img('guardiao_caveira'), 8),
     },
     presa: animacao(img('aranha_andando'), 5),
+    xamaAvatar: img('xama_avatar'),
     feras: {
       troll: {
         parado: animacao(img('fera_troll_parado'), 6),
@@ -553,6 +567,7 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
       bomba: animacao(img('fx:bomba'), 6),
       trollCaido: animacao(img('fx:trollCaido'), 10),
       bolota: animacao(img('fx:bolota'), 12),
+      transformacao: animacao(img('fx:transformacao'), 14),
     },
     icones: Object.fromEntries(ICONES.map((n) => [n, img(`icone:${n}`)])) as Record<
       IconeDaObra,

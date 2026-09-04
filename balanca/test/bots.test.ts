@@ -104,6 +104,15 @@ describe('os bots', () => {
     expect(eventos.filter((e) => e === 'presaCaiu').length).toBeGreaterThan(0);
   });
 
+  it('no Modo Xamã, pegam o cajado e transformam alguém em porco', () => {
+    // O primeiro cajado nasce por volta dos 40s (um terço do intervalo de
+    // 120s) — 150s dá tempo de nascer, um bot notar (raio de 700), pegar, e
+    // achar um inimigo ao alcance do feitiço antes da carga expirar.
+    const { eventos } = jogar(150, 51, 'xama');
+    expect(eventos.filter((e) => e === 'cajadoPego').length).toBeGreaterThan(0);
+    expect(eventos.filter((e) => e === 'virouPorco').length).toBeGreaterThan(0);
+  });
+
   it('nunca ficam presos dentro da água', () => {
     const { sala } = jogar(120, 24);
     for (const u of sala.estado.unidades) {

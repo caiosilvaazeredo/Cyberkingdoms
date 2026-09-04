@@ -46,6 +46,8 @@ function estadoVazio(): Estado {
     presa: null,
     proximaPresaEm: 0,
     buffDaPresa: { azul: 0, vermelho: 0 },
+    cajado: null,
+    proximoCajadoEm: 0,
     estoque,
     eventos: [],
     vencedor: null,
@@ -175,6 +177,26 @@ describe('o retrato', () => {
     partida.estado.presa = null;
     const semPresa = desempacotar(empacotar(partida.estado), estadoVazio());
     expect(semPresa.presa).toBeNull();
+  });
+
+  it('leva o cajado, e o xamaAte/porco de cada unidade, no Modo Xamã', () => {
+    const partida = criarPartida(34, 'xama');
+    for (let i = 0; i < Math.ceil(AQUECIMENTO * TICKS_POR_SEGUNDO) + 2; i++) partida.passo();
+
+    partida.estado.cajado = { id: 55, x: 400, y: 350 };
+    const xama = partida.entrar({ nome: 'X', bot: false, time: 'azul' });
+    xama.xamaAte = 12.5;
+    const porco = partida.entrar({ nome: 'P', bot: false, time: 'vermelho' });
+    porco.porco = 6.2;
+
+    const copia = desempacotar(empacotar(partida.estado), estadoVazio());
+    expect(copia.cajado).toEqual({ id: 55, x: 400, y: 350 });
+    expect(copia.unidades.find((u) => u.id === xama.id)!.xamaAte).toBeCloseTo(12.5, 1);
+    expect(copia.unidades.find((u) => u.id === porco.id)!.porco).toBeCloseTo(6.2, 1);
+
+    partida.estado.cajado = null;
+    const semCajado = desempacotar(empacotar(partida.estado), estadoVazio());
+    expect(semCajado.cajado).toBeNull();
   });
 
   it('cabe num pacote pequeno o bastante para quinze envios por segundo', () => {

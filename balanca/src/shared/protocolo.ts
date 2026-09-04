@@ -332,6 +332,8 @@ export interface Retrato {
   pz: number[];
   /** Segundos restantes do buff de dano da Presa, `[azul, vermelho]`. */
   pb: number[];
+  /** O cajado do Modo Xamã — `[id, x, y]`, ou vazio quando não há nenhum. */
+  cj: number[];
   cz: number[][];
   /** A obra de cada time. */
   of: number[][];
@@ -370,7 +372,7 @@ export function empacotar(estado: Estado): Retrato {
     ],
     // `[id, time, classe, x, y, olharX*100, olharY*100, vida, vivo, carga,
     //   golpe*100, colheita*100, renasceEm*10, ultimoComando, abates, mortes,
-    //   depósitos, resgates, entregas, fera]`
+    //   depósitos, resgates, entregas, fera, xamaAte*10, porco*10]`
     //
     // `golpe` vai como centésimos de segundo, e não como um sim/não: é o
     // relógio da animação de ataque, e o cliente precisa dele para saber em que
@@ -378,6 +380,11 @@ export function empacotar(estado: Estado): Retrato {
     //
     // `fera` viaja separado de `classe` — o Modo Fera não troca a classe de
     // ninguém, só empresta um retrato diferente por cima dela por um tempo.
+    //
+    // `xamaAte` e `porco` (Modo Xamã) viajam pelo mesmo motivo de `golpe`:
+    // não são só relógio interno — `porco` decide a velocidade que a própria
+    // previsão do cliente calcula, e os dois decidem o que aparece sobre a
+    // cabeça de quem está com eles.
     u: estado.unidades.map((u) => [
       u.id,
       idxTime(u.time),
@@ -399,6 +406,8 @@ export function empacotar(estado: Estado): Retrato {
       u.resgates,
       u.entregas,
       u.fera === null ? -1 : FERAS.indexOf(u.fera),
+      arred(u.xamaAte * 10),
+      arred(u.porco * 10),
     ]),
     // `[time, peso, onde, x, y, portador, ajudantes, voltaEm]`
     pr: estado.baus.map((p) => [
@@ -469,6 +478,7 @@ export function empacotar(estado: Estado): Retrato {
         ]
       : [],
     pb: TIMES.map((t) => arred(estado.buffDaPresa[t])),
+    cj: estado.cajado ? [estado.cajado.id, arred(estado.cajado.x), arred(estado.cajado.y)] : [],
     // `[time, minério, cunhando*10, bolsas]`
     cz: estado.casasDaMoeda.map((c) => [idxTime(c.time), c.minerio, arred(c.cunhando * 10), c.bolsas]),
     // `[time, madeira, ouro, nivel]`
@@ -526,6 +536,8 @@ export function desempacotar(r: Retrato, base: Estado): Estado {
       ultimoComando: 0,
       fera: null,
       feraAte: 0,
+      xamaAte: 0,
+      porco: 0,
     };
     u.time = timePorIdx(linha[1]!);
     u.classe = CLASSES[linha[2]!]!;
@@ -547,6 +559,8 @@ export function desempacotar(r: Retrato, base: Estado): Estado {
     u.entregas = linha[18]!;
     const idxFera = linha[19]!;
     u.fera = idxFera < 0 ? null : FERAS[idxFera]!;
+    u.xamaAte = (linha[20] ?? 0) / 10;
+    u.porco = (linha[21] ?? 0) / 10;
     return u;
   });
 
@@ -657,6 +671,8 @@ export function desempacotar(r: Retrato, base: Estado): Estado {
           mordeEm: 0,
         };
   base.buffDaPresa = { azul: r.pb[0] ?? 0, vermelho: r.pb[1] ?? 0 };
+
+  base.cajado = r.cj.length === 0 ? null : { id: r.cj[0]!, x: r.cj[1]!, y: r.cj[2]! };
 
   base.casasDaMoeda = r.cz.map((l) => ({
     time: timePorIdx(l[0]!),

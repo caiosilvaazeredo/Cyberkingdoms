@@ -16,6 +16,7 @@ import {
   pesoMaximoDe,
   carregadoresPara,
   outroTime,
+  XAMA_ALCANCE,
   type Time,
 } from './regras';
 
@@ -102,6 +103,12 @@ const RAIO_DE_INTERESSE_NO_GUARDIAO = 900;
 
 /** Distância a partir da qual a Presa do Modo Caça deixa de valer o desvio — menor que o Guardião: ela nasce o dobro das vezes e recompensa menos. */
 const RAIO_DE_INTERESSE_NA_PRESA = 650;
+
+/** Distância a partir da qual o cajado do Modo Xamã deixa de valer o desvio. */
+const RAIO_DE_INTERESSE_NO_CAJADO = 700;
+
+/** Até onde um Xamã carregado sai do caminho para achar alguém para transformar. */
+const XAMA_RAIO_DE_BUSCA = 900;
 
 interface Memoria {
   papel: Papel;
@@ -385,6 +392,15 @@ export class Bots {
       if (invasor) return ir(invasor, false, 0, false);
     }
 
+    // O feitiço carregado (Modo Xamã): ao contrário de ir atrás do cajado —
+    // que é opcional, e por isso respeita o papel —, gastar a carga antes
+    // que o relógio dela zere vale para qualquer um, cozinheiro incluso. Um
+    // Xamã carregado que nunca usa o feitiço é uma vantagem jogada fora.
+    if (u.xamaAte > 0) {
+      const alvo = this.inimigoMaisPertoDe(estado, u, u, XAMA_RAIO_DE_BUSCA);
+      if (alvo) return ir(alvo, this.chegou(u, alvo, XAMA_ALCANCE), 0, false);
+    }
+
     // Um chapéu no chão a dois passos vale mais que qualquer plano — ainda mais
     // se for do inimigo, que fica sem ele.
     const chapeu = estado.itens.find(
@@ -427,6 +443,16 @@ export class Bots {
       const presa = estado.presa;
       if (Math.hypot(presa.x - u.x, presa.y - u.y) < RAIO_DE_INTERESSE_NA_PRESA) {
         return ir(presa, false, 0, true);
+      }
+    }
+
+    // O cajado do Modo Xamã: só vale ir atrás dele de mãos vazias e sem já
+    // estar com o feitiço — pegá-lo de novo não soma nada, e é automático
+    // por proximidade (ver `moverCajado`), sem precisar apertar nada.
+    if (estado.cajado && u.carga === 'nada' && u.xamaAte <= 0 && m.papel !== 'cozinheiro') {
+      const cajado = estado.cajado;
+      if (Math.hypot(cajado.x - u.x, cajado.y - u.y) < RAIO_DE_INTERESSE_NO_CAJADO) {
+        return ir(cajado, false, 0, true);
       }
     }
 

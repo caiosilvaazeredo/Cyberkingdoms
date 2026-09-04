@@ -487,6 +487,23 @@ export const PRESA_BUFF_DURACAO = 20;
 /** Multiplicador de dano do buff — janela curta, vantagem real. */
 export const PRESA_BUFF_DANO = 1.2;
 
+// --- o cajado do xamã (Modo Xamã) ---------------------------------------------
+
+/** Segundos entre o cajado ser pego (ou virar feitiço não usado) e o próximo nascer. */
+export const CAJADO_INTERVALO = 120;
+
+/** Segundos que quem pega o cajado tem para usar o feitiço antes dele se perder. */
+export const XAMA_CARGA_DURACAO = 20;
+
+/** Alcance do feitiço de transformação — mais longe que um golpe, mais perto que uma flecha. */
+export const XAMA_ALCANCE = 220;
+
+/** Segundos que a vítima do feitiço fica porco: sem atacar, sem colher, sem usar. */
+export const PORCO_DURACAO = 10;
+
+/** Quanto o porco anda mais devagar que a própria classe por baixo. */
+export const PORCO_VELOCIDADE_MULT = 0.7;
+
 /** Segundos até outro bicho aparecer no lugar do que morreu. */
 export const ANIMAL_VOLTA_EM = 18;
 

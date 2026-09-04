@@ -68,6 +68,18 @@ export interface Unidade {
   fera: Fera | null;
   /** Segundos restantes de transformação. Só vale com `fera` não nulo. */
   feraAte: number;
+  /**
+   * O Modo Xamã: segundos restantes com o feitiço de transformação
+   * carregado, depois de pegar o cajado. Zero quando não está com ele.
+   * Some sozinho se não for gasto a tempo — ver `XAMA_CARGA_DURACAO`.
+   */
+  xamaAte: number;
+  /**
+   * O Modo Xamã, do outro lado do feitiço: segundos restantes transformado
+   * em porco inofensivo por um cajado inimigo. Sem atacar, sem colher, sem
+   * usar — só anda, e mais devagar. Volta sozinho quando chega a zero.
+   */
+  porco: number;
 }
 
 /**
@@ -252,6 +264,18 @@ export interface Presa {
   mordeEm: number;
 }
 
+/**
+ * O cajado do Modo Xamã — um pingente neutro no chão, sem dono até alguém
+ * pegar. Ao contrário do Guardião e da Presa, ele não briga: tocar nele já
+ * basta, do mesmo jeito que o totem do Modo Fera funciona. Ver
+ * `Unidade.xamaAte`.
+ */
+export interface Cajado {
+  id: number;
+  x: number;
+  y: number;
+}
+
 export interface CasaDaMoeda {
   time: Time;
   minerio: number;
@@ -304,6 +328,8 @@ export type Evento =
   | { tipo: 'guardiaoNasceu'; tipoDoGuardiao: TipoDeGuardiao }
   | { tipo: 'guardiaoCaiu'; time: Time; x: number; y: number }
   | { tipo: 'presaCaiu'; time: Time; x: number; y: number }
+  | { tipo: 'cajadoPego'; unidade: number; time: Time }
+  | { tipo: 'virouPorco'; unidade: number; algoz: Time }
   | { tipo: 'fim'; vencedor: Time | null };
 
 export interface Estado {
@@ -367,6 +393,10 @@ export interface Estado {
   proximaPresaEm: number;
   /** Segundos restantes do buff de dano por derrubar a Presa. */
   buffDaPresa: Record<Time, number>;
+  /** O cajado do Modo Xamã, quando existe um esperando ser pego. */
+  cajado: Cajado | null;
+  /** Segundos até o próximo cajado nascer. Ver `moverCajado`. */
+  proximoCajadoEm: number;
   /** Chapéus ainda guardados, por time e classe. */
   estoque: Record<Time, Record<Classe, number>>;
   /** Zerado a cada tick; o servidor despacha e esquece. */

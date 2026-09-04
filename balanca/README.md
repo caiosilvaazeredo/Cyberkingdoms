@@ -155,11 +155,11 @@ diferentes, cada uma vendo uma partida na mesma tela.
 ela e o resto do time vem de bot. *Jogo Online* usa a sala pública mais
 movimentada, e aí o sofá entra junto de quem estiver na rede.
 
-### Os nove modos
+### Os dez modos
 
 Um modo muda **uma** alavanca em relação ao clássico, e a alavanca que ele muda
 é a que dá nome a ele. É o que permite explicá-lo numa linha na hora de escolher,
-e o que impede a lista de virar nove variações indistinguíveis.
+e o que impede a lista de virar dez variações indistinguíveis.
 
 | modo | o que muda | mediana com bots |
 |---|---|---|
@@ -172,10 +172,11 @@ e o que impede a lista de virar nove variações indistinguíveis.
 | **Abate** | trinta baixas vencem · sem cortejo, sem moeda, só briga | 166 s |
 | **Covil** | um Guardião nasce no meio do mapa · derrubá-lo acelera o time inteiro | 508 s |
 | **Caça** | uma Presa nasce sem parar no meio do mapa · derrubá-la turbina o dano do time por um tempo | 451 s |
+| **Xamã** | um cajado nasce sem parar no meio do mapa · quem pega pode transformar um inimigo em porco | 353 s |
 
 A coluna da direita é medida, não estimada: doze seeds por modo, salas só de
-bots. Todas as cento e oito partidas terminaram, e o placar por lado ficou
-equilibrado em todos os nove.
+bots. Todas as cento e vinte partidas terminaram, e o placar por lado ficou
+equilibrado em todos os dez.
 
 Por dentro, um modo é **dado** e não caminho de código: uma linha em
 `shared/modos.ts` que o tick lê no lugar das constantes. A tentação era escrever
@@ -683,6 +684,23 @@ o buff de uma acelera o cabo de guerra, o da outra encurta a próxima briga.
 Passado o tempo do buff, ou derrubada, ela renasce quarenta e cinco segundos
 depois — metade do intervalo do Guardião, porque vale menos por vez.
 
+### O cajado: o herói raro do Reino de Migalhas, só no Modo Xamã
+
+Exclusivo do modo **Xamã** — a terceira ideia do mesmo molde, agora sem
+briga nenhuma. Um cajado nasce sozinho no meio do mapa, sem dono: o
+primeiro a tocar nele, de qualquer um dos dois reinos, ganha um feitiço de
+transformação carregado por vinte segundos — o retrato do Hex Shaman do
+Enemy Pack aparece sobre a cabeça de quem está com ele, para o resto do
+campo saber quem carrega o poder.
+
+Gastar o feitiço é apertar "E" perto de um inimigo: ele vira um porco
+inofensivo por dez segundos — sem atacar, sem colher, sem usar nada, e mais
+devagar do que a própria classe por baixo. Não é dano, é um tempo fora da
+partida, o mesmo tipo de virada que um encantamento decisivo dá num MOBA. Se
+a carga não for gasta a tempo, ela simplesmente some, e o cajado volta a
+nascer dois minutos depois de pego — o dobro do intervalo do Guardião,
+porque decidir uma brecha inteira vale mais do que um golpe.
+
 ### Os efeitos: o que aconteceu, e o que a construção faz
 
 O jogo mudava de estado sem avisar. Um aldeão virava arqueiro e o único sinal
@@ -701,6 +719,8 @@ nenhum.
 | tocar o totem | vira Troll ou Minotauro na tela, e o nome sobe em vermelho |
 | derrubar o Guardião (Covil) | estouro grande no covil, e o aviso de quem ganhou o buff |
 | derrubar a Presa (Caça) | o mesmo estouro, no tamanho normal, e o aviso de quem ganhou o buff de dano |
+| pegar o cajado (Xamã) | o mesmo estouro de vestir chapéu, e o retrato do Xamã sobre a cabeça de quem pegou |
+| virar porco (Xamã) | a folha do próprio feitiço de transformação, no instante em que acerta |
 | correr | um bafo de poeira sob os pés — respingo, se for na beira d'água |
 
 Os efeitos nascem de **eventos do servidor**, e não de o desenho comparar dois
@@ -802,7 +822,7 @@ despercebido justamente porque quem programa olha no monitor em que tudo cabe.
 src/
   shared/       a simulação, e ela é a mesma dos dois lados
     regras.ts     todos os números do jogo, num arquivo só
-    modos.ts      os nove modos, como dado e não como caminho de código
+    modos.ts      os dez modos, como dado e não como caminho de código
     mapas.ts      os quatro campos de batalha, idem
     classes.ts    as oito classes, o estoque de chapéus e os ofícios
     arena.ts      o mapa como função pura da seed

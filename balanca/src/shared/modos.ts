@@ -44,7 +44,8 @@ export type IdDoModo =
   | 'obra'
   | 'abate'
   | 'covil'
-  | 'caca';
+  | 'caca'
+  | 'xama';
 
 export interface Modo {
   readonly id: IdDoModo;
@@ -117,6 +118,13 @@ export interface Modo {
    * `PRESA_*` em regras.ts.
    */
   readonly temCaca: boolean;
+  /**
+   * Um cajado neutro nasce sem parar no meio do mapa: quem tocar nele ganha
+   * um feitiço de transformação — usar (`E`) perto de um inimigo o transforma
+   * em porco por um tempo, sem ataque, sem colheita. Ver `pve.ts` e
+   * `CAJADO_*`/`XAMA_*`/`PORCO_*` em regras.ts.
+   */
+  readonly temCajado: boolean;
 }
 
 /**
@@ -152,6 +160,7 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     pesoQueVence: PESO_MINIMO,
     temGuardiao: false,
     temCaca: false,
+    temCajado: false,
   },
   assalto: {
     id: 'assalto',
@@ -168,6 +177,7 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     pesoQueVence: PESO_MINIMO,
     temGuardiao: false,
     temCaca: false,
+    temCajado: false,
   },
   cofrecheio: {
     id: 'cofrecheio',
@@ -189,6 +199,7 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     pesoQueVence: 70,
     temGuardiao: false,
     temCaca: false,
+    temCajado: false,
   },
   chapelaria: {
     id: 'chapelaria',
@@ -205,6 +216,7 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     pesoQueVence: PESO_MINIMO,
     temGuardiao: false,
     temCaca: false,
+    temCajado: false,
   },
   veiaseca: {
     id: 'veiaseca',
@@ -221,6 +233,7 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     pesoQueVence: PESO_MINIMO,
     temGuardiao: false,
     temCaca: false,
+    temCajado: false,
   },
   obra: {
     id: 'obra',
@@ -237,6 +250,7 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     pesoQueVence: PESO_MINIMO,
     temGuardiao: false,
     temCaca: false,
+    temCajado: false,
   },
   abate: {
     id: 'abate',
@@ -257,6 +271,7 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     pesoQueVence: PESO_MINIMO,
     temGuardiao: false,
     temCaca: false,
+    temCajado: false,
   },
   covil: {
     id: 'covil',
@@ -273,6 +288,7 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     pesoQueVence: PESO_MINIMO,
     temGuardiao: true,
     temCaca: false,
+    temCajado: false,
   },
   caca: {
     id: 'caca',
@@ -289,6 +305,24 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     pesoQueVence: PESO_MINIMO,
     temGuardiao: false,
     temCaca: true,
+    temCajado: false,
+  },
+  xama: {
+    id: 'xama',
+    nome: 'Xamã',
+    lema: 'um cajado nasce sem parar no meio do mapa · quem pega pode transformar um inimigo em porco',
+    pontosParaVencer: PONTOS_PARA_VENCER,
+    duracao: DURACAO_DA_PARTIDA,
+    renascimentoBase: RENASCIMENTO_BASE,
+    vitoriaPorBalanca: false,
+    chapeusInfinitos: false,
+    animaisVoltam: true,
+    vitoriaPorObra: false,
+    abatesParaVencer: null,
+    pesoQueVence: PESO_MINIMO,
+    temGuardiao: false,
+    temCaca: false,
+    temCajado: true,
   },
 };
 
@@ -305,6 +339,7 @@ export const IDS_DOS_MODOS: readonly IdDoModo[] = [
   'abate',
   'covil',
   'caca',
+  'xama',
 ];
 
 /**
