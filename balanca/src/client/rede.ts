@@ -162,7 +162,19 @@ export class Rede {
       ws.send(JSON.stringify(mensagemDeEntrada(this.nome, assistindo, onde)));
       this.pingar();
     };
-    ws.onmessage = (ev) => this.receber(JSON.parse(String(ev.data)) as DoServidor);
+    ws.onmessage = (ev) => {
+      // O servidor é confiável, mas o cabo entre ele e o navegador não: um
+      // pacote cortado no meio derruba este handler pra sempre se o parse
+      // solto. `ajustes.ts` já leva essa desconfiança a sério pro
+      // localStorage; aqui é a mesma ideia, pro caminho mais quente do jogo.
+      let dado: DoServidor;
+      try {
+        dado = JSON.parse(String(ev.data)) as DoServidor;
+      } catch {
+        return;
+      }
+      this.receber(dado);
+    };
     ws.onclose = () => {
       this.fechado = true;
     };
