@@ -730,6 +730,20 @@ export function desenharMundo(
     });
   }
 
+  const tubarao = posicaoDoTubarao(arena, tempo);
+  if (tubarao) {
+    const px = v.paraTelaX(tubarao.x);
+    const py = v.paraTelaY(tubarao.y);
+    pinturas.push({
+      y: tubarao.y,
+      pintar: () => {
+        espelhado(ctx, px, tubarao.paraEsquerda, () =>
+          quadro(ctx, arte.tubarao, quadroEm(arte.tubarao, tempo), px, py, escala * 0.6, 'centro'),
+        );
+      },
+    });
+  }
+
   // --- baús ----------------------------------------------------------
   for (const p of estado.baus) {
     if (p.onde === 'resgatado') continue;
@@ -1037,6 +1051,35 @@ function posicaoDaTartaruga(
   // o mesmo tamanho em todo mapa, e um raio grande a mandaria pisar em
   // terra firme na Planície, que tem duas lagoas pequenas em vez de uma.
   return passeioCircular(ancora, tempo, fase, 1.3 * TILE, 0.1, 0.5);
+}
+
+/**
+ * O tubarão: só no Vau e no Arquipélago.
+ *
+ * Os outros três mapas têm água central — o fosso arredondado do Corte, o
+ * lago da Planície — mas é água de decoração, não a extensão de verdade que
+ * só esses dois desenham. Restringir por `arena.mapa`, e não por achar água
+ * grande o bastante, é a diferença entre "estes dois mapas têm um tubarão"
+ * (a intenção) e "todo mapa cuja lagoa passar de um certo tamanho ganha um
+ * tubarão de graça" (um acidente de medição que quebraria no próximo mapa
+ * novo). Raio maior e mais rápido que a tartaruga — é um predador, não um
+ * bicho que toma sol.
+ */
+export function posicaoDoTubarao(
+  arena: Arena,
+  tempo: number,
+): { x: number; y: number; paraEsquerda: boolean } | null {
+  if (arena.mapa !== 'vau' && arena.mapa !== 'arquipelago') return null;
+  const ancora = aguaCentralDe(arena);
+  if (!ancora) return null;
+  const fase = (arena.seed % 900) * 0.011 + 1.5;
+  // A água dos dois mapas é um canal estreito, cortado por pontes a poucos
+  // tiles da âncora — o rio do Vau tem só duas colunas de largura, e o fosso
+  // do Arquipélago não é mais largo, com uma travessia bem perto do centro
+  // que `aguaCentralDe` acha. O raio pequeno é medido, não estético: 0,5 de
+  // tile já bate numa ponte ou na margem antes de completar a volta —
+  // conferido tile a tile nos dois mapas, não só de olho.
+  return passeioCircular(ancora, tempo, fase, 0.4 * TILE, 0.35, 0.6);
 }
 
 /**

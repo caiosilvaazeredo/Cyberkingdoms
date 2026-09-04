@@ -130,6 +130,12 @@ export interface Arte {
   readonly cobra: Animacao;
   readonly lagarto: Animacao;
   /**
+   * O tubarão — só no Vau e no Arquipélago, os dois mapas com água de
+   * verdade no meio, e não o fosso estreito dos outros três. Ver
+   * `posicaoDoTubarao` em desenho.ts.
+   */
+  readonly tubarao: Animacao;
+  /**
    * As folhas da fera — Troll e Minotauro, sem cor de time.
    *
    * `folhaDaUnidade` em desenho.ts olha `Unidade.fera` antes de olhar a
@@ -305,6 +311,7 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
   pede('abelhao_voando', 'recursos/abelhao_voando.png');
   pede('cobra_andando', 'recursos/cobra_andando.png');
   pede('lagarto_andando', 'recursos/lagarto_andando.png');
+  pede('tubarao_nadando', 'recursos/tubarao_nadando.png');
   pede('goblin_invasor', 'recursos/goblin_invasor.png');
   pede('torch_goblin_invasor', 'recursos/torch_goblin_invasor.png');
   for (const fera of ['troll', 'minotauro'] as const) {
@@ -436,6 +443,7 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
     abelhao: animacao(img('abelhao_voando'), 10),
     cobra: animacao(img('cobra_andando'), 8),
     lagarto: animacao(img('lagarto_andando'), 10),
+    tubarao: animacao(img('tubarao_nadando'), 8),
     invasor: animacao(img('goblin_invasor'), 8),
     invasorTocha: animacao(img('torch_goblin_invasor'), 8),
     feras: {
