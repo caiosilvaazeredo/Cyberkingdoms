@@ -599,6 +599,11 @@ chegar na porta não rouba só um chapéu, incendeia a chapelaria. É sorteado
 uma vez por onda, nunca metade tocha e metade não, e é raro o bastante para
 continuar valendo a pena correr para casa quando a fumaça sobe no horizonte.
 
+Repelir a onda inteira — o último goblin dela afugentado, não cada um —
+deixa um resquício de batalha na porta da chapelaria por alguns segundos:
+prova de que a defesa aconteceu, para quem só olhou o registro de longe e
+perdeu o resto.
+
 ### O totem: virar Troll ou Minotauro por um instante
 
 De vez em quando — a cada minuto e meio, em média — um totem nasce sozinho

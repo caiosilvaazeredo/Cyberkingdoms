@@ -58,6 +58,8 @@ interface Efeito {
   escala: number;
   /** Em segundos de relógio de parede. */
   nasceu: number;
+  /** Segundos extras no último quadro, depois da folha acabar de tocar. */
+  segura: number;
 }
 
 /**
@@ -72,6 +74,13 @@ type Receita = {
   escala: number;
   /** Deslocamento vertical, em unidades de mundo. */
   acima: number;
+  /**
+   * Segundos extras parado no último quadro, depois da folha acabar. A
+   * maioria dos efeitos é um clarão — toca e some; um resquício de batalha
+   * precisa ficar no chão um tempo depois de caído, não sumir no instante
+   * em que a queda termina.
+   */
+  segura?: number;
 };
 
 const RECEITAS = {
@@ -94,6 +103,13 @@ const RECEITAS = {
   saque: { folha: 'poeira', escala: 0.8, acima: 4 },
   /** A onda rara do Torch Goblin, quando chega: a chapelaria pega fogo. */
   incendio: { folha: 'labareda', escala: 1.9, acima: 30 },
+  /**
+   * O resquício de batalha: nasce quando o **último** goblin de uma onda é
+   * afugentado, não a cada um — senão a chapelaria vira um cemitério a cada
+   * onda de cinco. Fica caído no chão por um tempo depois da queda, e
+   * some sozinho.
+   */
+  trollCaido: { folha: 'trollCaido', escala: 1.15, acima: 8, segura: 6 },
 } as const satisfies Record<string, Receita>;
 
 /**
@@ -148,6 +164,7 @@ export class Particulas {
       y: y - r.acima,
       escala: r.escala,
       nasceu: agora,
+      segura: r.segura ?? 0,
     });
   }
 
@@ -269,9 +286,17 @@ export class Particulas {
     for (const f of this.efeitos) {
       const t = agora - f.nasceu;
       const duracao = f.folha.quadros / f.folha.fps;
-      if (t >= duracao) continue;
+      const duracaoTotal = duracao + f.segura;
+      if (t >= duracaoTotal) continue;
       vivos.push(f);
+      // Passado o fim da folha, `quadroDaVez` já prende sozinho no último
+      // quadro — é só não parar de chamá-lo enquanto durar a espera.
       const i = quadroDaVez(f.folha, t / duracao);
+      // No último segundo da espera, some aos poucos em vez de piscar: um
+      // resquício de batalha que desaparece de um quadro para o outro lê
+      // como falha de desenho, não como o tempo levando o rastro embora.
+      const restante = duracaoTotal - t;
+      if (restante < 1) ctx.globalAlpha = Math.max(0, restante);
       quadro(
         ctx,
         f.folha,
@@ -281,6 +306,7 @@ export class Particulas {
         escalaDaTela * f.escala,
         'centro',
       );
+      if (restante < 1) ctx.globalAlpha = 1;
     }
     this.efeitos = vivos;
   }

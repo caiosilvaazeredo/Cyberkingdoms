@@ -94,7 +94,10 @@ export interface Arte {
    * nome do arquivo é do desenhista, e o nome que o código usa é do jogo.
    */
   readonly efeitos: Readonly<
-    Record<'poeira' | 'poeirada' | 'labareda' | 'estouro' | 'agua' | 'furto' | 'bomba', Animacao>
+    Record<
+      'poeira' | 'poeirada' | 'labareda' | 'estouro' | 'agua' | 'furto' | 'bomba' | 'trollCaido',
+      Animacao
+    >
   >;
   /** Ícones de interface, por nome do que eles marcam. */
   readonly icones: Readonly<Record<IconeDaObra, HTMLImageElement>>;
@@ -342,6 +345,9 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
     ['fx:furto', 'furto'],
     // A bomba de pavio aceso, sobre o baú refém em trânsito — ver `desenho.ts`.
     ['fx:bomba', 'bomba'],
+    // O resquício de batalha depois de repelir uma onda inteira de goblins —
+    // ver a receita `trollCaido` em particulas.ts.
+    ['fx:trollCaido', 'troll_caido'],
   ] as const) {
     pede(chave, `fx/${arquivo}.png`);
   }
@@ -496,6 +502,7 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
       agua: animacao(img('fx:agua'), 16),
       furto: animacao(img('fx:furto'), 18),
       bomba: animacao(img('fx:bomba'), 6),
+      trollCaido: animacao(img('fx:trollCaido'), 10),
     },
     icones: Object.fromEntries(ICONES.map((n) => [n, img(`icone:${n}`)])) as Record<
       IconeDaObra,

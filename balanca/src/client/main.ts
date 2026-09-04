@@ -261,6 +261,7 @@ const espia = { quadros: 0, comandos: 0 };
   tela: () => telas.atual,
   relogio: () => rede?.estado?.relogio ?? null,
   totem: () => rede?.estado?.totem ?? null,
+  invasores: () => rede?.estado?.invasores.length ?? null,
   canhao: (time: Time) => (rede?.arena ? canhaoDe(rede.arena, time) : null),
   euEstou: () => (sofa?.jogadores[0]?.rede.eu ? { x: sofa.jogadores[0].rede.eu.x, y: sofa.jogadores[0].rede.eu.y } : null),
   ping: () => rede?.ping ?? null,
@@ -447,6 +448,11 @@ function laco(agora: number): void {
   }
 
   if (estado) {
+    // Um time por tick, não um por goblin — quando o time inteiro é
+    // afugentado no mesmo tick (o normal: todo mundo converge para a mesma
+    // chapelaria), cada goblin dispara o próprio evento, e um `Set` é o que
+    // impede cinco resquícios empilhados no lugar de um.
+    const ondaRepelida = new Set<Time>();
     for (const evento of rede.eventosNovos.splice(0)) {
       const linha = narrar(evento, estado, eu?.time ?? null);
       if (linha && ajustes.registro) rede.avisar(linha.texto, linha.cor, linha.icone);
@@ -470,7 +476,14 @@ function laco(agora: number): void {
       if (evento.tipo === 'invasaoAfugentada') {
         const chapelaria = rede.arena.estrutura('chapelaria', evento.time);
         particulas.acender(arte, 'saque', chapelaria.x, chapelaria.y, tempo);
+        if (!estado.invasores.some((inv) => inv.time === evento.time)) {
+          ondaRepelida.add(evento.time);
+        }
       }
+    }
+    for (const time of ondaRepelida) {
+      const chapelaria = rede.arena.estrutura('chapelaria', time);
+      particulas.acender(arte, 'trollCaido', chapelaria.x, chapelaria.y, tempo);
     }
   }
   if (emCampo.length > 0) {
