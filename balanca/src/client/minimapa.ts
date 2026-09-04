@@ -2,6 +2,7 @@ import { AGUA, PONTE, type Arena } from '../shared/arena';
 import type { Estado } from '../shared/estado';
 import { TILE, outroTime, type Time } from '../shared/regras';
 import { avistados, pontoAvistado } from '../shared/vista';
+import { DURACAO_DA_MARCA } from './rede';
 
 /**
  * O minimapa: onde o seu time está, e onde o inimigo foi visto.
@@ -91,6 +92,7 @@ export class Minimapa {
     meuTime: Time,
     enquadramento: Enquadramento,
     largura: number,
+    marcas: readonly { x: number; y: number; quando: number }[] = [],
   ): void {
     const { x, y, l, a } = caixaDoMinimapa(largura, arena);
     const b = 5; // a borda da moldura, por fora do relevo
@@ -206,6 +208,32 @@ export class Minimapa {
     ctx.lineWidth = 1;
     ctx.strokeStyle = 'rgba(255,255,255,0.85)';
     ctx.strokeRect(cx, cy, Math.round(cl), Math.round(ca));
+
+    // As marcas do time — "olha aqui" — por cima de tudo, porque são a coisa
+    // mais nova na tela e é para isso que existem. Um anel que nasce grande
+    // e fecha, junto com um ponto fixo por baixo: o anel puxa o olho na
+    // primeira meio-segundo, o ponto continua legível depois que ele sumiu.
+    const agora = performance.now();
+    for (const m of marcas) {
+      const idade = (agora - m.quando) / DURACAO_DA_MARCA;
+      if (idade < 0 || idade >= 1) continue;
+      const mx = paraX(m.x);
+      const my = paraY(m.y);
+      const cor = COR_DO_TIME[meuTime];
+
+      ctx.beginPath();
+      ctx.fillStyle = cor;
+      ctx.arc(mx, my, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.strokeStyle = cor;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 1 - idade;
+      ctx.arc(mx, my, 3 + idade * 10, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
 
     ctx.restore();
   }

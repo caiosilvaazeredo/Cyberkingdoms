@@ -310,6 +310,7 @@ const espia = { quadros: 0, comandos: 0 };
   euEstou: () => (sofa?.jogadores[0]?.rede.eu ? { x: sofa.jogadores[0].rede.eu.x, y: sofa.jogadores[0].rede.eu.y } : null),
   ping: () => rede?.ping ?? null,
   sala: () => rede?.sala ?? null,
+  marcas: () => sofa?.jogadores[0]?.rede.marcas ?? [],
   sofa: () =>
     sofa?.jogadores.map((j) => ({
       vaga: j.vaga,
@@ -354,6 +355,22 @@ function laco(agora: number): void {
     }
     entrada.toquesDeRecolher = [];
     salvarAjustes(ajustes);
+  }
+  // "Olha aqui": um clique ou toque dentro da caixa do minimapa vira uma
+  // marca no mapa do time. A conta vai de trás para frente da que o próprio
+  // minimapa usa para desenhar — a mesma caixa, e por isso a mesma fonte.
+  if (entrada.cliquesDeMinimapa.length > 0) {
+    if (rede?.arena) {
+      const caixa = caixaDoMinimapa(largura, rede.arena);
+      const mundoL = rede.arena.largura * TILE;
+      const mundoA = rede.arena.altura * TILE;
+      for (const clique of entrada.cliquesDeMinimapa) {
+        const x = ((clique.x - caixa.x) / caixa.l) * mundoL;
+        const y = ((clique.y - caixa.y) / caixa.a) * mundoA;
+        rede.marcar(x, y);
+      }
+    }
+    entrada.cliquesDeMinimapa = [];
   }
 
   const estado = rede?.estado ?? null;
@@ -583,10 +600,19 @@ function laco(agora: number): void {
           y: camera.y,
           largura: largura / camera.zoom,
           altura: altura / camera.zoom,
-        }, largura);
+        }, largura, rede.marcas);
       }
       if (dispositivoTemToque()) {
         botaoDeRecolher(ctx, entrada, 'minimapa', caixa.x + caixa.l - 13, caixa.y + 13, ajustes.minimapa);
+      }
+      // A área clicável vem **depois** do nó de recolher: os dois disputam o
+      // mesmo canto, e `Entrada` casa o primeiro retângulo que achar — o nó
+      // registrado primeiro sempre vence ali, e o resto da caixa continua
+      // sendo "olha aqui".
+      if (ajustes.minimapa) {
+        entrada.botoes.minimapa = { x: caixa.x, y: caixa.y, largura: caixa.l, altura: caixa.a };
+      } else {
+        delete entrada.botoes.minimapa;
       }
     }
   }

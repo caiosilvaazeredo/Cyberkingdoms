@@ -67,6 +67,12 @@ export class Entrada {
    */
   toquesDeRecolher: string[] = [];
   /**
+   * Onde a pessoa clicou ou tocou dentro do minimapa desde a última leitura
+   * — em pixels de tela, não de mundo, porque só quem lê (`main.ts`) tem a
+   * câmera e a arena para fazer essa conta. `main.ts` esvazia a cada quadro.
+   */
+  cliquesDeMinimapa: { x: number; y: number }[] = [];
+  /**
    * De que lado da tela fica o manche, no celular.
    *
    * Vem dos ajustes e é lido a cada toque em vez de guardado: quem troca a
@@ -114,6 +120,17 @@ export class Entrada {
       if (e.button === 2) this.teclas.delete('KeyE');
     });
     tela.addEventListener('contextmenu', (e) => e.preventDefault());
+    // O clique nasce e morre no mouse — sem drag, sem alcançar o manche ou
+    // os botões de toque, que nem existem para quem usa mouse. O evento
+    // nativo `click` já resolve "foi um clique e não um arrasto" sozinho.
+    tela.addEventListener('click', (e) => {
+      const r = tela.getBoundingClientRect();
+      const x = e.clientX - r.left;
+      const y = e.clientY - r.top;
+      if (this.botoes.minimapa && dentro(this.botoes.minimapa, x, y)) {
+        this.cliquesDeMinimapa.push({ x, y });
+      }
+    });
 
     tela.addEventListener('touchstart', (e) => this.tocar(e), { passive: false });
     tela.addEventListener('touchmove', (e) => this.tocar(e), { passive: false });
@@ -134,6 +151,7 @@ export class Entrada {
       if (botao && !this.toqueDeMover && this.toqueDeMirar?.id !== t.identifier) {
         this.toquesEmBotao.set(t.identifier, botao[0]);
         if (botao[0].startsWith('recolher-')) this.toquesDeRecolher.push(botao[0]);
+        if (botao[0] === 'minimapa') this.cliquesDeMinimapa.push({ x, y });
         continue;
       }
       if (this.toqueDeMover?.id === t.identifier) {

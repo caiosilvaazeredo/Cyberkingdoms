@@ -240,6 +240,9 @@ wss.on('connection', (ws: WebSocket) => {
         sala?.tocar(chave);
         cliente.enviar({ t: 'pong', tempo: msg.tempo });
         return;
+      case 'marcar':
+        sala?.marcar(chave, Number(msg.x), Number(msg.y));
+        return;
       case 'sair':
         ws.close();
         return;

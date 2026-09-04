@@ -761,6 +761,22 @@ todo mundo, e o recorte acontece na hora de desenhar. A regra mora em
 `shared/vista.ts` justamente para o dia em que o recorte passar para o servidor:
 é a mesma função, só muda quem a chama.
 
+#### "Olha aqui": um clique no minimapa avisa o time inteiro
+
+Clicar (ou tocar) dentro do minimapa marca aquele ponto do mundo para o seu
+time — um anel que nasce grande e fecha, e um ponto que continua ali por
+alguns segundos depois que o anel some. `Sala.marcar` só confere duas
+coisas antes de repassar: se o ponto cai dentro do campo, e se a mesma
+pessoa não marcou nos últimos meio segundo. O adversário nunca vê a marca,
+do mesmo jeito que não vê a votação de classe — as duas são coisa de dentro
+do time.
+
+Não é um clique-para-mover-a-câmera, porque não há câmera livre neste
+jogo: ela segue o seu boneco sempre, e desacoplar as duas — como um MOBA
+faz — pediria abrir mão de ver a própria luta para olhar o mapa, o oposto
+do que um jogo de combate em tempo real quer. "Olha aqui" é a parte do
+minimapa de um MOBA que faz sentido aqui: comunicar sem soltar o teclado.
+
 ---
 
 ## Rodar

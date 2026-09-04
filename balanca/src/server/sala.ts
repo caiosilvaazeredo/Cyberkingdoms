@@ -12,6 +12,7 @@ import {
   MAX_COMANDOS_POR_PACOTE,
   POR_TIME,
   TICKS_POR_ENVIO,
+  TILE,
   TIMEOUT_DO_CLIENTE,
   TIMES,
   type Time,
@@ -152,6 +153,12 @@ export class Sala {
   private readonly votacoes = new Map<Time, Votacao>();
   /** A classe que o time pediu a cada npc e que ele ainda não vestiu. */
   private readonly pedidas = new Map<number, Classe>();
+  /**
+   * Segundo em que cada chave marcou o mapa pela última vez — não é estado do
+   * jogo, é só o freio contra clique nervoso. Um cliente adulterado que
+   * ignorasse o cooldown do próprio botão ainda esbarraria aqui.
+   */
+  private readonly ultimaMarca = new Map<string, number>();
 
   constructor(opcoes: OpcoesDaSala) {
     this.nome = opcoes.nome;
@@ -341,6 +348,35 @@ export class Sala {
     this.votacoes.set(time, votacao);
     this.recado(time, `${cliente.nome} abriu votação: ${npc.nome} vira o quê?`);
     this.espalharVotacao(time);
+    return true;
+  }
+
+  /**
+   * "Olha aqui": o clique no minimapa, repassado ao time inteiro.
+   *
+   * As coordenadas são de mundo — a mesma unidade de `Comando` — e o único
+   * cuidado do servidor é confirmar que caem dentro do campo: um cliente
+   * adulterado mandando um ponto fora da arena não tem por que travar a
+   * marca de ninguém, só é descartado. Meio segundo de cooldown por pessoa
+   * evita que um dedo nervoso no celular vire uma saraivada de marcas — o
+   * mesmo problema, em menor escala, que o limite geral de mensagens por
+   * segundo já cobre para o resto do protocolo.
+   */
+  marcar(chave: string, x: number, y: number): boolean {
+    const cliente = this.clientes.get(chave);
+    if (!cliente || cliente.time === null) return false;
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return false;
+    const arena = this.partida.arena;
+    if (x < 0 || y < 0 || x > arena.largura * TILE || y > arena.altura * TILE) return false;
+
+    const agora = Date.now() / 1000;
+    if (agora - (this.ultimaMarca.get(chave) ?? 0) < 0.5) return false;
+    this.ultimaMarca.set(chave, agora);
+
+    const time = cliente.time;
+    for (const c of this.clientes.values()) {
+      if (c.time === time) c.enviar({ t: 'marca', x, y, quem: cliente.nome });
+    }
     return true;
   }
 

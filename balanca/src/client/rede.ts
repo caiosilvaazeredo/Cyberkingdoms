@@ -54,6 +54,9 @@ const INTERVALO_DE_ENVIO = (TICKS_POR_ENVIO / TICKS_POR_SEGUNDO) * 1000;
  */
 const BACKOFF_DE_RECONEXAO = [500, 1000, 2000, 4000, 8000];
 
+/** Quanto tempo uma marca de "olha aqui" fica viva no minimapa, em ms. */
+export const DURACAO_DA_MARCA = 4000;
+
 export interface Aviso {
   texto: string;
   /** Momento em que apareceu, em milissegundos. */
@@ -142,6 +145,8 @@ export class Rede {
   votacao: VotacaoAberta | null = null;
   /** A última frase do time — ordem dada, votação apurada. */
   recadoDoTime: { texto: string; quando: number } | null = null;
+  /** As marcas do time no minimapa — "olha aqui" — vivas nos últimos segundos. */
+  readonly marcas: { x: number; y: number; quem: string; quando: number }[] = [];
 
   private anterior = new Map<number, Retratada>();
   private atual = new Map<number, Retratada>();
@@ -258,6 +263,18 @@ export class Rede {
   }
 
   /**
+   * "Olha aqui": marca um ponto de mundo no minimapa do time.
+   *
+   * O servidor decide se vale — meio segundo de cooldown por pessoa, ver
+   * `Sala.marcar` — então um clique nervoso aqui só engorda a fila de saída,
+   * nunca a tela de ninguém.
+   */
+  marcar(x: number, y: number): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    this.ws.send(JSON.stringify({ t: 'marcar', x, y }));
+  }
+
+  /**
    * Pede o lado. O servidor responde com `nasceu`, ou recusa com o motivo.
    *
    * O apelido viaja junto porque a conexão foi aberta como plateia, quando o
@@ -359,6 +376,9 @@ export class Rede {
         while (this.brilhos.length > 0 && performance.now() - this.brilhos[0]!.quando > 1200) {
           this.brilhos.shift();
         }
+        while (this.marcas.length > 0 && performance.now() - this.marcas[0]!.quando > DURACAO_DA_MARCA) {
+          this.marcas.shift();
+        }
         this.reconciliar();
         return;
       }
@@ -367,6 +387,9 @@ export class Rede {
         return;
       case 'recadoDoTime':
         this.recadoDoTime = { texto: msg.texto, quando: performance.now() };
+        return;
+      case 'marca':
+        this.marcas.push({ x: msg.x, y: msg.y, quem: msg.quem, quando: performance.now() });
         return;
       case 'pong':
         this.ping = Math.round(performance.now() - msg.tempo);

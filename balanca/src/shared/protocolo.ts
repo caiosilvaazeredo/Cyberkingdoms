@@ -214,6 +214,13 @@ export type DoCliente =
   | { t: 'votar'; classe: Classe }
   | { t: 'comando'; c: Comando }
   | { t: 'ping'; tempo: number }
+  /**
+   * O clique no minimapa: "olha aqui". Coordenadas de mundo, não de tile —
+   * é a mesma unidade que `Comando` já usa, e poupa o servidor de converter.
+   * Vale só para o próprio time; quem decide isso é `Sala.marcar`, não esta
+   * mensagem, que só carrega onde a pessoa tocou.
+   */
+  | { t: 'marcar'; x: number; y: number }
   | { t: 'sair' };
 
 // --- servidor → cliente ----------------------------------------------------
@@ -295,6 +302,13 @@ export type DoServidor =
   | { t: 'votacao'; v: VotacaoAberta | null }
   /** Uma frase curta para o painel do time: ordem dada, votação apurada. */
   | { t: 'recadoDoTime'; texto: string }
+  /**
+   * Um alerta no minimapa: alguém do seu time clicou "olha aqui". Nunca sai
+   * do próprio time — o inimigo não vê a marca, do mesmo jeito que não vê a
+   * votação. `quem` é para não pintar a própria marca de novo com um eco de
+   * volta, embora hoje isso não mude a leitura visual.
+   */
+  | { t: 'marca'; x: number; y: number; quem: string }
   | { t: 'retrato'; r: Retrato }
   | { t: 'pong'; tempo: number }
   | { t: 'recusado'; motivo: string };
