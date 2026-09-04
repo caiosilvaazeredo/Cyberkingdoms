@@ -790,6 +790,19 @@ function botoesDeToque(
     const t = Math.min(1, Math.hypot(manche.dx, manche.dy) / 56);
     ctx.arc(manche.x + manche.dx * t, manche.y + manche.dy * t, 22, 0, Math.PI * 2);
     ctx.fill();
+  } else {
+    // Os botões de ataque/usar ficam visíveis o jogo inteiro — é assim que
+    // alguém sabe onde estão antes de precisar deles. O manche não: sem
+    // toque nenhum ele não existe, e o lado que devia mover o personagem
+    // fica sem nenhuma pista de onde pôr o polegar. Um anel fraco no canto
+    // por padrão, do mesmo raio do de verdade, resolve isso sem prometer
+    // uma posição exata — ele nasce onde o dedo tocar, não aqui.
+    const hx = entrada.ladoDoManche === 'esquerda' ? 130 : largura - 130;
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(hx, altura - 130, 56, 0, Math.PI * 2);
+    ctx.stroke();
   }
   ctx.restore();
 }
