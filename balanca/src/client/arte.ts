@@ -127,6 +127,8 @@ export interface Arte {
   readonly tartaruga: Animacao;
   readonly urso: Animacao;
   readonly abelhao: Animacao;
+  readonly cobra: Animacao;
+  readonly lagarto: Animacao;
   /**
    * As folhas da fera — Troll e Minotauro, sem cor de time.
    *
@@ -301,6 +303,8 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
   pede('tartaruga_andando', 'recursos/tartaruga_andando.png');
   pede('urso_andando', 'recursos/urso_andando.png');
   pede('abelhao_voando', 'recursos/abelhao_voando.png');
+  pede('cobra_andando', 'recursos/cobra_andando.png');
+  pede('lagarto_andando', 'recursos/lagarto_andando.png');
   pede('goblin_invasor', 'recursos/goblin_invasor.png');
   pede('torch_goblin_invasor', 'recursos/torch_goblin_invasor.png');
   for (const fera of ['troll', 'minotauro'] as const) {
@@ -430,6 +434,8 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
     tartaruga: animacao(img('tartaruga_andando'), 6),
     urso: animacao(img('urso_andando'), 8),
     abelhao: animacao(img('abelhao_voando'), 10),
+    cobra: animacao(img('cobra_andando'), 8),
+    lagarto: animacao(img('lagarto_andando'), 10),
     invasor: animacao(img('goblin_invasor'), 8),
     invasorTocha: animacao(img('torch_goblin_invasor'), 8),
     feras: {

@@ -702,6 +702,34 @@ export function desenharMundo(
     });
   }
 
+  const cobra = posicaoDaCobra(arena, tempo);
+  if (cobra) {
+    const px = v.paraTelaX(cobra.x);
+    const py = v.paraTelaY(cobra.y) + RAIO_UNIDADE * escala * 0.3;
+    pinturas.push({
+      y: cobra.y,
+      pintar: () => {
+        espelhado(ctx, px, cobra.paraEsquerda, () =>
+          quadro(ctx, arte.cobra, quadroEm(arte.cobra, tempo), px, py, escala * 0.4, 'centro'),
+        );
+      },
+    });
+  }
+
+  const lagarto = posicaoDoLagarto(arena, tempo);
+  if (lagarto) {
+    const px = v.paraTelaX(lagarto.x);
+    const py = v.paraTelaY(lagarto.y) + RAIO_UNIDADE * escala * 0.3;
+    pinturas.push({
+      y: lagarto.y,
+      pintar: () => {
+        espelhado(ctx, px, lagarto.paraEsquerda, () =>
+          quadro(ctx, arte.lagarto, quadroEm(arte.lagarto, tempo), px, py, escala * 0.4, 'centro'),
+        );
+      },
+    });
+  }
+
   // --- baús ----------------------------------------------------------
   for (const p of estado.baus) {
     if (p.onde === 'resgatado') continue;
@@ -1042,6 +1070,40 @@ function posicaoDoAbelhao(
   // nascer colado como se fossem um bicho só.
   const fase = (arena.seed % 300) * 0.021 + 3;
   return passeioCircular(ancora, tempo, fase, 0.9 * TILE, 0.9, 0.7);
+}
+
+/**
+ * A cobra: a mesma árvore do meio do urso e do abelhão, uma terceira fase —
+ * rasteira, devagar, num raio curto o bastante para nunca sair da sombra
+ * dela.
+ */
+function posicaoDaCobra(
+  arena: Arena,
+  tempo: number,
+): { x: number; y: number; paraEsquerda: boolean } | null {
+  const ancora = ancoraDoMato(arena);
+  if (!ancora) return null;
+  const fase = (arena.seed % 400) * 0.019 + 6;
+  return passeioCircular(ancora, tempo, fase, 0.7 * TILE, 0.12, 0.35);
+}
+
+/**
+ * O lagarto: ancorado na jazida de ouro do meio do campo — pedra ao sol —,
+ * do mesmo jeito que a tartaruga ancora na água central. Sem jazida de ouro
+ * no meio (não deveria faltar em nenhum mapa da lista), ele simplesmente
+ * não aparece.
+ */
+function posicaoDoLagarto(
+  arena: Arena,
+  tempo: number,
+): { x: number; y: number; paraEsquerda: boolean } | null {
+  const j = arena.jazidas.find((j) => j.tipo === 'ouro' && j.lado === null) ?? null;
+  if (!j) return null;
+  const ancora = { x: j.x + TILE * 1.3, y: j.y + TILE * 0.4 };
+  const fase = (arena.seed % 600) * 0.023;
+  // Rápido e nervoso — o lagarto para, dispara, para de novo — é o que a
+  // velocidade alta e o raio curto dão de graça só com o seno.
+  return passeioCircular(ancora, tempo, fase, 0.8 * TILE, 0.7, 0.4);
 }
 
 export interface FolhaEscolhida {
