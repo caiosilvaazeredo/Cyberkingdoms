@@ -1,0 +1,36 @@
+{
+  "name": "meu-querido-rei-electron",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Embrulho desktop do Meu Querido Rei, para a Steam — carrega o site de sempre numa janela própria.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^44.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "com.reinodemigalhas.jogo",
+    "productName": "Meu Querido Rei",
+    "files": ["main.js", "package.json"],
+    "directories": {
+      "output": "dist-electron"
+    },
+    "mac": {
+      "icon": "../public/pwa/icone-512.png",
+      "category": "public.app-category.games"
+    },
+    "win": {
+      "icon": "../public/pwa/icone-512.png",
+      "target": "nsis"
+    },
+    "linux": {
+      "icon": "../public/pwa/icone-512.png",
+      "target": "AppImage",
+      "category": "Game"
+    }
+  }
+}
