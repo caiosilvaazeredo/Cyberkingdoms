@@ -752,7 +752,7 @@ export function desenharMundo(
 
   // --- porco decorativo ----------------------------------------------
   {
-    const p = posicaoDoPorco(arena, tempo);
+    const p = posicaoDoPorco(arena, tempo, estado.unidades);
     const px = v.paraTelaX(p.x);
     const py = v.paraTelaY(p.y) + RAIO_UNIDADE * escala * 0.6;
     // Uma em vinte arenas — a mesma conta de `montado`, para o desenho e a
@@ -785,7 +785,7 @@ export function desenharMundo(
     });
   }
 
-  const urso = posicaoDoUrso(arena, tempo);
+  const urso = posicaoDoUrso(arena, tempo, estado.unidades);
   if (urso) {
     const px = v.paraTelaX(urso.x);
     const py = v.paraTelaY(urso.y) + RAIO_UNIDADE * escala * 0.6;
@@ -816,7 +816,7 @@ export function desenharMundo(
     });
   }
 
-  const cobra = posicaoDaCobra(arena, tempo);
+  const cobra = posicaoDaCobra(arena, tempo, estado.unidades);
   if (cobra) {
     const px = v.paraTelaX(cobra.x);
     const py = v.paraTelaY(cobra.y) + RAIO_UNIDADE * escala * 0.3;
@@ -830,7 +830,7 @@ export function desenharMundo(
     });
   }
 
-  const lagarto = posicaoDoLagarto(arena, tempo);
+  const lagarto = posicaoDoLagarto(arena, tempo, estado.unidades);
   if (lagarto) {
     const px = v.paraTelaX(lagarto.x);
     const py = v.paraTelaY(lagarto.y) + RAIO_UNIDADE * escala * 0.3;

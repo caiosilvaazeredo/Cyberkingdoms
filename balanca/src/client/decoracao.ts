@@ -1,5 +1,5 @@
 import { AGUA, PONTE, type Arena } from '../shared/arena';
-import type { Animal } from '../shared/estado';
+import type { Animal, Unidade } from '../shared/estado';
 import { TILE } from './tileset';
 
 /**
@@ -49,9 +49,44 @@ export function passeioCircular(
   };
 }
 
+/**
+ * O quanto um bicho arisco se afasta de quem chegou perto.
+ *
+ * Não é fuga de verdade — não há para onde fugir, o passeio circular traria
+ * o bicho de volta no instante seguinte de qualquer jeito. É o flinch que
+ * falta hoje: "eu te vi chegando", um empurrão que cresce conforme a unidade
+ * viva mais próxima se aproxima e some no raio de alerta. Pura em (posição
+ * do bicho, unidades), do mesmo jeito que o resto deste arquivo — zero rede,
+ * zero estado próprio, as duas telas concordam sozinhas.
+ */
+const RAIO_DE_ALERTA = 2.4 * TILE;
+const EMPURRAO_DE_ALERTA = TILE * 0.85;
+
+function empurraoDeAlerta(
+  pos: { x: number; y: number },
+  unidades: readonly Pick<Unidade, 'x' | 'y' | 'vivo'>[] | undefined,
+): { x: number; y: number } {
+  if (!unidades) return { x: 0, y: 0 };
+  let maisPerto: { dx: number; dy: number; d: number } | null = null;
+  for (const u of unidades) {
+    if (!u.vivo) continue;
+    const dx = pos.x - u.x;
+    const dy = pos.y - u.y;
+    const d = Math.hypot(dx, dy);
+    if (d < RAIO_DE_ALERTA && (!maisPerto || d < maisPerto.d)) maisPerto = { dx, dy, d };
+  }
+  if (!maisPerto) return { x: 0, y: 0 };
+  // Quanto mais perto, mais forte — e nunca divide por zero: duas unidades
+  // não ocupam o mesmo pixel, mas um bicho preso na própria âncora podia.
+  const forca = (1 - maisPerto.d / RAIO_DE_ALERTA) * EMPURRAO_DE_ALERTA;
+  const d = Math.max(0.001, maisPerto.d);
+  return { x: (maisPerto.dx / d) * forca, y: (maisPerto.dy / d) * forca };
+}
+
 export function posicaoDoPorco(
   arena: Arena,
   tempo: number,
+  unidades?: readonly Pick<Unidade, 'x' | 'y' | 'vivo'>[],
 ): { x: number; y: number; paraEsquerda: boolean; montado: boolean } {
   // Ancorado num pasto do meio — chão já garantido seco e limpo de decoração
   // — e não no centro geométrico do mapa, que em vários relevos cai dentro
@@ -63,8 +98,11 @@ export function posicaoDoPorco(
 
   const fase = (arena.seed % 1000) * 0.01;
   const passeio = passeioCircular(ancora, tempo, fase, 2.2 * TILE, 0.25, 0.6);
+  const empurrao = empurraoDeAlerta(passeio, unidades);
   return {
-    ...passeio,
+    x: passeio.x + empurrao.x,
+    y: passeio.y + empurrao.y,
+    paraEsquerda: empurrao.x !== 0 ? empurrao.x < 0 : passeio.paraEsquerda,
     // Uma em vinte: raro o bastante para ser notícia quando alguém vê, comum
     // o bastante para não virar lenda urbana de "ninguém nunca viu isso".
     montado: Math.abs(arena.seed) % 20 === 0,
@@ -246,11 +284,18 @@ export function posicaoDaVilaDeGnomos(arena: Arena): { x: number; y: number } | 
 export function posicaoDoUrso(
   arena: Arena,
   tempo: number,
+  unidades?: readonly Pick<Unidade, 'x' | 'y' | 'vivo'>[],
 ): { x: number; y: number; paraEsquerda: boolean } | null {
   const ancora = ancoraDoMato(arena);
   if (!ancora) return null;
   const fase = (arena.seed % 500) * 0.017;
-  return passeioCircular(ancora, tempo, fase, 1.6 * TILE, 0.18, 0.5);
+  const passeio = passeioCircular(ancora, tempo, fase, 1.6 * TILE, 0.18, 0.5);
+  const empurrao = empurraoDeAlerta(passeio, unidades);
+  return {
+    x: passeio.x + empurrao.x,
+    y: passeio.y + empurrao.y,
+    paraEsquerda: empurrao.x !== 0 ? empurrao.x < 0 : passeio.paraEsquerda,
+  };
 }
 
 export function posicaoDoAbelhao(
@@ -273,11 +318,18 @@ export function posicaoDoAbelhao(
 export function posicaoDaCobra(
   arena: Arena,
   tempo: number,
+  unidades?: readonly Pick<Unidade, 'x' | 'y' | 'vivo'>[],
 ): { x: number; y: number; paraEsquerda: boolean } | null {
   const ancora = ancoraDoMato(arena);
   if (!ancora) return null;
   const fase = (arena.seed % 400) * 0.019 + 6;
-  return passeioCircular(ancora, tempo, fase, 0.7 * TILE, 0.12, 0.35);
+  const passeio = passeioCircular(ancora, tempo, fase, 0.7 * TILE, 0.12, 0.35);
+  const empurrao = empurraoDeAlerta(passeio, unidades);
+  return {
+    x: passeio.x + empurrao.x,
+    y: passeio.y + empurrao.y,
+    paraEsquerda: empurrao.x !== 0 ? empurrao.x < 0 : passeio.paraEsquerda,
+  };
 }
 
 /**
@@ -289,12 +341,21 @@ export function posicaoDaCobra(
 export function posicaoDoLagarto(
   arena: Arena,
   tempo: number,
+  unidades?: readonly Pick<Unidade, 'x' | 'y' | 'vivo'>[],
 ): { x: number; y: number; paraEsquerda: boolean } | null {
   const j = arena.jazidas.find((j) => j.tipo === 'ouro' && j.lado === null) ?? null;
   if (!j) return null;
   const ancora = { x: j.x + TILE * 1.3, y: j.y + TILE * 0.4 };
   const fase = (arena.seed % 600) * 0.023;
   // Rápido e nervoso — o lagarto para, dispara, para de novo — é o que a
-  // velocidade alta e o raio curto dão de graça só com o seno.
-  return passeioCircular(ancora, tempo, fase, 0.8 * TILE, 0.7, 0.4);
+  // velocidade alta e o raio curto dão de graça só com o seno. O empurrão de
+  // alerta é o mesmo dos outros bichos, mas nele se nota mais: é o único que
+  // já corria por conta própria.
+  const passeio = passeioCircular(ancora, tempo, fase, 0.8 * TILE, 0.7, 0.4);
+  const empurrao = empurraoDeAlerta(passeio, unidades);
+  return {
+    x: passeio.x + empurrao.x,
+    y: passeio.y + empurrao.y,
+    paraEsquerda: empurrao.x !== 0 ? empurrao.x < 0 : passeio.paraEsquerda,
+  };
 }
