@@ -99,6 +99,22 @@ export function hashLabel(label: string): number {
   return hash >>> 0;
 }
 
+/**
+ * Semente estável de um par `(a, b)` — mesmo par, mesmo sorteio, em
+ * qualquer servidor rodando a mesma partida.
+ *
+ * É o compromisso repetido do roubo da invasão, da fera do totem e do
+ * destino do animal: cada chamada alimenta `a`/`b` com o par que faz
+ * sentido pra ela — id e tick, ou tick e um extra — mas a mistura de bits é
+ * sempre esta, escrita uma vez só. As quatro cópias manuais que existiam
+ * antes são exatamente o tipo de duplicação que já causou um bug real: o
+ * sorteio da variante da invasão esqueceu de somar `arena.seed` numa das
+ * cópias, e toda partida no mesmo tick via a mesma onda.
+ */
+export function semeadoPor(a: number, b: number): DeterministicRandom {
+  return new DeterministicRandom(((a + 1) * 2654435761 + b) >>> 0);
+}
+
 /** Combina duas seeds. Finalizador do MurmurHash3 de 32 bits. */
 export function mix(a: number, b: number): number {
   let z = (a ^ mul32(b, 0x9e3779b1)) >>> 0;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { AGUA, criarArena } from '../src/shared/arena';
-import { posicaoDoBarco, posicaoDoCavaloMarinho } from '../src/client/desenho';
+import { posicaoDoBarco, posicaoDoCavaloMarinho } from '../src/client/decoracao';
 import { IDS_DOS_MAPAS } from '../src/shared/mapas';
 import { TILE } from '../src/shared/regras';
 

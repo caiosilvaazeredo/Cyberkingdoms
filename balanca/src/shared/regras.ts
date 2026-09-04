@@ -73,6 +73,14 @@ export type Time = 'azul' | 'vermelho';
 export const TIMES: readonly Time[] = ['azul', 'vermelho'];
 export const outroTime = (t: Time): Time => (t === 'azul' ? 'vermelho' : 'azul');
 
+/**
+ * Duas coisas a `r` de distância ou menos — sem `Math.sqrt`, porque quem
+ * chama isto pergunta "cabe no alcance?" centenas de vezes por tick, e
+ * comparar os quadrados poupa a raiz em todas elas.
+ */
+export const perto = (a: { x: number; y: number }, b: { x: number; y: number }, r: number): boolean =>
+  (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y) <= r * r;
+
 // --- partida ---------------------------------------------------------------
 
 /** Jogadores por time. Doze em campo é o teto do que a arena comporta. */

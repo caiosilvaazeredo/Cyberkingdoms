@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { criarArena, PONTE } from '../src/shared/arena';
-import { posicaoDaVilaDeGnomos } from '../src/client/desenho';
+import { posicaoDaVilaDeGnomos } from '../src/client/decoracao';
 import { IDS_DOS_MAPAS } from '../src/shared/mapas';
 import { TILE } from '../src/shared/regras';
 
