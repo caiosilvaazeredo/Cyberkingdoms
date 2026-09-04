@@ -744,6 +744,63 @@ export function desenharMundo(
     });
   }
 
+  // --- vila de gnomos --------------------------------------------------
+  const vila = posicaoDaVilaDeGnomos(arena);
+  if (vila) {
+    // Duas folhas paradas, lado a lado — a torre-cogumelo mais alta, a
+    // choupana mais baixa — e não desenhadas em cima uma da outra.
+    const choupana = arte.gnomoChoupana;
+    const torre = arte.gnomoTorre;
+    const pxChoupana = v.paraTelaX(vila.x - TILE * 0.7);
+    const pyChoupana = v.paraTelaY(vila.y);
+    const lChoupana = choupana.width * escala;
+    const aChoupana = choupana.height * escala;
+    pinturas.push({
+      y: vila.y,
+      pintar: () => {
+        ctx.drawImage(
+          choupana,
+          Math.round(pxChoupana - lChoupana / 2),
+          Math.round(pyChoupana - aChoupana),
+          Math.ceil(lChoupana),
+          Math.ceil(aChoupana),
+        );
+      },
+    });
+    const pxTorre = v.paraTelaX(vila.x + TILE * 0.8);
+    const pyTorre = v.paraTelaY(vila.y + TILE * 0.2);
+    const lTorre = torre.width * escala;
+    const aTorre = torre.height * escala;
+    pinturas.push({
+      y: vila.y + TILE * 0.2,
+      pintar: () => {
+        ctx.drawImage(
+          torre,
+          Math.round(pxTorre - lTorre / 2),
+          Math.round(pyTorre - aTorre),
+          Math.ceil(lTorre),
+          Math.ceil(aTorre),
+        );
+      },
+    });
+
+    // Um gnomo rondando as próprias casas — a mesma receita do porco e da
+    // cobra, só que sem tempo de espera: a vila não é um evento, é cenário,
+    // e cenário vivo pede alguém andando nele.
+    const faseDoGnomo = (arena.seed % 500) * 0.027 + 2;
+    const passeioDoGnomo = passeioCircular(vila, tempo, faseDoGnomo, 0.9 * TILE, 0.5, 0.5);
+    const pxGnomo = v.paraTelaX(passeioDoGnomo.x);
+    const pyGnomo = v.paraTelaY(passeioDoGnomo.y) + RAIO_UNIDADE * escala * 0.3;
+    pinturas.push({
+      y: passeioDoGnomo.y,
+      pintar: () => {
+        espelhado(ctx, pxGnomo, passeioDoGnomo.paraEsquerda, () =>
+          quadro(ctx, arte.gnomo, quadroEm(arte.gnomo, tempo), pxGnomo, pyGnomo, escala * 0.5, 'centro'),
+        );
+      },
+    });
+  }
+
   // --- baús ----------------------------------------------------------
   for (const p of estado.baus) {
     if (p.onde === 'resgatado') continue;
@@ -1091,6 +1148,50 @@ export function posicaoDoTubarao(
 function ancoraDoMato(arena: Arena): { x: number; y: number } | null {
   const j = arena.jazidas.find((j) => j.tipo === 'arvore' && j.lado === null) ?? null;
   return j ? { x: j.x + TILE * 1.4, y: j.y } : null;
+}
+
+/**
+ * A vila de gnomos: cenário de fundo perto da árvore do meio, longe o
+ * bastante para não disputar o mesmo pedaço de tela do urso e do abelhão,
+ * que rondam a própria árvore.
+ *
+ * É estática — não depende de `tempo` — e por isso cacheada por arena, do
+ * mesmo jeito que `aguaCentralDe`: a conta não muda no meio da partida, e
+ * refazê-la a cada quadro seria trabalho jogado fora. A busca em candidatos,
+ * e não um deslocamento fixo, é a mesma garantia do canhão: um deslocamento
+ * fixo que cai em chão seco num mapa pode cair em cima de uma pedra no
+ * próximo.
+ */
+const CACHE_VILA_DE_GNOMOS = new WeakMap<Arena, { x: number; y: number } | null>();
+
+export function posicaoDaVilaDeGnomos(arena: Arena): { x: number; y: number } | null {
+  const cache = CACHE_VILA_DE_GNOMOS.get(arena);
+  if (cache !== undefined) return cache;
+
+  const ancora = ancoraDoMato(arena);
+  let achado: { x: number; y: number } | null = null;
+  if (ancora) {
+    const tx0 = Math.floor(ancora.x / TILE);
+    const ty0 = Math.floor(ancora.y / TILE);
+    const candidatos: readonly (readonly [number, number])[] = [
+      [tx0 + 3, ty0 - 2],
+      [tx0 - 3, ty0 - 2],
+      [tx0 + 3, ty0 + 2],
+      [tx0 - 3, ty0 + 2],
+      [tx0, ty0 - 3],
+      [tx0, ty0 + 3],
+      [tx0 + 4, ty0],
+      [tx0 - 4, ty0],
+    ];
+    for (const [tx, ty] of candidatos) {
+      if (arena.ehChao(tx, ty) && !arena.bloqueado(tx, ty) && arena.tile(tx, ty) !== PONTE) {
+        achado = { x: tx * TILE + TILE / 2, y: ty * TILE + TILE / 2 };
+        break;
+      }
+    }
+  }
+  CACHE_VILA_DE_GNOMOS.set(arena, achado);
+  return achado;
 }
 
 function posicaoDoUrso(

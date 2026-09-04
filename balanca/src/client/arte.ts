@@ -136,6 +136,15 @@ export interface Arte {
    */
   readonly tubarao: Animacao;
   /**
+   * A vila de gnomos: cenário de fundo perto da árvore do meio, em todo
+   * mapa que tiver uma. Duas folhas paradas — a choupana e a torre-cogumelo
+   * do Enemy Pack — e um gnomo que anda entre elas. Ver
+   * `posicaoDaVilaDeGnomos` em desenho.ts.
+   */
+  readonly gnomoChoupana: HTMLImageElement;
+  readonly gnomoTorre: HTMLImageElement;
+  readonly gnomo: Animacao;
+  /**
    * As folhas da fera — Troll e Minotauro, sem cor de time.
    *
    * `folhaDaUnidade` em desenho.ts olha `Unidade.fera` antes de olhar a
@@ -312,6 +321,9 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
   pede('cobra_andando', 'recursos/cobra_andando.png');
   pede('lagarto_andando', 'recursos/lagarto_andando.png');
   pede('tubarao_nadando', 'recursos/tubarao_nadando.png');
+  pede('gnomo_choupana', 'recursos/gnomo_choupana.png');
+  pede('gnomo_torre', 'recursos/gnomo_torre.png');
+  pede('gnomo_andando', 'recursos/gnomo_andando.png');
   pede('goblin_invasor', 'recursos/goblin_invasor.png');
   pede('torch_goblin_invasor', 'recursos/torch_goblin_invasor.png');
   for (const fera of ['troll', 'minotauro'] as const) {
@@ -444,6 +456,9 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
     cobra: animacao(img('cobra_andando'), 8),
     lagarto: animacao(img('lagarto_andando'), 10),
     tubarao: animacao(img('tubarao_nadando'), 8),
+    gnomoChoupana: img('gnomo_choupana'),
+    gnomoTorre: img('gnomo_torre'),
+    gnomo: animacao(img('gnomo_andando'), 8),
     invasor: animacao(img('goblin_invasor'), 8),
     invasorTocha: animacao(img('torch_goblin_invasor'), 8),
     feras: {
