@@ -74,6 +74,42 @@ import { DT, type Time } from '../shared/regras';
  * lugar.
  */
 
+/**
+ * A ponte para conquistas da Steam — só existe dentro do embrulho Electron
+ * (`electron/preload.js`), nunca no navegador. Em qualquer outro lugar
+ * `window.steamworksBridge` é `undefined`, e é assim que o resto deste
+ * arquivo sabe que não há nada para avisar.
+ */
+declare global {
+  interface Window {
+    steamworksBridge?: { primeiraPartida: () => void };
+  }
+}
+
+const CHAVE_PRIMEIRA_PARTIDA = 'balanca.conquista.primeiraPartida';
+
+/**
+ * Avisa a Steam que esta pessoa terminou a primeira partida da vida dela —
+ * uma vez só, para sempre, guardado no mesmo `localStorage` dos ajustes.
+ *
+ * Fora do Electron isto é um no-op barato: `window.steamworksBridge` não
+ * existe, a função só teria conferido e desistido. Dentro dele, sem conta
+ * Steamworks ainda cadastrada (ver `electron/LEIA-ME.md`), a conquista não
+ * existe do lado da Valve e a chamada silenciosamente não faz nada — é
+ * exatamente o mesmo "sem Steam aberta, o jogo segue normal" que já vale
+ * para o resto da integração.
+ */
+function sinalizarPrimeiraPartida(): void {
+  if (!window.steamworksBridge) return;
+  try {
+    if (localStorage.getItem(CHAVE_PRIMEIRA_PARTIDA)) return;
+    localStorage.setItem(CHAVE_PRIMEIRA_PARTIDA, '1');
+  } catch {
+    // Sem localStorage, sem como lembrar — mas ainda vale avisar desta vez.
+  }
+  window.steamworksBridge.primeiraPartida();
+}
+
 const tela = document.querySelector<HTMLCanvasElement>('#tela')!;
 const ctx = tela.getContext('2d')!;
 
@@ -95,6 +131,10 @@ let anterior = performance.now();
 let querendoJogar = false;
 /** A conexão de plateia está numa sala reservada, aberta para um jogo local. */
 let salaReservada = false;
+/** Verdadeiro assim que este aparelho tem alguém em campo na partida atual —
+ * é o que distingue "eu joguei" de "eu vi o modo atração passar por trás do
+ * menu", para a conquista de primeira partida (ver mais abaixo). */
+let jaEstivePresenteNaPartida = false;
 
 /**
  * O painel do time. Fala com a **anfitriã** do sofá — ver `atualizarPainelDaEquipe`.
@@ -325,6 +365,8 @@ function laco(agora: number): void {
   for (const j of sofa?.jogadores ?? []) {
     if (j.rede.eu) emCampo.push({ vaga: j.vaga, unidade: j.rede.eu });
   }
+  if (emCampo.length > 0) jaEstivePresenteNaPartida = true;
+  if (jaEstivePresenteNaPartida && estado?.fase === 'fim') sinalizarPrimeiraPartida();
 
   telas.atualizarEstado({
     ligado: rede !== null && !rede.fechado && rede.arena !== null,

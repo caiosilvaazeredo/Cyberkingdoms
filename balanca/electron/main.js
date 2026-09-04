@@ -12,7 +12,7 @@
 // jogo é só multiplayer (sem servidor não tem partida, em navegador ou fora
 // dele), abrir a URL de verdade custa a mesma internet que o jogo já exige e
 // não pede nenhuma mudança no cliente.
-const { app, BrowserWindow, Menu } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain } = require('electron');
 const path = require('node:path');
 
 // Troca a URL para testar contra um servidor local — a build empacotada usa
@@ -47,6 +47,24 @@ function iniciarSteam() {
 
 iniciarSteam();
 
+// A única conquista ligada até agora: "primeira partida". O nome exato tem
+// que bater com o ID cadastrado no painel do Steamworks — sem conta e sem
+// App ID ainda (ver LEIA-ME.md), não existe achievement nenhum do lado da
+// Valve para ativar, e `activate` simplesmente falha sem quebrar nada, preso
+// pelo mesmo try/catch de sempre.
+const CONQUISTA_PRIMEIRA_PARTIDA = 'PRIMEIRA_PARTIDA';
+
+ipcMain.on('conquista:primeira-partida', () => {
+  if (!steamClient) return;
+  try {
+    steamClient.achievement.activate(CONQUISTA_PRIMEIRA_PARTIDA);
+  } catch {
+    // Sem App ID, sem a conquista cadastrada, ou Steam fechou no meio da
+    // partida — qualquer um desses casos é "não aconteceu nada", não um erro
+    // que deva incomodar quem está jogando.
+  }
+});
+
 function criarJanela() {
   const janela = new BrowserWindow({
     width: 1280,
@@ -59,10 +77,13 @@ function criarJanela() {
     webPreferences: {
       // A janela carrega um site remoto — trata-lo como qualquer página da
       // internet, sem acesso a Node, é a postura padrão do Electron para
-      // isto e não há razão para abrir exceção aqui.
+      // isto e não há razão para abrir exceção aqui. `preload.js` é a única
+      // porta que abrimos de propósito, e só expõe uma função (ver o
+      // arquivo) — não o Node inteiro.
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true,
+      preload: path.join(__dirname, 'preload.js'),
     },
   });
 

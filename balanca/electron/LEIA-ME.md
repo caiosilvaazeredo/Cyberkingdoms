@@ -38,14 +38,34 @@ oficial da Valve, "Spacewar") e abra a Steam antes de rodar `npm start`.
 Depois de ter um App ID de verdade (passo 3), troque o conteúdo do arquivo
 para ele — ou passe direto pra `steamworks.init(SEU_APP_ID)` em `main.js`.
 
-**Conquistas não estão implementadas ainda.** A API é
-`client.achievement.activate('ID_DA_CONQUISTA')`, mas conquistas só existem
-depois de cadastradas no painel do Steamworks (passo 3), e disparar uma no
-momento certo (ex.: primeira partida vencida) pede um sinal vindo do
-cliente do jogo — hoje o processo principal do Electron não sabe nada sobre
-o estado da partida, só abre a janela. Se quiser isso, é um gancho pequeno
-e opcional no cliente (`src/client/`) chamando de volta pro processo
-principal, não precisa mexer no resto do jogo.
+**A primeira conquista já está ligada de ponta a ponta**: "primeira
+partida", ID `PRIMEIRA_PARTIDA`. `src/client/main.ts` guarda em
+`localStorage` a primeira vez que a própria pessoa termina uma partida (não
+conta o modo atração atrás do menu) e chama
+`window.steamworksBridge.primeiraPartida()` — uma função que só existe
+porque `electron/preload.js` a expõe com `contextBridge`, a única porta
+entre o site remoto e o processo principal (a janela continua sem
+`nodeIntegration`). `main.js` recebe o aviso por IPC e chama
+`client.achievement.activate('PRIMEIRA_PARTIDA')`, preso no mesmo try/catch
+de sempre — sem Steam, sem App ID, ou com a conquista ainda não cadastrada
+no painel, a chamada não faz nada e o jogo segue normal.
+
+**Falta só um passo, e é só seu**: cadastrar uma conquista com o ID exato
+`PRIMEIRA_PARTIDA` no painel do Steamworks (Steamworks → sua aplicação →
+Estatísticas e conquistas), depois que tiver o App ID (passo 3). Sem isso
+cadastrado, `activate` chama e não acontece nada — não é bug, é a conquista
+não existir ainda do lado da Valve.
+
+Para testar local sem gastar a única vez que o `localStorage` deixa passar:
+`localStorage.removeItem('balanca.conquista.primeiraPartida')` no console
+do DevTools (Ctrl+Shift+I na janela do Electron) antes de terminar outra
+partida.
+
+Uma conquista nova segue o mesmo caminho: um ID cadastrado no Steamworks, um
+`client.achievement.activate('SEU_ID')` em `main.js` atrás de um `ipcMain.on`
+próprio, e o gancho correspondente no cliente chamando
+`window.steamworksBridge.suaFuncao?.()` — sempre com `?.`, porque fora do
+Electron essa ponte não existe.
 
 ## 3. Conta Steamworks — o que só a sua conta consegue fazer
 
@@ -86,5 +106,6 @@ Depois:
 
 - `npm run dist` de novo a cada versão nova, repetindo o passo 4.
 - Rich Presence e overlay já funcionam sem configuração extra da loja.
-- Conquistas (se forem implementadas) precisam ser cadastradas no painel
-  antes de aparecer para os jogadores.
+- "Primeira partida" só aparece para os jogadores depois de cadastrada no
+  painel com o ID `PRIMEIRA_PARTIDA` (ver seção 2) — o código já está pronto
+  e esperando por ela.
