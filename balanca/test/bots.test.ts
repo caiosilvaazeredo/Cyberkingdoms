@@ -71,6 +71,21 @@ describe('os bots', () => {
     expect(eventos.filter((e) => e === 'pegouBau').length).toBeGreaterThan(0);
   });
 
+  it('afugentam a invasão de goblins pelo menos uma vez', () => {
+    // Sem a urgência da invasão em `planejar()`, nenhum bot ia até o
+    // invasor — a onda sempre roubava, porque ninguém jogava. Cem segundos
+    // cobre a primeira onda inteira (nasce por volta dos 45s).
+    const { eventos } = jogar(100, 23);
+    expect(eventos.filter((e) => e === 'invasaoAfugentada').length).toBeGreaterThan(0);
+  });
+
+  it('disputam o totem: algum bot vira fera', () => {
+    // O primeiro totem nasce por volta dos 38s; noventa segundos dá tempo de
+    // sobra para um bot notá-lo dentro do raio de interesse e pegá-lo.
+    const { eventos } = jogar(90, 21);
+    expect(eventos.filter((e) => e === 'virouFera').length).toBeGreaterThan(0);
+  });
+
   it('nunca ficam presos dentro da água', () => {
     const { sala } = jogar(120, 24);
     for (const u of sala.estado.unidades) {

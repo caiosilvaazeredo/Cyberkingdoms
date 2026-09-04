@@ -94,6 +94,9 @@ const ESPERA_PARA_MIRAR = 0.3;
 /** Vida abaixo desta fração manda o bot comer a bolsa em vez de entregá-lo. */
 const VIDA_PARA_COMER = 0.35;
 
+/** Distância a partir da qual o totem do Modo Fera deixa de valer o desvio. */
+const RAIO_DE_INTERESSE_NO_TOTEM = 700;
+
 interface Memoria {
   papel: Papel;
   /** A classe que este bot quer vestir. `null` para quem briga. */
@@ -366,6 +369,16 @@ export class Bots {
       if (ladrao) return ir(ladrao, false, 0, false);
     }
 
+    // A invasão de goblins ameaça a própria chapelaria: chegar perto já
+    // afugenta a onda inteira, então vale a mesma interrupção rápida que a
+    // perseguição da refém — todo mundo que não é cozinheiro larga o que
+    // estava fazendo por um instante. Sem isto, um time só de bots nunca
+    // reage à onda, e ela sempre rouba um chapéu quando ninguém joga.
+    if (m.papel !== 'cozinheiro') {
+      const invasor = estado.invasores.find((i) => i.time === meu);
+      if (invasor) return ir(invasor, false, 0, false);
+    }
+
     // Um chapéu no chão a dois passos vale mais que qualquer plano — ainda mais
     // se for do inimigo, que fica sem ele.
     const chapeu = estado.itens.find(
@@ -379,6 +392,16 @@ export class Bots {
 
     if (u.carga === 'bolsa' && u.vida < perfil(u.classe).vida * VIDA_PARA_COMER) {
       return ir(null, true);
+    }
+
+    // O totem do Modo Fera: vale desviar se estiver por perto, não vale
+    // atravessar o mapa atrás dele — sem o raio, todo bot do time
+    // convergiria pro mesmo ponto a cada minuto e meio, largando o papel.
+    if (estado.totem && m.papel !== 'cozinheiro') {
+      const totem = estado.totem;
+      if (Math.hypot(totem.x - u.x, totem.y - u.y) < RAIO_DE_INTERESSE_NO_TOTEM) {
+        return ir(totem, false, 0, false);
+      }
     }
 
     // --- papel ------------------------------------------------------------
