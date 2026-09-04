@@ -397,13 +397,33 @@ function cartaoDaClasse(
   const nivel = nivelDe(estado, eu.time);
   const max = vidaMaximaDe(eu.classe, nivel, eu.fera);
   const x = 12;
-  const y = altura - 108;
   // Num celular estreito o cartão não pode ser mais largo que a tela: 272 fixos
   // deixavam a linha da obra saindo pela direita.
   const l = Math.min(272, largura - 24);
+
+  // Onde o cartão não pode descer: no toque, é a mesma faixa que o manche —
+  // ou os botões, do lado oposto — alcança; sem toque, a margem de sempre.
+  // Onde ele não pode subir: por baixo da balança e do relógio, presos no
+  // topo em qualquer tamanho de tela (`balanca()`, mais acima neste arquivo).
+  const pisoDoCartao = dispositivoTemToque()
+    ? altura - CENTRO_DOS_CONTROLES_DA_BASE - RAIO_DO_ANEL_DO_MANCHE - 10
+    : altura - 12;
+  const TOPO_SEGURO = 150;
+
+  // Numa tela baixa (celular deitado) não cabem as quatro linhas entre o topo
+  // e o manche — coube o comprido e sobrou o alto. O cartão perde chapelaria,
+  // moeda e obra e vira só nome e vida: o que se olha em pleno combate, não o
+  // extrato da economia. Onde há espaço de sobra (retrato, mesa, monitor), a
+  // versão inteira continua.
+  const ALTURA_CHEIA = 96;
+  const ALTURA_COMPACTA = 52;
+  const compacto = pisoDoCartao - TOPO_SEGURO < ALTURA_CHEIA;
+  const alturaCartao = compacto ? ALTURA_COMPACTA : ALTURA_CHEIA;
+  const y = Math.max(TOPO_SEGURO, pisoDoCartao - alturaCartao);
+
   ctx.save();
   ctx.fillStyle = 'rgba(12, 14, 20, 0.72)';
-  arredondado(ctx, x, y, l, 96, 10);
+  arredondado(ctx, x, y, l, alturaCartao, 10);
   ctx.fill();
 
   ctx.textAlign = 'left';
@@ -421,27 +441,29 @@ function cartaoDaClasse(
   ctx.fillStyle = 'rgba(255,255,255,0.75)';
   ctx.fillText(`${Math.max(0, Math.round(eu.vida))}/${max}`, x + barra + 20, y + 30);
 
-  const estoque = estado.estoque[eu.time];
-  const chapeus = CLASSES_COM_CHAPEU.filter((c) => estoque[c] > 0)
-    .map((c) => `${perfil(c).nome.slice(0, 3).toLowerCase()} ${estoque[c]}`)
-    .join(' · ');
-  ctx.fillStyle = 'rgba(255,255,255,0.6)';
-  ctx.fillText(`chapelaria: ${chapeus || 'vazia'}`, x + 12, y + 48);
-  const forno = estado.casasDaMoeda.find((c) => c.time === eu.time);
-  if (forno) {
-    ctx.fillText(
-      `moeda: ${forno.bolsas} bolsa(s) · ${forno.minerio} minério${forno.cunhando > 0 ? ' · cunhando' : ''}`,
-      x + 12,
-      y + 62,
-    );
-  }
-  const oficina = estado.oficinas.find((o) => o.time === eu.time);
-  if (oficina) {
-    ctx.fillText(
-      `obra ${'I'.repeat(oficina.nivel)} · ${oficina.madeira} madeira · ${oficina.ouro} ouro`,
-      x + 12,
-      y + 76,
-    );
+  if (!compacto) {
+    const estoque = estado.estoque[eu.time];
+    const chapeus = CLASSES_COM_CHAPEU.filter((c) => estoque[c] > 0)
+      .map((c) => `${perfil(c).nome.slice(0, 3).toLowerCase()} ${estoque[c]}`)
+      .join(' · ');
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.fillText(`chapelaria: ${chapeus || 'vazia'}`, x + 12, y + 48);
+    const forno = estado.casasDaMoeda.find((c) => c.time === eu.time);
+    if (forno) {
+      ctx.fillText(
+        `moeda: ${forno.bolsas} bolsa(s) · ${forno.minerio} minério${forno.cunhando > 0 ? ' · cunhando' : ''}`,
+        x + 12,
+        y + 62,
+      );
+    }
+    const oficina = estado.oficinas.find((o) => o.time === eu.time);
+    if (oficina) {
+      ctx.fillText(
+        `obra ${'I'.repeat(oficina.nivel)} · ${oficina.madeira} madeira · ${oficina.ouro} ouro`,
+        x + 12,
+        y + 76,
+      );
+    }
   }
   ctx.restore();
 }
@@ -751,14 +773,27 @@ function tabela(
 
 const pad = (n: number): string => String(n).padStart(2, ' ');
 
+/** Há dedo na tela? Aparelho, não jogador — a mesma pergunta que `entrada.ts`
+ * faz para decidir se liga o manche virtual. */
+function dispositivoTemToque(): boolean {
+  return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+}
+
+/** Onde o manche por padrão fica, e o raio do anel dele — a mesma dupla de
+ * números usada para desenhá-lo e para reservar a faixa da base que ele
+ * ocupa, em `cartaoDaClasse`. Um valor só, puxado dos dois lugares, é o que
+ * impede o cartão de voltar a cobrir o manche no dia em que alguém mudar um
+ * dos dois sem lembrar do outro. */
+const CENTRO_DOS_CONTROLES_DA_BASE = 130;
+const RAIO_DO_ANEL_DO_MANCHE = 56;
+
 function botoesDeToque(
   ctx: CanvasRenderingContext2D,
   entrada: Entrada,
   largura: number,
   altura: number,
 ): void {
-  const temToque = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-  if (!temToque) {
+  if (!dispositivoTemToque()) {
     entrada.botoes = {};
     return;
   }
@@ -767,7 +802,7 @@ function botoesDeToque(
   const aDireita = entrada.ladoDoManche === 'esquerda';
   const bx = (recuo: number): number => (aDireita ? largura - recuo : recuo - r * 2);
   entrada.botoes = {
-    atacar: { x: bx(150), y: altura - 130, largura: r * 2, altura: r * 2 },
+    atacar: { x: bx(150), y: altura - CENTRO_DOS_CONTROLES_DA_BASE, largura: r * 2, altura: r * 2 },
     usar: { x: bx(240), y: altura - 80, largura: r * 2, altura: r * 2 },
   };
   ctx.save();
@@ -790,11 +825,11 @@ function botoesDeToque(
     ctx.strokeStyle = 'rgba(255,255,255,0.3)';
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(manche.x, manche.y, 56, 0, Math.PI * 2);
+    ctx.arc(manche.x, manche.y, RAIO_DO_ANEL_DO_MANCHE, 0, Math.PI * 2);
     ctx.stroke();
     ctx.fillStyle = 'rgba(255,255,255,0.35)';
     ctx.beginPath();
-    const t = Math.min(1, Math.hypot(manche.dx, manche.dy) / 56);
+    const t = Math.min(1, Math.hypot(manche.dx, manche.dy) / RAIO_DO_ANEL_DO_MANCHE);
     ctx.arc(manche.x + manche.dx * t, manche.y + manche.dy * t, 22, 0, Math.PI * 2);
     ctx.fill();
   } else {
@@ -804,11 +839,14 @@ function botoesDeToque(
     // fica sem nenhuma pista de onde pôr o polegar. Um anel fraco no canto
     // por padrão, do mesmo raio do de verdade, resolve isso sem prometer
     // uma posição exata — ele nasce onde o dedo tocar, não aqui.
-    const hx = entrada.ladoDoManche === 'esquerda' ? 130 : largura - 130;
+    const hx =
+      entrada.ladoDoManche === 'esquerda'
+        ? CENTRO_DOS_CONTROLES_DA_BASE
+        : largura - CENTRO_DOS_CONTROLES_DA_BASE;
     ctx.strokeStyle = 'rgba(255,255,255,0.18)';
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(hx, altura - 130, 56, 0, Math.PI * 2);
+    ctx.arc(hx, altura - CENTRO_DOS_CONTROLES_DA_BASE, RAIO_DO_ANEL_DO_MANCHE, 0, Math.PI * 2);
     ctx.stroke();
   }
   ctx.restore();
