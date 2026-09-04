@@ -42,6 +42,18 @@ import { DT, TICKS_POR_ENVIO, TICKS_POR_SEGUNDO, TIMES, type Time } from '../sha
 
 const INTERVALO_DE_ENVIO = (TICKS_POR_ENVIO / TICKS_POR_SEGUNDO) * 1000;
 
+/**
+ * Backoff da reconexão automática, em milissegundos — cinco tentativas antes
+ * de desistir e mostrar a tela de desconectado.
+ *
+ * Uma queda de wifi de meio segundo não devia tirar ninguém da partida; um
+ * servidor de verdade fora do ar também não devia manter a tela congelada
+ * para sempre tentando de novo. O crescimento é geométrico, não para achar o
+ * intervalo "ótimo" — é só para não martelar um servidor que só vai voltar
+ * daqui a um tempo.
+ */
+const BACKOFF_DE_RECONEXAO = [500, 1000, 2000, 4000, 8000];
+
 export interface Aviso {
   texto: string;
   /** Momento em que apareceu, em milissegundos. */
@@ -143,6 +155,19 @@ export class Rede {
   private seq = 0;
   private ultimoAceno = 0;
 
+  // --- reconexão automática -------------------------------------------------
+  //
+  // Para onde esta conexão foi pedida a ir, guardado para poder pedir nas
+  // mesmas condições depois de uma queda — `conectar` não tem como se
+  // lembrar disso sozinho porque cada tentativa passa pelos mesmos
+  // parâmetros que a chamada original.
+  private assistindoAtual = false;
+  private ondeAtual: Destino = {};
+  /** `true` só quando `desconectar()` pediu o fechamento. Não reconecta. */
+  private fechadoIntencionalmente = false;
+  private tentativasDeReconexao = 0;
+  private timerDeReconexao: ReturnType<typeof setTimeout> | null = null;
+
   constructor(url: string) {
     this.url = url;
   }
@@ -156,6 +181,11 @@ export class Rede {
    */
   conectar(nome: string, assistindo = false, onde: Destino = {}): void {
     this.nome = nome;
+    this.assistindoAtual = assistindo;
+    this.ondeAtual = onde;
+    // Cada tentativa — a primeira e as de reconexão — nasce disposta a
+    // reconectar se cair; só `desconectar()` desarma isso.
+    this.fechadoIntencionalmente = false;
     const ws = new WebSocket(this.url);
     this.ws = ws;
     ws.onopen = () => {
@@ -176,6 +206,18 @@ export class Rede {
       this.receber(dado);
     };
     ws.onclose = () => {
+      if (this.fechadoIntencionalmente) return;
+      if (this.tentativasDeReconexao < BACKOFF_DE_RECONEXAO.length) {
+        const espera = BACKOFF_DE_RECONEXAO[this.tentativasDeReconexao]!;
+        this.tentativasDeReconexao++;
+        this.timerDeReconexao = setTimeout(() => {
+          this.timerDeReconexao = null;
+          this.conectar(this.nome, this.assistindoAtual, this.ondeAtual);
+        }, espera);
+        return;
+      }
+      // As tentativas acabaram: agora sim é uma desconexão de verdade, do
+      // jeito que o resto do cliente já sabe mostrar.
       this.fechado = true;
     };
     ws.onerror = () => {
@@ -229,6 +271,11 @@ export class Rede {
   }
 
   desconectar(): void {
+    this.fechadoIntencionalmente = true;
+    if (this.timerDeReconexao !== null) {
+      clearTimeout(this.timerDeReconexao);
+      this.timerDeReconexao = null;
+    }
     this.ws?.close();
     this.ws = null;
   }
@@ -242,6 +289,11 @@ export class Rede {
   private receber(msg: DoServidor): void {
     switch (msg.t) {
       case 'bemvindo': {
+        // Chegou um 'bemvindo' de verdade: se isto veio de uma reconexão, ela
+        // deu certo — a próxima queda merece a série de tentativas inteira
+        // de novo, não continuar de onde esta parou.
+        this.tentativasDeReconexao = 0;
+        this.motivo = null;
         this.sala = msg.sala;
         this.porTime = msg.porTime;
         this.modo = modoDe(msg.modo).id;
