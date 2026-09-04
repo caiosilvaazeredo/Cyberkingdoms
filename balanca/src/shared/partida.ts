@@ -27,6 +27,7 @@ import {
   oficinaDe,
   bauDe,
   unidade,
+  VARIANTES_RARAS_DA_INVASAO,
   type Animal,
   type Carga,
   type Estado,
@@ -34,6 +35,7 @@ import {
   type Item,
   type Bau,
   type Unidade,
+  type VarianteDaInvasao,
 } from './estado';
 import type { Comando } from './protocolo';
 import { DeterministicRandom } from './rng';
@@ -59,8 +61,6 @@ import {
   INVASAO_AVISO_ANTES,
   INVASAO_INTERVALO,
   INVASAO_RAIO_DE_AFUGENTAR,
-  INVASAO_CHANCE_DE_SLINGSHOT,
-  INVASAO_CHANCE_DE_TOCHA,
   INVASAO_RAIO_DO_SAQUE,
   INVASAO_RAIO_DO_SAQUE_SLINGSHOT,
   INVASAO_TAMANHO,
@@ -978,12 +978,17 @@ function moverInvasores(arena: Arena, estado: Estado): void {
       // onda pegar fogo (ou não).
       const dado = semeadoPor(estado.tick, arena.seed * 97 + (time === 'azul' ? 11 : 17));
       const sorteio = dado.nextDouble();
-      const variante =
-        sorteio < INVASAO_CHANCE_DE_TOCHA
-          ? 'tocha'
-          : sorteio < INVASAO_CHANCE_DE_TOCHA + INVASAO_CHANCE_DE_SLINGSHOT
-            ? 'slingshot'
-            : 'comum';
+      // Percorre as faixas na ordem da tabela: a primeira cujo teto o
+      // sorteio não alcança decide a variante; nenhuma decide, é comum.
+      let variante: VarianteDaInvasao = 'comum';
+      let teto = 0;
+      for (const rara of VARIANTES_RARAS_DA_INVASAO) {
+        teto += rara.chance;
+        if (sorteio < teto) {
+          variante = rara.variante;
+          break;
+        }
+      }
       for (let i = 0; i < INVASAO_TAMANHO; i++) {
         estado.invasores.push({
           id: estado.proximoId++,

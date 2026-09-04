@@ -1,6 +1,6 @@
 import { AGUA, PONTE, canhaoDe, decoracaoEm, type Arena, type Estrutura } from '../shared/arena';
 import { perfil, vidaMaximaDe, PERFIS_DE_FERA, type Classe } from '../shared/classes';
-import { nivelDe, type Animal, type Estado, type Unidade } from '../shared/estado';
+import { nivelDe, type Animal, type Estado, type Unidade, type VarianteDaInvasao } from '../shared/estado';
 import {
   CUSTO_DO_NIVEL,
   DT,
@@ -127,6 +127,15 @@ const ICONE_DA_ESTRUTURA: Record<Estrutura['tipo'], IconeDaObra> = {
 };
 
 const COR_DO_TIME: Readonly<Record<Time, string>> = { azul: 'blue', vermelho: 'red' };
+
+/** Qual animação de `Arte` cada variante do invasor usa — a comum, e as duas raras. */
+const ANIM_DA_VARIANTE: Readonly<
+  Record<VarianteDaInvasao, 'invasor' | 'invasorTocha' | 'invasorSlingshot'>
+> = {
+  comum: 'invasor',
+  tocha: 'invasorTocha',
+  slingshot: 'invasorSlingshot',
+};
 
 export function criarCamera(): Camera {
   return { x: 0, y: 0, zoom: 1 };
@@ -598,12 +607,7 @@ export function desenharMundo(
     const py = v.paraTelaY(inv.y) + RAIO_UNIDADE * escala * 0.6;
     const chapelaria = arena.estrutura('chapelaria', inv.time);
     const paraEsquerda = chapelaria.x - inv.x < 0;
-    const anim =
-      inv.variante === 'tocha'
-        ? arte.invasorTocha
-        : inv.variante === 'slingshot'
-          ? arte.invasorSlingshot
-          : arte.invasor;
+    const anim = arte[ANIM_DA_VARIANTE[inv.variante]];
     pinturas.push({
       y: inv.y,
       pintar: () => {

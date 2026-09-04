@@ -1,5 +1,13 @@
 import { CLASSES_COM_CHAPEU, perfil, PERFIS_DE_FERA, vidaMaximaDe } from '../shared/classes';
-import { nivelDe, bauDe, type Carga, type Estado, type Evento, type Unidade } from '../shared/estado';
+import {
+  nivelDe,
+  bauDe,
+  type Carga,
+  type Estado,
+  type Evento,
+  type Unidade,
+  type VarianteDaInvasao,
+} from '../shared/estado';
 import { MAPAS } from '../shared/mapas';
 import { modoDe } from '../shared/modos';
 import {
@@ -42,6 +50,44 @@ import type { Rede } from './rede';
 const COR: Record<Time, string> = { azul: '#3b7fe0', vermelho: '#e04b3b' };
 const COR_CLARA: Record<Time, string> = { azul: '#8fc0ff', vermelho: '#ff9c8f' };
 const NOME_DO_TIME: Record<Time, string> = { azul: 'Azul', vermelho: 'Vermelho' };
+
+/**
+ * Como cada variante da invasão se narra — o nome da onda pro texto de
+ * "afugentou", a cor do evento, e a frase de roubo, que muda conforme achou
+ * ou não achou chapéu no estoque. Uma variante nova entra como uma linha
+ * aqui, não mais um `if` a mais nos dois eventos que a mencionam.
+ */
+const NARRACAO_DA_VARIANTE: Readonly<
+  Record<
+    VarianteDaInvasao,
+    { nomeDaOnda: string; cor: string; roubou: (time: string, chapeu: string | null) => string }
+  >
+> = {
+  comum: {
+    nomeDaOnda: 'goblins',
+    cor: '#ff9c4a',
+    roubou: (time, chapeu) =>
+      chapeu === null
+        ? `os goblins vasculharam a chapelaria do ${time} e não acharam nada`
+        : `os goblins roubaram um chapéu de ${chapeu} do ${time}`,
+  },
+  tocha: {
+    nomeDaOnda: 'Torch Goblins',
+    cor: '#ff5a2e',
+    roubou: (time, chapeu) =>
+      chapeu === null
+        ? `os Torch Goblins incendiaram a chapelaria do ${time}`
+        : `os Torch Goblins incendiaram a chapelaria do ${time} e levaram um chapéu de ${chapeu}`,
+  },
+  slingshot: {
+    nomeDaOnda: 'Slingshot Gnomes',
+    cor: '#8fd48f',
+    roubou: (time, chapeu) =>
+      chapeu === null
+        ? `os Slingshot Gnomes atiraram na chapelaria do ${time} e não acertaram nada`
+        : `os Slingshot Gnomes acertaram a chapelaria do ${time} de longe e levaram um chapéu de ${chapeu}`,
+  },
+};
 
 /**
  * Como cada carga se chama na tela.
@@ -803,44 +849,18 @@ export function narrar(
         texto: `goblins avançam sobre a chapelaria do ${NOME_DO_TIME[evento.time]}!`,
         cor: '#ff9c4a',
       };
-    case 'invasaoRoubou':
-      if (evento.variante === 'tocha') {
-        return {
-          texto:
-            evento.classe === null
-              ? `os Torch Goblins incendiaram a chapelaria do ${NOME_DO_TIME[evento.time]}`
-              : `os Torch Goblins incendiaram a chapelaria do ${NOME_DO_TIME[evento.time]} e levaram um chapéu de ${perfil(evento.classe).nome}`,
-          cor: '#ff5a2e',
-        };
-      }
-      if (evento.variante === 'slingshot') {
-        return {
-          texto:
-            evento.classe === null
-              ? `os Slingshot Gnomes atiraram na chapelaria do ${NOME_DO_TIME[evento.time]} e não acertaram nada`
-              : `os Slingshot Gnomes acertaram a chapelaria do ${NOME_DO_TIME[evento.time]} de longe e levaram um chapéu de ${perfil(evento.classe).nome}`,
-          cor: '#8fd48f',
-        };
-      }
+    case 'invasaoRoubou': {
+      const d = NARRACAO_DA_VARIANTE[evento.variante];
       return {
-        texto:
-          evento.classe === null
-            ? `os goblins vasculharam a chapelaria do ${NOME_DO_TIME[evento.time]} e não acharam nada`
-            : `os goblins roubaram um chapéu de ${perfil(evento.classe).nome} do ${NOME_DO_TIME[evento.time]}`,
-        cor: '#ff9c4a',
-      };
-    case 'invasaoAfugentada': {
-      const nomeDaOnda =
-        evento.variante === 'tocha'
-          ? 'Torch Goblins'
-          : evento.variante === 'slingshot'
-            ? 'Slingshot Gnomes'
-            : 'goblins';
-      return {
-        texto: `o ${NOME_DO_TIME[evento.time]} afugentou os ${nomeDaOnda}`,
-        cor: COR_CLARA[evento.time],
+        texto: d.roubou(NOME_DO_TIME[evento.time], evento.classe === null ? null : perfil(evento.classe).nome),
+        cor: d.cor,
       };
     }
+    case 'invasaoAfugentada':
+      return {
+        texto: `o ${NOME_DO_TIME[evento.time]} afugentou os ${NARRACAO_DA_VARIANTE[evento.variante].nomeDaOnda}`,
+        cor: COR_CLARA[evento.time],
+      };
     case 'saque':
       return null;
     case 'cura':

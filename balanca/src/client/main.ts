@@ -31,7 +31,7 @@ import { criarFiel, desenharVitrine, moverFiel } from './vitrine';
 import { Sofa, type Porta } from './sofa';
 import type { ConfiguracaoDeSala } from '../shared/protocolo';
 import { Telas, type SalaAberta } from './telas';
-import { bauDe, type Unidade } from '../shared/estado';
+import { bauDe, type Unidade, type VarianteDaInvasao } from '../shared/estado';
 import { DT, type Time } from '../shared/regras';
 
 /**
@@ -275,6 +275,18 @@ const espia = { quadros: 0, comandos: 0 };
     })) ?? [],
 };
 
+/**
+ * Qual partícula cada variante rara acende ao roubar — a comum não entra
+ * aqui porque a dela só acende com chapéu de verdade em mãos, uma condição
+ * que as raras não têm (a tocha e a bolota acendem mesmo de estoque vazio).
+ */
+const RECEITA_DA_VARIANTE_RARA: Readonly<
+  Partial<Record<VarianteDaInvasao, 'incendio' | 'saqueDeLonge'>>
+> = {
+  tocha: 'incendio',
+  slingshot: 'saqueDeLonge',
+};
+
 function laco(agora: number): void {
   requestAnimationFrame(laco);
   espia.quadros++;
@@ -469,10 +481,9 @@ function laco(agora: number): void {
         const chapelaria = rede.arena.estrutura('chapelaria', evento.time);
         // A tocha e a bolota acendem mesmo quando o estoque estava vazio —
         // é a onda chegando que faz a cena, não o que ela consegue levar.
-        if (evento.variante === 'tocha') {
-          particulas.acender(arte, 'incendio', chapelaria.x, chapelaria.y, tempo);
-        } else if (evento.variante === 'slingshot') {
-          particulas.acender(arte, 'saqueDeLonge', chapelaria.x, chapelaria.y, tempo);
+        const receitaRara = RECEITA_DA_VARIANTE_RARA[evento.variante];
+        if (receitaRara) {
+          particulas.acender(arte, receitaRara, chapelaria.x, chapelaria.y, tempo);
         } else if (evento.classe !== null) {
           particulas.acender(arte, 'roubo', chapelaria.x, chapelaria.y, tempo);
         }

@@ -1,6 +1,6 @@
 import type { Classe, Fera, Oficio } from './classes';
 import type { IdDoModo } from './modos';
-import type { Time } from './regras';
+import { INVASAO_CHANCE_DE_SLINGSHOT, INVASAO_CHANCE_DE_TOCHA, type Time } from './regras';
 
 /**
  * O estado de uma partida — os tipos, sem nenhuma regra.
@@ -163,6 +163,25 @@ export interface Animal {
  * `INVASAO_CHANCE_DE_TOCHA`/`INVASAO_CHANCE_DE_SLINGSHOT` em regras.ts.
  */
 export type VarianteDaInvasao = 'comum' | 'tocha' | 'slingshot';
+
+/**
+ * As variantes raras, na ordem em que o sorteio as testa — um número
+ * sorteado entre 0 e 1 cai na primeira faixa que alcançar, e o que sobra é
+ * `'comum'`.
+ *
+ * `partida.ts` percorre esta lista em vez de encadear um ternário por
+ * variante, e o cliente reaproveita a mesma lista para saber quais
+ * variantes existem (sprite, narração, partícula) sem repetir os nomes.
+ * Uma quinta rara vira uma linha aqui, não mais um `if` a mais em cada um
+ * dos arquivos que precisam conhecer o nome dela.
+ */
+export const VARIANTES_RARAS_DA_INVASAO: ReadonlyArray<{
+  readonly variante: Exclude<VarianteDaInvasao, 'comum'>;
+  readonly chance: number;
+}> = [
+  { variante: 'tocha', chance: INVASAO_CHANCE_DE_TOCHA },
+  { variante: 'slingshot', chance: INVASAO_CHANCE_DE_SLINGSHOT },
+];
 
 /**
  * Um goblin da invasão — nem time, nem `Unidade`.
