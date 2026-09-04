@@ -158,6 +158,13 @@ export interface Animal {
 }
 
 /**
+ * A onda comum, ou uma das duas raras — sorteada uma vez por onda, não por
+ * goblin, para o grupo inteiro chegar do mesmo jeito. Ver
+ * `INVASAO_CHANCE_DE_TOCHA`/`INVASAO_CHANCE_DE_SLINGSHOT` em regras.ts.
+ */
+export type VarianteDaInvasao = 'comum' | 'tocha' | 'slingshot';
+
+/**
  * Um goblin da invasão — nem time, nem `Unidade`.
  *
  * Ele não briga: não tem vida, não ataca, não é alvo de golpe. Duas coisas
@@ -173,12 +180,7 @@ export interface Invasor {
   time: Time;
   x: number;
   y: number;
-  /**
-   * Se esta é uma onda rara do Torch Goblin — sorteada uma vez por onda, não
-   * por goblin, para o grupo inteiro chegar do mesmo jeito. Ver
-   * `INVASAO_CHANCE_DE_TOCHA` em regras.ts.
-   */
-  tocha: boolean;
+  variante: VarianteDaInvasao;
 }
 
 /**
@@ -238,8 +240,8 @@ export type Evento =
   | { tipo: 'cura'; clerigo: number; alvo: number }
   | { tipo: 'nivel'; time: Time; nivel: number }
   | { tipo: 'invasaoAvisada'; time: Time }
-  | { tipo: 'invasaoRoubou'; time: Time; classe: Classe | null; tocha: boolean }
-  | { tipo: 'invasaoAfugentada'; time: Time; tocha: boolean }
+  | { tipo: 'invasaoRoubou'; time: Time; classe: Classe | null; variante: VarianteDaInvasao }
+  | { tipo: 'invasaoAfugentada'; time: Time; variante: VarianteDaInvasao }
   | { tipo: 'virouFera'; unidade: number; fera: Fera }
   | { tipo: 'voltouAoNormal'; unidade: number }
   | { tipo: 'fim'; vencedor: Time | null };

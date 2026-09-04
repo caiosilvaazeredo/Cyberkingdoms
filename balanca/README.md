@@ -599,6 +599,13 @@ chegar na porta não rouba só um chapéu, incendeia a chapelaria. É sorteado
 uma vez por onda, nunca metade tocha e metade não, e é raro o bastante para
 continuar valendo a pena correr para casa quando a fumaça sobe no horizonte.
 
+Mais rara ainda — uma onda em cada sete — é o Slingshot Gnome: rouba de
+longe, sem precisar encostar na porta. O mesmo bando, a mesma rota, só que o
+alcance do saque é mais de três vezes o do goblin comum, o suficiente para
+levar o chapéu de dentro do próprio arco de tiro em vez de bater na
+soleira. Quem só vigia a porta não vê essa onda chegando — ela cobra
+patrulha, não plantão.
+
 Repelir a onda inteira — o último goblin dela afugentado, não cada um —
 deixa um resquício de batalha na porta da chapelaria por alguns segundos:
 prova de que a defesa aconteceu, para quem só olhou o registro de longe e

@@ -342,11 +342,26 @@ export const INVASAO_RAIO_DE_AFUGENTAR = 50;
 export const INVASAO_RAIO_DO_SAQUE = 40;
 
 /**
+ * A que distância o Slingshot Gnome consuma o roubo — bem mais longe do que
+ * o goblin comum, porque ele atira de onde está em vez de arrombar a porta.
+ * É essa distância que faz dele "à distância" de verdade: quem defende a
+ * porta não alcança ninguém que nunca chega perto dela.
+ */
+export const INVASAO_RAIO_DO_SAQUE_SLINGSHOT = 130;
+
+/**
  * A chance de uma onda de invasão nascer como Torch Goblin em vez do goblin
  * comum. Sorteada uma vez por onda — o grupo inteiro chega do mesmo jeito,
  * não metade tocha e metade não.
  */
 export const INVASAO_CHANCE_DE_TOCHA = 0.2;
+
+/**
+ * A chance de a onda nascer como Slingshot Gnome — checada depois da chance
+ * da tocha, no mesmo sorteio, para nunca sair uma onda que é as duas coisas
+ * ao mesmo tempo.
+ */
+export const INVASAO_CHANCE_DE_SLINGSHOT = 0.15;
 
 // --- o modo fera -------------------------------------------------------------
 

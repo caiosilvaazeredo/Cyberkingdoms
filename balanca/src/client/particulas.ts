@@ -110,6 +110,8 @@ const RECEITAS = {
    * some sozinho.
    */
   trollCaido: { folha: 'trollCaido', escala: 1.15, acima: 8, segura: 6 },
+  /** A onda rara do Slingshot Gnome: rouba de longe, e a bolota é o gesto. */
+  saqueDeLonge: { folha: 'bolota', escala: 1.3, acima: 20 },
 } as const satisfies Record<string, Receita>;
 
 /**

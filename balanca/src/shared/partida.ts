@@ -59,8 +59,10 @@ import {
   INVASAO_AVISO_ANTES,
   INVASAO_INTERVALO,
   INVASAO_RAIO_DE_AFUGENTAR,
+  INVASAO_CHANCE_DE_SLINGSHOT,
   INVASAO_CHANCE_DE_TOCHA,
   INVASAO_RAIO_DO_SAQUE,
+  INVASAO_RAIO_DO_SAQUE_SLINGSHOT,
   INVASAO_TAMANHO,
   INVASAO_VELOCIDADE,
   JAZIDA_VOLTA_EM,
@@ -961,14 +963,20 @@ function moverInvasores(arena: Arena, estado: Estado): void {
       const dado = new DeterministicRandom(
         ((estado.tick + 1) * 2654435761 + arena.seed * 97 + (time === 'azul' ? 11 : 17)) >>> 0,
       );
-      const tocha = dado.nextDouble() < INVASAO_CHANCE_DE_TOCHA;
+      const sorteio = dado.nextDouble();
+      const variante =
+        sorteio < INVASAO_CHANCE_DE_TOCHA
+          ? 'tocha'
+          : sorteio < INVASAO_CHANCE_DE_TOCHA + INVASAO_CHANCE_DE_SLINGSHOT
+            ? 'slingshot'
+            : 'comum';
       for (let i = 0; i < INVASAO_TAMANHO; i++) {
         estado.invasores.push({
           id: estado.proximoId++,
           time,
           x: chapelaria.x + ladoDeFora * TILE * 3.5,
           y: chapelaria.y + (i - (INVASAO_TAMANHO - 1) / 2) * TILE,
-          tocha,
+          variante,
         });
       }
     }
@@ -984,12 +992,14 @@ function moverInvasores(arena: Arena, estado: Estado): void {
       }
     }
     if (afugentado) {
-      estado.eventos.push({ tipo: 'invasaoAfugentada', time: inv.time, tocha: inv.tocha });
+      estado.eventos.push({ tipo: 'invasaoAfugentada', time: inv.time, variante: inv.variante });
       continue;
     }
 
     const chapelaria = arena.estrutura('chapelaria', inv.time);
-    if (perto(inv, chapelaria, INVASAO_RAIO_DO_SAQUE)) {
+    const raioDoSaque =
+      inv.variante === 'slingshot' ? INVASAO_RAIO_DO_SAQUE_SLINGSHOT : INVASAO_RAIO_DO_SAQUE;
+    if (perto(inv, chapelaria, raioDoSaque)) {
       const estoque = estado.estoque[inv.time];
       const comEstoque = CLASSES_COM_CHAPEU.filter((c) => estoque[c] > 0);
       let roubada: Classe | null = null;
@@ -1001,7 +1011,7 @@ function moverInvasores(arena: Arena, estado: Estado): void {
         roubada = comEstoque[dado.nextIntBelow(comEstoque.length)]!;
         estoque[roubada]--;
       }
-      estado.eventos.push({ tipo: 'invasaoRoubou', time: inv.time, classe: roubada, tocha: inv.tocha });
+      estado.eventos.push({ tipo: 'invasaoRoubou', time: inv.time, classe: roubada, variante: inv.variante });
       continue;
     }
 

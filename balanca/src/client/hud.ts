@@ -804,13 +804,22 @@ export function narrar(
         cor: '#ff9c4a',
       };
     case 'invasaoRoubou':
-      if (evento.tocha) {
+      if (evento.variante === 'tocha') {
         return {
           texto:
             evento.classe === null
               ? `os Torch Goblins incendiaram a chapelaria do ${NOME_DO_TIME[evento.time]}`
               : `os Torch Goblins incendiaram a chapelaria do ${NOME_DO_TIME[evento.time]} e levaram um chapéu de ${perfil(evento.classe).nome}`,
           cor: '#ff5a2e',
+        };
+      }
+      if (evento.variante === 'slingshot') {
+        return {
+          texto:
+            evento.classe === null
+              ? `os Slingshot Gnomes atiraram na chapelaria do ${NOME_DO_TIME[evento.time]} e não acertaram nada`
+              : `os Slingshot Gnomes acertaram a chapelaria do ${NOME_DO_TIME[evento.time]} de longe e levaram um chapéu de ${perfil(evento.classe).nome}`,
+          cor: '#8fd48f',
         };
       }
       return {
@@ -820,11 +829,18 @@ export function narrar(
             : `os goblins roubaram um chapéu de ${perfil(evento.classe).nome} do ${NOME_DO_TIME[evento.time]}`,
         cor: '#ff9c4a',
       };
-    case 'invasaoAfugentada':
+    case 'invasaoAfugentada': {
+      const nomeDaOnda =
+        evento.variante === 'tocha'
+          ? 'Torch Goblins'
+          : evento.variante === 'slingshot'
+            ? 'Slingshot Gnomes'
+            : 'goblins';
       return {
-        texto: `o ${NOME_DO_TIME[evento.time]} afugentou os ${evento.tocha ? 'Torch Goblins' : 'goblins'}`,
+        texto: `o ${NOME_DO_TIME[evento.time]} afugentou os ${nomeDaOnda}`,
         cor: COR_CLARA[evento.time],
       };
+    }
     case 'saque':
       return null;
     case 'cura':

@@ -95,7 +95,15 @@ export interface Arte {
    */
   readonly efeitos: Readonly<
     Record<
-      'poeira' | 'poeirada' | 'labareda' | 'estouro' | 'agua' | 'furto' | 'bomba' | 'trollCaido',
+      | 'poeira'
+      | 'poeirada'
+      | 'labareda'
+      | 'estouro'
+      | 'agua'
+      | 'furto'
+      | 'bomba'
+      | 'trollCaido'
+      | 'bolota',
       Animacao
     >
   >;
@@ -171,12 +179,14 @@ export interface Arte {
    */
   readonly invasor: Animacao;
   /**
-   * A onda rara do Torch Goblin — ver `Invasor.tocha` em shared/estado.ts e
-   * `INVASAO_CHANCE_DE_TOCHA` em shared/regras.ts. Mesma folha de corrida,
-   * personagem diferente: é o aviso visual de que esta onda, se chegar,
-   * incendeia a chapelaria em vez de só roubar.
+   * As duas ondas raras — ver `Invasor.variante` em shared/estado.ts e
+   * `INVASAO_CHANCE_DE_TOCHA`/`INVASAO_CHANCE_DE_SLINGSHOT` em
+   * shared/regras.ts. Mesma folha de corrida, personagem diferente: é o
+   * aviso visual de que esta onda, se chegar, não é o roubo silencioso de
+   * sempre — incendeia a chapelaria, ou atira de longe.
    */
   readonly invasorTocha: Animacao;
+  readonly invasorSlingshot: Animacao;
   /**
    * O ícone de cada carga no chão.
    *
@@ -338,6 +348,7 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
   pede('cavalo_marinho', 'recursos/cavalo_marinho.png');
   pede('goblin_invasor', 'recursos/goblin_invasor.png');
   pede('torch_goblin_invasor', 'recursos/torch_goblin_invasor.png');
+  pede('slingshot_gnome_invasor', 'recursos/slingshot_gnome_invasor.png');
   for (const fera of ['troll', 'minotauro'] as const) {
     for (const estado of ['parado', 'andando', 'golpe'] as const) {
       pede(`fera_${fera}_${estado}`, `feras/${fera}_${estado}.png`);
@@ -357,6 +368,9 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
     // O resquício de batalha depois de repelir uma onda inteira de goblins —
     // ver a receita `trollCaido` em particulas.ts.
     ['fx:trollCaido', 'troll_caido'],
+    // A bolota do Slingshot Gnome, no lugar do golpe do ladrão quando quem
+    // rouba atira de longe — ver a receita `saqueDeLonge` em particulas.ts.
+    ['fx:bolota', 'flecha_bolota'],
   ] as const) {
     pede(chave, `fx/${arquivo}.png`);
   }
@@ -478,6 +492,7 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
     cavaloMarinho: animacao(img('cavalo_marinho'), 6),
     invasor: animacao(img('goblin_invasor'), 8),
     invasorTocha: animacao(img('torch_goblin_invasor'), 8),
+    invasorSlingshot: animacao(img('slingshot_gnome_invasor'), 8),
     feras: {
       troll: {
         parado: animacao(img('fera_troll_parado'), 6),
@@ -514,6 +529,7 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
       furto: animacao(img('fx:furto'), 18),
       bomba: animacao(img('fx:bomba'), 6),
       trollCaido: animacao(img('fx:trollCaido'), 10),
+      bolota: animacao(img('fx:bolota'), 12),
     },
     icones: Object.fromEntries(ICONES.map((n) => [n, img(`icone:${n}`)])) as Record<
       IconeDaObra,

@@ -598,7 +598,12 @@ export function desenharMundo(
     const py = v.paraTelaY(inv.y) + RAIO_UNIDADE * escala * 0.6;
     const chapelaria = arena.estrutura('chapelaria', inv.time);
     const paraEsquerda = chapelaria.x - inv.x < 0;
-    const anim = inv.tocha ? arte.invasorTocha : arte.invasor;
+    const anim =
+      inv.variante === 'tocha'
+        ? arte.invasorTocha
+        : inv.variante === 'slingshot'
+          ? arte.invasorSlingshot
+          : arte.invasor;
     pinturas.push({
       y: inv.y,
       pintar: () => {

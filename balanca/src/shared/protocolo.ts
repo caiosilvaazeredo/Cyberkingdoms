@@ -10,6 +10,7 @@ import type {
   TipoDeItem,
   TipoDeProjetil,
   Unidade,
+  VarianteDaInvasao,
 } from './estado';
 import { IDS_DOS_MAPAS, MAPAS, mapaDe, porTimeMaximo, type IdDoMapa } from './mapas';
 import { modoDe, type IdDoModo } from './modos';
@@ -333,6 +334,7 @@ const ITENS: readonly TipoDeItem[] = ['chapeu', 'bolsa', 'minerio', 'madeira', '
 const ONDES: readonly Bau['onde'][] = ['cofre', 'carregado', 'chao', 'resgatado'];
 const FERAS: readonly Fera[] = ['troll', 'minotauro'];
 const PROJETEIS: readonly TipoDeProjetil[] = ['flecha', 'bolaDeCanhao'];
+const VARIANTES: readonly VarianteDaInvasao[] = ['comum', 'tocha', 'slingshot'];
 
 const idxTime = (t: Time): number => TIMES.indexOf(t);
 const timePorIdx = (i: number): Time => TIMES[i]!;
@@ -424,8 +426,14 @@ export function empacotar(estado: Estado): Retrato {
       a.vivo ? 1 : 0,
       a.fugindo > 0 ? 1 : 0,
     ]),
-    // `[id, time, x, y, tocha]`
-    iv: estado.invasores.map((i) => [i.id, idxTime(i.time), arred(i.x), arred(i.y), i.tocha ? 1 : 0]),
+    // `[id, time, x, y, variante]`
+    iv: estado.invasores.map((i) => [
+      i.id,
+      idxTime(i.time),
+      arred(i.x),
+      arred(i.y),
+      VARIANTES.indexOf(i.variante),
+    ]),
     tm: estado.totem ? [estado.totem.id, arred(estado.totem.x), arred(estado.totem.y)] : [],
     // `[time, minério, cunhando*10, bolsas]`
     cz: estado.casasDaMoeda.map((c) => [idxTime(c.time), c.minerio, arred(c.cunhando * 10), c.bolsas]),
@@ -584,7 +592,7 @@ export function desempacotar(r: Retrato, base: Estado): Estado {
     time: timePorIdx(l[1]!),
     x: l[2]!,
     y: l[3]!,
-    tocha: l[4] === 1,
+    variante: VARIANTES[l[4]!] ?? 'comum',
   }));
 
   base.totem = r.tm.length === 0 ? null : { id: r.tm[0]!, x: r.tm[1]!, y: r.tm[2]! };

@@ -261,7 +261,6 @@ const espia = { quadros: 0, comandos: 0 };
   tela: () => telas.atual,
   relogio: () => rede?.estado?.relogio ?? null,
   totem: () => rede?.estado?.totem ?? null,
-  invasores: () => rede?.estado?.invasores.length ?? null,
   canhao: (time: Time) => (rede?.arena ? canhaoDe(rede.arena, time) : null),
   euEstou: () => (sofa?.jogadores[0]?.rede.eu ? { x: sofa.jogadores[0].rede.eu.x, y: sofa.jogadores[0].rede.eu.y } : null),
   ping: () => rede?.ping ?? null,
@@ -468,10 +467,15 @@ function laco(agora: number): void {
       // cima de gente.
       if (evento.tipo === 'invasaoRoubou') {
         const chapelaria = rede.arena.estrutura('chapelaria', evento.time);
-        // A tocha acende mesmo quando o estoque estava vazio — é a onda
-        // chegando que incendeia, não o que ela consegue levar.
-        if (evento.tocha) particulas.acender(arte, 'incendio', chapelaria.x, chapelaria.y, tempo);
-        else if (evento.classe !== null) particulas.acender(arte, 'roubo', chapelaria.x, chapelaria.y, tempo);
+        // A tocha e a bolota acendem mesmo quando o estoque estava vazio —
+        // é a onda chegando que faz a cena, não o que ela consegue levar.
+        if (evento.variante === 'tocha') {
+          particulas.acender(arte, 'incendio', chapelaria.x, chapelaria.y, tempo);
+        } else if (evento.variante === 'slingshot') {
+          particulas.acender(arte, 'saqueDeLonge', chapelaria.x, chapelaria.y, tempo);
+        } else if (evento.classe !== null) {
+          particulas.acender(arte, 'roubo', chapelaria.x, chapelaria.y, tempo);
+        }
       }
       if (evento.tipo === 'invasaoAfugentada') {
         const chapelaria = rede.arena.estrutura('chapelaria', evento.time);

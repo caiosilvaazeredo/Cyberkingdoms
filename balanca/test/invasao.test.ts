@@ -5,7 +5,16 @@ import { criarArena } from '../src/shared/arena';
 import { IDS_DOS_MAPAS } from '../src/shared/mapas';
 import { criarPartida, type Partida } from '../src/shared/partida';
 import type { Evento } from '../src/shared/estado';
-import { AQUECIMENTO, INVASAO_INTERVALO, INVASAO_TAMANHO, TICKS_POR_SEGUNDO, TILE, TIMES } from '../src/shared/regras';
+import {
+  AQUECIMENTO,
+  INVASAO_INTERVALO,
+  INVASAO_RAIO_DO_SAQUE,
+  INVASAO_RAIO_DO_SAQUE_SLINGSHOT,
+  INVASAO_TAMANHO,
+  TICKS_POR_SEGUNDO,
+  TILE,
+  TIMES,
+} from '../src/shared/regras';
 
 /**
  * A invasão de goblins: chega perto da chapelaria, e some — roubada ou
@@ -90,50 +99,79 @@ describe('a invasão de goblins', () => {
     expect(partida.estado.estoque.azul).toEqual(estoqueAntes);
   });
 
-  it('a onda inteira nasce com a mesma tocha — nunca metade tocha e metade não', () => {
+  it('a onda inteira nasce com a mesma variante — nunca metade tocha e metade não', () => {
     for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
       const partida = criarPartida(seed);
       passarSegundos(partida, ATE_O_PRIMEIRO_AVISO + 1);
       for (const time of TIMES) {
         const daOnda = partida.estado.invasores.filter((i) => i.time === time);
-        expect(new Set(daOnda.map((i) => i.tocha)).size, `seed ${seed}/${time}`).toBeLessThanOrEqual(1);
+        expect(
+          new Set(daOnda.map((i) => i.variante)).size,
+          `seed ${seed}/${time}`,
+        ).toBeLessThanOrEqual(1);
       }
     }
   });
 
-  it('de vez em quando, uma onda nasce em chamas — e na maioria das vezes não', () => {
-    let comTocha = 0;
-    let semTocha = 0;
+  /**
+   * Procura uma seed cuja onda do Azul nasça com a variante pedida —
+   * determinístico, não sorte de execução.
+   *
+   * Amostra logo após o nascimento (+0.1s, não +1s): o Slingshot Gnome nasce
+   * só 94 unidades fora do próprio raio de saque, e a 120 unidades/s isso
+   * fecha em menos de um segundo — esperar demais faz o goblin já ter
+   * roubado e sumido de `invasores` antes da amostra, quase sempre lendo
+   * "nenhum azul" em vez da variante de verdade.
+   */
+  function acharSeedCom(variante: 'tocha' | 'slingshot', ateSeed: number): number {
+    for (let seed = 1; seed <= ateSeed; seed++) {
+      const partida = criarPartida(seed);
+      passarSegundos(partida, ATE_O_PRIMEIRO_AVISO + 0.1);
+      if (partida.estado.invasores.find((i) => i.time === 'azul')?.variante === variante) return seed;
+    }
+    throw new Error(`nenhuma seed até ${ateSeed} produziu a variante ${variante}`);
+  }
+
+  it('de vez em quando, uma onda nasce em chamas ou de longe — e na maioria das vezes não', () => {
+    let rara = 0;
+    let comum = 0;
     for (let seed = 1; seed <= 40; seed++) {
       const partida = criarPartida(seed);
       passarSegundos(partida, ATE_O_PRIMEIRO_AVISO + 1);
       const azul = partida.estado.invasores.find((i) => i.time === 'azul');
-      if (azul?.tocha) comTocha++;
-      else semTocha++;
+      if (azul?.variante === 'comum') comum++;
+      else rara++;
     }
-    expect(comTocha).toBeGreaterThan(0);
-    expect(semTocha).toBeGreaterThan(comTocha);
+    expect(rara).toBeGreaterThan(0);
+    expect(comum).toBeGreaterThan(rara);
   });
 
-  it('o evento de roubo carrega a mesma tocha do goblin que chegou', () => {
-    // Procura uma seed cuja onda do Azul nasça em chamas — determinístico,
-    // não sorte de execução.
-    let seedComTocha: number | null = null;
-    for (let seed = 1; seed <= 60; seed++) {
-      const partida = criarPartida(seed);
-      passarSegundos(partida, ATE_O_PRIMEIRO_AVISO + 1);
-      if (partida.estado.invasores.find((i) => i.time === 'azul')?.tocha) {
-        seedComTocha = seed;
-        break;
-      }
-    }
-    expect(seedComTocha).not.toBeNull();
-
-    const partida = criarPartida(seedComTocha!);
+  it('o evento de roubo carrega a mesma variante do goblin que chegou', () => {
+    const seedComTocha = acharSeedCom('tocha', 60);
+    const partida = criarPartida(seedComTocha);
     const eventos = passarSegundos(partida, ATE_O_PRIMEIRO_AVISO + 5);
     const roubos = eventos.filter((e) => e.tipo === 'invasaoRoubou' && e.time === 'azul');
     expect(roubos.length).toBeGreaterThan(0);
-    expect(roubos.every((e) => e.tipo === 'invasaoRoubou' && e.tocha === true)).toBe(true);
+    expect(roubos.every((e) => e.tipo === 'invasaoRoubou' && e.variante === 'tocha')).toBe(true);
+  });
+
+  it('o Slingshot Gnome rouba de bem mais longe do que o goblin comum', () => {
+    const seedComSlingshot = acharSeedCom('slingshot', 80);
+    const partida = criarPartida(seedComSlingshot);
+    passarSegundos(partida, ATE_O_PRIMEIRO_AVISO + 0.1);
+    const chapelariaAzul = partida.arena.estrutura('chapelaria', 'azul');
+
+    // Trava o goblin exatamente entre os dois raios — perto demais para o
+    // comum ainda estar andando, longe demais para ele já ter roubado.
+    const inv = partida.estado.invasores.find((i) => i.time === 'azul')!;
+    const meio = (INVASAO_RAIO_DO_SAQUE + INVASAO_RAIO_DO_SAQUE_SLINGSHOT) / 2;
+    inv.x = chapelariaAzul.x + meio;
+    inv.y = chapelariaAzul.y;
+
+    const eventos = passarSegundos(partida, 0.1);
+    const roubos = eventos.filter((e) => e.tipo === 'invasaoRoubou' && e.time === 'azul');
+    expect(roubos.length).toBe(1);
+    expect(roubos[0]).toMatchObject({ variante: 'slingshot' });
   });
 
   it('nasce em chão livre, do lado de fora da própria chapelaria, em todo mapa', () => {
