@@ -460,9 +460,12 @@ function laco(agora: number): void {
       // que perdeu (ou não) o chapéu. Reaproveita as folhas do furto e do
       // saque: são o mesmo gesto, só que na porta do prédio em vez de em
       // cima de gente.
-      if (evento.tipo === 'invasaoRoubou' && evento.classe !== null) {
+      if (evento.tipo === 'invasaoRoubou') {
         const chapelaria = rede.arena.estrutura('chapelaria', evento.time);
-        particulas.acender(arte, 'roubo', chapelaria.x, chapelaria.y, tempo);
+        // A tocha acende mesmo quando o estoque estava vazio — é a onda
+        // chegando que incendeia, não o que ela consegue levar.
+        if (evento.tocha) particulas.acender(arte, 'incendio', chapelaria.x, chapelaria.y, tempo);
+        else if (evento.classe !== null) particulas.acender(arte, 'roubo', chapelaria.x, chapelaria.y, tempo);
       }
       if (evento.tipo === 'invasaoAfugentada') {
         const chapelaria = rede.arena.estrutura('chapelaria', evento.time);

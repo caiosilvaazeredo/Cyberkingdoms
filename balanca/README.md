@@ -593,6 +593,12 @@ demais — brigando na ponte, escoltando o baú — uma segunda coisa para
 perder de vista, e a decisão real que ela cobra é justamente essa: vale a
 pena parar o que se está fazendo para defender a casa?
 
+De vez em quando — uma onda em cada cinco, em média — ela chega como Torch
+Goblin em vez do goblin comum: o mesmo bando, a mesma rota, só que se
+chegar na porta não rouba só um chapéu, incendeia a chapelaria. É sorteado
+uma vez por onda, nunca metade tocha e metade não, e é raro o bastante para
+continuar valendo a pena correr para casa quando a fumaça sobe no horizonte.
+
 ### O totem: virar Troll ou Minotauro por um instante
 
 De vez em quando — a cada minuto e meio, em média — um totem nasce sozinho

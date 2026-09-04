@@ -144,6 +144,13 @@ export interface Arte {
    */
   readonly invasor: Animacao;
   /**
+   * A onda rara do Torch Goblin — ver `Invasor.tocha` em shared/estado.ts e
+   * `INVASAO_CHANCE_DE_TOCHA` em shared/regras.ts. Mesma folha de corrida,
+   * personagem diferente: é o aviso visual de que esta onda, se chegar,
+   * incendeia a chapelaria em vez de só roubar.
+   */
+  readonly invasorTocha: Animacao;
+  /**
    * O ícone de cada carga no chão.
    *
    * `HTMLCanvasElement` entra na união porque o minério é repintado no
@@ -295,6 +302,7 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
   pede('urso_andando', 'recursos/urso_andando.png');
   pede('abelhao_voando', 'recursos/abelhao_voando.png');
   pede('goblin_invasor', 'recursos/goblin_invasor.png');
+  pede('torch_goblin_invasor', 'recursos/torch_goblin_invasor.png');
   for (const fera of ['troll', 'minotauro'] as const) {
     for (const estado of ['parado', 'andando', 'golpe'] as const) {
       pede(`fera_${fera}_${estado}`, `feras/${fera}_${estado}.png`);
@@ -423,6 +431,7 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
     urso: animacao(img('urso_andando'), 8),
     abelhao: animacao(img('abelhao_voando'), 10),
     invasor: animacao(img('goblin_invasor'), 8),
+    invasorTocha: animacao(img('torch_goblin_invasor'), 8),
     feras: {
       troll: {
         parado: animacao(img('fera_troll_parado'), 6),

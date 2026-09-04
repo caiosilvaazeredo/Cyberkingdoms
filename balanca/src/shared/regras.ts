@@ -341,6 +341,13 @@ export const INVASAO_RAIO_DE_AFUGENTAR = 50;
 /** A que distância da chapelaria o goblin consuma o roubo. */
 export const INVASAO_RAIO_DO_SAQUE = 40;
 
+/**
+ * A chance de uma onda de invasão nascer como Torch Goblin em vez do goblin
+ * comum. Sorteada uma vez por onda — o grupo inteiro chega do mesmo jeito,
+ * não metade tocha e metade não.
+ */
+export const INVASAO_CHANCE_DE_TOCHA = 0.2;
+
 // --- o modo fera -------------------------------------------------------------
 
 /**

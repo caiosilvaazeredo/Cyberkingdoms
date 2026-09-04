@@ -804,6 +804,15 @@ export function narrar(
         cor: '#ff9c4a',
       };
     case 'invasaoRoubou':
+      if (evento.tocha) {
+        return {
+          texto:
+            evento.classe === null
+              ? `os Torch Goblins incendiaram a chapelaria do ${NOME_DO_TIME[evento.time]}`
+              : `os Torch Goblins incendiaram a chapelaria do ${NOME_DO_TIME[evento.time]} e levaram um chapéu de ${perfil(evento.classe).nome}`,
+          cor: '#ff5a2e',
+        };
+      }
       return {
         texto:
           evento.classe === null
@@ -813,7 +822,7 @@ export function narrar(
       };
     case 'invasaoAfugentada':
       return {
-        texto: `o ${NOME_DO_TIME[evento.time]} afugentou os goblins`,
+        texto: `o ${NOME_DO_TIME[evento.time]} afugentou os ${evento.tocha ? 'Torch Goblins' : 'goblins'}`,
         cor: COR_CLARA[evento.time],
       };
     case 'saque':

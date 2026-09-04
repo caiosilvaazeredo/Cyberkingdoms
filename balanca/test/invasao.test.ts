@@ -90,6 +90,52 @@ describe('a invasão de goblins', () => {
     expect(partida.estado.estoque.azul).toEqual(estoqueAntes);
   });
 
+  it('a onda inteira nasce com a mesma tocha — nunca metade tocha e metade não', () => {
+    for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+      const partida = criarPartida(seed);
+      passarSegundos(partida, ATE_O_PRIMEIRO_AVISO + 1);
+      for (const time of TIMES) {
+        const daOnda = partida.estado.invasores.filter((i) => i.time === time);
+        expect(new Set(daOnda.map((i) => i.tocha)).size, `seed ${seed}/${time}`).toBeLessThanOrEqual(1);
+      }
+    }
+  });
+
+  it('de vez em quando, uma onda nasce em chamas — e na maioria das vezes não', () => {
+    let comTocha = 0;
+    let semTocha = 0;
+    for (let seed = 1; seed <= 40; seed++) {
+      const partida = criarPartida(seed);
+      passarSegundos(partida, ATE_O_PRIMEIRO_AVISO + 1);
+      const azul = partida.estado.invasores.find((i) => i.time === 'azul');
+      if (azul?.tocha) comTocha++;
+      else semTocha++;
+    }
+    expect(comTocha).toBeGreaterThan(0);
+    expect(semTocha).toBeGreaterThan(comTocha);
+  });
+
+  it('o evento de roubo carrega a mesma tocha do goblin que chegou', () => {
+    // Procura uma seed cuja onda do Azul nasça em chamas — determinístico,
+    // não sorte de execução.
+    let seedComTocha: number | null = null;
+    for (let seed = 1; seed <= 60; seed++) {
+      const partida = criarPartida(seed);
+      passarSegundos(partida, ATE_O_PRIMEIRO_AVISO + 1);
+      if (partida.estado.invasores.find((i) => i.time === 'azul')?.tocha) {
+        seedComTocha = seed;
+        break;
+      }
+    }
+    expect(seedComTocha).not.toBeNull();
+
+    const partida = criarPartida(seedComTocha!);
+    const eventos = passarSegundos(partida, ATE_O_PRIMEIRO_AVISO + 5);
+    const roubos = eventos.filter((e) => e.tipo === 'invasaoRoubou' && e.time === 'azul');
+    expect(roubos.length).toBeGreaterThan(0);
+    expect(roubos.every((e) => e.tipo === 'invasaoRoubou' && e.tocha === true)).toBe(true);
+  });
+
   it('nasce em chão livre, do lado de fora da própria chapelaria, em todo mapa', () => {
     for (const id of IDS_DOS_MAPAS) {
       const arena = criarArena(11, id);

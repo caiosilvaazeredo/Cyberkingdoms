@@ -424,8 +424,8 @@ export function empacotar(estado: Estado): Retrato {
       a.vivo ? 1 : 0,
       a.fugindo > 0 ? 1 : 0,
     ]),
-    // `[id, time, x, y]`
-    iv: estado.invasores.map((i) => [i.id, idxTime(i.time), arred(i.x), arred(i.y)]),
+    // `[id, time, x, y, tocha]`
+    iv: estado.invasores.map((i) => [i.id, idxTime(i.time), arred(i.x), arred(i.y), i.tocha ? 1 : 0]),
     tm: estado.totem ? [estado.totem.id, arred(estado.totem.x), arred(estado.totem.y)] : [],
     // `[time, minério, cunhando*10, bolsas]`
     cz: estado.casasDaMoeda.map((c) => [idxTime(c.time), c.minerio, arred(c.cunhando * 10), c.bolsas]),
@@ -584,6 +584,7 @@ export function desempacotar(r: Retrato, base: Estado): Estado {
     time: timePorIdx(l[1]!),
     x: l[2]!,
     y: l[3]!,
+    tocha: l[4] === 1,
   }));
 
   base.totem = r.tm.length === 0 ? null : { id: r.tm[0]!, x: r.tm[1]!, y: r.tm[2]! };

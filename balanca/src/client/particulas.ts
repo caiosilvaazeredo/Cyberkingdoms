@@ -92,6 +92,8 @@ const RECEITAS = {
   resgate: { folha: 'estouro', escala: 1.1, acima: 20 },
   obra: { folha: 'labareda', escala: 1.4, acima: 34 },
   saque: { folha: 'poeira', escala: 0.8, acima: 4 },
+  /** A onda rara do Torch Goblin, quando chega: a chapelaria pega fogo. */
+  incendio: { folha: 'labareda', escala: 1.9, acima: 30 },
 } as const satisfies Record<string, Receita>;
 
 /**

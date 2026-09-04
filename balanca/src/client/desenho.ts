@@ -598,11 +598,12 @@ export function desenharMundo(
     const py = v.paraTelaY(inv.y) + RAIO_UNIDADE * escala * 0.6;
     const chapelaria = arena.estrutura('chapelaria', inv.time);
     const paraEsquerda = chapelaria.x - inv.x < 0;
+    const anim = inv.tocha ? arte.invasorTocha : arte.invasor;
     pinturas.push({
       y: inv.y,
       pintar: () => {
         espelhado(ctx, px, paraEsquerda, () =>
-          quadro(ctx, arte.invasor, quadroEm(arte.invasor, tempo, inv.id * 5), px, py, escala * 0.85, 'centro'),
+          quadro(ctx, anim, quadroEm(anim, tempo, inv.id * 5), px, py, escala * 0.85, 'centro'),
         );
       },
     });

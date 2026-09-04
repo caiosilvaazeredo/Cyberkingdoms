@@ -59,6 +59,7 @@ import {
   INVASAO_AVISO_ANTES,
   INVASAO_INTERVALO,
   INVASAO_RAIO_DE_AFUGENTAR,
+  INVASAO_CHANCE_DE_TOCHA,
   INVASAO_RAIO_DO_SAQUE,
   INVASAO_TAMANHO,
   INVASAO_VELOCIDADE,
@@ -953,12 +954,21 @@ function moverInvasores(arena: Arena, estado: Estado): void {
       // O lado de fora: o mesmo lado que o anexo da obra e o guarda da
       // tesouraria usam no desenho, só para não nascer colado na porta.
       const ladoDeFora = time === 'azul' ? -1 : 1;
+      // Sorteado uma vez por onda, não por goblin — o mesmo compromisso da
+      // fera e do saque: semeado pelo tick e por um número que separa os dois
+      // reinos, para dois servidores rodando a mesma partida verem a mesma
+      // onda pegar fogo (ou não).
+      const dado = new DeterministicRandom(
+        ((estado.tick + 1) * 2654435761 + arena.seed * 97 + (time === 'azul' ? 11 : 17)) >>> 0,
+      );
+      const tocha = dado.nextDouble() < INVASAO_CHANCE_DE_TOCHA;
       for (let i = 0; i < INVASAO_TAMANHO; i++) {
         estado.invasores.push({
           id: estado.proximoId++,
           time,
           x: chapelaria.x + ladoDeFora * TILE * 3.5,
           y: chapelaria.y + (i - (INVASAO_TAMANHO - 1) / 2) * TILE,
+          tocha,
         });
       }
     }
@@ -974,7 +984,7 @@ function moverInvasores(arena: Arena, estado: Estado): void {
       }
     }
     if (afugentado) {
-      estado.eventos.push({ tipo: 'invasaoAfugentada', time: inv.time });
+      estado.eventos.push({ tipo: 'invasaoAfugentada', time: inv.time, tocha: inv.tocha });
       continue;
     }
 
@@ -991,7 +1001,7 @@ function moverInvasores(arena: Arena, estado: Estado): void {
         roubada = comEstoque[dado.nextIntBelow(comEstoque.length)]!;
         estoque[roubada]--;
       }
-      estado.eventos.push({ tipo: 'invasaoRoubou', time: inv.time, classe: roubada });
+      estado.eventos.push({ tipo: 'invasaoRoubou', time: inv.time, classe: roubada, tocha: inv.tocha });
       continue;
     }
 
