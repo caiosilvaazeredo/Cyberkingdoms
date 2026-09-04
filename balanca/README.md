@@ -593,6 +593,22 @@ demais — brigando na ponte, escoltando o baú — uma segunda coisa para
 perder de vista, e a decisão real que ela cobra é justamente essa: vale a
 pena parar o que se está fazendo para defender a casa?
 
+### O totem: virar Troll ou Minotauro por um instante
+
+De vez em quando — a cada minuto e meio, em média — um totem nasce sozinho
+numa pastagem neutra, sem dono, e fica lá até alguém chegar perto. Quem chega
+primeiro, dos dois reinos, vira Troll ou Minotauro na hora: maior, mais
+forte, mais devagar ou mais rápido conforme a fera sorteada, por vinte e
+cinco segundos.
+
+A classe por baixo não muda — é o mesmo compromisso do chapéu: tirar o
+chapéu de arqueiro não apaga o guerreiro por baixo dele, e sair da forma de
+fera devolve exatamente a vida e o golpe de antes, mesmo que a
+transformação acabe no meio de um combate ou com um golpe fatal. Ninguém
+escolhe a fera, ninguém escolhe se vira — o totem escolhe por sorteio
+semeado, e é raro o bastante para continuar sendo notícia toda vez que
+acontece.
+
 ### Os efeitos: o que aconteceu, e o que a construção faz
 
 O jogo mudava de estado sem avisar. Um aldeão virava arqueiro e o único sinal
@@ -608,6 +624,7 @@ nenhum.
 | entulhar o baú | labareda **no baú**, que é o que mudou de peso |
 | resgate | estouro grande em quem trouxe |
 | a obra subir de nível | labareda na chapelaria e "obra II" na cor do reino |
+| tocar o totem | vira Troll ou Minotauro na tela, e o nome sobe em vermelho |
 | correr | um bafo de poeira sob os pés — respingo, se for na beira d'água |
 
 Os efeitos nascem de **eventos do servidor**, e não de o desenho comparar dois

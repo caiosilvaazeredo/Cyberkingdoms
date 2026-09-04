@@ -1,4 +1,4 @@
-import type { Classe, Oficio } from './classes';
+import type { Classe, Fera, Oficio } from './classes';
 import type { IdDoModo } from './modos';
 import type { Time } from './regras';
 
@@ -64,6 +64,10 @@ export interface Unidade {
   entregas: number;
   /** Último comando confirmado, para o cliente reconciliar a previsão. */
   ultimoComando: number;
+  /** O Modo Fera: transformação passageira, não uma classe. Ver classes.ts. */
+  fera: Fera | null;
+  /** Segundos restantes de transformação. Só vale com `fera` não nulo. */
+  feraAte: number;
 }
 
 /**
@@ -171,6 +175,18 @@ export interface Invasor {
   y: number;
 }
 
+/**
+ * O totem do Modo Fera — um só por vez, de qualquer time que chegar primeiro.
+ *
+ * Sem dono até alguém pegar: `id` é só para o protocolo saber se é o mesmo
+ * totem entre dois retratos, não para saber de quem é.
+ */
+export interface Totem {
+  id: number;
+  x: number;
+  y: number;
+}
+
 export interface CasaDaMoeda {
   time: Time;
   minerio: number;
@@ -208,6 +224,8 @@ export type Evento =
   | { tipo: 'invasaoAvisada'; time: Time }
   | { tipo: 'invasaoRoubou'; time: Time; classe: Classe | null }
   | { tipo: 'invasaoAfugentada'; time: Time }
+  | { tipo: 'virouFera'; unidade: number; fera: Fera }
+  | { tipo: 'voltouAoNormal'; unidade: number }
   | { tipo: 'fim'; vencedor: Time | null };
 
 export interface Estado {
@@ -252,6 +270,10 @@ export interface Estado {
   invasores: Invasor[];
   /** Segundos até a próxima onda de goblins. Ver `moverInvasores`. */
   proximaInvasaoEm: number;
+  /** O totem do Modo Fera, quando existe um esperando ser pego. */
+  totem: Totem | null;
+  /** Segundos até o próximo totem nascer. Ver `moverTotem`. */
+  proximoTotemEm: number;
   casasDaMoeda: CasaDaMoeda[];
   oficinas: Oficina[];
   /** Chapéus ainda guardados, por time e classe. */

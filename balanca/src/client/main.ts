@@ -260,6 +260,7 @@ const espia = { quadros: 0, comandos: 0 };
   espia,
   tela: () => telas.atual,
   relogio: () => rede?.estado?.relogio ?? null,
+  totem: () => rede?.estado?.totem ?? null,
   ping: () => rede?.ping ?? null,
   sala: () => rede?.sala ?? null,
   sofa: () =>

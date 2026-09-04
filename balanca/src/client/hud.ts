@@ -1,4 +1,4 @@
-import { CLASSES_COM_CHAPEU, perfil, vidaMaxima } from '../shared/classes';
+import { CLASSES_COM_CHAPEU, perfil, PERFIS_DE_FERA, vidaMaximaDe } from '../shared/classes';
 import { nivelDe, bauDe, type Carga, type Estado, type Evento, type Unidade } from '../shared/estado';
 import { MAPAS } from '../shared/mapas';
 import { modoDe } from '../shared/modos';
@@ -129,7 +129,7 @@ function cartoesDoSofa(
 
   for (const { vaga, unidade: u } of locais) {
     const cor = COR_DA_VAGA[vaga % COR_DA_VAGA.length]!;
-    const max = vidaMaxima(u.classe, nivelDe(estado, u.time));
+    const max = vidaMaximaDe(u.classe, nivelDe(estado, u.time), u.fera);
     const margem = apertado ? 8 : 12;
     ctx.save();
     ctx.fillStyle = 'rgba(12, 14, 20, 0.75)';
@@ -342,7 +342,7 @@ function cartaoDaClasse(
 ): void {
   const p = perfil(eu.classe);
   const nivel = nivelDe(estado, eu.time);
-  const max = vidaMaxima(eu.classe, nivel);
+  const max = vidaMaximaDe(eu.classe, nivel, eu.fera);
   const x = 12;
   const y = altura - 108;
   // Num celular estreito o cartão não pode ser mais largo que a tela: 272 fixos
@@ -827,6 +827,13 @@ export function narrar(
       };
     case 'largouBau':
       return { texto: `o baú do ${NOME_DO_TIME[evento.bau]} caiu no chão` };
+    case 'virouFera':
+      return {
+        texto: `${nome(evento.unidade)} tocou o totem e virou ${PERFIS_DE_FERA[evento.fera].nome}!`,
+        cor: '#ff5a5a',
+      };
+    case 'voltouAoNormal':
+      return { texto: `${nome(evento.unidade)} voltou ao normal` };
     case 'fim':
       return {
         texto: evento.vencedor ? `fim — ${NOME_DO_TIME[evento.vencedor]} vence` : 'fim — empate',

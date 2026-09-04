@@ -1,5 +1,5 @@
 import { AGUA, PONTE, decoracaoEm, type Arena, type Estrutura } from '../shared/arena';
-import { perfil, vidaMaxima, type Classe } from '../shared/classes';
+import { perfil, vidaMaximaDe, PERFIS_DE_FERA, type Classe } from '../shared/classes';
 import { nivelDe, type Animal, type Estado, type Unidade } from '../shared/estado';
 import {
   CUSTO_DO_NIVEL,
@@ -589,6 +589,33 @@ export function desenharMundo(
     });
   }
 
+  // --- totem do Modo Fera ----------------------------------------------
+  // Raro e chamativo de propósito: um anel dourado que pulsa, sob as duas
+  // feras possíveis alternando — quem chegar primeiro decide qual delas vira.
+  if (estado.totem) {
+    const totem = estado.totem;
+    const px = v.paraTelaX(totem.x);
+    const py = v.paraTelaY(totem.y);
+    pinturas.push({
+      y: totem.y,
+      pintar: () => {
+        const raio = (20 + Math.sin(tempo * 3) * 4) * escala;
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 210, 90, 0.9)';
+        ctx.lineWidth = Math.max(2, 3 * escala);
+        ctx.setLineDash([7 * escala, 5 * escala]);
+        ctx.beginPath();
+        ctx.ellipse(px, py, raio, raio * 0.55, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+        const fera = Math.floor(tempo / 2) % 2 === 0 ? 'troll' : 'minotauro';
+        const anim = arte.feras[fera].parado;
+        quadro(ctx, anim, quadroEm(anim, tempo, totem.id * 3), px, py - RAIO_UNIDADE * escala * 0.6, escala * 0.9, 'centro');
+        rotulo(ctx, 'totem', px, py + 16 * escala, escala, '#ffd25a');
+      },
+    });
+  }
+
   // --- porco decorativo ----------------------------------------------
   {
     const p = posicaoDoPorco(arena, tempo);
@@ -1006,10 +1033,24 @@ export function folhaDaUnidade(
   u: Unidade,
   andando: boolean,
 ): FolhaEscolhida {
+  const espelhar = u.olharX < -0.1;
+
+  if (u.fera) {
+    // A fera ignora a classe por baixo inteiramente: enquanto dura a
+    // transformação, é o Troll ou o Minotauro que aparece na tela.
+    const folhasFera = arte.feras[u.fera];
+    const perfilFera = PERFIS_DE_FERA[u.fera];
+    if (u.golpe > 0) {
+      const progresso = 1 - Math.max(0, Math.min(1, u.golpe / perfilFera.duracaoDoGolpe));
+      return { anim: folhasFera.golpe, indice: quadroDaVez(folhasFera.golpe, progresso), espelhar };
+    }
+    const anim = andando ? folhasFera.andando : folhasFera.parado;
+    return { anim, indice: quadroEm(anim, performance.now() / 1000, u.id * 3), espelhar };
+  }
+
   const folhas = arte.unidades[u.time];
   const p = perfil(u.classe);
   const pega = (chave: string): Animacao | undefined => folhas[chave];
-  const espelhar = u.olharX < -0.1;
 
   if (u.golpe > 0) {
     const progresso = 1 - Math.max(0, Math.min(1, u.golpe / p.duracaoDoGolpe));
@@ -1123,7 +1164,7 @@ function desenharUnidade(
   const topo = py - 34 * escala;
 
   // Barra de vida só quando falta vida: doze barras cheias na tela é ruído.
-  const max = vidaMaxima(u.classe, nivelDe(estado, u.time));
+  const max = vidaMaximaDe(u.classe, nivelDe(estado, u.time), u.fera);
   if (u.vida < max) {
     const larguraBarra = 34 * escala;
     ctx.fillStyle = 'rgba(0,0,0,0.55)';

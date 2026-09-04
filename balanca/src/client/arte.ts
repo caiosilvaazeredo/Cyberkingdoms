@@ -1,4 +1,4 @@
-import { CLASSES, type Classe } from '../shared/classes';
+import { CLASSES, type Classe, type Fera } from '../shared/classes';
 import { TIMES, type Time } from '../shared/regras';
 
 /**
@@ -127,6 +127,14 @@ export interface Arte {
   readonly tartaruga: Animacao;
   readonly urso: Animacao;
   readonly abelhao: Animacao;
+  /**
+   * As folhas da fera — Troll e Minotauro, sem cor de time.
+   *
+   * `folhaDaUnidade` em desenho.ts olha `Unidade.fera` antes de olhar a
+   * classe: enquanto transformado, o retrato inteiro vem daqui, não do
+   * conjunto de folhas do time.
+   */
+  readonly feras: Readonly<Record<Fera, Readonly<Record<'parado' | 'andando' | 'golpe', Animacao>>>>;
   /**
    * O goblin da invasão — folha só, sem cor: ele não tem time.
    *
@@ -279,6 +287,11 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
   pede('urso_andando', 'recursos/urso_andando.png');
   pede('abelhao_voando', 'recursos/abelhao_voando.png');
   pede('goblin_invasor', 'recursos/goblin_invasor.png');
+  for (const fera of ['troll', 'minotauro'] as const) {
+    for (const estado of ['parado', 'andando', 'golpe'] as const) {
+      pede(`fera_${fera}_${estado}`, `feras/${fera}_${estado}.png`);
+    }
+  }
   for (const [chave, arquivo] of [
     ['fx:poeira', 'poeira'],
     ['fx:poeirada', 'poeirada'],
@@ -400,6 +413,18 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
     urso: animacao(img('urso_andando'), 8),
     abelhao: animacao(img('abelhao_voando'), 10),
     invasor: animacao(img('goblin_invasor'), 8),
+    feras: {
+      troll: {
+        parado: animacao(img('fera_troll_parado'), 6),
+        andando: animacao(img('fera_troll_andando'), 8),
+        golpe: animacao(img('fera_troll_golpe'), 10),
+      },
+      minotauro: {
+        parado: animacao(img('fera_minotauro_parado'), 6),
+        andando: animacao(img('fera_minotauro_andando'), 8),
+        golpe: animacao(img('fera_minotauro_golpe'), 12),
+      },
+    },
     recursos: {
       minerio: img('recurso_minerio'),
       madeira: img('recurso_madeira'),

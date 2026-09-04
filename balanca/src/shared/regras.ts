@@ -341,6 +341,25 @@ export const INVASAO_RAIO_DE_AFUGENTAR = 50;
 /** A que distância da chapelaria o goblin consuma o roubo. */
 export const INVASAO_RAIO_DO_SAQUE = 40;
 
+// --- o modo fera -------------------------------------------------------------
+
+/**
+ * O totem: um evento raro, dentro de qualquer modo, para pelo menos um
+ * jogador poder virar Troll ou Minotauro por um tempo.
+ *
+ * Não é uma classe nova (ver `Fera` em classes.ts) — é uma transformação
+ * passageira, que qualquer um pode pegar correndo até o meio do mapa.
+ */
+
+/** Segundos entre um totem sumir (pego ou não) e o próximo nascer. */
+export const TOTEM_INTERVALO = 90;
+
+/** Segundos de transformação, uma vez pego o totem. */
+export const FERA_DURACAO = 25;
+
+/** A que distância do totem uma unidade o pega, só de chegar perto. */
+export const TOTEM_RAIO_DE_PEGAR = 40;
+
 /** Segundos até outro bicho aparecer no lugar do que morreu. */
 export const ANIMAL_VOLTA_EM = 18;
 

@@ -289,3 +289,55 @@ export function vidaMaxima(classe: Classe, nivel: number): number {
 export function danoDe(classe: Classe, nivel: number): number {
   return perfil(classe).dano * bonusDoNivel(nivel);
 }
+
+/**
+ * A fera: uma transformação passageira, não uma classe.
+ *
+ * Não entra em `Classe` de propósito. `Classe` é uma união exaustiva que
+ * toda tabela do jogo precisa cobrir — chapelaria, estoque, protocolo,
+ * ícone de menu, elenco na tela inicial — e o Modo Fera é um evento raro
+ * dentro de **qualquer** modo, não uma oitava classe para vestir. Ele vive
+ * ao lado da classe (`Unidade.fera`), não no lugar dela: quem vira Troll
+ * continua sendo o mesmo aldeão ou guerreiro por baixo, e volta a ser
+ * exatamente isso quando o tempo acaba.
+ *
+ * Os números não escalam com o nível da obra: um Troll é um Troll, em
+ * qualquer partida, para o jogador sempre saber com o que está lidando.
+ */
+export type Fera = 'troll' | 'minotauro';
+
+export interface PerfilDeFera {
+  readonly nome: string;
+  readonly vida: number;
+  readonly velocidade: number;
+  readonly dano: number;
+  readonly alcance: number;
+  readonly cadencia: number;
+  readonly duracaoDoGolpe: number;
+}
+
+export const PERFIS_DE_FERA: Readonly<Record<Fera, PerfilDeFera>> = {
+  troll: {
+    nome: 'Troll',
+    vida: 340,
+    velocidade: 165,
+    dano: 34,
+    alcance: 70,
+    cadencia: 1.6,
+    duracaoDoGolpe: 0.9,
+  },
+  minotauro: {
+    nome: 'Minotauro',
+    vida: 300,
+    velocidade: 195,
+    dano: 30,
+    alcance: 62,
+    cadencia: 1.1,
+    duracaoDoGolpe: 0.6,
+  },
+};
+
+/** `vidaMaxima`, mas ciente de que a unidade pode estar transformada. */
+export function vidaMaximaDe(classe: Classe, nivel: number, fera: Fera | null): number {
+  return fera ? PERFIS_DE_FERA[fera].vida : vidaMaxima(classe, nivel);
+}

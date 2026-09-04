@@ -2,10 +2,13 @@ import {
   CLASSES_COM_CHAPEU,
   ESTOQUE_INICIAL,
   LERDEZA_DO_ALDEAO,
+  PERFIS_DE_FERA,
   danoDe,
   perfil,
   vidaMaxima,
+  vidaMaximaDe,
   type Classe,
+  type Fera,
 } from './classes';
 import {
   criarArena,
@@ -51,6 +54,7 @@ import {
   CUSTO_DO_NIVEL,
   DT,
   EMPURRAO_DO_BAU,
+  FERA_DURACAO,
   INVASAO_AVISO_ANTES,
   INVASAO_INTERVALO,
   INVASAO_RAIO_DE_AFUGENTAR,
@@ -61,6 +65,8 @@ import {
   NIVEL_MAXIMO,
   PAUSA_APOS_PONTO,
   POR_TIME,
+  TOTEM_INTERVALO,
+  TOTEM_RAIO_DE_PEGAR,
   chapeusDe,
   custoDaObraDe,
   pesoMaximoDe,
@@ -176,6 +182,8 @@ export function criarPartida(
         resgates: 0,
         entregas: 0,
         ultimoComando: 0,
+        fera: null,
+        feraAte: 0,
       };
       estado.unidades.push(u);
       porNoNascedouro(arena, estado, u);
@@ -271,6 +279,8 @@ function estadoInicial(arena: Arena, id: IdDoModo, porTime: number): Estado {
     // seguintes, porque a partida inteira já esperou o aquecimento antes de
     // este relógio começar a andar.
     proximaInvasaoEm: INVASAO_INTERVALO / 2,
+    totem: null,
+    proximoTotemEm: TOTEM_INTERVALO / 3,
     casasDaMoeda: TIMES.map((time) => ({ time, minerio: 0, cunhando: 0, bolsas: 1 })),
     oficinas: TIMES.map((time) => ({ time, madeira: 0, ouro: 0, nivel: 1 })),
     estoque,
@@ -342,6 +352,17 @@ function tick(
     u.recarga = Math.max(0, u.recarga - DT);
     u.golpe = Math.max(0, u.golpe - DT);
 
+    if (u.fera) {
+      u.feraAte -= DT;
+      if (u.feraAte <= 0) {
+        u.fera = null;
+        // A vida some proporcionalmente ao talo — ninguém guarda os
+        // trezentos e tantos pontos do Troll depois de virar gente nova.
+        u.vida = Math.min(u.vida, vidaMaxima(u.classe, nivelDe(estado, u.time)));
+        estado.eventos.push({ tipo: 'voltouAoNormal', unidade: u.id });
+      }
+    }
+
     if (!u.vivo) {
       u.renasceEm -= DT;
       if (u.renasceEm <= 0) reviver(arena, estado, u);
@@ -376,6 +397,7 @@ function tick(
   if (jogando) {
     moverAnimais(arena, estado);
     moverInvasores(arena, estado);
+    moverTotem(arena, estado);
     cuidarDosBaus(arena, estado);
     cunhar(estado);
     recomporJazidas(estado);
@@ -451,7 +473,7 @@ export function moverUnidade(
     u.olharY = my / n;
   }
 
-  let velocidade = perfil(u.classe).velocidade;
+  let velocidade = u.fera ? PERFIS_DE_FERA[u.fera].velocidade : perfil(u.classe).velocidade;
   if (u.carga !== 'nada' && u.carga !== 'bau') velocidade *= 0.95;
   if (u.carga === 'bau') {
     const p = estado.baus.find((x) => x.portador === u.id);
@@ -541,7 +563,7 @@ function usar(arena: Arena, estado: Estado, u: Unidade): void {
       return;
     }
     // Longe do cofre, a bolsa vira o que qualquer bolsa é: comida.
-    const maximo = vidaMaxima(u.classe, nivelDe(estado, meu));
+    const maximo = vidaMaximaDe(u.classe, nivelDe(estado, meu), u.fera);
     if (u.vida < maximo) {
       u.vida = Math.min(maximo, u.vida + CURA_DA_BOLSA);
       u.carga = 'nada';
@@ -671,7 +693,14 @@ function vestirDaChapelaria(estado: Estado, u: Unidade): void {
  */
 function trocarClasse(estado: Estado, u: Unidade, classe: Classe, cheio: boolean): void {
   const nivel = nivelDe(estado, u.time);
-  const razao = u.vida / vidaMaxima(u.classe, nivel);
+  const razao = u.vida / vidaMaximaDe(u.classe, nivel, u.fera);
+  // Vestir chapéu de verdade acaba a fera: o chapéu é uma escolha de
+  // classe, e as duas coisas por cima da mesma unidade só confundiriam
+  // qual conta de vida vale.
+  if (u.fera) {
+    u.fera = null;
+    estado.eventos.push({ tipo: 'voltouAoNormal', unidade: u.id });
+  }
   u.classe = classe;
   const maximo = vidaMaxima(classe, nivel);
   u.vida = cheio ? maximo : Math.max(1, Math.round(maximo * razao));
@@ -793,7 +822,7 @@ function entregarNaObra(estado: Estado, u: Unidade, carga: 'madeira' | 'ouro'): 
     // seria cruel deixar o time inteiro com a barra pela metade por isso.
     for (const outro of estado.unidades) {
       if (outro.time !== u.time || !outro.vivo) continue;
-      outro.vida = Math.min(vidaMaxima(outro.classe, oficina.nivel), outro.vida + 15);
+      outro.vida = Math.min(vidaMaximaDe(outro.classe, oficina.nivel, outro.fera), outro.vida + 15);
     }
   }
 }
@@ -975,6 +1004,53 @@ function moverInvasores(arena: Arena, estado: Estado): void {
     restantes.push(inv);
   }
   estado.invasores = restantes;
+}
+
+// --- o modo fera -------------------------------------------------------------
+
+/**
+ * O totem: nasce, espera, e o primeiro que chegar perto vira fera.
+ *
+ * ## Onde ele nasce
+ *
+ * Num pasto do meio — o mesmo ponto que já serve de âncora para o porco
+ * decorativo no cliente, aqui reaproveitado do lado do servidor: chão que a
+ * arena já garante seco e livre de decoração, sem precisar de uma busca
+ * nova. Não é o centro geométrico do mapa por causa do mesmo lago que
+ * atrapalharia a tartaruga se ela nascesse ali sem cuidado.
+ *
+ * ## Por que qualquer um pode pegar, dos dois times
+ *
+ * O totem não escolhe lado — os dois reinos correm pra ele igual. É a
+ * mesma decisão de design da invasão, espelhada: lá a ameaça não tem time,
+ * aqui o prêmio também não.
+ */
+function moverTotem(arena: Arena, estado: Estado): void {
+  estado.proximoTotemEm -= DT;
+  if (!estado.totem && estado.proximoTotemEm <= 0) {
+    const ancora = arena.pastos.find((p) => p.lado === null) ?? arena.pastos[0];
+    if (ancora) {
+      estado.totem = { id: estado.proximoId++, x: ancora.x, y: ancora.y };
+    }
+  }
+  if (!estado.totem) return;
+
+  for (const u of estado.unidades) {
+    if (!u.vivo || u.fera) continue;
+    if (!perto(u, estado.totem, TOTEM_RAIO_DE_PEGAR)) continue;
+
+    // Semeado pelo id de quem pegou e o tick — o mesmo compromisso do
+    // sorteio da ovelha e do roubo da invasão.
+    const dado = new DeterministicRandom(((u.id + 1) * 2654435761 + estado.tick) >>> 0);
+    const fera: Fera = dado.nextDouble() < 0.5 ? 'troll' : 'minotauro';
+    u.fera = fera;
+    u.feraAte = FERA_DURACAO;
+    u.vida = PERFIS_DE_FERA[fera].vida;
+    estado.eventos.push({ tipo: 'virouFera', unidade: u.id, fera });
+    estado.totem = null;
+    estado.proximoTotemEm = TOTEM_INTERVALO;
+    break;
+  }
 }
 
 /**
@@ -1220,8 +1296,36 @@ function terminar(estado: Estado, vencedor: Time | null): void {
 
 // --- combate ---------------------------------------------------------------
 
+/** O golpe corpo a corpo: meia-volta à frente, no alcance. Classe ou fera. */
+function golpearCorpoATodos(estado: Estado, u: Unidade, alcance: number, dano: number): void {
+  for (const alvo of estado.unidades) {
+    if (!alvo.vivo || alvo.time === u.time) continue;
+    const dx = alvo.x - u.x;
+    const dy = alvo.y - u.y;
+    const d = Math.hypot(dx, dy);
+    if (d > alcance + RAIO_UNIDADE) continue;
+    // Meia-volta à frente: bater em quem está nas costas transformaria o
+    // corpo a corpo num círculo de dano e apagaria o flanqueamento.
+    if (d > 0.001 && (dx / d) * u.olharX + (dy / d) * u.olharY < 0) continue;
+    ferir(estado, u, alvo, dano);
+  }
+  ferirBichosNoAlcance(estado, u, alcance + RAIO_UNIDADE, dano);
+}
+
 function atacar(arena: Arena, estado: Estado, u: Unidade): void {
   if (u.recarga > 0 || u.carga === 'bau') return;
+
+  // A fera ignora a classe por baixo — o Troll ataca como Troll, não como o
+  // aldeão ou guerreiro que a pessoa era antes de pegar o totem.
+  if (u.fera) {
+    const fp = PERFIS_DE_FERA[u.fera];
+    u.recarga = fp.cadencia;
+    u.golpe = fp.duracaoDoGolpe;
+    u.colhendoId = null;
+    golpearCorpoATodos(estado, u, fp.alcance, fp.dano);
+    return;
+  }
+
   const p = perfil(u.classe);
   u.recarga = p.cadencia;
   u.golpe = p.duracaoDoGolpe;
@@ -1235,18 +1339,7 @@ function atacar(arena: Arena, estado: Estado, u: Unidade): void {
   const dano = danoDe(u.classe, nivelDe(estado, u.time));
 
   if (p.ataque === 'corpo') {
-    for (const alvo of estado.unidades) {
-      if (!alvo.vivo || alvo.time === u.time) continue;
-      const dx = alvo.x - u.x;
-      const dy = alvo.y - u.y;
-      const d = Math.hypot(dx, dy);
-      if (d > p.alcance + RAIO_UNIDADE) continue;
-      // Meia-volta à frente: bater em quem está nas costas transformaria o
-      // corpo a corpo num círculo de dano e apagaria o flanqueamento.
-      if (d > 0.001 && (dx / d) * u.olharX + (dy / d) * u.olharY < 0) continue;
-      ferir(estado, u, alvo, dano);
-    }
-    ferirBichosNoAlcance(estado, u, p.alcance + RAIO_UNIDADE, dano);
+    golpearCorpoATodos(estado, u, p.alcance, dano);
     return;
   }
 
@@ -1315,14 +1408,14 @@ function curar(estado: Estado, u: Unidade): void {
   for (const o of estado.unidades) {
     if (!o.vivo || o.time !== u.time || o.id === u.id) continue;
     if (!perto(o, u, p.alcance)) continue;
-    const razao = o.vida / vidaMaxima(o.classe, nivel);
+    const razao = o.vida / vidaMaximaDe(o.classe, nivel, o.fera);
     if (razao < pior) {
       pior = razao;
       alvo = o;
     }
   }
   const quem = alvo ?? u;
-  quem.vida = Math.min(vidaMaxima(quem.classe, nivel), quem.vida + p.dano);
+  quem.vida = Math.min(vidaMaximaDe(quem.classe, nivel, quem.fera), quem.vida + p.dano);
   estado.eventos.push({ tipo: 'cura', clerigo: u.id, alvo: quem.id });
 }
 
@@ -1373,6 +1466,13 @@ function morrer(estado: Estado, algoz: Unidade, alvo: Unidade): void {
   alvo.vivo = false;
   alvo.vida = 0;
   alvo.mortes++;
+  // Cair também acaba a transformação — ninguém renasce Troll. `reviver`
+  // já usa `vidaMaxima` puro, sem `fera`, e é este limpo aqui que garante
+  // que a conta bate.
+  if (alvo.fera) {
+    alvo.fera = null;
+    estado.eventos.push({ tipo: 'voltouAoNormal', unidade: alvo.id });
+  }
   if (algoz.id !== alvo.id && algoz.time !== alvo.time) {
     algoz.abates++;
     // A contagem é do **time**, e não a soma dos abates de quem está em campo:

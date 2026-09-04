@@ -1,4 +1,4 @@
-import { CLASSES, CLASSES_COM_CHAPEU, type Classe } from './classes';
+import { CLASSES, CLASSES_COM_CHAPEU, type Classe, type Fera } from './classes';
 import type {
   Carga,
   Estado,
@@ -316,6 +316,8 @@ export interface Retrato {
   an: number[][];
   /** Os goblins da invasão. */
   iv: number[][];
+  /** O totem do Modo Fera — `[id, x, y]`, ou vazio quando não há nenhum. */
+  tm: number[];
   cz: number[][];
   /** A obra de cada time. */
   of: number[][];
@@ -328,6 +330,7 @@ const FASES: readonly Fase[] = ['aquecimento', 'jogando', 'ponto', 'fim'];
 const CARGAS: readonly Carga[] = ['nada', 'madeira', 'ouro', 'minerio', 'bolsa', 'bau'];
 const ITENS: readonly TipoDeItem[] = ['chapeu', 'bolsa', 'minerio', 'madeira', 'ouro'];
 const ONDES: readonly Bau['onde'][] = ['cofre', 'carregado', 'chao', 'resgatado'];
+const FERAS: readonly Fera[] = ['troll', 'minotauro'];
 
 const idxTime = (t: Time): number => TIMES.indexOf(t);
 const timePorIdx = (i: number): Time => TIMES[i]!;
@@ -350,11 +353,14 @@ export function empacotar(estado: Estado): Retrato {
     ],
     // `[id, time, classe, x, y, olharX*100, olharY*100, vida, vivo, carga,
     //   golpe*100, colheita*100, renasceEm*10, ultimoComando, abates, mortes,
-    //   depósitos, resgates, entregas]`
+    //   depósitos, resgates, entregas, fera]`
     //
     // `golpe` vai como centésimos de segundo, e não como um sim/não: é o
     // relógio da animação de ataque, e o cliente precisa dele para saber em que
     // ponto do arco da espada o boneco está.
+    //
+    // `fera` viaja separado de `classe` — o Modo Fera não troca a classe de
+    // ninguém, só empresta um retrato diferente por cima dela por um tempo.
     u: estado.unidades.map((u) => [
       u.id,
       idxTime(u.time),
@@ -375,6 +381,7 @@ export function empacotar(estado: Estado): Retrato {
       u.depositos,
       u.resgates,
       u.entregas,
+      u.fera === null ? -1 : FERAS.indexOf(u.fera),
     ]),
     // `[time, peso, onde, x, y, portador, ajudantes, voltaEm]`
     pr: estado.baus.map((p) => [
@@ -416,6 +423,7 @@ export function empacotar(estado: Estado): Retrato {
     ]),
     // `[id, time, x, y]`
     iv: estado.invasores.map((i) => [i.id, idxTime(i.time), arred(i.x), arred(i.y)]),
+    tm: estado.totem ? [estado.totem.id, arred(estado.totem.x), arred(estado.totem.y)] : [],
     // `[time, minério, cunhando*10, bolsas]`
     cz: estado.casasDaMoeda.map((c) => [idxTime(c.time), c.minerio, arred(c.cunhando * 10), c.bolsas]),
     // `[time, madeira, ouro, nivel]`
@@ -471,6 +479,8 @@ export function desempacotar(r: Retrato, base: Estado): Estado {
       resgates: 0,
       entregas: 0,
       ultimoComando: 0,
+      fera: null,
+      feraAte: 0,
     };
     u.time = timePorIdx(linha[1]!);
     u.classe = CLASSES[linha[2]!]!;
@@ -490,6 +500,8 @@ export function desempacotar(r: Retrato, base: Estado): Estado {
     u.depositos = linha[16]!;
     u.resgates = linha[17]!;
     u.entregas = linha[18]!;
+    const idxFera = linha[19]!;
+    u.fera = idxFera < 0 ? null : FERAS[idxFera]!;
     return u;
   });
 
@@ -570,6 +582,8 @@ export function desempacotar(r: Retrato, base: Estado): Estado {
     x: l[2]!,
     y: l[3]!,
   }));
+
+  base.totem = r.tm.length === 0 ? null : { id: r.tm[0]!, x: r.tm[1]!, y: r.tm[2]! };
 
   base.casasDaMoeda = r.cz.map((l) => ({
     time: timePorIdx(l[0]!),

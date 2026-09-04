@@ -1,4 +1,4 @@
-import { CLASSES_COM_CHAPEU, perfil, vidaMaxima, type Classe } from '../shared/classes';
+import { CLASSES_COM_CHAPEU, perfil, vidaMaximaDe, type Classe } from '../shared/classes';
 import { nivelDe, type Estado, type Unidade } from '../shared/estado';
 import type { FichaDeJogador, VotacaoAberta } from '../shared/protocolo';
 import type { Time } from '../shared/regras';
@@ -103,7 +103,7 @@ export class PainelDaEquipe {
     for (const u of time) {
       const barra = this.barras.get(u.id);
       if (!barra) continue;
-      const max = vidaMaxima(u.classe, nivelDe(d.estado, u.time));
+      const max = vidaMaximaDe(u.classe, nivelDe(d.estado, u.time), u.fera);
       const fracao = Math.max(0, Math.min(1, u.vida / max));
       barra.style.width = `${fracao * 100}%`;
       barra.dataset.baixa = String(!u.vivo || fracao < 0.35);

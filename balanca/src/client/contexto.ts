@@ -1,5 +1,5 @@
 import type { Arena } from '../shared/arena';
-import { LERDEZA_DO_ALDEAO, perfil, vidaMaxima } from '../shared/classes';
+import { LERDEZA_DO_ALDEAO, perfil, vidaMaximaDe } from '../shared/classes';
 import {
   casaDaMoedaDe,
   nivelDe,
@@ -67,7 +67,7 @@ export function dicaDeUso(arena: Arena, estado: Estado, u: Unidade): Dica | null
         ? { texto: 'a balança está no talo', alvo: cofre }
         : { texto: 'entulhar o baú — pesa nele, alivia o seu', alvo: cofre };
     }
-    if (u.vida < vidaMaxima(u.classe, nivelDe(estado, meu))) return { texto: 'gastar a bolsa consigo' };
+    if (u.vida < vidaMaximaDe(u.classe, nivelDe(estado, meu), u.fera)) return { texto: 'gastar a bolsa consigo' };
     return null;
   }
 
