@@ -911,3 +911,17 @@ No plano gratuito do Render, um serviço web hiberna depois de quinze minutos se
 acesso e leva quase um minuto para acordar — num jogo em rede, é a diferença
 entre entrar e desistir. Vale a pena o plano pago, ou aceitar que a primeira
 pessoa a entrar no dia espere.
+
+### A casca de PWA: a fundação para publicar fora do navegador
+
+`manifest.webmanifest`, um service worker mínimo (`public/sw.js`) e os ícones
+em `public/pwa/` não mudam nada do jogo em si — existem para o navegador (e,
+por baixo, o Android) reconhecer o site como instalável. É o único pré-requisito
+comum entre publicar na Google Play (via TWA, empacotando esta mesma PWA com o
+Bubblewrap) e embrulhar para a Steam (o cliente Electron carrega a mesma build).
+
+O service worker não tenta fazer o jogo funcionar offline — sem servidor não
+tem partida, e fingir que dá seria pior que não ter cache nenhum. A estratégia
+é *stale-while-revalidate*: serve do cache na hora (carregamento instantâneo
+numa segunda visita) e atualiza em paralelo, então uma versão nova do jogo
+aparece sozinha na próxima abertura.

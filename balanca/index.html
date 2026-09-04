@@ -17,6 +17,14 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2310121a'/%3E%3Crect x='4' y='13' width='11' height='7' fill='%233b7fe0'/%3E%3Crect x='17' y='13' width='11' height='7' fill='%23e04b3b'/%3E%3Crect x='15' y='8' width='2' height='17' fill='%23ffd479'/%3E%3C/svg%3E"
     />
+    <!--
+      A casca de PWA: existe para o Google Play aceitar o jogo embrulhado
+      num TWA (Trusted Web Activity), sem mudar nada do jogo em si. `apple-
+      touch-icon` é o mesmo ícone 512 — o Safari não lê `manifest.icons`.
+    -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#10121a" />
+    <link rel="apple-touch-icon" href="/pwa/icone-512.png" />
     <style>
       /*
         Duas peles, e elas não se misturam.
@@ -1776,5 +1784,19 @@
     </section>
 
     <script type="module" src="/src/client/main.ts"></script>
+    <!--
+      Registra o service worker fora do módulo do jogo de propósito: é
+      infraestrutura de instalação (PWA/TWA), não parte da simulação, e não
+      pode competir por atenção com um erro de verdade em `main.ts`. Falha
+      em silêncio em navegadores sem suporte — não é um requisito para jogar,
+      só para instalar.
+    -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+    </script>
   </body>
 </html>
