@@ -680,6 +680,24 @@ export class Telas {
       this.pedirParaJogar('montada', criar);
     });
 
+    // O Cerco é a mesma Regência — mesma sala montada, mesma escalada — só
+    // que com o modo 'cerco' no lugar do 'resgate': os três chefes neutros
+    // continuam sem saber que a campanha existe, e a campanha continua sem
+    // saber qual modo está rodando. É a composição que a tabela de modos
+    // promete, e não um caminho novo para testar.
+    pegar<HTMLButtonElement>('#jogar-cerco').addEventListener('click', () => {
+      const criar = salaConfiguravel({
+        modo: 'cerco',
+        mapa: 'sorteio',
+        porTime: 4,
+        bots: 0,
+        privada: true,
+        campanha: true,
+      });
+      this.montagemPendente = criar;
+      this.pedirParaJogar('montada', criar);
+    });
+
     pegar<HTMLButtonElement>('#assistir').addEventListener('click', () => {
       this.fecharFolhas();
       this.acoes.assistir();

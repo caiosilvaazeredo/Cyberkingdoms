@@ -45,7 +45,8 @@ export type IdDoModo =
   | 'abate'
   | 'covil'
   | 'caca'
-  | 'xama';
+  | 'xama'
+  | 'cerco';
 
 export interface Modo {
   readonly id: IdDoModo;
@@ -324,6 +325,34 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     temCaca: false,
     temCajado: true,
   },
+  /**
+   * O Cerco: os três chefes neutros de uma vez, e não um por partida.
+   *
+   * Guardião, Presa e cajado já nasceram desenhados para não saber uns dos
+   * outros — cada um lê só a própria chave do modo (`temGuardiao`/`temCaca`/
+   * `temCajado`) e nasce no próprio canto do mapa (`covilDe`/`tocaDaPresaDe`/
+   * `cajadoDe`, três cantos distintos de propósito). O Cerco não soma código
+   * novo: soma as três chaves na mesma linha da tabela, e o tick continua sem
+   * saber que este modo existe — a mesma garantia que qualquer outro modo
+   * daqui já tem.
+   */
+  cerco: {
+    id: 'cerco',
+    nome: 'Cerco',
+    lema: 'o Guardião, a Presa e o cajado do Xamã, todos ao mesmo tempo',
+    pontosParaVencer: PONTOS_PARA_VENCER,
+    duracao: DURACAO_DA_PARTIDA,
+    renascimentoBase: RENASCIMENTO_BASE,
+    vitoriaPorBalanca: false,
+    chapeusInfinitos: false,
+    animaisVoltam: true,
+    vitoriaPorObra: false,
+    abatesParaVencer: null,
+    pesoQueVence: PESO_MINIMO,
+    temGuardiao: true,
+    temCaca: true,
+    temCajado: true,
+  },
 };
 
 export const MODO_PADRAO: IdDoModo = 'resgate';
@@ -340,6 +369,7 @@ export const IDS_DOS_MODOS: readonly IdDoModo[] = [
   'covil',
   'caca',
   'xama',
+  'cerco',
 ];
 
 /**

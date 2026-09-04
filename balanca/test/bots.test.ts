@@ -113,6 +113,17 @@ describe('os bots', () => {
     expect(eventos.filter((e) => e === 'virouPorco').length).toBeGreaterThan(0);
   });
 
+  it('no Modo Cerco, os três chefes caem na mesma partida', () => {
+    // As três chaves ligadas ao mesmo tempo — o mesmo intervalo do Covil
+    // (280s) porque o Guardião é o mais lento a nascer e o mais caro a
+    // derrubar dos três; Presa e cajado, mais rápidos, cabem de sobra na
+    // mesma janela.
+    const { eventos } = jogar(280, 51, 'cerco');
+    expect(eventos.filter((e) => e === 'guardiaoCaiu').length).toBeGreaterThan(0);
+    expect(eventos.filter((e) => e === 'presaCaiu').length).toBeGreaterThan(0);
+    expect(eventos.filter((e) => e === 'virouPorco').length).toBeGreaterThan(0);
+  });
+
   it('nunca ficam presos dentro da água', () => {
     const { sala } = jogar(120, 24);
     for (const u of sala.estado.unidades) {
