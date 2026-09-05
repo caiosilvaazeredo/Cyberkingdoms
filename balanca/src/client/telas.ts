@@ -697,6 +697,21 @@ export class Telas {
       this.pedirParaJogar('montada', criar);
     });
 
+    // A Vigília: mesma sala montada, modo 'vigilia' — o Guardião só existe
+    // à noite, e o reino bandido continua correndo solto o tempo todo.
+    pegar<HTMLButtonElement>('#jogar-vigilia').addEventListener('click', () => {
+      const criar = salaConfiguravel({
+        modo: 'vigilia',
+        mapa: 'sorteio',
+        porTime: 4,
+        bots: 0,
+        privada: true,
+        campanha: true,
+      });
+      this.montagemPendente = criar;
+      this.pedirParaJogar('montada', criar);
+    });
+
     // O Cerco é a mesma Regência — mesma sala montada, mesma escalada — só
     // que com o modo 'cerco' no lugar do 'resgate': os três chefes neutros
     // continuam sem saber que a campanha existe, e a campanha continua sem

@@ -345,6 +345,8 @@ export type Evento =
   | { tipo: 'virouPorco'; unidade: number; algoz: Time }
   | { tipo: 'meninoReiLiberto'; time: Time }
   | { tipo: 'meninoReiGuardado'; time: Time }
+  | { tipo: 'noiteCaiu' }
+  | { tipo: 'diaChegou' }
   | { tipo: 'fim'; vencedor: Time | null };
 
 export interface Estado {
@@ -414,6 +416,14 @@ export interface Estado {
   proximoCajadoEm: number;
   /** O Menino Rei do Modo Fuga, quando existe um esperando ser libertado. */
   meninoRei: MeninoRei | null;
+  /**
+   * Se é noite agora, no Modo Vigília. Fora dele, sempre `false` — o resto
+   * do jogo não sabe que este campo existe. Ver `moverCicloDoDia` em
+   * pve.ts.
+   */
+  noite: boolean;
+  /** Segundos até o próximo amanhecer ou anoitecer. */
+  proximaTrocaDeCicloEm: number;
   /** Chapéus ainda guardados, por time e classe. */
   estoque: Record<Time, Record<Classe, number>>;
   /** Zerado a cada tick; o servidor despacha e esquece. */

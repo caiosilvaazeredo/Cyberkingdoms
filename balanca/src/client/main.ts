@@ -519,6 +519,31 @@ function laco(agora: number): void {
     particulas,
   );
 
+  // A noite do Modo Vigília: um véu por cima do mundo já desenhado, e não
+  // uma paleta de terreno própria — o resto do mapa (biomas, água, decoração)
+  // continua sendo o mesmo de sempre, só que visto no escuro. Mais forte nas
+  // bordas do que no centro porque é ali que se olha: a briga acontece perto
+  // do próprio boneco, e escurecer demais bem no meio da tela custaria
+  // legibilidade sem custar clima nenhum a mais.
+  if (estado?.noite) {
+    ctx.save();
+    const raioClaro = Math.min(largura, altura) * 0.3;
+    const raioEscuro = Math.max(largura, altura) * 0.75;
+    const veu = ctx.createRadialGradient(
+      largura / 2,
+      altura / 2,
+      raioClaro,
+      largura / 2,
+      altura / 2,
+      raioEscuro,
+    );
+    veu.addColorStop(0, 'rgba(10, 14, 40, 0.25)');
+    veu.addColorStop(1, 'rgba(4, 6, 20, 0.62)');
+    ctx.fillStyle = veu;
+    ctx.fillRect(0, 0, largura, altura);
+    ctx.restore();
+  }
+
   const eu = emCampo[0]?.unidade ?? null;
   if (estado && eu && estado.baus.length === 2) {
     const dica = dicaDeUso(rede.arena, estado, eu);

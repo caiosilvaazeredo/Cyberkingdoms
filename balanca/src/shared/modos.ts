@@ -47,7 +47,8 @@ export type IdDoModo =
   | 'caca'
   | 'xama'
   | 'cerco'
-  | 'fuga';
+  | 'fuga'
+  | 'vigilia';
 
 export interface Modo {
   readonly id: IdDoModo;
@@ -134,6 +135,12 @@ export interface Modo {
    * em partida.ts e `MENINO_REI_*`/`guardasParaLiberar` em regras.ts.
    */
   readonly temFuga: boolean;
+  /**
+   * A Vigília: um relógio de dia e noite. À noite, e só à noite, o
+   * Guardião existe — desperta ao anoitecer e foge, vivo ou morto, ao
+   * amanhecer. Ver `moverCicloDoDia` em pve.ts.
+   */
+  readonly temNoite: boolean;
 }
 
 /**
@@ -171,6 +178,7 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     temCaca: false,
     temCajado: false,
     temFuga: false,
+    temNoite: false,
   },
   assalto: {
     id: 'assalto',
@@ -189,6 +197,7 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     temCaca: false,
     temCajado: false,
     temFuga: false,
+    temNoite: false,
   },
   cofrecheio: {
     id: 'cofrecheio',
@@ -212,6 +221,7 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     temCaca: false,
     temCajado: false,
     temFuga: false,
+    temNoite: false,
   },
   chapelaria: {
     id: 'chapelaria',
@@ -230,6 +240,7 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     temCaca: false,
     temCajado: false,
     temFuga: false,
+    temNoite: false,
   },
   veiaseca: {
     id: 'veiaseca',
@@ -248,6 +259,7 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     temCaca: false,
     temCajado: false,
     temFuga: false,
+    temNoite: false,
   },
   obra: {
     id: 'obra',
@@ -266,6 +278,7 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     temCaca: false,
     temCajado: false,
     temFuga: false,
+    temNoite: false,
   },
   abate: {
     id: 'abate',
@@ -288,6 +301,7 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     temCaca: false,
     temCajado: false,
     temFuga: false,
+    temNoite: false,
   },
   covil: {
     id: 'covil',
@@ -306,6 +320,7 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     temCaca: false,
     temCajado: false,
     temFuga: false,
+    temNoite: false,
   },
   caca: {
     id: 'caca',
@@ -324,6 +339,7 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     temCaca: true,
     temCajado: false,
     temFuga: false,
+    temNoite: false,
   },
   xama: {
     id: 'xama',
@@ -342,6 +358,7 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     temCaca: false,
     temCajado: true,
     temFuga: false,
+    temNoite: false,
   },
   /**
    * O Cerco: os três chefes neutros de uma vez, e não um por partida.
@@ -371,6 +388,7 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     temCaca: true,
     temCajado: true,
     temFuga: false,
+    temNoite: false,
   },
   /**
    * A Fuga: um cativo neutro no meio do mapa — o Menino Rei — que qualquer
@@ -397,6 +415,32 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     temCaca: false,
     temCajado: false,
     temFuga: true,
+    temNoite: false,
+  },
+  /**
+   * A Vigília: dia e noite se alternam, e o Guardião só existe na noite —
+   * desperta ao anoitecer, foge (vivo ou morto) ao amanhecer. O resto do
+   * modo é o clássico: a economia do dia é o que decide se o time chega
+   * pronto para a próxima noite. Ver `moverCicloDoDia` em pve.ts.
+   */
+  vigilia: {
+    id: 'vigilia',
+    nome: 'Vigília',
+    lema: 'dia e noite se alternam — o Guardião só existe na escuridão',
+    pontosParaVencer: PONTOS_PARA_VENCER,
+    duracao: DURACAO_DA_PARTIDA,
+    renascimentoBase: RENASCIMENTO_BASE,
+    vitoriaPorBalanca: false,
+    chapeusInfinitos: false,
+    animaisVoltam: true,
+    vitoriaPorObra: false,
+    abatesParaVencer: null,
+    pesoQueVence: PESO_MINIMO,
+    temGuardiao: false,
+    temCaca: false,
+    temCajado: false,
+    temFuga: false,
+    temNoite: true,
   },
 };
 
@@ -416,6 +460,7 @@ export const IDS_DOS_MODOS: readonly IdDoModo[] = [
   'xama',
   'cerco',
   'fuga',
+  'vigilia',
 ];
 
 /**

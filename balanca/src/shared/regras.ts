@@ -531,6 +531,25 @@ export function guardasParaLiberar(porTime: number): number {
   return Math.max(1, Math.min(4, Math.round(porTime / 4)));
 }
 
+// --- o ciclo dia/noite (Modo Vigília) -----------------------------------------
+
+/**
+ * Segundos de dia — tempo de sobra para a economia correr solta antes do
+ * primeiro anoitecer. Mais curto que `GUARDIAO_ATRASO_INICIAL` (180s) de
+ * propósito: a Vigília é sobre o relógio apertando, não sobre esquecer que
+ * o modo existe.
+ */
+export const DIA_DURACAO = 140;
+
+/**
+ * Segundos de noite — metade do dia, porque a noite é a exceção que
+ * interrompe a rotina, não a rotina em si. O Guardião do Covil mede cerca
+ * de cem segundos de vida útil de propósito: nascer, alguém notar, chegar
+ * e baixar a vida toda. Uma noite mais curta que isso tornaria o abate uma
+ * loteria, e não a corrida contra o relógio que o modo promete.
+ */
+export const NOITE_DURACAO = 70;
+
 /** Segundos até outro bicho aparecer no lugar do que morreu. */
 export const ANIMAL_VOLTA_EM = 18;
 

@@ -16,6 +16,7 @@ import {
   CANHAO_DANO,
   CANHAO_RAIO,
   CANHAO_VELOCIDADE_DA_BOLA,
+  DIA_DURACAO,
   DT,
   FERA_DURACAO,
   GUARDIAO_BUFF_DURACAO,
@@ -31,6 +32,7 @@ import {
   INVASAO_RAIO_DO_SAQUE_SLINGSHOT,
   INVASAO_TAMANHO,
   INVASAO_VELOCIDADE,
+  NOITE_DURACAO,
   PRESA_BUFF_DURACAO,
   PRESA_CADENCIA_DE_ATAQUE,
   PRESA_DANO,
@@ -471,4 +473,37 @@ export function nascerMeninoRei(arena: Arena, estado: Estado): void {
   if (estado.meninoRei) return;
   const local = covilDe(arena);
   estado.meninoRei = { id: estado.proximoId++, x: local.x, y: local.y };
+}
+
+// --- o ciclo dia/noite (Modo Vigília) -----------------------------------------
+
+/**
+ * O relógio de dia e noite: alterna `estado.noite`, e é só ele quem decide
+ * quando o Guardião pode existir.
+ *
+ * ## Por que não é um Guardião novo
+ *
+ * `moverGuardiao` já sabe nascer, bater em quem chega perto e cair para
+ * quem baixa a vida toda — o comportamento inteiro que um chefe precisa.
+ * Reescrevê-lo para a Vigília seria duplicar as mesmas linhas para
+ * significar a mesma coisa. O que a Vigília muda é só **quando** ele
+ * existe: à noite ele acorda na hora (`proximoGuardiaoEm = 0`, e o
+ * chamador em partida.ts chama `moverGuardiao` no mesmo tick); ao
+ * amanhecer, ele foge da luz — vivo ou morto, o dia o apaga
+ * (`estado.guardiao = null`), e quem não terminou a caçada tenta de novo
+ * na próxima noite.
+ */
+export function moverCicloDoDia(estado: Estado): void {
+  estado.proximaTrocaDeCicloEm -= DT;
+  if (estado.proximaTrocaDeCicloEm > 0) return;
+
+  estado.noite = !estado.noite;
+  estado.proximaTrocaDeCicloEm = estado.noite ? NOITE_DURACAO : DIA_DURACAO;
+  estado.eventos.push({ tipo: estado.noite ? 'noiteCaiu' : 'diaChegou' });
+
+  if (estado.noite) {
+    estado.proximoGuardiaoEm = 0;
+  } else {
+    estado.guardiao = null;
+  }
 }

@@ -132,6 +132,16 @@ describe('os bots', () => {
     expect(eventos.filter((e) => e === 'meninoReiLiberto').length).toBeGreaterThan(0);
   });
 
+  it('no Modo Vigília, dia e noite se alternam e o Guardião cai à noite', () => {
+    // Dia (140s) + noite (70s) — 450s cobre duas noites inteiras, tempo de
+    // sobra para os bots notarem o Guardião (raio 900) e baixarem a vida
+    // toda dele antes do amanhecer apagar a caçada.
+    const { eventos } = jogar(450, 51, 'vigilia');
+    expect(eventos.filter((e) => e === 'noiteCaiu').length).toBeGreaterThan(0);
+    expect(eventos.filter((e) => e === 'diaChegou').length).toBeGreaterThan(0);
+    expect(eventos.filter((e) => e === 'guardiaoCaiu').length).toBeGreaterThan(0);
+  });
+
   it('nunca ficam presos dentro da água', () => {
     const { sala } = jogar(120, 24);
     for (const u of sala.estado.unidades) {

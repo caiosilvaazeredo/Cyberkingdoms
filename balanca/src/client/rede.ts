@@ -588,6 +588,8 @@ function estadoVazio(modo: IdDoModo, porTime: number): Estado {
     cajado: null,
     proximoCajadoEm: 0,
     meninoRei: null,
+    noite: false,
+    proximaTrocaDeCicloEm: 0,
     estoque,
     eventos: [],
     vencedor: null,

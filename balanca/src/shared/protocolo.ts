@@ -362,6 +362,12 @@ export interface Retrato {
   cj: number[];
   /** O Menino Rei do Modo Fuga — `[id, x, y]`, ou vazio quando não há nenhum. */
   mr: number[];
+  /**
+   * Se é noite agora, no Modo Vigília — `[1]` ou `[0]`, vazio fora dele
+   * (`estado.noite` nunca sai de `false` em nenhum outro modo, então a
+   * conta já sai vazia sozinha).
+   */
+  nt: number[];
   cz: number[][];
   /** A obra de cada time. */
   of: number[][];
@@ -510,6 +516,7 @@ export function empacotar(estado: Estado): Retrato {
     mr: estado.meninoRei
       ? [estado.meninoRei.id, arred(estado.meninoRei.x), arred(estado.meninoRei.y)]
       : [],
+    nt: estado.noite ? [1] : [],
     // `[time, minério, cunhando*10, bolsas]`
     cz: estado.casasDaMoeda.map((c) => [idxTime(c.time), c.minerio, arred(c.cunhando * 10), c.bolsas]),
     // `[time, madeira, ouro, nivel]`
@@ -706,6 +713,8 @@ export function desempacotar(r: Retrato, base: Estado): Estado {
   base.cajado = r.cj.length === 0 ? null : { id: r.cj[0]!, x: r.cj[1]!, y: r.cj[2]! };
 
   base.meninoRei = r.mr.length === 0 ? null : { id: r.mr[0]!, x: r.mr[1]!, y: r.mr[2]! };
+
+  base.noite = r.nt[0] === 1;
 
   base.casasDaMoeda = r.cz.map((l) => ({
     time: timePorIdx(l[0]!),

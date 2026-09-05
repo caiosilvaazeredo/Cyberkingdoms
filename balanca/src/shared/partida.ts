@@ -31,6 +31,7 @@ import {
   ferirPresa,
   moverCajado,
   moverCanhoes,
+  moverCicloDoDia,
   moverGuardiao,
   moverInvasores,
   moverPresa,
@@ -56,6 +57,7 @@ import {
   CHAPEU_VOLTA_EM,
   CURA_DA_BOLSA,
   CUSTO_DO_NIVEL,
+  DIA_DURACAO,
   DT,
   EMPURRAO_DO_BAU,
   GUARDIAO_ATRASO_INICIAL,
@@ -304,6 +306,8 @@ function estadoInicial(arena: Arena, id: IdDoModo, porTime: number): Estado {
     cajado: null,
     proximoCajadoEm: CAJADO_INTERVALO / 3,
     meninoRei: null,
+    noite: false,
+    proximaTrocaDeCicloEm: DIA_DURACAO,
     estoque,
     eventos: [],
     vencedor: null,
@@ -446,6 +450,12 @@ function tick(
     // Só na Fuga: o Menino Rei nasce uma vez e espera — a libertação mora
     // em `usar()`, mais abaixo.
     if (modoDe(estado.modo).temFuga) nascerMeninoRei(arena, estado);
+    // Só na Vigília: o relógio de dia/noite decide quando o Guardião pode
+    // existir — ver `moverCicloDoDia`.
+    if (modoDe(estado.modo).temNoite) {
+      moverCicloDoDia(estado);
+      if (estado.noite) moverGuardiao(arena, estado);
+    }
     cuidarDosBaus(arena, estado);
     cunhar(estado);
     recomporJazidas(estado);

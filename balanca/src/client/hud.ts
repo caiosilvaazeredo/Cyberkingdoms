@@ -1071,6 +1071,10 @@ export function narrar(
       // olhando o próprio campo; não precisa de uma linha para cada tapa na
       // porta trancada.
       return null;
+    case 'noiteCaiu':
+      return { texto: 'a noite cai — o Guardião acordou', cor: '#8f9bd6' };
+    case 'diaChegou':
+      return { texto: 'o dia chega — o Guardião foge da luz', cor: '#ffd479' };
     case 'fim':
       return {
         texto: evento.vencedor ? `fim — ${NOME_DO_TIME[evento.vencedor]} vence` : 'fim — empate',
