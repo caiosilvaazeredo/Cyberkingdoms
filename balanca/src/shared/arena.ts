@@ -189,6 +189,14 @@ export function criarArena(seed: number, idDoMapa: IdDoMapa = MAPA_PADRAO): Aren
     }
   }
 
+  // A árvore que se derruba usa o mesmo par de espécies da árvore só de
+  // enfeite (`ESPECIES_DE_ARVORE_DO_MAPA`) — sem isso, a jazida no meio do
+  // mapa continuaria sorteando entre as quatro folhas, e o jogador veria a
+  // mata ao redor combinar mas a árvore que ele corta destoar dela.
+  const [especieA, especieB] = ESPECIES_DE_ARVORE_DO_MAPA[idDoMapa];
+  const especieDaJazida = (tx: number, ty: number, tipo: TipoDeJazida): number =>
+    tipo === 'arvore' ? ((tx + ty) % 2 === 0 ? especieA : especieB) : (tx + ty) % 4;
+
   const jazidas: Jazida[] = [];
   let idJazida = 0;
   for (const time of TIMES) {
@@ -198,13 +206,19 @@ export function criarArena(seed: number, idDoMapa: IdDoMapa = MAPA_PADRAO): Aren
         id: idJazida++,
         tipo,
         lado: time,
-        variante: (tx + ty) % 4,
+        variante: especieDaJazida(tx, ty, tipo),
         ...centro(cx, ty),
       });
     }
   }
   for (const [tx, ty, tipo] of mapa.jazidasDoMeio) {
-    jazidas.push({ id: idJazida++, tipo, lado: null, variante: (tx + ty) % 4, ...centro(tx, ty) });
+    jazidas.push({
+      id: idJazida++,
+      tipo,
+      lado: null,
+      variante: especieDaJazida(tx, ty, tipo),
+      ...centro(tx, ty),
+    });
   }
 
   const pastos: Pasto[] = [];
@@ -502,6 +516,33 @@ export function cajadoDe(arena: Arena): { x: number; y: number } {
 }
 
 /**
+ * As duas espécies de árvore de cada relevo — sempre um par, nunca as quatro.
+ *
+ * As quatro folhas do pacote (`arte.arvores`) misturam duas coisas que não se
+ * parecem nada: um pinheiro escuro e uma copa redonda em tom de outono. As
+ * duas sozinhas formam uma mata crível; as quatro juntas, no mesmo relevo,
+ * formam um cartão-postal de nenhum lugar — pinheiro do norte ao lado de
+ * árvore de outono, na mesma moita. O par por mapa é o que faz cada relevo
+ * parecer uma mata só, e não um catálogo de espécies.
+ *
+ * Os índices continuam valendo tanto para `arte.arvores` (a árvore em pé)
+ * quanto para `arte.tocos` (o toco depois de derrubada): o pacote já as
+ * numerou em pares casados, e é por isso que basta escolher o par aqui — o
+ * toco de qualquer árvore listada continua sendo o toco dela mesma.
+ */
+export const ESPECIES_DE_ARVORE_DO_MAPA: Readonly<Record<IdDoMapa, readonly [number, number]>> = {
+  // Pinheiros: mata de rio e desfiladeiro de montanha — as duas travessias
+  // mais fechadas da lista, onde uma conífera escura combina com o aperto.
+  vau: [0, 1],
+  desfiladeiro: [0, 1],
+  // Copa redonda: parque de castelo, campo aberto e ilha — o resto do
+  // elenco, mais ensolarado, sem pinheiro nenhum.
+  corte: [2, 3],
+  arquipelago: [2, 3],
+  planicie: [2, 3],
+};
+
+/**
  * A conta do mato: onde ele pode nascer, e o que nasce.
  *
  * Chamada só por `criarArena`, uma vez por tile. As exclusões são de jogo, não
@@ -529,15 +570,22 @@ function calcularDecoracao(arena: Arena, tx: number, ty: number): DecoracaoNoCha
   const sorte = dado.nextDouble();
   const variante = dado.nextIntBelow(4);
   const deslocamento = dado.nextIntBelow(8);
-  if (sorte < 0.07) return { tipo: 'arvore', variante, deslocamento };
+  if (sorte < 0.07) {
+    // A posição e a densidade da árvore são as mesmas em todo mapa de
+    // propósito (um jogador que decorou onde fica árvore não pode ser
+    // traído por outro relevo) — só a espécie muda, e por um par fixo do
+    // relevo, não pelo sorteio do tile. Ver `ESPECIES_DE_ARVORE_DO_MAPA`.
+    const [a, b] = ESPECIES_DE_ARVORE_DO_MAPA[arena.mapa];
+    return { tipo: 'arvore', variante: variante % 2 === 0 ? a : b, deslocamento };
+  }
   if (sorte < 0.12) return { tipo: 'arbusto', variante, deslocamento };
   if (sorte < 0.15) return { tipo: 'pedra', variante, deslocamento };
   // O Desfiladeiro é o único mapa com uma única ponte por castelo — a
   // travessia mais disputada da lista — e é o único que ganha ossos no chão
-  // por isso: o resto do mato é o mesmo em todo mapa de propósito (um jogador
-  // que decorou onde fica árvore não pode ser traído por outro relevo), mas um
-  // biome por mapa também é o que a arte pede, e o Desfiladeiro é onde a
-  // leitura "aqui já morreu muita gente" faz sentido sem confundir ninguém.
+  // por isso: o resto do mato (arbusto, pedra) é o mesmo em todo mapa de
+  // propósito, mas um bioma por mapa também é o que a arte pede, e o
+  // Desfiladeiro é onde a leitura "aqui já morreu muita gente" faz sentido
+  // sem confundir ninguém.
   if (arena.mapa === 'desfiladeiro' && sorte < 0.19) {
     return { tipo: 'ossos', variante: variante % 3, deslocamento };
   }

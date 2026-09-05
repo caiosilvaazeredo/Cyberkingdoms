@@ -216,6 +216,9 @@ export function enquadrarGrupo(
  */
 const ZOOM_MINIMO_DO_SOFA = 0.3;
 
+/** A partir de que distância um arbusto deixa de notar quem passou perto. */
+const RAIO_DO_ARBUSTO_TOCADO = TILE * 1.3;
+
 /** Ajusta a câmera ao tamanho da tela e a prende dentro da arena. */
 export function seguir(
   camera: Camera,
@@ -397,9 +400,40 @@ export function desenharMundo(
         const banco = deco.tipo === 'arvore' ? arte.arvores : arte.arbustos;
         const anim = banco[deco.variante % banco.length]!;
         const tamanho = deco.tipo === 'arvore' ? escala * 0.85 : escala;
+        // O arbusto sente quem passa perto: um tremor que cresce conforme a
+        // unidade viva mais próxima se aproxima e some (`Math.max(0, 1 -
+        // d/raio)`) exatamente no raio, sem soletar — ao contrário de mudar a
+        // velocidade da folha (que pularia de quadro no instante em que
+        // alguém entra ou sai do raio), o ângulo nasce e morre em zero dos
+        // dois lados, e por isso não pisca. É a mesma ideia do empurrão nos
+        // bichos decorativos (`empurraoDeAlerta`) — "o cenário te notou" —
+        // só que na planta em vez do bicho.
+        const bx = tx * TILE + TILE / 2;
+        const by = ty * TILE + TILE / 2;
+        let proximidade = 0;
+        if (deco.tipo === 'arbusto') {
+          for (const u of estado?.unidades ?? []) {
+            if (!u.vivo) continue;
+            const d = Math.hypot(u.x - bx, u.y - by) / RAIO_DO_ARBUSTO_TOCADO;
+            if (d < 1 && 1 - d > proximidade) proximidade = 1 - d;
+          }
+        }
         pinturas.push({
           y: ty * TILE,
-          pintar: () => quadro(ctx, anim, quadroEm(anim, tempo, deco.deslocamento), px, py, tamanho),
+          pintar: () => {
+            const quadroAtual = quadroEm(anim, tempo, deco.deslocamento);
+            if (proximidade <= 0) {
+              quadro(ctx, anim, quadroAtual, px, py, tamanho);
+              return;
+            }
+            const angulo = Math.sin(tempo * 14) * 0.09 * proximidade;
+            ctx.save();
+            ctx.translate(px, py);
+            ctx.rotate(angulo);
+            ctx.translate(-px, -py);
+            quadro(ctx, anim, quadroAtual, px, py, tamanho);
+            ctx.restore();
+          },
         });
       }
     }

@@ -1,5 +1,6 @@
 import { AGUA, PONTE, type Arena } from '../shared/arena';
 import type { Animal, Unidade } from '../shared/estado';
+import type { IdDoMapa } from '../shared/mapas';
 import { TILE } from './tileset';
 
 /**
@@ -281,11 +282,30 @@ export function posicaoDaVilaDeGnomos(arena: Arena): { x: number; y: number } | 
   return achado;
 }
 
+/**
+ * Quais bichos de mato rondam a árvore do meio, por relevo.
+ *
+ * Urso e abelhão são bicho de campo aberto — Corte e Planície, os dois
+ * relevos de grama. Vau e Desfiladeiro são travessia de água e passagem de
+ * pedra: cobra sozinha combina com os dois, sem o urso que pertence à
+ * campina. O Arquipélago já tem a própria fauna — tartaruga, tubarão,
+ * cavalo-marinho — e não precisa de nenhum bicho de mata para se
+ * diferenciar do resto da lista.
+ */
+const BICHOS_DE_MATO_DO_MAPA: Readonly<Record<IdDoMapa, readonly ('urso' | 'abelhao' | 'cobra')[]>> = {
+  corte: ['urso', 'abelhao'],
+  planicie: ['urso', 'abelhao'],
+  vau: ['cobra'],
+  desfiladeiro: ['cobra'],
+  arquipelago: [],
+};
+
 export function posicaoDoUrso(
   arena: Arena,
   tempo: number,
   unidades?: readonly Pick<Unidade, 'x' | 'y' | 'vivo'>[],
 ): { x: number; y: number; paraEsquerda: boolean } | null {
+  if (!BICHOS_DE_MATO_DO_MAPA[arena.mapa].includes('urso')) return null;
   const ancora = ancoraDoMato(arena);
   if (!ancora) return null;
   const fase = (arena.seed % 500) * 0.017;
@@ -302,6 +322,7 @@ export function posicaoDoAbelhao(
   arena: Arena,
   tempo: number,
 ): { x: number; y: number; paraEsquerda: boolean } | null {
+  if (!BICHOS_DE_MATO_DO_MAPA[arena.mapa].includes('abelhao')) return null;
   const ancora = ancoraDoMato(arena);
   if (!ancora) return null;
   // Fase própria — mesma âncora do urso, mas deslocada, para o par não
@@ -320,6 +341,7 @@ export function posicaoDaCobra(
   tempo: number,
   unidades?: readonly Pick<Unidade, 'x' | 'y' | 'vivo'>[],
 ): { x: number; y: number; paraEsquerda: boolean } | null {
+  if (!BICHOS_DE_MATO_DO_MAPA[arena.mapa].includes('cobra')) return null;
   const ancora = ancoraDoMato(arena);
   if (!ancora) return null;
   const fase = (arena.seed % 400) * 0.019 + 6;

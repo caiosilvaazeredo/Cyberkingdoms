@@ -4,6 +4,7 @@ import {
   criarArena,
   decoracaoEm,
   espelharEm,
+  ESPECIES_DE_ARVORE_DO_MAPA,
   resolverColisao,
   type TipoDeEstrutura,
 } from '../src/shared/arena';
@@ -44,6 +45,17 @@ describe.each(IDS_DOS_MAPAS)('o mapa %s', (id) => {
     expect(arena.pastos.filter((p) => p.lado === 'azul')).toHaveLength(
       arena.pastos.filter((p) => p.lado === 'vermelho').length,
     );
+  });
+
+  it('a árvore que se derruba é sempre uma das duas espécies do relevo', () => {
+    // O par é o que impede a mata de virar um catálogo de espécies — ver
+    // `ESPECIES_DE_ARVORE_DO_MAPA`. Este teste é o que pega a regressão de
+    // alguém trocar `% 2` por `% 4` num dos dois lugares que leem o par e
+    // esquecer do outro.
+    const par = ESPECIES_DE_ARVORE_DO_MAPA[id];
+    for (const j of arena.jazidas.filter((j) => j.tipo === 'arvore')) {
+      expect(par).toContain(j.variante);
+    }
   });
 
   it('é espelhada: o que vale para um reino vale para o outro', () => {
