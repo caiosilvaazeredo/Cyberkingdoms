@@ -35,6 +35,7 @@ import {
   moverInvasores,
   moverPresa,
   moverTotem,
+  nascerMeninoRei,
 } from './pve';
 import type { Comando } from './protocolo';
 import { semeadoPor } from './rng';
@@ -78,6 +79,8 @@ import {
   PESO_POR_BOLSA,
   BAU_VOLTA_EM,
   CANHAO_CADENCIA,
+  MENINO_REI_RAIO_DE_GUARDA,
+  MENINO_REI_RAIO_DE_LIBERTAR,
   RAIO_UNIDADE,
   RENASCIMENTO_POR_PONTO,
   TEMPO_DE_CUNHAGEM,
@@ -85,6 +88,7 @@ import {
   TILE,
   TIMES,
   carregadoresPara,
+  guardasParaLiberar,
   outroTime,
   perto,
   velocidadeCarregando,
@@ -299,6 +303,7 @@ function estadoInicial(arena: Arena, id: IdDoModo, porTime: number): Estado {
     buffDaPresa: { azul: 0, vermelho: 0 },
     cajado: null,
     proximoCajadoEm: CAJADO_INTERVALO / 3,
+    meninoRei: null,
     estoque,
     eventos: [],
     vencedor: null,
@@ -438,6 +443,9 @@ function tick(
     if (modoDe(estado.modo).temCaca) moverPresa(arena, estado);
     // Só no Xamã: o cajado nasce, e tocar já basta — ver `moverCajado`.
     if (modoDe(estado.modo).temCajado) moverCajado(arena, estado);
+    // Só na Fuga: o Menino Rei nasce uma vez e espera — a libertação mora
+    // em `usar()`, mais abaixo.
+    if (modoDe(estado.modo).temFuga) nascerMeninoRei(arena, estado);
     cuidarDosBaus(arena, estado);
     cunhar(estado);
     recomporJazidas(estado);
@@ -642,6 +650,24 @@ function usar(arena: Arena, estado: Estado, u: Unidade): void {
       transformarEmPorco(estado, u, alvo);
       return;
     }
+  }
+
+  // O Menino Rei (Modo Fuga): apertar "E" perto o bastante vence a partida
+  // na hora — mas só quando a guarda inimiga ao redor dele já foi limpa.
+  // Antes de qualquer outra coisa de mãos vazias, porque libertar é sempre
+  // a prioridade de quem consegue: um chapéu no chão não compete com o
+  // objetivo do modo.
+  if (modoDe(estado.modo).temFuga && estado.meninoRei && perto(u, estado.meninoRei, MENINO_REI_RAIO_DE_LIBERTAR)) {
+    const guardas = estado.unidades.filter(
+      (o) => o.vivo && o.time === inimigo && perto(o, estado.meninoRei!, MENINO_REI_RAIO_DE_GUARDA),
+    ).length;
+    if (guardas < guardasParaLiberar(estado.porTime)) {
+      estado.eventos.push({ tipo: 'meninoReiLiberto', time: meu });
+      terminar(estado, meu);
+    } else {
+      estado.eventos.push({ tipo: 'meninoReiGuardado', time: meu });
+    }
+    return;
   }
 
   // Mãos vazias. Primeiro o que está no chão, que é o que o jogador vê embaixo

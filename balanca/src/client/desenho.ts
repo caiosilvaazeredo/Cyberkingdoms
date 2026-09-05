@@ -750,6 +750,43 @@ export function desenharMundo(
     });
   }
 
+  // --- menino rei do Modo Fuga -------------------------------------------
+  // O mesmo círculo tracejado do totem e do cajado — um objetivo neutro no
+  // meio do mapa — só que dourado, para a cor já dizer "vitória", e sem
+  // barra de vida: ele não é alvo de combate, ver `nascerMeninoRei` em
+  // shared/pve.ts.
+  if (estado.meninoRei) {
+    const meninoRei = estado.meninoRei;
+    const px = v.paraTelaX(meninoRei.x);
+    const py = v.paraTelaY(meninoRei.y);
+    pinturas.push({
+      y: meninoRei.y,
+      pintar: () => {
+        const raio = (20 + Math.sin(tempo * 3) * 4) * escala;
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 210, 90, 0.9)';
+        ctx.lineWidth = Math.max(2, 3 * escala);
+        ctx.setLineDash([7 * escala, 5 * escala]);
+        ctx.beginPath();
+        ctx.ellipse(px, py, raio, raio * 0.55, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+        const av = arte.meninoReiAvatar;
+        const l = av.width * escala * 0.45;
+        const a = av.height * escala * 0.45;
+        const flutua = Math.sin(tempo * 2.4) * 3 * escala;
+        ctx.drawImage(
+          av,
+          Math.round(px - l / 2),
+          Math.round(py - a - RAIO_UNIDADE * escala * 0.5 + flutua),
+          Math.ceil(l),
+          Math.ceil(a),
+        );
+        rotulo(ctx, 'menino rei', px, py + 16 * escala, escala, '#ffd25a');
+      },
+    });
+  }
+
   // --- porco decorativo ----------------------------------------------
   {
     const p = posicaoDoPorco(arena, tempo, estado.unidades);

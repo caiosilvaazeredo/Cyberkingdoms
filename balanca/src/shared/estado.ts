@@ -276,6 +276,19 @@ export interface Cajado {
   y: number;
 }
 
+/**
+ * O Menino Rei do Modo Fuga — um cativo neutro, sem dono até alguém
+ * libertar. Ao contrário do Guardião e da Presa, ele não briga nem foge, e
+ * por isso não tem vida nem os campos internos dos dois: a única coisa que
+ * acontece com ele mora em `usar()`, em partida.ts. Ver `guardasParaLiberar`
+ * em regras.ts.
+ */
+export interface MeninoRei {
+  id: number;
+  x: number;
+  y: number;
+}
+
 export interface CasaDaMoeda {
   time: Time;
   minerio: number;
@@ -330,6 +343,8 @@ export type Evento =
   | { tipo: 'presaCaiu'; time: Time; x: number; y: number }
   | { tipo: 'cajadoPego'; unidade: number; time: Time }
   | { tipo: 'virouPorco'; unidade: number; algoz: Time }
+  | { tipo: 'meninoReiLiberto'; time: Time }
+  | { tipo: 'meninoReiGuardado'; time: Time }
   | { tipo: 'fim'; vencedor: Time | null };
 
 export interface Estado {
@@ -397,6 +412,8 @@ export interface Estado {
   cajado: Cajado | null;
   /** Segundos até o próximo cajado nascer. Ver `moverCajado`. */
   proximoCajadoEm: number;
+  /** O Menino Rei do Modo Fuga, quando existe um esperando ser libertado. */
+  meninoRei: MeninoRei | null;
   /** Chapéus ainda guardados, por time e classe. */
   estoque: Record<Time, Record<Classe, number>>;
   /** Zerado a cada tick; o servidor despacha e esquece. */

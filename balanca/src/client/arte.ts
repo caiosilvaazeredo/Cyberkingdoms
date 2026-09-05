@@ -207,6 +207,12 @@ export interface Arte {
    */
   readonly xamaAvatar: HTMLImageElement;
   /**
+   * O Menino Rei do Modo Fuga: um retrato dos Human Avatars do Free Pack,
+   * usado sobre o próprio cativo — a mesma ideia do `xamaAvatar`, um ícone
+   * parado em vez de uma folha de animação, porque ele também não anda.
+   */
+  readonly meninoReiAvatar: HTMLImageElement;
+  /**
    * O ícone de cada carga no chão.
    *
    * `HTMLCanvasElement` entra na união porque o minério é repintado no
@@ -373,6 +379,7 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
   pede('guardiao_caveira', 'recursos/guardiao_caveira.png');
   pede('aranha_andando', 'recursos/aranha_andando.png');
   pede('xama_avatar', 'recursos/xama_avatar.png');
+  pede('menino_rei_avatar', 'recursos/menino_rei_avatar.png');
   pede('slingshot_gnome_invasor', 'recursos/slingshot_gnome_invasor.png');
   for (const fera of ['troll', 'minotauro'] as const) {
     for (const estado of ['parado', 'andando', 'golpe'] as const) {
@@ -530,6 +537,7 @@ export async function carregarArte(aoCarregar?: AoCarregar): Promise<Arte> {
     },
     presa: animacao(img('aranha_andando'), 5),
     xamaAvatar: img('xama_avatar'),
+    meninoReiAvatar: img('menino_rei_avatar'),
     feras: {
       troll: {
         parado: animacao(img('fera_troll_parado'), 6),

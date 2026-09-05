@@ -504,6 +504,33 @@ export const PORCO_DURACAO = 10;
 /** Quanto o porco anda mais devagar que a própria classe por baixo. */
 export const PORCO_VELOCIDADE_MULT = 0.7;
 
+// --- o menino rei (Modo Fuga) -------------------------------------------------
+
+/** Alcance para apertar "usar" perto do Menino Rei — o mesmo porte de `ALCANCE_DE_COLETA`. */
+export const MENINO_REI_RAIO_DE_LIBERTAR = 80;
+
+/**
+ * Raio da "guarda" ao redor do Menino Rei: inimigos vivos dentro dele contam
+ * contra quem tenta libertar. Maior que o alcance de libertar de propósito —
+ * é a distância que faz "cercar a guarda" ser limpar uma área, e não só
+ * afastar quem está grudado nele.
+ */
+export const MENINO_REI_RAIO_DE_GUARDA = 260;
+
+/**
+ * Quantos inimigos perto do Menino Rei impedem a libertação, num time deste
+ * tamanho.
+ *
+ * Um em times pequenos — a guarda é simbólica, e um único inimigo já barra.
+ * Ela cresce devagar com o time, para continuar valendo "cercar a área", e
+ * não "matar todo mundo": num time de trinta e dois, quatro inimigos por
+ * perto já é uma guarda que vale a pena montar, não uma varredura do mapa
+ * inteiro.
+ */
+export function guardasParaLiberar(porTime: number): number {
+  return Math.max(1, Math.min(4, Math.round(porTime / 4)));
+}
+
 /** Segundos até outro bicho aparecer no lugar do que morreu. */
 export const ANIMAL_VOLTA_EM = 18;
 

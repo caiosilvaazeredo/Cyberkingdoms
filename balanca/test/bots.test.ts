@@ -124,6 +124,14 @@ describe('os bots', () => {
     expect(eventos.filter((e) => e === 'virouPorco').length).toBeGreaterThan(0);
   });
 
+  it('no Modo Fuga, alguém acaba libertando o Menino Rei', () => {
+    // Os dois times querem libertá-lo — não há time bandido aqui, é o modo
+    // puro. 400s dá espaço de sobra para as trocas de combate abrirem uma
+    // janela em que a guarda de um dos lados cai abaixo do teto.
+    const { eventos } = jogar(400, 51, 'fuga');
+    expect(eventos.filter((e) => e === 'meninoReiLiberto').length).toBeGreaterThan(0);
+  });
+
   it('nunca ficam presos dentro da água', () => {
     const { sala } = jogar(120, 24);
     for (const u of sala.estado.unidades) {

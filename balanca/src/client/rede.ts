@@ -587,6 +587,7 @@ function estadoVazio(modo: IdDoModo, porTime: number): Estado {
     buffDaPresa: { azul: 0, vermelho: 0 },
     cajado: null,
     proximoCajadoEm: 0,
+    meninoRei: null,
     estoque,
     eventos: [],
     vencedor: null,

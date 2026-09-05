@@ -360,6 +360,8 @@ export interface Retrato {
   pb: number[];
   /** O cajado do Modo Xamã — `[id, x, y]`, ou vazio quando não há nenhum. */
   cj: number[];
+  /** O Menino Rei do Modo Fuga — `[id, x, y]`, ou vazio quando não há nenhum. */
+  mr: number[];
   cz: number[][];
   /** A obra de cada time. */
   of: number[][];
@@ -505,6 +507,9 @@ export function empacotar(estado: Estado): Retrato {
       : [],
     pb: TIMES.map((t) => arred(estado.buffDaPresa[t])),
     cj: estado.cajado ? [estado.cajado.id, arred(estado.cajado.x), arred(estado.cajado.y)] : [],
+    mr: estado.meninoRei
+      ? [estado.meninoRei.id, arred(estado.meninoRei.x), arred(estado.meninoRei.y)]
+      : [],
     // `[time, minério, cunhando*10, bolsas]`
     cz: estado.casasDaMoeda.map((c) => [idxTime(c.time), c.minerio, arred(c.cunhando * 10), c.bolsas]),
     // `[time, madeira, ouro, nivel]`
@@ -699,6 +704,8 @@ export function desempacotar(r: Retrato, base: Estado): Estado {
   base.buffDaPresa = { azul: r.pb[0] ?? 0, vermelho: r.pb[1] ?? 0 };
 
   base.cajado = r.cj.length === 0 ? null : { id: r.cj[0]!, x: r.cj[1]!, y: r.cj[2]! };
+
+  base.meninoRei = r.mr.length === 0 ? null : { id: r.mr[0]!, x: r.mr[1]!, y: r.mr[2]! };
 
   base.casasDaMoeda = r.cz.map((l) => ({
     time: timePorIdx(l[0]!),

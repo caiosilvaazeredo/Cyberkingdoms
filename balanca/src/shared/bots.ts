@@ -11,6 +11,7 @@ import {
   ALCANCE_DE_COLETA,
   CUSTO_DO_NIVEL,
   DT,
+  MENINO_REI_RAIO_DE_LIBERTAR,
   NIVEL_MAXIMO,
   custoDaObraDe,
   pesoMaximoDe,
@@ -106,6 +107,14 @@ const RAIO_DE_INTERESSE_NA_PRESA = 650;
 
 /** Distância a partir da qual o cajado do Modo Xamã deixa de valer o desvio. */
 const RAIO_DE_INTERESSE_NO_CAJADO = 700;
+
+/**
+ * Distância a partir da qual o Menino Rei do Modo Fuga deixa de valer o
+ * desvio — a mesma do Guardião, e pelo mesmo motivo: os dois nascem na
+ * mesma âncora (`covilDe`), e um chefe neutro que só existe uma vez por
+ * partida vale um desvio maior do que a Presa, que nasce sem parar.
+ */
+const RAIO_DE_INTERESSE_NO_MENINO_REI = 900;
 
 /** Até onde um Xamã carregado sai do caminho para achar alguém para transformar. */
 const XAMA_RAIO_DE_BUSCA = 900;
@@ -453,6 +462,19 @@ export class Bots {
       const cajado = estado.cajado;
       if (Math.hypot(cajado.x - u.x, cajado.y - u.y) < RAIO_DE_INTERESSE_NO_CAJADO) {
         return ir(cajado, false, 0, true);
+      }
+    }
+
+    // O Menino Rei do Modo Fuga: mesmo raio de desvio do Guardião — os dois
+    // nascem na mesma âncora. Ao chegar perto o bastante, aperta "usar"
+    // (`ir(..., usar)`); se a guarda ainda não foi limpa, `usar()` em
+    // partida.ts recusa e o bot tenta de novo no próximo quadro, parado ali
+    // — que é exatamente "segurar a área" na prática, sem o bot precisar
+    // entender o motivo.
+    if (estado.meninoRei && u.carga === 'nada' && m.papel !== 'cozinheiro') {
+      const meninoRei = estado.meninoRei;
+      if (Math.hypot(meninoRei.x - u.x, meninoRei.y - u.y) < RAIO_DE_INTERESSE_NO_MENINO_REI) {
+        return ir(meninoRei, this.chegou(u, meninoRei, MENINO_REI_RAIO_DE_LIBERTAR * 0.8), 0, true);
       }
     }
 

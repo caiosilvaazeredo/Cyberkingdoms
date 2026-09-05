@@ -46,7 +46,8 @@ export type IdDoModo =
   | 'covil'
   | 'caca'
   | 'xama'
-  | 'cerco';
+  | 'cerco'
+  | 'fuga';
 
 export interface Modo {
   readonly id: IdDoModo;
@@ -126,6 +127,13 @@ export interface Modo {
    * `CAJADO_*`/`XAMA_*`/`PORCO_*` em regras.ts.
    */
   readonly temCajado: boolean;
+  /**
+   * O Menino Rei (Modo Fuga): um cativo neutro nasce no meio do mapa e
+   * espera. Apertar "usar" (`E`) perto dele vence a partida na hora, mas só
+   * quando a guarda inimiga ao redor já foi limpa. Ver `pve.ts`, `usar()`
+   * em partida.ts e `MENINO_REI_*`/`guardasParaLiberar` em regras.ts.
+   */
+  readonly temFuga: boolean;
 }
 
 /**
@@ -162,6 +170,7 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     temGuardiao: false,
     temCaca: false,
     temCajado: false,
+    temFuga: false,
   },
   assalto: {
     id: 'assalto',
@@ -179,6 +188,7 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     temGuardiao: false,
     temCaca: false,
     temCajado: false,
+    temFuga: false,
   },
   cofrecheio: {
     id: 'cofrecheio',
@@ -201,6 +211,7 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     temGuardiao: false,
     temCaca: false,
     temCajado: false,
+    temFuga: false,
   },
   chapelaria: {
     id: 'chapelaria',
@@ -218,6 +229,7 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     temGuardiao: false,
     temCaca: false,
     temCajado: false,
+    temFuga: false,
   },
   veiaseca: {
     id: 'veiaseca',
@@ -235,6 +247,7 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     temGuardiao: false,
     temCaca: false,
     temCajado: false,
+    temFuga: false,
   },
   obra: {
     id: 'obra',
@@ -252,6 +265,7 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     temGuardiao: false,
     temCaca: false,
     temCajado: false,
+    temFuga: false,
   },
   abate: {
     id: 'abate',
@@ -273,6 +287,7 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     temGuardiao: false,
     temCaca: false,
     temCajado: false,
+    temFuga: false,
   },
   covil: {
     id: 'covil',
@@ -290,6 +305,7 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     temGuardiao: true,
     temCaca: false,
     temCajado: false,
+    temFuga: false,
   },
   caca: {
     id: 'caca',
@@ -307,6 +323,7 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     temGuardiao: false,
     temCaca: true,
     temCajado: false,
+    temFuga: false,
   },
   xama: {
     id: 'xama',
@@ -324,6 +341,7 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     temGuardiao: false,
     temCaca: false,
     temCajado: true,
+    temFuga: false,
   },
   /**
    * O Cerco: os três chefes neutros de uma vez, e não um por partida.
@@ -352,6 +370,33 @@ export const MODOS: Readonly<Record<IdDoModo, Modo>> = {
     temGuardiao: true,
     temCaca: true,
     temCajado: true,
+    temFuga: false,
+  },
+  /**
+   * A Fuga: um cativo neutro no meio do mapa — o Menino Rei — que qualquer
+   * um dos dois times pode libertar apertando "usar" perto dele, desde que
+   * a guarda inimiga ao redor já tenha sido limpa. Ao contrário do
+   * Guardião e da Presa, ele não é alvo do sistema de combate: a conta é só
+   * de gente perto, e vencer é libertá-lo — não derrubá-lo. Ver `pve.ts` e
+   * `usar()` em partida.ts.
+   */
+  fuga: {
+    id: 'fuga',
+    nome: 'Fuga',
+    lema: 'liberte o Menino Rei — mas só depois de afastar a guarda dele',
+    pontosParaVencer: PONTOS_PARA_VENCER,
+    duracao: DURACAO_DA_PARTIDA,
+    renascimentoBase: RENASCIMENTO_BASE,
+    vitoriaPorBalanca: false,
+    chapeusInfinitos: false,
+    animaisVoltam: true,
+    vitoriaPorObra: false,
+    abatesParaVencer: null,
+    pesoQueVence: PESO_MINIMO,
+    temGuardiao: false,
+    temCaca: false,
+    temCajado: false,
+    temFuga: true,
   },
 };
 
@@ -370,6 +415,7 @@ export const IDS_DOS_MODOS: readonly IdDoModo[] = [
   'caca',
   'xama',
   'cerco',
+  'fuga',
 ];
 
 /**

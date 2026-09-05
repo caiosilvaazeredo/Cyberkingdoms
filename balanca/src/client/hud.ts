@@ -391,15 +391,17 @@ function cabecalho(ctx: CanvasRenderingContext2D, rede: Rede, largura: number): 
   const curta = `${nomeDoModo} · ${nomeDoMapa} · ${rede.ping} ms`;
   ctx.fillText(ctx.measureText(inteira).width <= cabe ? inteira : curta, 12, 10);
 
-  // A Regência mostra a corrente na própria tela, e não só no recado que passa
-  // e some: nível e reforços são o placar da campanha, tão permanentes quanto
-  // o placar de resgates — sem a linha fixa, quem chegou no meio de um nível
-  // alto não tem como saber o que já conquistou.
+  // A campanha mostra a corrente na própria tela, e não só no recado que
+  // passa e some: nível e reforços são o placar dela, tão permanentes
+  // quanto o placar de resgates — sem a linha fixa, quem chegou no meio de
+  // um nível alto não tem como saber o que já conquistou. O nome vem do
+  // próprio modo — Regência, Cerco e Fuga passam pela mesma campanha, e a
+  // linha não pode chamar as três de "Regência".
   if (rede.campanha) {
     ctx.font = '700 13px "Trebuchet MS", system-ui, sans-serif';
     ctx.fillStyle = 'rgba(255, 212, 121, 0.92)';
     const reforcos = rede.campanha.perks.length > 0 ? rede.campanha.perks.join(', ') : 'nenhum ainda';
-    ctx.fillText(`Regência · nível ${rede.campanha.nivel} · reforços: ${reforcos}`, 12, 26);
+    ctx.fillText(`${nomeDoModo} · nível ${rede.campanha.nivel} · reforços: ${reforcos}`, 12, 26);
   }
   ctx.restore();
 }
@@ -1056,6 +1058,19 @@ export function narrar(
         texto: `o ${NOME_DO_TIME[evento.algoz]} transformou alguém em porco!`,
         cor: COR_CLARA[evento.algoz],
       };
+    case 'meninoReiLiberto':
+      return {
+        texto: `o ${NOME_DO_TIME[evento.time]} libertou o Menino Rei!`,
+        cor: COR_CLARA[evento.time],
+      };
+    case 'meninoReiGuardado':
+      // Silencioso de propósito: dispara a cada tentativa que falha, e com
+      // vários bots tentando ao mesmo tempo isso seria um evento a cada
+      // fração de segundo — o registro afogaria abates e depósitos com "a
+      // guarda ainda protege" repetido. O jogador já vê a guarda por perto
+      // olhando o próprio campo; não precisa de uma linha para cada tapa na
+      // porta trancada.
+      return null;
     case 'fim':
       return {
         texto: evento.vencedor ? `fim — ${NOME_DO_TIME[evento.vencedor]} vence` : 'fim — empate',

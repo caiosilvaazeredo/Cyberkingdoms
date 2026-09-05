@@ -680,6 +680,23 @@ export class Telas {
       this.pedirParaJogar('montada', criar);
     });
 
+    // A Fuga: mesma sala montada dos outros dois, com 'fuga' no lugar do
+    // modo — o reino bandido corre atrás do Menino Rei junto com o
+    // jogador, e chega lá primeiro se ninguém afastar a guarda dele a
+    // tempo.
+    pegar<HTMLButtonElement>('#jogar-fuga').addEventListener('click', () => {
+      const criar = salaConfiguravel({
+        modo: 'fuga',
+        mapa: 'sorteio',
+        porTime: 4,
+        bots: 0,
+        privada: true,
+        campanha: true,
+      });
+      this.montagemPendente = criar;
+      this.pedirParaJogar('montada', criar);
+    });
+
     // O Cerco é a mesma Regência — mesma sala montada, mesma escalada — só
     // que com o modo 'cerco' no lugar do 'resgate': os três chefes neutros
     // continuam sem saber que a campanha existe, e a campanha continua sem

@@ -454,3 +454,21 @@ export function moverCajado(arena: Arena, estado: Estado): void {
     break;
   }
 }
+
+// --- o menino rei (Modo Fuga) -------------------------------------------------
+
+/**
+ * O Menino Rei: nasce uma vez, no meio do mapa, e só espera.
+ *
+ * Ao contrário do Guardião, da Presa e até do cajado, ele não faz nada
+ * sozinho — não briga, não é pego ao toque, não tem vida. A única coisa que
+ * acontece com ele mora em `usar()`, em partida.ts: apertar "E" perto o
+ * bastante, com a guarda inimiga baixa o bastante, vence a partida na hora.
+ * Esta função só garante que ele existe; reaproveita a mesma âncora do
+ * Guardião (`covilDe`) porque nenhum dos dois modos coexiste com este.
+ */
+export function nascerMeninoRei(arena: Arena, estado: Estado): void {
+  if (estado.meninoRei) return;
+  const local = covilDe(arena);
+  estado.meninoRei = { id: estado.proximoId++, x: local.x, y: local.y };
+}
