@@ -36,7 +36,15 @@ import { ARENA_ALTURA, ARENA_LARGURA } from './regras';
  * no dia em que o mapa grande saísse assimétrico no meio.
  */
 
-export type IdDoMapa = 'corte' | 'vau' | 'desfiladeiro' | 'arquipelago' | 'planicie';
+export type IdDoMapa =
+  | 'corte'
+  | 'vau'
+  | 'desfiladeiro'
+  | 'arquipelago'
+  | 'planicie'
+  | 'encruzilhada'
+  | 'pantano'
+  | 'cidadela';
 
 /**
  * O desenhista do relevo.
@@ -100,6 +108,19 @@ export interface Mapa {
     readonly ate: number;
     readonly passagens: readonly number[];
   }[];
+  /**
+   * Fica de fora do sorteio de campo (a opção "Sortear" da tela de salas).
+   *
+   * `totalPorTime('sorteio')` usa o **menor** teto entre os mapas do
+   * sorteio, porque uma sala que troca de campo a cada partida não pode
+   * aceitar um formato que quebra no primeiro campo pequeno que cair. Um
+   * mapa muito menor que o resto da lista arrastaria esse teto para todo
+   * mundo que sorteia — inclusive nas rodadas em que ele nem é o campo
+   * escolhido, porque a conta é feita uma vez só, na criação da sala. A
+   * Cidadela existe para quem a escolhe de propósito, não para encolher o
+   * formato de quem só queria variedade entre os campos do tamanho normal.
+   */
+  readonly foraDoSorteio?: boolean;
 }
 
 const meio = (ARENA_LARGURA - 1) / 2;
@@ -545,6 +566,229 @@ const PLANICIE: Mapa = {
   ],
 };
 
+// --- Encruzilhada -------------------------------------------------------------
+
+/**
+ * O Corte, mais um rio no meio do campo — e só uma travessia nele.
+ *
+ * Nenhum dos cinco primeiros mapas tem os dois estrangulamentos ao mesmo
+ * tempo: o Corte prende só no próprio castelo, o Vau só no meio. Aqui as duas
+ * coisas coexistem — o fosso e as duas pontes de casa continuam de pé, e o
+ * campo aberto ganha um terceiro afunilamento, mais estreito que os dois
+ * outros juntos. Trocar de flanco deixa de ser "dar a volta pelo lago": vira
+ * escolher qual dos três portões vale a fila.
+ *
+ * O rio fica só no meio da altura do mapa (não de ponta a ponta, como no Vau)
+ * de propósito: as jazidas do meio do Corte moram perto do topo e da base, e
+ * um rio da borda à borda as afogaria. Curto, ele fecha só a faixa central —
+ * onde o cortejo do baú de qualquer jeito precisa passar.
+ */
+const RIO_DA_ENCRUZILHADA = { de: 9, ate: 24 } as const;
+const TRAVESSIA_DA_ENCRUZILHADA_Y = [16, 17] as const;
+
+const ENCRUZILHADA: Mapa = {
+  id: 'encruzilhada',
+  nome: 'Encruzilhada',
+  largura: ARENA_LARGURA,
+  altura: ARENA_ALTURA,
+  lema: 'o fosso do Corte, mais um rio central com uma travessia só · três portões, três filas',
+  relevo(p) {
+    for (let ty = CASTELO.y0; ty <= CASTELO.y1; ty++) p.agua(CASTELO.x1, ty);
+    for (let tx = CASTELO.x0; tx <= CASTELO.x1; tx++) {
+      p.agua(tx, CASTELO.y0);
+      p.agua(tx, CASTELO.y1);
+    }
+    for (const py of PONTES_Y) p.ponte(CASTELO.x1, py);
+    for (let ty = RIO_DA_ENCRUZILHADA.de; ty <= RIO_DA_ENCRUZILHADA.ate; ty++) {
+      p.agua(Math.floor(meio), ty);
+    }
+    for (const py of TRAVESSIA_DA_ENCRUZILHADA_Y) p.ponte(Math.floor(meio), py);
+  },
+  planta: {
+    tesouraria: [5, 15],
+    cofre: [6, 9],
+    casaDaMoeda: [11, 20],
+    chapelaria: [11, 12],
+    nascedouro: [6, 20],
+  },
+  jazidasDoLado: [
+    [13, 15, 'arvore'],
+    [13, 17, 'arvore'],
+    [8, 25, 'ouro'],
+    [20, 9, 'arvore'],
+    [20, 24, 'ouro'],
+    [24, 16, 'ouro'],
+  ],
+  jazidasDoMeio: [
+    [29, 4, 'arvore'],
+    [30, 4, 'arvore'],
+    [29, 29, 'arvore'],
+    [30, 29, 'arvore'],
+  ],
+  pastosDoLado: [
+    [10, 10],
+    [22, 20],
+  ],
+  pastosDoMeio: [
+    [25, 16],
+    [34, 16],
+    [29, 6],
+    [30, 6],
+    [29, 27],
+    [30, 27],
+  ],
+  portoes: [
+    { coluna: CASTELO.x1, de: CASTELO.y0, ate: CASTELO.y1, passagens: [...PONTES_Y] },
+    {
+      coluna: Math.floor(meio),
+      de: RIO_DA_ENCRUZILHADA.de,
+      ate: RIO_DA_ENCRUZILHADA.ate,
+      passagens: [...TRAVESSIA_DA_ENCRUZILHADA_Y],
+    },
+  ],
+};
+
+// --- Pântano --------------------------------------------------------------
+
+/**
+ * O Vau, com o rio único trocado por três poças espalhadas — sem ponte
+ * nenhuma.
+ *
+ * O Vau tem uma frente só, e ela é reta: quem olha o meio do mapa vê onde a
+ * briga vai acontecer. Aqui a água se espalha em três poças que não se tocam,
+ * cada uma pequena o bastante para contornar — não há travessia para segurar,
+ * porque não há gargalo nenhum. O preço é o oposto do Vau: sem uma frente
+ * óbvia, o time que se divide certo entre as três aberturas domina o meio; o
+ * que empilha tudo numa poça só sobra de flanco nas outras duas.
+ *
+ * Sem portão declarado — a mesma escolha do Vau, pelo mesmo motivo: não
+ * estrangular é a proposta do mapa, e prometer um estrangulamento que as
+ * poças não entregam derrubaria o teste que existe exatamente para isso.
+ */
+const PANTANO: Mapa = {
+  id: 'pantano',
+  nome: 'Pântano',
+  largura: ARENA_LARGURA,
+  altura: ARENA_ALTURA,
+  lema: 'castelo aberto e três poças soltas no meio · sem travessia para segurar',
+  relevo(p) {
+    elipse(p, 24, 8, 3.5, 3);
+    elipse(p, 24, (p.altura - 1) / 2, 4, 3.5);
+    elipse(p, 24, 26, 3.5, 3);
+  },
+  planta: {
+    tesouraria: [5, 17],
+    cofre: [5, 9],
+    casaDaMoeda: [12, 22],
+    chapelaria: [12, 11],
+    nascedouro: [8, 17],
+  },
+  jazidasDoLado: [
+    [10, 6, 'arvore'],
+    [10, 27, 'arvore'],
+    [16, 13, 'arvore'],
+    [16, 20, 'ouro'],
+    [12, 17, 'ouro'],
+    [19, 6, 'ouro'],
+  ],
+  jazidasDoMeio: [
+    [26, 12, 'arvore'],
+    [33, 12, 'arvore'],
+    [26, 21, 'ouro'],
+    [33, 21, 'ouro'],
+  ],
+  pastosDoLado: [
+    [7, 24],
+    [19, 24],
+  ],
+  // Nas colunas 26/33 de propósito — as mesmas das jazidas do meio, e por
+  // isso já comprovadamente longe das três poças (que só ocupam as colunas
+  // 20 a 24, e o espelho delas, 35 a 39).
+  pastosDoMeio: [
+    [26, 6],
+    [33, 6],
+    [26, 27],
+    [33, 27],
+    [26, 16],
+    [33, 16],
+  ],
+  // Nada estrangula: três aberturas em vez de uma é a proposta do mapa.
+  portoes: [],
+};
+
+// --- Cidadela ---------------------------------------------------------------
+
+/**
+ * O campo pequeno — o oposto da Planície.
+ *
+ * A Planície existe para trinta e dois por lado não fazerem fila; a Cidadela
+ * existe para o extremo contrário, quatro ou cinco por lado, onde a distância
+ * é o próprio inimigo: com um campo grande e pouca gente, metade da partida
+ * seria andar. Aqui o portão do castelo (um só, como no Desfiladeiro) fica a
+ * um punhado de passos do meio do mapa, que por sua vez fica a um punhado de
+ * passos do portão do inimigo — e por isso o meio fica limpo, sem nenhum
+ * obstáculo. Um mapa deste tamanho não tem espaço de sobra para um lago que
+ * ninguém atravessando por acaso.
+ */
+const CASTELO_PEQUENO = { x0: 2, y0: 5, x1: 11, y1: 20 } as const;
+const PORTAO_PEQUENO_Y = [11, 12] as const;
+const LARGURA_PEQUENA = 44;
+const ALTURA_PEQUENA = 26;
+
+const CIDADELA: Mapa = {
+  id: 'cidadela',
+  nome: 'Cidadela',
+  largura: LARGURA_PEQUENA,
+  altura: ALTURA_PEQUENA,
+  lema: 'campo pequeno, um portão por castelo, meio sem obstáculo · a briga começa cedo',
+  // Ver o comentário de `foraDoSorteio` em `Mapa`.
+  foraDoSorteio: true,
+  relevo(p) {
+    for (let ty = CASTELO_PEQUENO.y0; ty <= CASTELO_PEQUENO.y1; ty++) {
+      p.agua(CASTELO_PEQUENO.x1, ty);
+    }
+    for (let tx = CASTELO_PEQUENO.x0; tx <= CASTELO_PEQUENO.x1; tx++) {
+      p.agua(tx, CASTELO_PEQUENO.y0);
+      p.agua(tx, CASTELO_PEQUENO.y1);
+    }
+    for (const py of PORTAO_PEQUENO_Y) p.ponte(CASTELO_PEQUENO.x1, py);
+  },
+  planta: {
+    cofre: [4, 9],
+    tesouraria: [4, 16],
+    chapelaria: [9, 9],
+    casaDaMoeda: [9, 16],
+    nascedouro: [6, 12],
+  },
+  jazidasDoLado: [
+    [7, 9, 'arvore'],
+    [7, 16, 'ouro'],
+    [15, 8, 'arvore'],
+    [15, 17, 'ouro'],
+  ],
+  jazidasDoMeio: [
+    [21, 6, 'arvore'],
+    [22, 6, 'arvore'],
+    [21, 19, 'arvore'],
+    [22, 19, 'arvore'],
+  ],
+  pastosDoLado: [[9, 13]],
+  pastosDoMeio: [
+    [19, 9],
+    [24, 9],
+    [19, 16],
+    [24, 16],
+  ],
+  portoes: [
+    {
+      coluna: CASTELO_PEQUENO.x1,
+      de: CASTELO_PEQUENO.y0,
+      ate: CASTELO_PEQUENO.y1,
+      passagens: [...PORTAO_PEQUENO_Y],
+    },
+  ],
+};
+
 // --- a tabela ---------------------------------------------------------------
 
 export const MAPAS: Readonly<Record<IdDoMapa, Mapa>> = {
@@ -553,6 +797,9 @@ export const MAPAS: Readonly<Record<IdDoMapa, Mapa>> = {
   desfiladeiro: DESFILADEIRO,
   arquipelago: ARQUIPELAGO,
   planicie: PLANICIE,
+  encruzilhada: ENCRUZILHADA,
+  pantano: PANTANO,
+  cidadela: CIDADELA,
 };
 
 export const MAPA_PADRAO: IdDoMapa = 'corte';
@@ -564,6 +811,9 @@ export const IDS_DOS_MAPAS: readonly IdDoMapa[] = [
   'desfiladeiro',
   'arquipelago',
   'planicie',
+  'encruzilhada',
+  'pantano',
+  'cidadela',
 ];
 
 /**
@@ -577,6 +827,17 @@ export function mapaDe(id: unknown): Mapa {
 }
 
 /**
+ * Os mapas que entram na roda do sorteio — todos, menos os marcados
+ * `foraDoSorteio`. Usada tanto por `mapaSorteado` (o que pode sair) quanto
+ * por `totalPorTime('sorteio')` em protocolo.ts (o teto que vale para
+ * qualquer um deles): as duas listas têm de ser a mesma, ou uma sala que
+ * sorteou o teto de um mapa acabaria sorteando outro que ela nunca prometeu.
+ */
+export const IDS_SORTEAVEIS: readonly IdDoMapa[] = IDS_DOS_MAPAS.filter(
+  (id) => !MAPAS[id].foraDoSorteio,
+);
+
+/**
  * Sorteia um mapa a partir da seed da partida.
  *
  * Determinístico de propósito: a seed já decide o mato e a partida inteira, e
@@ -584,8 +845,8 @@ export function mapaDe(id: unknown): Mapa {
  * servidor não conseguiria reproduzir ao investigar um defeito.
  */
 export function mapaSorteado(seed: number): IdDoMapa {
-  const i = (seed >>> 0) % IDS_DOS_MAPAS.length;
-  return IDS_DOS_MAPAS[i]!;
+  const i = (seed >>> 0) % IDS_SORTEAVEIS.length;
+  return IDS_SORTEAVEIS[i]!;
 }
 
 /** Uma elipse de água, para o pincel. */

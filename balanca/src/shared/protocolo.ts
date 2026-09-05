@@ -13,7 +13,7 @@ import type {
   Unidade,
   VarianteDaInvasao,
 } from './estado';
-import { IDS_DOS_MAPAS, MAPAS, mapaDe, porTimeMaximo, type IdDoMapa } from './mapas';
+import { IDS_SORTEAVEIS, MAPAS, mapaDe, porTimeMaximo, type IdDoMapa } from './mapas';
 import { modoDe, type IdDoModo } from './modos';
 import { POR_TIME, TIMES, type Time } from './regras';
 
@@ -107,12 +107,15 @@ export const MAX_BOTS = 32;
  * é um campo vazio.
  *
  * Agora a conta é do mapa (`porTimeMaximo`), e o sorteio pega o **menor** dos
- * tetos: uma sala que sorteia campo a cada partida não pode aceitar trinta e
- * dois por lado e depois cair no Corte.
+ * tetos entre os mapas sorteáveis: uma sala que sorteia campo a cada
+ * partida não pode aceitar trinta e dois por lado e depois cair num campo
+ * que não aguenta. Mapas fora do sorteio (`IDS_SORTEAVEIS` em mapas.ts, ver
+ * `foraDoSorteio`) não entram nessa conta — só quem escolhe um deles de
+ * propósito aceita o teto dele.
  */
 export function totalPorTime(mapa: IdDoMapa | 'sorteio'): number {
   if (mapa === 'sorteio') {
-    return Math.min(...IDS_DOS_MAPAS.map((id) => porTimeMaximo(MAPAS[id])));
+    return Math.min(...IDS_SORTEAVEIS.map((id) => porTimeMaximo(MAPAS[id])));
   }
   return porTimeMaximo(mapaDe(mapa));
 }

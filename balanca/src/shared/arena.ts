@@ -531,15 +531,20 @@ export function cajadoDe(arena: Arena): { x: number; y: number } {
  * toco de qualquer árvore listada continua sendo o toco dela mesma.
  */
 export const ESPECIES_DE_ARVORE_DO_MAPA: Readonly<Record<IdDoMapa, readonly [number, number]>> = {
-  // Pinheiros: mata de rio e desfiladeiro de montanha — as duas travessias
-  // mais fechadas da lista, onde uma conífera escura combina com o aperto.
+  // Pinheiros: mata de rio e desfiladeiro de montanha — as travessias mais
+  // fechadas da lista, e o pântano, onde uma conífera escura combina com o
+  // clima parado da água solta.
   vau: [0, 1],
   desfiladeiro: [0, 1],
-  // Copa redonda: parque de castelo, campo aberto e ilha — o resto do
-  // elenco, mais ensolarado, sem pinheiro nenhum.
+  pantano: [0, 1],
+  // Copa redonda: parque de castelo, campo aberto, ilha e cidadela — o
+  // resto do elenco, mais ensolarado, sem pinheiro nenhum.
   corte: [2, 3],
   arquipelago: [2, 3],
   planicie: [2, 3],
+  cidadela: [2, 3],
+  // A Encruzilhada herda o castelo do Corte — a mesma copa redonda.
+  encruzilhada: [2, 3],
 };
 
 /**

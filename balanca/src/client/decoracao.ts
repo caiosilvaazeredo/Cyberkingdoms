@@ -295,9 +295,12 @@ export function posicaoDaVilaDeGnomos(arena: Arena): { x: number; y: number } | 
 const BICHOS_DE_MATO_DO_MAPA: Readonly<Record<IdDoMapa, readonly ('urso' | 'abelhao' | 'cobra')[]>> = {
   corte: ['urso', 'abelhao'],
   planicie: ['urso', 'abelhao'],
+  cidadela: ['urso', 'abelhao'],
   vau: ['cobra'],
   desfiladeiro: ['cobra'],
+  pantano: ['cobra'],
   arquipelago: [],
+  encruzilhada: ['urso', 'abelhao'],
 };
 
 export function posicaoDoUrso(

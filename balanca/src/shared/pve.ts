@@ -284,6 +284,9 @@ const GUARDIAO_DO_MAPA: Readonly<Record<IdDoMapa, TipoDeGuardiao>> = {
   vau: 'tartaruga',
   arquipelago: 'caveira',
   desfiladeiro: 'minotauro',
+  encruzilhada: 'minotauro',
+  pantano: 'caveira',
+  cidadela: 'minotauro',
 };
 
 /** Qual Guardião nasce neste mapa. Exportado para o desenho escolher a folha certa. */

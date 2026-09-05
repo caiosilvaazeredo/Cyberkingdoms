@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { anguloDaBalanca } from '../src/client/vitrine';
 import { FORMATOS, campoPara } from '../src/shared/formatos';
-import { IDS_DOS_MAPAS, MAPAS, porTimeMaximo } from '../src/shared/mapas';
+import { IDS_DOS_MAPAS, IDS_SORTEAVEIS, MAPAS, porTimeMaximo } from '../src/shared/mapas';
 import { criarPartida } from '../src/shared/partida';
 import { MAX_POR_TIME, salaConfiguravel, totalPorTime } from '../src/shared/protocolo';
 import {
@@ -180,7 +180,7 @@ describe('quem cabe em que campo', () => {
     // Uma sala que troca de campo a cada partida não pode aceitar trinta e dois
     // por lado e depois cair no Corte.
     expect(totalPorTime('sorteio')).toBe(
-      Math.min(...IDS_DOS_MAPAS.map((id) => porTimeMaximo(MAPAS[id]))),
+      Math.min(...IDS_SORTEAVEIS.map((id) => porTimeMaximo(MAPAS[id]))),
     );
     expect(salaConfiguravel({ mapa: 'sorteio', porTime: MAX_POR_TIME }).porTime).toBe(
       totalPorTime('sorteio'),
