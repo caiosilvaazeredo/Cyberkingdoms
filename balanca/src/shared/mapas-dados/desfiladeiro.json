@@ -5,6 +5,7 @@
   "altura": 34,
   "lema": "uma ponte por castelo · quem defende o portão defende tudo",
   "especiesDeArvore": [0, 1],
+  "bioma": "ossos",
   "relevo": [
     { "tipo": "linha", "eixo": "vertical", "fixo": 15, "de": 5, "ate": 28 },
     { "tipo": "linha", "eixo": "horizontal", "fixo": 5, "de": 2, "ate": 15 },

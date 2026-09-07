@@ -580,13 +580,13 @@ function calcularDecoracao(arena: Arena, tx: number, ty: number): DecoracaoNoCha
   }
   if (sorte < 0.12) return { tipo: 'arbusto', variante, deslocamento };
   if (sorte < 0.15) return { tipo: 'pedra', variante, deslocamento };
-  // O Desfiladeiro é o único mapa com uma única ponte por castelo — a
-  // travessia mais disputada da lista — e é o único que ganha ossos no chão
-  // por isso: o resto do mato (arbusto, pedra) é o mesmo em todo mapa de
-  // propósito, mas um bioma por mapa também é o que a arte pede, e o
-  // Desfiladeiro é onde a leitura "aqui já morreu muita gente" faz sentido
-  // sem confundir ninguém.
-  if (arena.mapa === 'desfiladeiro' && sorte < 0.19) {
+  // O bioma é dado do mapa, não um `if` por id — um mapa novo liga ossos no
+  // chão só escrevendo `"bioma": "ossos"` no JSON, sem tocar em código. O
+  // Desfiladeiro é o único que liga hoje: uma única ponte por castelo, a
+  // travessia mais disputada da lista, e é onde a leitura "aqui já morreu
+  // muita gente" faz sentido sem confundir ninguém. O resto do mato
+  // (arbusto, pedra) continua igual em todo mapa de propósito.
+  if (mapaDe(arena.mapa).bioma === 'ossos' && sorte < 0.19) {
     return { tipo: 'ossos', variante: variante % 3, deslocamento };
   }
   return null;

@@ -262,6 +262,7 @@ const campoLargura = pegar<HTMLInputElement>('#mapa-largura');
 const campoAltura = pegar<HTMLInputElement>('#mapa-altura');
 const campoEspecies = pegar<HTMLSelectElement>('#mapa-especies');
 const campoForaDoSorteio = pegar<HTMLInputElement>('#mapa-fora-sorteio');
+const campoBioma = pegar<HTMLSelectElement>('#mapa-bioma');
 
 function sincronizarCamposComEditor(): void {
   campoId.value = editor.id;
@@ -271,6 +272,7 @@ function sincronizarCamposComEditor(): void {
   campoAltura.value = String(editor.altura);
   campoEspecies.value = editor.especiesDeArvore.join(',');
   campoForaDoSorteio.checked = editor.foraDoSorteio;
+  campoBioma.value = editor.bioma;
 }
 
 campoId.addEventListener('input', () => {
@@ -285,6 +287,9 @@ campoEspecies.addEventListener('change', () => {
 });
 campoForaDoSorteio.addEventListener('change', () => {
   editor.foraDoSorteio = campoForaDoSorteio.checked;
+});
+campoBioma.addEventListener('change', () => {
+  editor.bioma = campoBioma.value === 'ossos' ? 'ossos' : 'padrao';
 });
 pegar<HTMLButtonElement>('#mapa-redimensionar').addEventListener('click', () => {
   const largura = Math.max(20, Math.min(200, Number(campoLargura.value) || editor.largura));

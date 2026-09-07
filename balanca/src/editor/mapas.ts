@@ -43,6 +43,7 @@ export class EditorDeMapas {
   altura = 34;
   especiesDeArvore: readonly [number, number] = [2, 3];
   foraDoSorteio = false;
+  bioma: 'padrao' | 'ossos' = 'padrao';
 
   /** Chave `ty*largura+tx`, sempre do lado azul (tx <= eixo). */
   private agua = new Set<number>();
@@ -149,6 +150,7 @@ export class EditorDeMapas {
     this.altura = 34;
     this.especiesDeArvore = [2, 3];
     this.foraDoSorteio = false;
+    this.bioma = 'padrao';
     this.agua.clear();
     this.pontes.clear();
     this.planta = {};
@@ -222,6 +224,7 @@ export class EditorDeMapas {
       altura: this.altura,
       especiesDeArvore: this.especiesDeArvore,
       foraDoSorteio: this.foraDoSorteio || undefined,
+      bioma: this.bioma === 'ossos' ? 'ossos' : undefined,
       relevo,
       planta: this.planta as Record<TipoDeEstrutura, readonly [number, number]>,
       jazidasDoLado: this.jazidasDoLado,
@@ -242,6 +245,7 @@ export class EditorDeMapas {
     this.altura = esquema.altura;
     this.especiesDeArvore = esquema.especiesDeArvore;
     this.foraDoSorteio = esquema.foraDoSorteio ?? false;
+    this.bioma = esquema.bioma === 'ossos' ? 'ossos' : 'padrao';
     this.planta = { ...esquema.planta };
     this.jazidasDoLado = esquema.jazidasDoLado.map((p) => [...p]) as [number, number, TipoDeJazida][];
     this.jazidasDoMeio = esquema.jazidasDoMeio.map((p) => [...p]) as [number, number, TipoDeJazida][];

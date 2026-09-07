@@ -111,6 +111,15 @@ export interface EsquemaDeMapa {
   /** As duas espécies de árvore deste relevo — sempre um par, nunca as
    * quatro do pacote. Ver a nota em `arena.ts`. */
   readonly especiesDeArvore: readonly [number, number];
+  /**
+   * O bioma extra deste mapa, se tiver um — hoje só `'ossos'`, do
+   * Desfiladeiro. A densidade e a posição do mato **não** entram aqui de
+   * propósito: são as mesmas em todo mapa, para que decorar onde fica
+   * árvore num campo valha nos outros (ver `calcularDecoracao` em
+   * `arena.ts`). Bioma é só o adicional cosmético — ossos no chão, hoje —
+   * que um mapa pode ligar sem tocar em código.
+   */
+  readonly bioma?: 'ossos';
   readonly relevo: readonly OperacaoDeRelevo[];
   readonly planta: Readonly<Record<TipoDeEstrutura, readonly [number, number]>>;
   readonly jazidasDoLado: readonly (readonly [number, number, TipoDeJazida])[];
