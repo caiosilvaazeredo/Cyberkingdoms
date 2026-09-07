@@ -220,7 +220,7 @@ async function montarOSofa(porta: Porta, criar?: ConfiguracaoDeSala): Promise<vo
     rede = new Rede(enderecoDoServidor());
     rede.conectar(telas.preferencias.nome || 'Anônimo', true, {
       ...(porta === 'local' ? { privada: true } : {}),
-      ...(porta === 'montada' && criar ? { criar } : {}),
+      ...((porta === 'local' || porta === 'montada') && criar ? { criar } : {}),
       ...(porta === 'convidada' && convite ? { sala: convite } : {}),
     });
     // Toda sala que não é a pública do lobby precisa ser desfeita ao voltar ao

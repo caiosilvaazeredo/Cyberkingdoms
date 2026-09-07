@@ -1,5 +1,5 @@
 import { CLASSES, perfil } from '../shared/classes';
-import { TIMES, type Time } from '../shared/regras';
+import { POR_TIME, TIMES, type Time } from '../shared/regras';
 import type { FichaDeJogador } from '../shared/protocolo';
 import {
   PADROES,
@@ -226,6 +226,8 @@ export class Telas {
   private montagem: Required<ConfiguracaoDeSala> = salaConfiguravel({ porTime: 2, bots: 2 });
   /** A montagem que o botão do apelido deve reenviar, se houver. */
   private montagemPendente: ConfiguracaoDeSala | undefined;
+  /** O mapa escolhido para o próximo Jogo Local. `'sorteio'` é o padrão. */
+  private mapaLocalEscolhido: IdDoMapa | 'sorteio' = 'sorteio';
   /** A sala aberta em que se clicou "entrar", quando a porta é `convidada`. */
   private salaPedida: string | null = null;
 
@@ -235,6 +237,7 @@ export class Telas {
 
     this.ligarBarra();
     this.ligarCabine();
+    this.montarMapaLocal();
     this.montarPainelDeSalas();
     this.montarVitrineDoMenu();
     this.montarAjustes();
@@ -359,6 +362,68 @@ export class Telas {
   atualizarEscolha(dados: DadosDaEscolha): void {
     this.ultimosDados = dados;
     if (this.tela === 'escolha') this.pintarEscolha();
+  }
+
+  /**
+   * O que o botão de entrar da barra faz depois do apelido resolvido.
+   *
+   * Só o Jogo Local pergunta o mapa: é a única porta rápida que abre uma sala
+   * só sua, então é a única em que a pergunta tem resposta — no Jogo Online
+   * a sala já existe, com o mapa que já tinha.
+   */
+  private seguirDaBarra(porta: Porta): void {
+    if (porta === 'local') {
+      this.abrirFolha('mapa-local');
+      return;
+    }
+    this.pedirParaJogar(porta);
+  }
+
+  /**
+   * Os cartões de mapa do Jogo Local — o mesmo elenco do painel de Salas,
+   * num painel menor: aqui não há modo, formato nem npc para escolher, só o
+   * campo, porque o resto já é o padrão que o Jogo Local sempre teve.
+   */
+  private montarMapaLocal(): void {
+    const caixa = pegar<HTMLElement>('#mapas-jogo-local');
+    const cartoes: { valor: IdDoMapa | 'sorteio'; nome: string; lema: string }[] = [
+      {
+        valor: 'sorteio',
+        nome: 'Sortear',
+        lema: 'um campo diferente a cada partida',
+      },
+      ...IDS_DOS_MAPAS.map((id) => ({ valor: id, nome: MAPAS[id].nome, lema: MAPAS[id].lema })),
+    ];
+    const pintar = (): void => {
+      for (const b of Array.from(caixa.querySelectorAll<HTMLButtonElement>('button'))) {
+        b.setAttribute('aria-pressed', String(b.dataset.mapa === this.mapaLocalEscolhido));
+      }
+    };
+    for (const c of cartoes) {
+      const botao = document.createElement('button');
+      botao.className = 'modo';
+      botao.dataset.mapa = c.valor;
+      const nome = document.createElement('b');
+      nome.textContent = c.nome;
+      const lema = document.createElement('small');
+      lema.textContent = c.lema;
+      botao.append(nome, lema);
+      botao.addEventListener('click', () => {
+        this.mapaLocalEscolhido = c.valor;
+        pintar();
+      });
+      caixa.append(botao);
+    }
+    pintar();
+    pegar<HTMLButtonElement>('[data-acao="jogar-mapa-local"]').addEventListener('click', () => {
+      const criar = salaConfiguravel({
+        mapa: this.mapaLocalEscolhido,
+        porTime: POR_TIME,
+        bots: POR_TIME,
+        privada: true,
+      });
+      this.pedirParaJogar('local', criar);
+    });
   }
 
   private pedirParaJogar(porta: Porta, criar?: ConfiguracaoDeSala): void {
@@ -577,7 +642,11 @@ export class Telas {
   }
 
   private pintarMontagem(): void {
-    for (const b of Array.from(document.querySelectorAll<HTMLButtonElement>('.modo'))) {
+    // Escopado à folha de Salas: o Jogo Local tem seu próprio painel de
+    // mapas, com os mesmos botões `.modo`, e não pode ser pintado por aqui.
+    const folhaDeSalas = document.querySelector<HTMLElement>('.folha[data-folha="sala"]');
+    if (!folhaDeSalas) return;
+    for (const b of Array.from(folhaDeSalas.querySelectorAll<HTMLButtonElement>('.modo'))) {
       const meu =
         b.dataset.modo !== undefined
           ? b.dataset.modo === this.montagem.modo
@@ -657,14 +726,15 @@ export class Telas {
   private ligarBarra(): void {
     const entrar = (porta: Porta) => () => {
       // Sem apelido guardado, o primeiro clique abre a folha para escrever um;
-      // com apelido, vai direto para a cabine.
+      // com apelido, vai direto para a cabine (ou, no Jogo Local, para a
+      // escolha de mapa antes dela).
       if (!this.ajustes.nome.trim()) {
         this.porta = porta;
         this.abrirFolha('apelido');
         this.campoNome.focus();
         return;
       }
-      this.pedirParaJogar(porta);
+      this.seguirDaBarra(porta);
     };
     pegar<HTMLButtonElement>('#jogar-local').addEventListener('click', entrar('local'));
     pegar<HTMLButtonElement>('#jogar-online').addEventListener('click', entrar('online'));
@@ -756,7 +826,15 @@ export class Telas {
     // O botão dentro da folha do apelido continua a mesma porta de entrada, e
     // respeita o botão do menu que a abriu.
     for (const acao of Array.from(document.querySelectorAll<HTMLElement>('[data-acao="jogar"]'))) {
-      acao.addEventListener('click', () => this.pedirParaJogar(this.porta, this.montagemPendente));
+      acao.addEventListener('click', () => {
+        // A folha do apelido serve toda porta rápida; só o Jogo Local (sem
+        // `montagemPendente`, que é de Salas) pergunta o mapa antes de ir.
+        if (this.porta === 'local' && !this.montagemPendente) {
+          this.seguirDaBarra(this.porta);
+          return;
+        }
+        this.pedirParaJogar(this.porta, this.montagemPendente);
+      });
     }
   }
 

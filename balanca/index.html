@@ -1650,6 +1650,16 @@
         <p class="recado" id="recado"></p>
       </div>
 
+      <!-- o Jogo Local escolhe o mapa aqui, antes de montar o sofá: a sala é
+           dele sozinho, e é o único fluxo rápido em que faz sentido perguntar -->
+      <div class="folha" data-folha="mapa-local" hidden>
+        <h2>Qual campo?</h2>
+        <div class="modos" id="mapas-jogo-local"></div>
+        <div class="linha">
+          <button class="grande" data-acao="jogar-mapa-local">jogar</button>
+        </div>
+      </div>
+
       <!--
         Montar sala e entrar numa sala são a mesma folha de propósito. São a
         mesma pergunta ("onde eu vou jogar?") e separá-las em dois painéis faria
