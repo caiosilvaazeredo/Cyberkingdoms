@@ -107,6 +107,18 @@ export function mensagemDeEntrada(
   };
 }
 
+/** O que a tela de escolha mostra enquanto a sala está travada. */
+export interface LobbyInfo {
+  aberto: boolean;
+  souAnfitriao: boolean;
+  modo: IdDoModo;
+  mapa: IdDoMapa | 'sorteio';
+  porTime: number;
+  bots: number;
+  nomesProntos: readonly string[];
+  total: number;
+}
+
 export class Rede {
   private ws: WebSocket | null = null;
   private readonly url: string;
@@ -147,6 +159,11 @@ export class Rede {
   votacao: VotacaoAberta | null = null;
   /** A última frase do time — ordem dada, votação apurada. */
   recadoDoTime: { texto: string; quando: number } | null = null;
+  /**
+   * O lobby desta sala, ou `null` quando ela não passa por um — a maioria:
+   * só sala montada (Jogo Local, Salas) nasce travada esperando confirmação.
+   */
+  lobby: LobbyInfo | null = null;
   /** As marcas do time no minimapa — "olha aqui" — vivas nos últimos segundos. */
   readonly marcas: { x: number; y: number; quem: string; quando: number }[] = [];
 
@@ -256,6 +273,18 @@ export class Rede {
   mandar(alvo: number, classe: Classe, votar = false): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
     this.ws.send(JSON.stringify({ t: 'mandar', alvo, classe, ...(votar ? { votar: true } : {}) }));
+  }
+
+  /** O anfitrião do lobby muda mapa, modo ou formato. O servidor confere. */
+  configurarLobby(c: ConfiguracaoDeSala): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    this.ws.send(JSON.stringify({ t: 'configurarLobby', c }));
+  }
+
+  /** "Estou pronto" — ou o cancelamento dele. */
+  marcarPronto(valor: boolean): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    this.ws.send(JSON.stringify({ t: 'pronto', valor }));
   }
 
   /** Vota numa votação aberta. O último voto é o que vale. */
@@ -396,6 +425,18 @@ export class Rede {
         return;
       case 'pong':
         this.ping = Math.round(performance.now() - msg.tempo);
+        return;
+      case 'lobby':
+        this.lobby = {
+          aberto: msg.aberto,
+          souAnfitriao: msg.souAnfitriao,
+          modo: msg.modo,
+          mapa: msg.mapa,
+          porTime: msg.porTime,
+          bots: msg.bots,
+          nomesProntos: msg.nomesProntos,
+          total: msg.total,
+        };
         return;
       case 'recusado':
         this.motivo = msg.motivo;

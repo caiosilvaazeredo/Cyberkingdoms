@@ -751,6 +751,13 @@
         gap: 8px;
         margin-bottom: 6px;
       }
+      /* Sem isto, `hidden` some para a maioria dos elementos mas perde para o
+         `display: grid` acima — a mesma especificidade, e a regra de baixo
+         vence. Só passou despercebido até aqui porque nenhum `.modos` tinha
+         sido escondido de verdade antes do painel do lobby. */
+      .modos[hidden] {
+        display: none;
+      }
       button.modo {
         display: block;
         text-align: left;
@@ -1171,6 +1178,27 @@
         font-weight: 500;
         letter-spacing: normal;
         color: rgba(20, 17, 15, 0.6);
+      }
+      .lobby {
+        margin: 0 0 clamp(8px, 1.4vw, 14px);
+        padding: 10px 12px;
+        background: rgba(60, 44, 12, 0.08);
+        border: 1px solid rgba(201, 162, 39, 0.35);
+        border-radius: 6px;
+      }
+      .lobby-config .modos {
+        margin-top: 8px;
+      }
+      .lobby-rodape {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .lobby-rodape #lobby-pronto[aria-pressed='true'] {
+        background: #3f8f4f;
+        color: #fff;
       }
       .lados {
         display: grid;
@@ -1650,16 +1678,6 @@
         <p class="recado" id="recado"></p>
       </div>
 
-      <!-- o Jogo Local escolhe o mapa aqui, antes de montar o sofá: a sala é
-           dele sozinho, e é o único fluxo rápido em que faz sentido perguntar -->
-      <div class="folha" data-folha="mapa-local" hidden>
-        <h2>Qual campo?</h2>
-        <div class="modos" id="mapas-jogo-local"></div>
-        <div class="linha">
-          <button class="grande" data-acao="jogar-mapa-local">jogar</button>
-        </div>
-      </div>
-
       <!--
         Montar sala e entrar numa sala são a mesma folha de propósito. São a
         mesma pergunta ("onde eu vou jogar?") e separá-las em dois painéis faria
@@ -1901,6 +1919,25 @@
           descobre o que vai jogar é o meio da partida.
         -->
         <p class="confronto" id="confronto-da-escolha"></p>
+
+        <!--
+          O lobby: só aparece enquanto a sala está travada esperando todo
+          mundo confirmar. Some sozinho assim que o servidor destrava — dali
+          em diante é a tela de escolha de sempre, sem mais nada por cima.
+        -->
+        <div class="lobby" id="lobby" hidden>
+          <div class="lobby-config">
+            <button class="pequeno" id="lobby-mudar" hidden>mudar mapa e formato</button>
+            <div class="modos" id="lobby-mapas" hidden></div>
+            <div class="modos" id="lobby-modos" hidden></div>
+            <div class="modos" id="lobby-formatos" hidden></div>
+          </div>
+          <div class="lobby-rodape">
+            <span class="dica" id="lobby-status"></span>
+            <button class="grande" id="lobby-pronto">pronto</button>
+          </div>
+        </div>
+
         <div class="lados">
           <div class="lado" data-time="azul" aria-selected="true">
             <h3>Reino Azul</h3>

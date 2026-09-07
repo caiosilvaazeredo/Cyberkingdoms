@@ -10,8 +10,9 @@ import {
 } from './controles';
 import type { OlharLocal } from './desenho';
 import type { Entrada, LeituraDeEntrada } from './entrada';
-import { Rede } from './rede';
+import { Rede, type LobbyInfo } from './rede';
 import type { Unidade } from '../shared/estado';
+import type { ConfiguracaoDeSala } from '../shared/protocolo';
 import type { Time } from '../shared/regras';
 
 /**
@@ -147,6 +148,33 @@ export class Sofa implements OlharLocal {
   /** Todos escolhem o mesmo lado. É a regra do sofá. */
   escolherTime(time: Time): void {
     for (const j of this.locais) j.rede.escolherTime(time, j.nome);
+  }
+
+  /**
+   * O lobby da sala, visto pelo sofá inteiro — `souAnfitriao` é de **qualquer**
+   * uma das conexões locais, porque o resto do painel (mapa, modo, prontos)
+   * chega igual em todas: são todas clientes da mesma sala.
+   */
+  get lobby(): LobbyInfo | null {
+    const base = this.anfitria.lobby;
+    if (!base) return null;
+    return { ...base, souAnfitriao: this.locais.some((j) => j.rede.lobby?.souAnfitriao === true) };
+  }
+
+  /** Só quem é anfitrião de verdade manda; as outras conexões são ignoradas
+   * pelo servidor, então basta achar a que é. */
+  configurarLobby(c: ConfiguracaoDeSala): void {
+    const anfitriao = this.locais.find((j) => j.rede.lobby?.souAnfitriao === true);
+    (anfitriao ?? this.locais[0])?.rede.configurarLobby(c);
+  }
+
+  /**
+   * "Pronto" do sofá inteiro de uma vez: fisicamente é uma sala só decidindo
+   * junto, e pedir quatro cliques separados para uma coisa que todo mundo já
+   * concordou ali na tela seria fricção sem propósito nenhum.
+   */
+  marcarPronto(valor: boolean): void {
+    for (const j of this.locais) j.rede.marcarPronto(valor);
   }
 
   /** Verdadeiro quando todo mundo do sofá já nasceu em campo. */

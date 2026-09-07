@@ -190,6 +190,11 @@ export class Lobby {
             porTime: feita.porTime,
             botsPorTime: feita.bots,
             campanha: feita.campanha,
+            // A campanha não pergunta nada — o modo, o mapa e o formato já
+            // vêm decididos, e o time bandido é sempre bot. Só quem monta a
+            // própria sala de verdade (Jogo Local e Salas) tem o que
+            // configurar e quem esperar.
+            lobby: !feita.campanha,
           }
         : {}),
       ...(this.porTime !== undefined && !feita ? { porTime: this.porTime } : {}),

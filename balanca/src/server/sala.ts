@@ -6,7 +6,14 @@ import { CLASSES_COM_CHAPEU, type Classe } from '../shared/classes';
 import { mapaDe, mapaSorteado, type IdDoMapa } from '../shared/mapas';
 import { modoDe, type IdDoModo } from '../shared/modos';
 import { criarPartida, type Partida } from '../shared/partida';
-import { empacotar, type Comando, type DoServidor, type FichaDeJogador } from '../shared/protocolo';
+import {
+  empacotar,
+  salaConfiguravel,
+  type Comando,
+  type ConfiguracaoDeSala,
+  type DoServidor,
+  type FichaDeJogador,
+} from '../shared/protocolo';
 import {
   DT,
   ESPERA_POR_JOGADORES,
@@ -121,20 +128,29 @@ export interface OpcoesDaSala {
    * recusa qualquer humano que peça esse lado. Ver `shared/campanha.ts`.
    */
   campanha?: boolean;
+  /**
+   * Abre travada: sem bot, sem relógio, até todo humano conectado marcar
+   * `pronto`. Só faz sentido para quem monta a própria sala — Jogo Local e
+   * Salas — porque só ali há uma configuração para mostrar e alguém para
+   * esperar. Quem entra numa sala pública ou convidada cai numa partida que
+   * já está de pé, e travá-la de novo a cada chegada seria congelar o jogo
+   * de quem já estava lá por causa de quem acabou de entrar.
+   */
+  lobby?: boolean;
 }
 
 export class Sala {
   readonly nome: string;
   readonly privada: boolean;
-  readonly modo: IdDoModo;
+  modo: IdDoModo;
   /** O que o anfitrião pediu: um mapa, ou sorteio a cada partida. */
-  readonly escolhaDeMapa: IdDoMapa | 'sorteio';
+  escolhaDeMapa: IdDoMapa | 'sorteio';
   /** O mapa da partida que está rodando agora. */
   private mapaAtual: IdDoMapa;
   /** Vagas de gente por time. */
-  readonly porTime: number;
+  porTime: number;
   /** Npcs fixos por time, ou `null` quando o bot é tapa-buraco do lobby. */
-  readonly botsFixos: number | null;
+  botsFixos: number | null;
   private partida: Partida;
   private navegador: Navegador;
   private bots: Bots;
@@ -173,6 +189,19 @@ export class Sala {
    * de novo no estoque a cada partida nova, então uma campanha de dez
    * vitórias empilha dez reforços, não um só. */
   private perksDoTime: Classe[] = [];
+  /**
+   * Travada até todo humano marcar `pronto`: sem bot, sem relógio.
+   *
+   * Só nasce travada quando `opcoes.lobby` pede; do contrário começa aberta
+   * (comportamento de sempre) e nunca mais entra em lobby, nem na próxima
+   * partida — a sala já teve a chance de perguntar, e perguntar de novo a
+   * cada rodada seria interromper quem já está jogando.
+   */
+  private lobbyAberto: boolean;
+  /** Quem pode mudar a configuração enquanto o lobby está aberto. */
+  private anfitriao: string | null = null;
+  /** Quem já disse que está pronto, por chave de cliente. */
+  private readonly prontos = new Set<string>();
 
   constructor(opcoes: OpcoesDaSala) {
     this.nome = opcoes.nome;
@@ -193,6 +222,7 @@ export class Sala {
     // este caso especial toda Regência nasceria com o backfill desligado.
     this.botsFixos = this.campanha ? null : (opcoes.botsPorTime ?? null);
     this.espera = opcoes.esperaPorJogadores ?? ESPERA_POR_JOGADORES;
+    this.lobbyAberto = opcoes.lobby === true;
     this.partida = criarPartida(this.seed, this.modo, this.mapaAtual, this.porTime);
     this.navegador = new Navegador(this.partida.arena);
     this.bots = new Bots(this.partida.arena, this.navegador);
@@ -274,6 +304,10 @@ export class Sala {
       cliente.enviar({ t: 'recusado', motivo: 'sala cheia' });
       return false;
     }
+    // O primeiro a entrar manda no lobby — não há eleição nem configuração
+    // prévia para decidir outra coisa, e "quem abriu a sala" é a resposta que
+    // qualquer jogador já espera.
+    if (this.anfitriao === null) this.anfitriao = cliente.chave;
     cliente.unidade = null;
     cliente.time = null;
     cliente.assistindo = assistindo;
@@ -283,6 +317,7 @@ export class Sala {
     // O elenco vai na hora: a tela de escolha precisa saber quem já está de que
     // lado antes do primeiro retrato chegar.
     cliente.enviar({ t: 'elenco', jogadores: this.elenco() });
+    if (this.lobbyAberto) this.espalharLobby();
     return true;
   }
 
@@ -327,7 +362,106 @@ export class Sala {
     if (!this.fila[time].includes(chave)) this.fila[time].push(chave);
     this.elencoSujo = true;
     cliente.enviar({ t: 'nasceu', voce: u.id, time });
+    // Deixou de assistir: quem conta para o lobby mudou, e quem está olhando
+    // o painel de "pronto" merece ver o total certo sem esperar o próximo
+    // clique de alguém.
+    if (this.lobbyAberto) this.espalharLobby();
     return true;
+  }
+
+  // --- o lobby -------------------------------------------------------------
+
+  /**
+   * O anfitrião muda modo, mapa, formato ou npcs enquanto o lobby está
+   * aberto. Refaz a arena na hora — ninguém entrou em campo ainda, porque é
+   * exatamente isso que "aberto" quer dizer — e zera quem já tinha marcado
+   * `pronto`: a pergunta mudou, a resposta de antes não vale mais.
+   */
+  configurarLobby(chave: string, bruta: ConfiguracaoDeSala): boolean {
+    if (!this.lobbyAberto || chave !== this.anfitriao) return false;
+    const c = salaConfiguravel({
+      modo: this.modo,
+      mapa: this.escolhaDeMapa,
+      porTime: this.porTime,
+      bots: this.botsFixos ?? 0,
+      privada: this.privada,
+      campanha: this.campanha,
+      ...bruta,
+    });
+    this.modo = c.modo;
+    this.escolhaDeMapa = c.mapa;
+    this.recriarPartida(c.mapa === 'sorteio' ? mapaSorteado(this.seed) : c.mapa);
+    this.porTime = c.porTime;
+    this.botsFixos = this.campanha ? null : c.bots;
+    this.prontos.clear();
+    this.elencoSujo = true;
+    // Mapa novo é arena nova: sem isto, quem já estava aqui desenharia o
+    // campo velho por cima da simulação nova até a partida de verdade
+    // começar e mandar o primeiro `bemvindo` da rodada seguinte.
+    this.transmitir(this.boasVindas());
+    this.espalharLobby();
+    return true;
+  }
+
+  /** Refaz partida, navegador e bots para um mapa novo — mesmo gesto da
+   * troca de rodada em `reiniciarSeAcabou`, usado também aqui e ao mudar a
+   * configuração do lobby. */
+  private recriarPartida(mapa: IdDoMapa): void {
+    this.mapaAtual = mapa;
+    this.partida = criarPartida(this.seed, this.modo, this.mapaAtual, this.porTime);
+    this.navegador = new Navegador(this.partida.arena);
+    this.bots = new Bots(this.partida.arena, this.navegador);
+  }
+
+  /**
+   * "Estou pronto." Abre o jogo assim que todo humano conectado — e só quem
+   * está mesmo aqui para jogar, não quem só assiste — tiver marcado.
+   */
+  marcarPronto(chave: string, valor: boolean): boolean {
+    if (!this.lobbyAberto || !this.clientes.has(chave)) return false;
+    if (valor) this.prontos.add(chave);
+    else this.prontos.delete(chave);
+    this.conferirLobby();
+    return true;
+  }
+
+  /** Quantos humanos precisam confirmar: todo mundo, exceto quem só assiste. */
+  private get jogadoresDoLobby(): Cliente[] {
+    return [...this.clientes.values()].filter((c) => !c.assistindo);
+  }
+
+  /**
+   * Abre o jogo quando todo mundo confirmou, e sempre avisa o resultado.
+   *
+   * Chamada depois de qualquer coisa que mude a resposta: um `pronto`, uma
+   * entrada ou saída. Uma sala sem ninguém para jogar (só espectador, ou
+   * ninguém) nunca abre sozinha — não há o que destravar.
+   */
+  private conferirLobby(): void {
+    if (!this.lobbyAberto) return;
+    const jogadores = this.jogadoresDoLobby;
+    if (jogadores.length > 0 && jogadores.every((c) => this.prontos.has(c.chave))) {
+      this.lobbyAberto = false;
+      this.prontos.clear();
+    }
+    this.espalharLobby();
+  }
+
+  private espalharLobby(): void {
+    const jogadores = this.jogadoresDoLobby;
+    for (const c of this.clientes.values()) {
+      c.enviar({
+        t: 'lobby',
+        aberto: this.lobbyAberto,
+        souAnfitriao: c.chave === this.anfitriao,
+        modo: this.modo,
+        mapa: this.escolhaDeMapa,
+        porTime: this.porTime,
+        bots: this.botsFixos ?? 0,
+        nomesProntos: jogadores.filter((j) => this.prontos.has(j.chave)).map((j) => j.nome),
+        total: jogadores.length,
+      });
+    }
   }
 
   // --- o time manda nos npcs ----------------------------------------------
@@ -495,6 +629,13 @@ export class Sala {
     if (cliente.unidade !== null) this.partida.sair(cliente.unidade);
     this.clientes.delete(chave);
     this.elencoSujo = true;
+    this.prontos.delete(chave);
+    // O anfitrião saiu: o próximo da fila de chegada assume — sem eleição,
+    // pelo mesmo motivo que o primeiro virou anfitrião sozinho.
+    if (this.anfitriao === chave) {
+      this.anfitriao = [...this.clientes.keys()][0] ?? null;
+    }
+    if (this.lobbyAberto) this.conferirLobby();
   }
 
   receber(chave: string, comando: Comando): void {
@@ -514,12 +655,18 @@ export class Sala {
   /** Um tick de simulação. O servidor chama trinta vezes por segundo. */
   passo(): void {
     this.expirarClientes();
-    this.cuidarDasVotacoes();
-    this.conferirPedidos();
-    this.cuidarDosBots();
-    this.bots.pensar(this.partida);
-    this.partida.passo();
-    this.reiniciarSeAcabou();
+    // Travada: nada de bot, votação, relógio ou movimento — a arena que o
+    // `bemvindo` já mandou continua de pé para o preview, mas parada, até
+    // todo mundo marcar `pronto`. É o freio inteiro da espera; o resto do
+    // laço volta a rodar assim que `lobbyAberto` cai.
+    if (!this.lobbyAberto) {
+      this.cuidarDasVotacoes();
+      this.conferirPedidos();
+      this.cuidarDosBots();
+      this.bots.pensar(this.partida);
+      this.partida.passo();
+      this.reiniciarSeAcabou();
+    }
 
     if (this.elencoSujo) {
       this.transmitir({ t: 'elenco', jogadores: this.elenco() });
@@ -627,10 +774,7 @@ export class Sala {
     this.seed = (this.seed * 1103515245 + 12345) >>> 0;
     // Sorteio: o mapa da próxima partida sai da seed nova. Fixo: o mesmo campo
     // de novo, que é o que quem escolheu um mapa está esperando.
-    if (this.escolhaDeMapa === 'sorteio') this.mapaAtual = mapaSorteado(this.seed);
-    this.partida = criarPartida(this.seed, this.modo, this.mapaAtual, this.porTime);
-    this.navegador = new Navegador(this.partida.arena);
-    this.bots = new Bots(this.partida.arena, this.navegador);
+    this.recriarPartida(this.escolhaDeMapa === 'sorteio' ? mapaSorteado(this.seed) : this.mapaAtual);
     this.esperando = 0;
     if (this.campanha) this.aplicarCampanha();
 

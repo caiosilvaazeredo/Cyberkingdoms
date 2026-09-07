@@ -11,6 +11,7 @@ import {
 } from './ajustes';
 import { MAXIMO_LOCAL, rotuloDaFonte, type IdDeFonte } from './controles';
 import { COR_DA_VAGA } from './desenho';
+import type { LobbyInfo } from './rede';
 import { avatarDe } from './equipe';
 import { FORMATOS, campoPara } from '../shared/formatos';
 import { IDS_DOS_MAPAS, MAPAS, type IdDoMapa } from '../shared/mapas';
@@ -76,6 +77,16 @@ export interface AcoesDasTelas {
   escolher(time: Time): void;
   /** Desistiu da cabine e voltou ao menu: as conexões extras podem fechar. */
   desistir(): void;
+  /**
+   * O lobby da sala atual, ou `null` fora de uma sala montada — a tela chama
+   * isto a cada quadro que desenha a escolha de lado, então tem de ser
+   * síncrono e barato: nunca uma promessa, nunca uma busca na rede.
+   */
+  lobby(): LobbyInfo | null;
+  /** O anfitrião do lobby muda mapa, modo ou formato. */
+  configurarLobby(c: ConfiguracaoDeSala): void;
+  /** "Estou pronto", ou o cancelamento — `valor` diz qual dos dois. */
+  marcarPronto(valor: boolean): void;
   /**
    * As salas abertas agora, para a lista do painel.
    *
@@ -226,8 +237,6 @@ export class Telas {
   private montagem: Required<ConfiguracaoDeSala> = salaConfiguravel({ porTime: 2, bots: 2 });
   /** A montagem que o botão do apelido deve reenviar, se houver. */
   private montagemPendente: ConfiguracaoDeSala | undefined;
-  /** O mapa escolhido para o próximo Jogo Local. `'sorteio'` é o padrão. */
-  private mapaLocalEscolhido: IdDoMapa | 'sorteio' = 'sorteio';
   /** A sala aberta em que se clicou "entrar", quando a porta é `convidada`. */
   private salaPedida: string | null = null;
 
@@ -237,8 +246,8 @@ export class Telas {
 
     this.ligarBarra();
     this.ligarCabine();
-    this.montarMapaLocal();
     this.montarPainelDeSalas();
+    this.montarLobby();
     this.montarVitrineDoMenu();
     this.montarAjustes();
 
@@ -367,63 +376,21 @@ export class Telas {
   /**
    * O que o botão de entrar da barra faz depois do apelido resolvido.
    *
-   * Só o Jogo Local pergunta o mapa: é a única porta rápida que abre uma sala
-   * só sua, então é a única em que a pergunta tem resposta — no Jogo Online
-   * a sala já existe, com o mapa que já tinha.
+   * Nenhuma porta rápida pergunta nada antes de entrar — Jogo Local abre a
+   * sala com a configuração de sempre (sorteio, seis por time) e quem a abriu
+   * refina tudo depois, no próprio lobby: é lá que tem prévia de verdade (a
+   * arena já de pé, e não um cartão de texto) e onde dá para trocar de ideia
+   * mais de uma vez sem fechar e reabrir uma tela.
    */
   private seguirDaBarra(porta: Porta): void {
     if (porta === 'local') {
-      this.abrirFolha('mapa-local');
+      this.pedirParaJogar(
+        'local',
+        salaConfiguravel({ mapa: 'sorteio', porTime: POR_TIME, bots: POR_TIME, privada: true }),
+      );
       return;
     }
     this.pedirParaJogar(porta);
-  }
-
-  /**
-   * Os cartões de mapa do Jogo Local — o mesmo elenco do painel de Salas,
-   * num painel menor: aqui não há modo, formato nem npc para escolher, só o
-   * campo, porque o resto já é o padrão que o Jogo Local sempre teve.
-   */
-  private montarMapaLocal(): void {
-    const caixa = pegar<HTMLElement>('#mapas-jogo-local');
-    const cartoes: { valor: IdDoMapa | 'sorteio'; nome: string; lema: string }[] = [
-      {
-        valor: 'sorteio',
-        nome: 'Sortear',
-        lema: 'um campo diferente a cada partida',
-      },
-      ...IDS_DOS_MAPAS.map((id) => ({ valor: id, nome: MAPAS[id].nome, lema: MAPAS[id].lema })),
-    ];
-    const pintar = (): void => {
-      for (const b of Array.from(caixa.querySelectorAll<HTMLButtonElement>('button'))) {
-        b.setAttribute('aria-pressed', String(b.dataset.mapa === this.mapaLocalEscolhido));
-      }
-    };
-    for (const c of cartoes) {
-      const botao = document.createElement('button');
-      botao.className = 'modo';
-      botao.dataset.mapa = c.valor;
-      const nome = document.createElement('b');
-      nome.textContent = c.nome;
-      const lema = document.createElement('small');
-      lema.textContent = c.lema;
-      botao.append(nome, lema);
-      botao.addEventListener('click', () => {
-        this.mapaLocalEscolhido = c.valor;
-        pintar();
-      });
-      caixa.append(botao);
-    }
-    pintar();
-    pegar<HTMLButtonElement>('[data-acao="jogar-mapa-local"]').addEventListener('click', () => {
-      const criar = salaConfiguravel({
-        mapa: this.mapaLocalEscolhido,
-        porTime: POR_TIME,
-        bots: POR_TIME,
-        privada: true,
-      });
-      this.pedirParaJogar('local', criar);
-    });
   }
 
   private pedirParaJogar(porta: Porta, criar?: ConfiguracaoDeSala): void {
@@ -940,6 +907,7 @@ export class Telas {
   }
 
   private pintarEscolha(): void {
+    this.pintarLobby();
     const dados = this.ultimosDados;
     const confronto = document.querySelector<HTMLElement>('#confronto-da-escolha');
     if (confronto) {
@@ -1014,6 +982,114 @@ export class Telas {
   /** Mensagem na tela de escolha, quando o servidor recusa o lado. */
   avisarNaEscolha(texto: string): void {
     this.status.textContent = texto;
+  }
+
+  /**
+   * Os três painéis de cartão do lobby — mapa, modo, formato — montados uma
+   * vez só. Cada clique manda `configurarLobby` na hora: o servidor é quem
+   * decide se vale (só o anfitrião, só com o lobby aberto), então não há
+   * nada para validar aqui além de estar mostrando os cartões certos.
+   */
+  private montarLobby(): void {
+    const cartao = (
+      caixa: HTMLElement,
+      dataset: string,
+      valor: string,
+      nome: string,
+      lema: string,
+      aoClicar: () => void,
+    ): void => {
+      const botao = document.createElement('button');
+      botao.className = 'modo';
+      botao.dataset[dataset] = valor;
+      const n = document.createElement('b');
+      n.textContent = nome;
+      const l = document.createElement('small');
+      l.textContent = lema;
+      botao.append(n, l);
+      botao.addEventListener('click', aoClicar);
+      caixa.append(botao);
+    };
+
+    const caixaMapas = pegar<HTMLElement>('#lobby-mapas');
+    cartao(caixaMapas, 'mapa', 'sorteio', 'Sortear', 'um campo diferente a cada partida', () =>
+      this.acoes.configurarLobby({ mapa: 'sorteio' }),
+    );
+    for (const id of IDS_DOS_MAPAS) {
+      cartao(caixaMapas, 'mapa', id, MAPAS[id].nome, MAPAS[id].lema, () =>
+        this.acoes.configurarLobby({ mapa: id }),
+      );
+    }
+
+    const caixaModos = pegar<HTMLElement>('#lobby-modos');
+    for (const id of IDS_DOS_MODOS) {
+      cartao(caixaModos, 'modo', id, MODOS[id].nome, MODOS[id].lema, () =>
+        this.acoes.configurarLobby({ modo: id }),
+      );
+    }
+
+    const caixaFormatos = pegar<HTMLElement>('#lobby-formatos');
+    for (const f of FORMATOS) {
+      cartao(caixaFormatos, 'formato', String(f.porTime), f.nome, f.lema, () =>
+        this.acoes.configurarLobby({ porTime: f.porTime, bots: f.porTime }),
+      );
+    }
+
+    pegar<HTMLButtonElement>('#lobby-mudar').addEventListener('click', () => {
+      for (const id of ['lobby-mapas', 'lobby-modos', 'lobby-formatos']) {
+        const el = pegar<HTMLElement>(`#${id}`);
+        el.hidden = !el.hidden;
+      }
+    });
+
+    pegar<HTMLButtonElement>('#lobby-pronto').addEventListener('click', () => {
+      const pronto = pegar<HTMLButtonElement>('#lobby-pronto').getAttribute('aria-pressed') === 'true';
+      this.acoes.marcarPronto(!pronto);
+    });
+  }
+
+  /**
+   * O estado do lobby: aparece só enquanto a sala está travada, e some
+   * sozinho assim que o servidor destrava — dali em diante a tela de
+   * escolha é a de sempre, sem mais nada por cima.
+   */
+  private pintarLobby(): void {
+    const painel = pegar<HTMLElement>('#lobby');
+    const lobby = this.acoes.lobby();
+    if (!lobby || !lobby.aberto) {
+      painel.hidden = true;
+      return;
+    }
+    painel.hidden = false;
+
+    const mudar = pegar<HTMLButtonElement>('#lobby-mudar');
+    mudar.hidden = !lobby.souAnfitriao;
+    if (!lobby.souAnfitriao) {
+      for (const id of ['lobby-mapas', 'lobby-modos', 'lobby-formatos']) {
+        pegar<HTMLElement>(`#${id}`).hidden = true;
+      }
+    }
+    for (const [id, chave, valor] of [
+      ['lobby-mapas', 'mapa', lobby.mapa],
+      ['lobby-modos', 'modo', lobby.modo],
+      ['lobby-formatos', 'formato', String(lobby.porTime)],
+    ] as const) {
+      for (const b of Array.from(pegar<HTMLElement>(`#${id}`).querySelectorAll<HTMLButtonElement>('button'))) {
+        b.setAttribute('aria-pressed', String(b.dataset[chave] === valor));
+      }
+    }
+
+    const meuNome = this.ajustes.nome.trim() || 'Anônimo';
+    const jaProntinho = lobby.nomesProntos.includes(meuNome);
+    const botaoPronto = pegar<HTMLButtonElement>('#lobby-pronto');
+    botaoPronto.setAttribute('aria-pressed', String(jaProntinho));
+    botaoPronto.textContent = jaProntinho ? 'cancelar' : 'pronto';
+
+    const status = pegar<HTMLElement>('#lobby-status');
+    status.textContent =
+      lobby.nomesProntos.length === 0
+        ? `esperando confirmação — 0 de ${lobby.total} prontos`
+        : `${lobby.nomesProntos.length} de ${lobby.total} prontos: ${lobby.nomesProntos.join(', ')}`;
   }
 
   /**

@@ -150,6 +150,9 @@ const telas: Telas = new Telas({
   assistir: (): void => telas.mostrar('plateia'),
   escolher: (time) => sofa?.escolherTime(time),
   desistir: () => desfazerOSofa(),
+  lobby: () => sofa?.lobby ?? null,
+  configurarLobby: (c) => sofa?.configurarLobby(c),
+  marcarPronto: (valor) => sofa?.marcarPronto(valor),
   ajustou: () => {
     // Nada a fazer além de guardar: o laço de quadro lê `telas.preferencias`
     // toda vez que desenha, então o ajuste vale no quadro seguinte.
@@ -430,7 +433,11 @@ function laco(agora: number): void {
       );
     }
   }
-  if (sofa?.todosEmCampo && telas.atual !== 'jogo') {
+  // Sofá inteiro em campo não basta enquanto o lobby está travado: entrar em
+  // 'jogo' com o mundo parado, sem nada na tela dizendo por quê, pareceria
+  // travamento. Quem já escolheu o lado espera aqui, na tela de escolha —
+  // que é onde o painel de "pronto" mora.
+  if (sofa?.todosEmCampo && !sofa.lobby?.aberto && telas.atual !== 'jogo') {
     querendoJogar = false;
     telas.mostrar('jogo');
   }

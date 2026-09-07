@@ -243,6 +243,12 @@ wss.on('connection', (ws: WebSocket) => {
       case 'marcar':
         sala?.marcar(chave, Number(msg.x), Number(msg.y));
         return;
+      case 'configurarLobby':
+        sala?.configurarLobby(chave, msg.c);
+        return;
+      case 'pronto':
+        sala?.marcarPronto(chave, msg.valor === true);
+        return;
       case 'sair':
         ws.close();
         return;

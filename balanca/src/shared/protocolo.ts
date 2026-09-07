@@ -230,6 +230,21 @@ export type DoCliente =
    * mensagem, que só carrega onde a pessoa tocou.
    */
   | { t: 'marcar'; x: number; y: number }
+  /**
+   * O anfitrião muda as regras da sala **enquanto o lobby está aberto**.
+   *
+   * Mesmo formato de `entrar.criar`, e pelo mesmo motivo: o servidor saneia
+   * com `salaConfiguravel` antes de tocar em qualquer número. Ignorada de
+   * quem não é o anfitrião, ou depois que a partida já começou — mudar o
+   * mapa no meio do jogo derrubaria a arena debaixo de quem já está nela.
+   */
+  | { t: 'configurarLobby'; c: ConfiguracaoDeSala }
+  /**
+   * "Estou pronto." Enquanto o lobby está aberto, a partida fica parada —
+   * sem bot, sem relógio correndo — até todo humano conectado marcar isto.
+   * `valor: false` desmarca, para quem clicou cedo demais.
+   */
+  | { t: 'pronto'; valor: boolean }
   | { t: 'sair' };
 
 // --- servidor → cliente ----------------------------------------------------
@@ -326,7 +341,26 @@ export type DoServidor =
   | { t: 'marca'; x: number; y: number; quem: string }
   | { t: 'retrato'; r: Retrato }
   | { t: 'pong'; tempo: number }
-  | { t: 'recusado'; motivo: string };
+  | { t: 'recusado'; motivo: string }
+  /**
+   * O estado do lobby: aberto até todo humano conectado marcar `pronto`.
+   *
+   * Mandada a cada entrada, saída, `pronto` e mudança de configuração — nunca
+   * no laço dos quinze retratos por segundo, porque muda raramente e cada
+   * campo dela é pouco. `nomesProntos` é a lista, não a contagem: é o que
+   * deixa a tela mostrar quem falta, e não só "3 de 4".
+   */
+  | {
+      t: 'lobby';
+      aberto: boolean;
+      souAnfitriao: boolean;
+      modo: IdDoModo;
+      mapa: IdDoMapa | 'sorteio';
+      porTime: number;
+      bots: number;
+      nomesProntos: string[];
+      total: number;
+    };
 
 export interface Retrato {
   /**
