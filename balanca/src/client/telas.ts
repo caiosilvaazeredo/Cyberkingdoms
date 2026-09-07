@@ -284,6 +284,14 @@ export class Telas {
         this.mostrar('menu');
         return;
       }
+      // Sem isto, quem entra numa partida fica preso nela: não havia como
+      // sair a não ser fechando a aba. `desistir()` já cuida de fechar as
+      // conexões do sofá — o mesmo que a cabine chama ao voltar.
+      if (this.tela === 'jogo' && e.code === 'Escape') {
+        this.acoes.desistir();
+        this.mostrar('menu');
+        return;
+      }
       if (this.tela === 'menu' && e.code === 'Escape') this.fecharFolhas();
     });
   }
