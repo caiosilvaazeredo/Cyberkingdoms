@@ -189,6 +189,7 @@ export class Lobby {
             mapa: feita.mapa,
             porTime: feita.porTime,
             botsPorTime: feita.bots,
+            dificuldadeDosBots: feita.dificuldadeDosBots,
             campanha: feita.campanha,
             // A campanha não pergunta nada — o modo, o mapa e o formato já
             // vêm decididos, e o time bandido é sempre bot. Só quem monta a

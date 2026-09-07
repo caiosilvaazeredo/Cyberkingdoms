@@ -93,6 +93,25 @@ const OFICIOS: readonly Classe[] = ['saqueador', 'lenhador', 'minerador'];
 /** Segundos entre ver o alvo e conseguir atirar nele. */
 const ESPERA_PARA_MIRAR = 0.3;
 
+/**
+ * A dificuldade que o anfitrião escolhe para os bots da sala.
+ *
+ * Não é pontaria: um bot que mira por vetor sempre acerta o alvo, então
+ * "difícil" não pode significar "acerta mais". O que a dificuldade mexe é o
+ * tempo de reação — quanto tempo o bot demora para começar a atacar depois de
+ * ver o alvo, e para atacar de novo depois do último golpe — que é a mesma
+ * alavanca que `tempero` já usa para dar variedade entre bots. `'normal'`
+ * mantém a conta de sempre.
+ */
+export type Dificuldade = 'facil' | 'normal' | 'dificil';
+
+/** Quanto cada dificuldade multiplica o tempo de reação do bot. Menor é mais rápido. */
+const MULTIPLICADOR_DE_REACAO: Readonly<Record<Dificuldade, number>> = {
+  facil: 1.7,
+  normal: 1,
+  dificil: 0.5,
+};
+
 /** Vida abaixo desta fração manda o bot comer a bolsa em vez de entregá-lo. */
 const VIDA_PARA_COMER = 0.35;
 
@@ -173,10 +192,15 @@ export class Bots {
    */
   private readonly proximoPapel = new Map<Time, number>();
 
+  private readonly multiplicadorDeReacao: number;
+
   constructor(
     private readonly arena: Arena,
     private readonly navegador: Navegador,
-  ) {}
+    dificuldade: Dificuldade = 'normal',
+  ) {
+    this.multiplicadorDeReacao = MULTIPLICADOR_DE_REACAO[dificuldade];
+  }
 
   /**
    * @param modo o que decide a partida, e por isso o que decide a divisão de
@@ -310,7 +334,7 @@ export class Bots {
       // O intervalo entre dois usos também é temperado: é o que faz dois
       // cozinheiros espelhados deixarem de entregar o depósito no mesmo tick, e a
       // balança sair do meio em vez de se anular a cada tick.
-      m.esperaDoUsar = 0.35 + m.tempero * 0.4;
+      m.esperaDoUsar = (0.35 + m.tempero * 0.4) * this.multiplicadorDeReacao;
     }
     return cmd;
   }
@@ -671,7 +695,9 @@ export class Bots {
     return {
       ax: dx / d,
       ay: dy / d,
-      atacar: m.mirando >= ESPERA_PARA_MIRAR * (0.7 + m.tempero * 0.8) && d <= p.alcance,
+      atacar:
+        m.mirando >= ESPERA_PARA_MIRAR * (0.7 + m.tempero * 0.8) * this.multiplicadorDeReacao &&
+        d <= p.alcance,
       // O de longe recua quando deixam chegar perto; o de perto nunca recua.
       recuar: !corpoACorpo && d < p.alcance * (0.28 + m.tempero * 0.18),
     };

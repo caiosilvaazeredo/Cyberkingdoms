@@ -1192,6 +1192,11 @@
       .lobby-config .modos {
         margin-top: 8px;
       }
+      .lobby-config .ajuste {
+        margin-top: 8px;
+        padding: 0;
+        border-bottom: none;
+      }
       .lobby-rodape {
         display: flex;
         align-items: center;
@@ -1935,6 +1940,26 @@
             <div class="modos" id="lobby-mapas" hidden></div>
             <div class="modos" id="lobby-modos" hidden></div>
             <div class="modos" id="lobby-formatos" hidden></div>
+            <div class="ajuste" id="lobby-bots" hidden>
+              <span
+                >Npcs por time<small>quantos bots cada reino leva</small></span
+              >
+              <div class="contador">
+                <button type="button" id="lobby-bots-menos" aria-label="menos npcs">−</button>
+                <output id="lobby-bots-valor">0</output>
+                <button type="button" id="lobby-bots-mais" aria-label="mais npcs">+</button>
+              </div>
+            </div>
+            <div class="ajuste" id="lobby-dificuldade" hidden>
+              <span
+                >Reação dos npcs<small>o quanto rápido os bots reagem</small></span
+              >
+              <div class="opcoes">
+                <button type="button" data-dificuldade="facil">fácil</button>
+                <button type="button" data-dificuldade="normal">normal</button>
+                <button type="button" data-dificuldade="dificil">difícil</button>
+              </div>
+            </div>
           </div>
           <div class="lobby-rodape">
             <span class="dica" id="lobby-status"></span>

@@ -1,4 +1,5 @@
 import { criarArena, type Arena } from '../shared/arena';
+import type { Dificuldade } from '../shared/bots';
 import { ESTOQUE_INICIAL, type Classe } from '../shared/classes';
 import type { Estado, Evento, Unidade } from '../shared/estado';
 import { MAPA_PADRAO, mapaDe, type IdDoMapa } from '../shared/mapas';
@@ -115,6 +116,7 @@ export interface LobbyInfo {
   mapa: IdDoMapa | 'sorteio';
   porTime: number;
   bots: number;
+  dificuldadeDosBots: Dificuldade;
   nomesProntos: readonly string[];
   total: number;
 }
@@ -434,6 +436,7 @@ export class Rede {
           mapa: msg.mapa,
           porTime: msg.porTime,
           bots: msg.bots,
+          dificuldadeDosBots: msg.dificuldadeDosBots,
           nomesProntos: msg.nomesProntos,
           total: msg.total,
         };

@@ -1,5 +1,5 @@
 import { PRAZO_DA_VOTACAO, apurar, type Votacao } from './comando';
-import { Bots } from '../shared/bots';
+import { Bots, type Dificuldade } from '../shared/bots';
 import { Navegador } from '../shared/navegacao';
 import { BONUS_DO_PERK, perkDaClasse, perkDoNivel } from '../shared/campanha';
 import { CLASSES_COM_CHAPEU, type Classe } from '../shared/classes';
@@ -119,6 +119,8 @@ export interface OpcoesDaSala {
    * um bot que ele vai ter de expulsar.
    */
   botsPorTime?: number;
+  /** Quanto os npcs reagem rápido. Ver a nota em `shared/bots.ts`. */
+  dificuldadeDosBots?: Dificuldade;
   /** Segundos antes de completar com bots. Os testes usam zero. */
   esperaPorJogadores?: number;
   /** Relógio injetável, para o teste não depender de `Date.now`. */
@@ -151,6 +153,8 @@ export class Sala {
   porTime: number;
   /** Npcs fixos por time, ou `null` quando o bot é tapa-buraco do lobby. */
   botsFixos: number | null;
+  /** Quanto os npcs desta sala reagem rápido. */
+  dificuldadeDosBots: Dificuldade;
   private partida: Partida;
   private navegador: Navegador;
   private bots: Bots;
@@ -221,11 +225,12 @@ export class Sala {
     // concreto (`salaConfiguravel` nunca deixa `bots` indefinido), então sem
     // este caso especial toda Regência nasceria com o backfill desligado.
     this.botsFixos = this.campanha ? null : (opcoes.botsPorTime ?? null);
+    this.dificuldadeDosBots = opcoes.dificuldadeDosBots ?? 'normal';
     this.espera = opcoes.esperaPorJogadores ?? ESPERA_POR_JOGADORES;
     this.lobbyAberto = opcoes.lobby === true;
     this.partida = criarPartida(this.seed, this.modo, this.mapaAtual, this.porTime);
     this.navegador = new Navegador(this.partida.arena);
-    this.bots = new Bots(this.partida.arena, this.navegador);
+    this.bots = new Bots(this.partida.arena, this.navegador, this.dificuldadeDosBots);
   }
 
   /** Quantos npcs cada time deve ter agora. Ver `cuidarDosBots`. */
@@ -384,12 +389,14 @@ export class Sala {
       mapa: this.escolhaDeMapa,
       porTime: this.porTime,
       bots: this.botsFixos ?? 0,
+      dificuldadeDosBots: this.dificuldadeDosBots,
       privada: this.privada,
       campanha: this.campanha,
       ...bruta,
     });
     this.modo = c.modo;
     this.escolhaDeMapa = c.mapa;
+    this.dificuldadeDosBots = c.dificuldadeDosBots;
     this.recriarPartida(c.mapa === 'sorteio' ? mapaSorteado(this.seed) : c.mapa);
     this.porTime = c.porTime;
     this.botsFixos = this.campanha ? null : c.bots;
@@ -410,7 +417,7 @@ export class Sala {
     this.mapaAtual = mapa;
     this.partida = criarPartida(this.seed, this.modo, this.mapaAtual, this.porTime);
     this.navegador = new Navegador(this.partida.arena);
-    this.bots = new Bots(this.partida.arena, this.navegador);
+    this.bots = new Bots(this.partida.arena, this.navegador, this.dificuldadeDosBots);
   }
 
   /**
@@ -458,6 +465,7 @@ export class Sala {
         mapa: this.escolhaDeMapa,
         porTime: this.porTime,
         bots: this.botsFixos ?? 0,
+        dificuldadeDosBots: this.dificuldadeDosBots,
         nomesProntos: jogadores.filter((j) => this.prontos.has(j.chave)).map((j) => j.nome),
         total: jogadores.length,
       });

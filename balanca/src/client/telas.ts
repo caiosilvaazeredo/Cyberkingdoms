@@ -1,3 +1,4 @@
+import type { Dificuldade } from '../shared/bots';
 import { CLASSES, perfil } from '../shared/classes';
 import { POR_TIME, TIMES, type Time } from '../shared/regras';
 import type { FichaDeJogador } from '../shared/protocolo';
@@ -600,6 +601,37 @@ export class Telas {
       caixaFormato.append(linha);
     }
 
+    // A dificuldade não é um contador — são três valores fechados — então
+    // ganha o mesmo desenho de botão único da tela de Ajustes, e não o par
+    // de mais/menos dos dois contadores acima.
+    {
+      const linha = document.createElement('div');
+      linha.className = 'ajuste';
+      const rotulo = document.createElement('span');
+      rotulo.append(document.createTextNode('Reação dos npcs'));
+      const explica = document.createElement('small');
+      explica.textContent = 'o quanto rápido os bots reagem';
+      rotulo.append(explica);
+      const opcoes = document.createElement('div');
+      opcoes.className = 'opcoes';
+      for (const [valor, texto] of [
+        ['facil', 'fácil'],
+        ['normal', 'normal'],
+        ['dificil', 'difícil'],
+      ] as const) {
+        const botao = document.createElement('button');
+        botao.textContent = texto;
+        botao.dataset.dificuldade = valor;
+        botao.addEventListener('click', () => {
+          this.montagem = { ...this.montagem, dificuldadeDosBots: valor };
+          this.pintarMontagem();
+        });
+        opcoes.append(botao);
+      }
+      linha.append(rotulo, opcoes);
+      caixaFormato.append(linha);
+    }
+
     pegar<HTMLButtonElement>('#abrir-sala').addEventListener('click', () => {
       this.montagemPendente = { ...this.montagem };
       this.pedirParaJogar('montada', this.montagemPendente);
@@ -630,6 +662,11 @@ export class Telas {
     for (const o of Array.from(document.querySelectorAll<HTMLOutputElement>('output[data-conta]'))) {
       const chave = o.dataset.conta as 'porTime' | 'bots';
       o.textContent = String(this.montagem[chave]);
+    }
+    for (const b of Array.from(
+      folhaDeSalas.querySelectorAll<HTMLButtonElement>('button[data-dificuldade]'),
+    )) {
+      b.setAttribute('aria-pressed', String(b.dataset.dificuldade === this.montagem.dificuldadeDosBots));
     }
     const total = this.montagem.porTime + this.montagem.bots;
     // O teto é do campo escolhido, e por isso a frase muda quando se troca de
@@ -1038,11 +1075,31 @@ export class Telas {
     }
 
     pegar<HTMLButtonElement>('#lobby-mudar').addEventListener('click', () => {
-      for (const id of ['lobby-mapas', 'lobby-modos', 'lobby-formatos']) {
+      for (const id of ['lobby-mapas', 'lobby-modos', 'lobby-formatos', 'lobby-bots', 'lobby-dificuldade']) {
         const el = pegar<HTMLElement>(`#${id}`);
         el.hidden = !el.hidden;
       }
     });
+
+    for (const [id, passo] of [
+      ['lobby-bots-menos', -1],
+      ['lobby-bots-mais', 1],
+    ] as const) {
+      pegar<HTMLButtonElement>(`#${id}`).addEventListener('click', () => {
+        const lobby = this.acoes.lobby();
+        if (!lobby) return;
+        const alvo = Math.max(MIN_BOTS, Math.min(MAX_BOTS, lobby.bots + passo));
+        this.acoes.configurarLobby({ bots: alvo });
+      });
+    }
+
+    for (const botao of Array.from(
+      pegar<HTMLElement>('#lobby-dificuldade').querySelectorAll<HTMLButtonElement>('button[data-dificuldade]'),
+    )) {
+      botao.addEventListener('click', () => {
+        this.acoes.configurarLobby({ dificuldadeDosBots: botao.dataset.dificuldade as Dificuldade });
+      });
+    }
 
     pegar<HTMLButtonElement>('#lobby-pronto').addEventListener('click', () => {
       const pronto = pegar<HTMLButtonElement>('#lobby-pronto').getAttribute('aria-pressed') === 'true';
@@ -1067,7 +1124,7 @@ export class Telas {
     const mudar = pegar<HTMLButtonElement>('#lobby-mudar');
     mudar.hidden = !lobby.souAnfitriao;
     if (!lobby.souAnfitriao) {
-      for (const id of ['lobby-mapas', 'lobby-modos', 'lobby-formatos']) {
+      for (const id of ['lobby-mapas', 'lobby-modos', 'lobby-formatos', 'lobby-bots', 'lobby-dificuldade']) {
         pegar<HTMLElement>(`#${id}`).hidden = true;
       }
     }
@@ -1079,6 +1136,12 @@ export class Telas {
       for (const b of Array.from(pegar<HTMLElement>(`#${id}`).querySelectorAll<HTMLButtonElement>('button'))) {
         b.setAttribute('aria-pressed', String(b.dataset[chave] === valor));
       }
+    }
+    pegar<HTMLOutputElement>('#lobby-bots-valor').textContent = String(lobby.bots);
+    for (const b of Array.from(
+      pegar<HTMLElement>('#lobby-dificuldade').querySelectorAll<HTMLButtonElement>('button[data-dificuldade]'),
+    )) {
+      b.setAttribute('aria-pressed', String(b.dataset.dificuldade === lobby.dificuldadeDosBots));
     }
 
     const meuNome = this.ajustes.nome.trim() || 'Anônimo';

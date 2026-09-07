@@ -51,6 +51,7 @@ describe('a mensagem de entrada', () => {
       mapa: 'vau',
       porTime: 2,
       bots: 3,
+      dificuldadeDosBots: 'normal',
       privada: false,
       campanha: false,
     });

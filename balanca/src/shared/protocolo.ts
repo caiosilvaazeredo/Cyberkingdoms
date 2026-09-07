@@ -16,6 +16,7 @@ import type {
 import { IDS_SORTEAVEIS, MAPAS, mapaDe, porTimeMaximo, type IdDoMapa } from './mapas';
 import { modoDe, type IdDoModo } from './modos';
 import { POR_TIME, TIMES, type Time } from './regras';
+import type { Dificuldade } from './bots';
 
 /**
  * O que trafega entre o navegador e o servidor.
@@ -81,6 +82,12 @@ export interface ConfiguracaoDeSala {
    * quando o terceiro amigo chegar.
    */
   bots?: number;
+  /**
+   * O quanto os npcs reagem rápido. `'normal'` é a conta de sempre; ver a
+   * nota longa em `shared/bots.ts` sobre por que a alavanca é reação, e não
+   * pontaria.
+   */
+  dificuldadeDosBots?: Dificuldade;
   /** Sala reservada: o lobby não manda estranhos para ela. */
   privada?: boolean;
   /**
@@ -131,6 +138,7 @@ export function salaConfiguravel(bruta: unknown): Required<ConfiguracaoDeSala> {
   const teto = totalPorTime(mapa);
   const porTime = inteiro(c.porTime, MIN_POR_TIME, Math.min(MAX_POR_TIME, teto), POR_TIME);
   const bots = inteiro(c.bots, MIN_BOTS, MAX_BOTS, 0);
+  const dificuldadesValidas: readonly Dificuldade[] = ['facil', 'normal', 'dificil'];
   return {
     modo: modoDe(c.modo).id,
     // `'sorteio'` é o único valor que não é um mapa e mesmo assim é válido;
@@ -138,6 +146,9 @@ export function salaConfiguravel(bruta: unknown): Required<ConfiguracaoDeSala> {
     mapa,
     porTime,
     bots: Math.min(bots, teto - porTime),
+    dificuldadeDosBots: dificuldadesValidas.includes(c.dificuldadeDosBots as Dificuldade)
+      ? (c.dificuldadeDosBots as Dificuldade)
+      : 'normal',
     privada: c.privada === true,
     campanha: c.campanha === true,
   };
@@ -358,6 +369,7 @@ export type DoServidor =
       mapa: IdDoMapa | 'sorteio';
       porTime: number;
       bots: number;
+      dificuldadeDosBots: Dificuldade;
       nomesProntos: string[];
       total: number;
     };
