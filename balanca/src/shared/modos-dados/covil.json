@@ -1,0 +1,19 @@
+{
+  "id": "covil",
+  "nome": "Covil",
+  "lema": "um Guardião nasce no meio do mapa · derrubá-lo acelera o time inteiro",
+  "pontosParaVencer": 3,
+  "duracao": 720,
+  "renascimentoBase": 6,
+  "vitoriaPorBalanca": false,
+  "chapeusInfinitos": false,
+  "animaisVoltam": true,
+  "vitoriaPorObra": false,
+  "abatesParaVencer": null,
+  "pesoQueVence": 40,
+  "temGuardiao": true,
+  "temCaca": false,
+  "temCajado": false,
+  "temFuga": false,
+  "temNoite": false
+}

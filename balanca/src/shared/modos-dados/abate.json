@@ -1,0 +1,19 @@
+{
+  "id": "abate",
+  "nome": "Abate",
+  "lema": "trinta baixas vencem · sem cortejo, sem moeda, só briga",
+  "pontosParaVencer": 1000000,
+  "duracao": 480,
+  "renascimentoBase": 4,
+  "vitoriaPorBalanca": false,
+  "chapeusInfinitos": false,
+  "animaisVoltam": true,
+  "vitoriaPorObra": false,
+  "abatesParaVencer": 30,
+  "pesoQueVence": 40,
+  "temGuardiao": false,
+  "temCaca": false,
+  "temCajado": false,
+  "temFuga": false,
+  "temNoite": false
+}

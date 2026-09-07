@@ -1,0 +1,19 @@
+{
+  "id": "vigilia",
+  "nome": "Vigília",
+  "lema": "dia e noite se alternam — o Guardião só existe na escuridão",
+  "pontosParaVencer": 3,
+  "duracao": 720,
+  "renascimentoBase": 6,
+  "vitoriaPorBalanca": false,
+  "chapeusInfinitos": false,
+  "animaisVoltam": true,
+  "vitoriaPorObra": false,
+  "abatesParaVencer": null,
+  "pesoQueVence": 40,
+  "temGuardiao": false,
+  "temCaca": false,
+  "temCajado": false,
+  "temFuga": false,
+  "temNoite": true
+}

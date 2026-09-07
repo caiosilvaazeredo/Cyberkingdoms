@@ -1,0 +1,19 @@
+{
+  "id": "veiaseca",
+  "nome": "Veia Seca",
+  "lema": "a mula derrubada não volta · o minério do mapa é tudo o que existe",
+  "pontosParaVencer": 3,
+  "duracao": 720,
+  "renascimentoBase": 6,
+  "vitoriaPorBalanca": false,
+  "chapeusInfinitos": false,
+  "animaisVoltam": false,
+  "vitoriaPorObra": false,
+  "abatesParaVencer": null,
+  "pesoQueVence": 40,
+  "temGuardiao": false,
+  "temCaca": false,
+  "temCajado": false,
+  "temFuga": false,
+  "temNoite": false
+}

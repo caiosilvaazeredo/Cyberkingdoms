@@ -1,0 +1,19 @@
+{
+  "id": "cofrecheio",
+  "nome": "Cofre Cheio",
+  "lema": "a balança vence: entulhe o baú refém até o talo da barra",
+  "pontosParaVencer": 3,
+  "duracao": 720,
+  "renascimentoBase": 6,
+  "vitoriaPorBalanca": true,
+  "chapeusInfinitos": false,
+  "animaisVoltam": true,
+  "vitoriaPorObra": false,
+  "abatesParaVencer": null,
+  "pesoQueVence": 70,
+  "temGuardiao": false,
+  "temCaca": false,
+  "temCajado": false,
+  "temFuga": false,
+  "temNoite": false
+}

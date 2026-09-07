@@ -1,0 +1,19 @@
+{
+  "id": "fuga",
+  "nome": "Fuga",
+  "lema": "liberte o Menino Rei — mas só depois de afastar a guarda dele",
+  "pontosParaVencer": 3,
+  "duracao": 720,
+  "renascimentoBase": 6,
+  "vitoriaPorBalanca": false,
+  "chapeusInfinitos": false,
+  "animaisVoltam": true,
+  "vitoriaPorObra": false,
+  "abatesParaVencer": null,
+  "pesoQueVence": 40,
+  "temGuardiao": false,
+  "temCaca": false,
+  "temCajado": false,
+  "temFuga": true,
+  "temNoite": false
+}

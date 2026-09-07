@@ -1,0 +1,19 @@
+{
+  "id": "caca",
+  "nome": "Caça",
+  "lema": "uma Presa nasce sem parar no meio do mapa · derrubá-la turbina o dano do time por um tempo",
+  "pontosParaVencer": 3,
+  "duracao": 720,
+  "renascimentoBase": 6,
+  "vitoriaPorBalanca": false,
+  "chapeusInfinitos": false,
+  "animaisVoltam": true,
+  "vitoriaPorObra": false,
+  "abatesParaVencer": null,
+  "pesoQueVence": 40,
+  "temGuardiao": false,
+  "temCaca": true,
+  "temCajado": false,
+  "temFuga": false,
+  "temNoite": false
+}

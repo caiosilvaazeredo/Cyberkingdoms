@@ -1,6 +1,8 @@
 import type { TipoDeEstrutura, TipoDeJazida } from '../shared/arena';
 import type { EsquemaDeMapa } from '../shared/mapas';
+import type { EsquemaDeModo } from '../shared/modos';
 import { EditorDeMapas, type Ferramenta } from './mapas';
+import { EditorDeModos } from './modos';
 import { FerramentaDeSprite, baixarComoPng } from './sprites';
 
 function pegar<T extends HTMLElement>(seletor: string): T {
@@ -341,6 +343,137 @@ pegar<HTMLButtonElement>('#mapa-exportar').addEventListener('click', () => {
 
 sincronizarCamposComEditor();
 redesenhar();
+
+// --- editor de modos ---------------------------------------------------
+
+const modo = new EditorDeModos();
+
+const camposDeModo = {
+  id: pegar<HTMLInputElement>('#modo-id'),
+  nome: pegar<HTMLInputElement>('#modo-nome'),
+  lema: pegar<HTMLInputElement>('#modo-lema'),
+  pontos: pegar<HTMLInputElement>('#modo-pontos'),
+  duracao: pegar<HTMLInputElement>('#modo-duracao'),
+  renascimento: pegar<HTMLInputElement>('#modo-renascimento'),
+  peso: pegar<HTMLInputElement>('#modo-peso'),
+  vitoriaBalanca: pegar<HTMLInputElement>('#modo-vitoria-balanca'),
+  vitoriaObra: pegar<HTMLInputElement>('#modo-vitoria-obra'),
+  abates: pegar<HTMLInputElement>('#modo-abates'),
+  chapeusInfinitos: pegar<HTMLInputElement>('#modo-chapeus-infinitos'),
+  animaisVoltam: pegar<HTMLInputElement>('#modo-animais-voltam'),
+  guardiao: pegar<HTMLInputElement>('#modo-guardiao'),
+  caca: pegar<HTMLInputElement>('#modo-caca'),
+  cajado: pegar<HTMLInputElement>('#modo-cajado'),
+  fuga: pegar<HTMLInputElement>('#modo-fuga'),
+  noite: pegar<HTMLInputElement>('#modo-noite'),
+};
+
+function sincronizarCamposComModo(): void {
+  camposDeModo.id.value = modo.id;
+  camposDeModo.nome.value = modo.nome;
+  camposDeModo.lema.value = modo.lema;
+  camposDeModo.pontos.value = String(modo.pontosParaVencer);
+  camposDeModo.duracao.value = String(modo.duracao);
+  camposDeModo.renascimento.value = String(modo.renascimentoBase);
+  camposDeModo.peso.value = String(modo.pesoQueVence);
+  camposDeModo.vitoriaBalanca.checked = modo.vitoriaPorBalanca;
+  camposDeModo.vitoriaObra.checked = modo.vitoriaPorObra;
+  camposDeModo.abates.value = modo.abatesParaVencer === null ? '' : String(modo.abatesParaVencer);
+  camposDeModo.chapeusInfinitos.checked = modo.chapeusInfinitos;
+  camposDeModo.animaisVoltam.checked = modo.animaisVoltam;
+  camposDeModo.guardiao.checked = modo.temGuardiao;
+  camposDeModo.caca.checked = modo.temCaca;
+  camposDeModo.cajado.checked = modo.temCajado;
+  camposDeModo.fuga.checked = modo.temFuga;
+  camposDeModo.noite.checked = modo.temNoite;
+}
+
+function lerCamposDoModo(): void {
+  modo.id = camposDeModo.id.value.trim();
+  modo.nome = camposDeModo.nome.value;
+  modo.lema = camposDeModo.lema.value;
+  modo.pontosParaVencer = Math.max(1, Number(camposDeModo.pontos.value) || 1);
+  modo.duracao = Math.max(30, Number(camposDeModo.duracao.value) || 30);
+  modo.renascimentoBase = Math.max(1, Number(camposDeModo.renascimento.value) || 1);
+  modo.pesoQueVence = Math.max(1, Number(camposDeModo.peso.value) || 1);
+  modo.vitoriaPorBalanca = camposDeModo.vitoriaBalanca.checked;
+  modo.vitoriaPorObra = camposDeModo.vitoriaObra.checked;
+  modo.abatesParaVencer = camposDeModo.abates.value.trim() === '' ? null : Number(camposDeModo.abates.value);
+  modo.chapeusInfinitos = camposDeModo.chapeusInfinitos.checked;
+  modo.animaisVoltam = camposDeModo.animaisVoltam.checked;
+  modo.temGuardiao = camposDeModo.guardiao.checked;
+  modo.temCaca = camposDeModo.caca.checked;
+  modo.temCajado = camposDeModo.cajado.checked;
+  modo.temFuga = camposDeModo.fuga.checked;
+  modo.temNoite = camposDeModo.noite.checked;
+  redesenharModo();
+}
+
+function redesenharModo(): void {
+  const avisos = pegar<HTMLElement>('#modo-avisos');
+  avisos.replaceChildren();
+  const erros = modo.validar();
+  if (erros.length === 0) {
+    const ok = document.createElement('div');
+    ok.className = 'aviso ok';
+    ok.textContent = 'sem problemas encontrados — pronto para exportar';
+    avisos.append(ok);
+  } else {
+    for (const erro of erros) {
+      const div = document.createElement('div');
+      div.className = 'aviso';
+      div.textContent = erro;
+      avisos.append(div);
+    }
+  }
+  pegar<HTMLElement>('#modo-json').textContent = JSON.stringify(modo.paraEsquema(), null, 2);
+}
+
+for (const campo of Object.values(camposDeModo)) {
+  campo.addEventListener('input', lerCamposDoModo);
+  campo.addEventListener('change', lerCamposDoModo);
+}
+
+pegar<HTMLButtonElement>('#modo-novo').addEventListener('click', () => {
+  if (!confirm('Descartar o modo atual e começar um em branco?')) return;
+  modo.limpar();
+  sincronizarCamposComModo();
+  redesenharModo();
+});
+
+pegar<HTMLInputElement>('#modo-importar').addEventListener('change', async (e) => {
+  const arquivo = (e.target as HTMLInputElement).files?.[0];
+  if (!arquivo) return;
+  const texto = await arquivo.text();
+  try {
+    const esquema = JSON.parse(texto) as EsquemaDeModo;
+    modo.carregar(esquema);
+    sincronizarCamposComModo();
+    redesenharModo();
+  } catch (err) {
+    alert(`não consegui ler este modo: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  (e.target as HTMLInputElement).value = '';
+});
+
+pegar<HTMLButtonElement>('#modo-exportar').addEventListener('click', () => {
+  const erros = modo.validar();
+  if (erros.length > 0 && !confirm(`Este modo tem ${erros.length} aviso(s). Exportar assim mesmo?`)) {
+    return;
+  }
+  const blob = new Blob([JSON.stringify(modo.paraEsquema(), null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${modo.id || 'modo'}.json`;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+});
+
+sincronizarCamposComModo();
+redesenharModo();
 
 // --- editor de sprites -----------------------------------------------------
 

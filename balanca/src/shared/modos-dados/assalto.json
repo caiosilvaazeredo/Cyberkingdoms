@@ -1,0 +1,19 @@
+{
+  "id": "assalto",
+  "nome": "Assalto",
+  "lema": "um resgate decide · seis minutos · volta-se rápido para o campo",
+  "pontosParaVencer": 1,
+  "duracao": 360,
+  "renascimentoBase": 3,
+  "vitoriaPorBalanca": false,
+  "chapeusInfinitos": false,
+  "animaisVoltam": true,
+  "vitoriaPorObra": false,
+  "abatesParaVencer": null,
+  "pesoQueVence": 40,
+  "temGuardiao": false,
+  "temCaca": false,
+  "temCajado": false,
+  "temFuga": false,
+  "temNoite": false
+}

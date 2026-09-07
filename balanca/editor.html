@@ -285,6 +285,7 @@
       <h1>⚒ Editor</h1>
       <nav class="abas">
         <button data-aba="mapas" aria-selected="true">Mapas</button>
+        <button data-aba="modos" aria-selected="false">Modos</button>
         <button data-aba="sprites" aria-selected="false">Sprites</button>
       </nav>
       <a class="voltar" href="/">← voltar ao jogo</a>
@@ -385,6 +386,110 @@
           </div>
           <div class="canvas-caixa">
             <canvas id="mapa-canvas" width="960" height="544"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================== editor de modos -->
+      <section class="pagina" id="pagina-modos">
+        <aside class="painel">
+          <div>
+            <h2>Modo</h2>
+            <div class="campo">
+              <label for="modo-id">id (nome do arquivo)</label>
+              <input id="modo-id" type="text" placeholder="meu-modo" />
+            </div>
+            <div class="campo">
+              <label for="modo-nome">nome</label>
+              <input id="modo-nome" type="text" placeholder="Meu Modo" />
+            </div>
+            <div class="campo">
+              <label for="modo-lema">lema (uma linha, a alavanca que ele puxa)</label>
+              <input id="modo-lema" type="text" placeholder="o que este modo muda" />
+            </div>
+          </div>
+
+          <div>
+            <h2>Vitória e relógio</h2>
+            <div class="linha-campos">
+              <div class="campo">
+                <label for="modo-pontos">resgates para vencer</label>
+                <input id="modo-pontos" type="number" min="1" value="3" />
+              </div>
+              <div class="campo">
+                <label for="modo-duracao">duração (segundos)</label>
+                <input id="modo-duracao" type="number" min="30" value="720" />
+              </div>
+            </div>
+            <div class="linha-campos">
+              <div class="campo">
+                <label for="modo-renascimento">renascimento base (s)</label>
+                <input id="modo-renascimento" type="number" min="1" value="6" />
+              </div>
+              <div class="campo">
+                <label for="modo-peso">peso que vence pela balança</label>
+                <input id="modo-peso" type="number" min="1" value="40" />
+              </div>
+            </div>
+            <div class="campo">
+              <label><input id="modo-vitoria-balanca" type="checkbox" /> vence pela balança (empanturrar a refém)</label>
+            </div>
+            <div class="campo">
+              <label><input id="modo-vitoria-obra" type="checkbox" /> vence pela obra (chapelaria no nível máximo)</label>
+            </div>
+            <div class="campo">
+              <label>abates para vencer (vazio = não vence por abate)</label>
+              <input id="modo-abates" type="number" min="1" placeholder="—" />
+            </div>
+          </div>
+
+          <div>
+            <h2>Economia</h2>
+            <div class="campo">
+              <label><input id="modo-chapeus-infinitos" type="checkbox" /> chapéus infinitos</label>
+            </div>
+            <div class="campo">
+              <label><input id="modo-animais-voltam" type="checkbox" checked /> bicho abatido volta ao pasto</label>
+            </div>
+          </div>
+
+          <div>
+            <h2>Chefes neutros</h2>
+            <div class="campo">
+              <label><input id="modo-guardiao" type="checkbox" /> Guardião (Covil)</label>
+            </div>
+            <div class="campo">
+              <label><input id="modo-caca" type="checkbox" /> Presa (Caça)</label>
+            </div>
+            <div class="campo">
+              <label><input id="modo-cajado" type="checkbox" /> cajado do Xamã</label>
+            </div>
+            <div class="campo">
+              <label><input id="modo-fuga" type="checkbox" /> Menino Rei (Fuga)</label>
+            </div>
+            <div class="campo">
+              <label><input id="modo-noite" type="checkbox" /> dia e noite (Guardião só à noite)</label>
+            </div>
+          </div>
+
+          <div>
+            <h2>Arquivo</h2>
+            <div class="botoes">
+              <button class="acao secundaria" id="modo-novo">novo modo em branco</button>
+              <label class="acao secundaria" style="text-align:center; cursor:pointer;">
+                importar .json
+                <input id="modo-importar" type="file" accept="application/json" style="display:none" />
+              </label>
+              <button class="acao" id="modo-exportar">exportar .json</button>
+            </div>
+          </div>
+
+          <div class="avisos" id="modo-avisos"></div>
+        </aside>
+        <div class="palco">
+          <div class="barra-palco">pré-visualização do arquivo exportado</div>
+          <div class="canvas-caixa">
+            <pre id="modo-json" style="color:#9aa3b5; font-size:12px; white-space:pre-wrap; margin:0;"></pre>
           </div>
         </div>
       </section>

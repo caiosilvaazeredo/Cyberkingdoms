@@ -1,0 +1,19 @@
+{
+  "id": "xama",
+  "nome": "Xamã",
+  "lema": "um cajado nasce sem parar no meio do mapa · quem pega pode transformar um inimigo em porco",
+  "pontosParaVencer": 3,
+  "duracao": 720,
+  "renascimentoBase": 6,
+  "vitoriaPorBalanca": false,
+  "chapeusInfinitos": false,
+  "animaisVoltam": true,
+  "vitoriaPorObra": false,
+  "abatesParaVencer": null,
+  "pesoQueVence": 40,
+  "temGuardiao": false,
+  "temCaca": false,
+  "temCajado": true,
+  "temFuga": false,
+  "temNoite": false
+}
