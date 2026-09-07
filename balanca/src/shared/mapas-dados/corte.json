@@ -1,0 +1,49 @@
+{
+  "id": "corte",
+  "nome": "Corte",
+  "largura": 60,
+  "altura": 34,
+  "lema": "castelo com fosso e duas pontes · o lago cobra para trocar de flanco",
+  "especiesDeArvore": [2, 3],
+  "relevo": [
+    { "tipo": "linha", "eixo": "vertical", "fixo": 16, "de": 6, "ate": 27 },
+    { "tipo": "linha", "eixo": "horizontal", "fixo": 6, "de": 2, "ate": 16 },
+    { "tipo": "linha", "eixo": "horizontal", "fixo": 27, "de": 2, "ate": 16 },
+    { "tipo": "pontes", "coluna": 16, "linhas": [10, 11, 22, 23] },
+    { "tipo": "elipse", "cx": 29.5, "cy": 16.5, "rx": 3.5, "ry": 4.5 }
+  ],
+  "planta": {
+    "tesouraria": [5, 15],
+    "cofre": [6, 9],
+    "casaDaMoeda": [11, 20],
+    "chapelaria": [11, 12],
+    "nascedouro": [6, 20]
+  },
+  "jazidasDoLado": [
+    [13, 15, "arvore"],
+    [13, 17, "arvore"],
+    [8, 25, "ouro"],
+    [20, 9, "arvore"],
+    [20, 24, "ouro"],
+    [24, 16, "ouro"]
+  ],
+  "jazidasDoMeio": [
+    [29, 4, "arvore"],
+    [30, 4, "arvore"],
+    [29, 29, "arvore"],
+    [30, 29, "arvore"]
+  ],
+  "pastosDoLado": [
+    [10, 10],
+    [22, 20]
+  ],
+  "pastosDoMeio": [
+    [29, 10],
+    [30, 10],
+    [29, 23],
+    [30, 23],
+    [25, 16],
+    [34, 16]
+  ],
+  "portoes": [{ "coluna": 16, "de": 6, "ate": 27, "passagens": [10, 11, 22, 23] }]
+}

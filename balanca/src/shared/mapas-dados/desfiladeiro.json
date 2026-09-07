@@ -1,0 +1,48 @@
+{
+  "id": "desfiladeiro",
+  "nome": "Desfiladeiro",
+  "largura": 60,
+  "altura": 34,
+  "lema": "uma ponte por castelo · quem defende o portão defende tudo",
+  "especiesDeArvore": [0, 1],
+  "relevo": [
+    { "tipo": "linha", "eixo": "vertical", "fixo": 15, "de": 5, "ate": 28 },
+    { "tipo": "linha", "eixo": "horizontal", "fixo": 5, "de": 2, "ate": 15 },
+    { "tipo": "linha", "eixo": "horizontal", "fixo": 28, "de": 2, "ate": 15 },
+    { "tipo": "pontes", "coluna": 15, "linhas": [16, 17] }
+  ],
+  "planta": {
+    "tesouraria": [5, 16],
+    "cofre": [6, 10],
+    "casaDaMoeda": [11, 22],
+    "chapelaria": [11, 11],
+    "nascedouro": [7, 16]
+  },
+  "jazidasDoLado": [
+    [12, 7, "arvore"],
+    [12, 26, "arvore"],
+    [9, 20, "ouro"],
+    [19, 8, "arvore"],
+    [19, 25, "ouro"],
+    [22, 16, "ouro"]
+  ],
+  "jazidasDoMeio": [
+    [28, 6, "arvore"],
+    [31, 6, "arvore"],
+    [28, 27, "ouro"],
+    [31, 27, "ouro"]
+  ],
+  "pastosDoLado": [
+    [8, 8],
+    [8, 25]
+  ],
+  "pastosDoMeio": [
+    [26, 12],
+    [33, 12],
+    [26, 21],
+    [33, 21],
+    [29, 16],
+    [30, 16]
+  ],
+  "portoes": [{ "coluna": 15, "de": 5, "ate": 28, "passagens": [16, 17] }]
+}

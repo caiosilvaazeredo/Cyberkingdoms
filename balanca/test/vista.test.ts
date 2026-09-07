@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { CASTELO, criarArena } from '../src/shared/arena';
+import { criarArena } from '../src/shared/arena';
 import { bauDe } from '../src/shared/estado';
 import { criarPartida } from '../src/shared/partida';
 import { ALCANCE_DE_VISTA, AQUECIMENTO, TICKS_POR_SEGUNDO, TILE } from '../src/shared/regras';
@@ -64,9 +64,11 @@ describe('a visão do time', () => {
     const partida = emJogo();
     const meu = partida.entrar({ nome: 'eu', bot: false, time: 'azul' });
     const dele = partida.entrar({ nome: 'ele', bot: false, time: 'vermelho' });
-    // Um de cada lado da coluna de água do castelo, longe das pontes.
-    por(meu, CASTELO.x1 - 1, CASTELO.y0 + 3);
-    por(dele, CASTELO.x1 + 1, CASTELO.y0 + 3);
+    // Um de cada lado da coluna de água do castelo, longe das pontes — 16 e 6
+    // são a coluna do fosso e a linha do topo do castelo do Corte, em
+    // `mapas-dados/corte.json`.
+    por(meu, 16 - 1, 6 + 3);
+    por(dele, 16 + 1, 6 + 3);
 
     const d = Math.hypot(dele.x - meu.x, dele.y - meu.y);
     expect(d).toBeLessThan(ALCANCE_DE_VISTA);

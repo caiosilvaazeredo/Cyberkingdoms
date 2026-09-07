@@ -1,0 +1,46 @@
+{
+  "id": "vau",
+  "nome": "Vau",
+  "largura": 60,
+  "altura": 34,
+  "lema": "castelo aberto e um rio no meio · a briga é sempre nas travessias",
+  "especiesDeArvore": [0, 1],
+  "relevo": [
+    { "tipo": "linha", "eixo": "vertical", "fixo": 29, "de": 2, "ate": 31 },
+    { "tipo": "pontes", "coluna": 29, "linhas": [7, 8, 16, 17, 25, 26] }
+  ],
+  "planta": {
+    "tesouraria": [5, 17],
+    "cofre": [5, 9],
+    "casaDaMoeda": [12, 22],
+    "chapelaria": [12, 11],
+    "nascedouro": [8, 17]
+  },
+  "jazidasDoLado": [
+    [10, 6, "arvore"],
+    [10, 27, "arvore"],
+    [16, 13, "arvore"],
+    [16, 20, "ouro"],
+    [21, 6, "ouro"],
+    [21, 27, "ouro"]
+  ],
+  "jazidasDoMeio": [
+    [26, 12, "arvore"],
+    [33, 12, "arvore"],
+    [26, 21, "ouro"],
+    [33, 21, "ouro"]
+  ],
+  "pastosDoLado": [
+    [7, 24],
+    [18, 9]
+  ],
+  "pastosDoMeio": [
+    [24, 4],
+    [35, 4],
+    [24, 30],
+    [35, 30],
+    [23, 17],
+    [36, 17]
+  ],
+  "portoes": []
+}

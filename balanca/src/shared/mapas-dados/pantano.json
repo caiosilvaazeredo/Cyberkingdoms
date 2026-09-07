@@ -1,0 +1,47 @@
+{
+  "id": "pantano",
+  "nome": "Pântano",
+  "largura": 60,
+  "altura": 34,
+  "lema": "castelo aberto e três poças soltas no meio · sem travessia para segurar",
+  "especiesDeArvore": [0, 1],
+  "relevo": [
+    { "tipo": "elipse", "cx": 24, "cy": 8, "rx": 3.5, "ry": 3 },
+    { "tipo": "elipse", "cx": 24, "cy": 16.5, "rx": 4, "ry": 3.5 },
+    { "tipo": "elipse", "cx": 24, "cy": 26, "rx": 3.5, "ry": 3 }
+  ],
+  "planta": {
+    "tesouraria": [5, 17],
+    "cofre": [5, 9],
+    "casaDaMoeda": [12, 22],
+    "chapelaria": [12, 11],
+    "nascedouro": [8, 17]
+  },
+  "jazidasDoLado": [
+    [10, 6, "arvore"],
+    [10, 27, "arvore"],
+    [16, 13, "arvore"],
+    [16, 20, "ouro"],
+    [12, 17, "ouro"],
+    [19, 6, "ouro"]
+  ],
+  "jazidasDoMeio": [
+    [26, 12, "arvore"],
+    [33, 12, "arvore"],
+    [26, 21, "ouro"],
+    [33, 21, "ouro"]
+  ],
+  "pastosDoLado": [
+    [7, 24],
+    [19, 24]
+  ],
+  "pastosDoMeio": [
+    [26, 6],
+    [33, 6],
+    [26, 27],
+    [33, 27],
+    [26, 16],
+    [33, 16]
+  ],
+  "portoes": []
+}

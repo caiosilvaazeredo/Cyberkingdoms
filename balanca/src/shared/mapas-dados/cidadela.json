@@ -1,0 +1,42 @@
+{
+  "id": "cidadela",
+  "nome": "Cidadela",
+  "largura": 44,
+  "altura": 26,
+  "lema": "campo pequeno, um portão por castelo, meio sem obstáculo · a briga começa cedo",
+  "especiesDeArvore": [2, 3],
+  "foraDoSorteio": true,
+  "relevo": [
+    { "tipo": "linha", "eixo": "vertical", "fixo": 11, "de": 5, "ate": 20 },
+    { "tipo": "linha", "eixo": "horizontal", "fixo": 5, "de": 2, "ate": 11 },
+    { "tipo": "linha", "eixo": "horizontal", "fixo": 20, "de": 2, "ate": 11 },
+    { "tipo": "pontes", "coluna": 11, "linhas": [11, 12] }
+  ],
+  "planta": {
+    "cofre": [4, 9],
+    "tesouraria": [4, 16],
+    "chapelaria": [9, 9],
+    "casaDaMoeda": [9, 16],
+    "nascedouro": [6, 12]
+  },
+  "jazidasDoLado": [
+    [7, 9, "arvore"],
+    [7, 16, "ouro"],
+    [15, 8, "arvore"],
+    [15, 17, "ouro"]
+  ],
+  "jazidasDoMeio": [
+    [21, 6, "arvore"],
+    [22, 6, "arvore"],
+    [21, 19, "arvore"],
+    [22, 19, "arvore"]
+  ],
+  "pastosDoLado": [[9, 13]],
+  "pastosDoMeio": [
+    [19, 9],
+    [24, 9],
+    [19, 16],
+    [24, 16]
+  ],
+  "portoes": [{ "coluna": 11, "de": 5, "ate": 20, "passagens": [11, 12] }]
+}

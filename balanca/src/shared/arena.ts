@@ -1,4 +1,4 @@
-import { MAPA_PADRAO, mapaDe, type IdDoMapa, type Pincel } from './mapas';
+import { MAPA_PADRAO, aplicarRelevo, mapaDe, type IdDoMapa, type Pincel } from './mapas';
 import { DeterministicRandom } from './rng';
 import { TILE, TIMES, type Time } from './regras';
 
@@ -108,12 +108,6 @@ export interface Arena {
 export const espelharEm = (largura: number, tx: number): number => largura - 1 - tx;
 
 /**
- * O castelo do mapa clássico. Reexportado porque o desenho e os testes antigos
- * o conhecem pelo nome; a definição mora com o mapa a que ele pertence.
- */
-export { CASTELO, PONTES_Y } from './mapas';
-
-/**
  * O desenho econômico, que agora é de cada mapa e não do arquivo.
  *
  * A divisão continua valendo para todos: parte das jazidas fica **dentro** do
@@ -178,7 +172,7 @@ export function criarArena(seed: number, idDoMapa: IdDoMapa = MAPA_PADRAO): Aren
       por(espelhar(tx), ty, GRAMA);
     },
   };
-  mapa.relevo(pincel);
+  aplicarRelevo(pincel, mapa.relevo);
 
   const estruturas: Estrutura[] = [];
   for (const time of TIMES) {
