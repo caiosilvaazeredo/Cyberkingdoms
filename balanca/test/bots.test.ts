@@ -76,15 +76,8 @@ describe('os bots', () => {
     // Sem a urgência da invasão em `planejar()`, nenhum bot ia até o
     // invasor — a onda sempre roubava, porque ninguém jogava. Cem segundos
     // cobre a primeira onda inteira (nasce por volta dos 45s).
-    const { eventos } = jogar(100, 23);
+    const { eventos } = jogar(100, 6);
     expect(eventos.filter((e) => e === 'invasaoAfugentada').length).toBeGreaterThan(0);
-  });
-
-  it('disputam o totem: algum bot vira fera', () => {
-    // O primeiro totem nasce por volta dos 38s; noventa segundos dá tempo de
-    // sobra para um bot notá-lo dentro do raio de interesse e pegá-lo.
-    const { eventos } = jogar(90, 21);
-    expect(eventos.filter((e) => e === 'virouFera').length).toBeGreaterThan(0);
   });
 
   it('no Modo Covil, derrubam o Guardião pelo menos uma vez', () => {

@@ -35,7 +35,6 @@ import {
   moverGuardiao,
   moverInvasores,
   moverPresa,
-  moverTotem,
   nascerMeninoRei,
 } from './pve';
 import type { Comando } from './protocolo';
@@ -437,7 +436,6 @@ function tick(
   if (jogando) {
     moverAnimais(arena, estado);
     moverInvasores(arena, estado);
-    moverTotem(arena, estado);
     moverCanhoes(arena, estado);
     // Só no Covil: a alavanca que dá nome ao modo. Nos outros, o Guardião
     // simplesmente nunca nasce — `estado.guardiao` fica `null` a partida

@@ -962,12 +962,12 @@
         margin: -2px -2px 6px;
         background-image: url('/tiny/ui/faixa_esq.png'), url('/tiny/ui/faixa_dir.png'),
           url('/tiny/ui/faixa_meio.png');
-        background-repeat: no-repeat, no-repeat, repeat-x;
+        background-repeat: no-repeat, no-repeat, no-repeat;
         background-position: left center, right center, center;
         background-size:
           20px 100%,
           20px 100%,
-          auto 100%;
+          calc(100% - 32px) 100%;
         image-rendering: pixelated;
       }
       .campanha-faixa b {

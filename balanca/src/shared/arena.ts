@@ -290,7 +290,8 @@ export function criarArena(seed: number, idDoMapa: IdDoMapa = MAPA_PADRAO): Aren
     for (let tx = 0; tx < largura; tx++) {
       const deco = calcularDecoracao(arena, tx, ty);
       decoracoes[ty * largura + tx] = deco;
-      bloqueados[ty * largura + tx] = tile(tx, ty) === AGUA || deco !== null ? 1 : 0;
+      const bloqueiaMato = deco !== null && deco.tipo !== 'arbusto' && deco.tipo !== 'ossos';
+      bloqueados[ty * largura + tx] = tile(tx, ty) === AGUA || bloqueiaMato ? 1 : 0;
     }
   }
   return arena;

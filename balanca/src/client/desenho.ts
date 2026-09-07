@@ -600,7 +600,7 @@ export function desenharMundo(
   // --- itens no chão ------------------------------------------------------
   for (const item of estado.itens) {
     const px = v.paraTelaX(item.x);
-    const py = v.paraTelaY(item.y);
+    const py = v.paraTelaY(item.y) + RAIO_UNIDADE * escala * 0.6;
     pinturas.push({
       y: item.y,
       pintar: () => {
@@ -614,7 +614,7 @@ export function desenharMundo(
           return;
         }
         const im = arte.recursos[item.tipo];
-        const l = im.width * escala * 0.8;
+        const l = im.width * escala * 1.1;
         ctx.drawImage(
           im,
           Math.round(px - l / 2),
@@ -1366,7 +1366,30 @@ function espelhado(
   ctx.restore();
 }
 
+/**
+ * Guarda a última posição prevista de cada unidade local, para medir o
+ * andar como velocidade instantânea em vez de olhar 90ms para trás.
+ *
+ * `posicaoDe(u, agora - 90)` reconstrói "onde estava há 90ms" olhando o
+ * estado *atual* da suavização visual — que só conhece o segmento em
+ * andamento, não o passado real. No jogador local isso atrasa a troca para
+ * a animação de andar por um ou dois quadros toda vez que o movimento
+ * começa ou para, porque a previsão ainda não tinha avançado o suficiente
+ * dentro do segmento atual. Nos outros jogadores o mesmo truque funciona
+ * bem, porque a rede já entrega dois retratos reais para interpolar entre
+ * eles — por isso o atalho abaixo vale só para quem é controlado aqui.
+ */
+const ultimaPosicaoPrevista = new Map<number, { x: number; y: number; t: number }>();
+
 function moveu(olhar: OlharLocal, u: Unidade, agora: number): boolean {
+  if (olhar.vagaDe(u.id) !== null) {
+    const anterior = ultimaPosicaoPrevista.get(u.id);
+    ultimaPosicaoPrevista.set(u.id, { x: u.x, y: u.y, t: agora });
+    if (!anterior) return false;
+    const dt = agora - anterior.t;
+    if (dt <= 0) return false;
+    return Math.hypot(u.x - anterior.x, u.y - anterior.y) / dt > 0.8 / 90;
+  }
   const a = olhar.posicaoDe(u, agora);
   const b = olhar.posicaoDe(u, agora - 90);
   return Math.hypot(a.x - b.x, a.y - b.y) > 0.8;

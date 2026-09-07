@@ -142,11 +142,12 @@ describe.each(IDS_DOS_MAPAS)('o mapa %s', (id) => {
     expect(arena2.bloqueado(Math.floor(x / TILE), Math.floor(y / TILE))).toBe(false);
   });
 
-  it('árvores, arbustos e pedras decorativas bloqueiam a passagem', () => {
+  it('árvores e pedras decorativas bloqueiam a passagem', () => {
     let encontrada: { x: number; y: number } | null = null;
     for (let y = 0; y < arena.altura && !encontrada; y++) {
       for (let x = 0; x < arena.largura; x++) {
-        if (decoracaoEm(arena, x, y)) {
+        const deco = decoracaoEm(arena, x, y);
+        if (deco && (deco.tipo === 'arvore' || deco.tipo === 'pedra')) {
           encontrada = { x, y };
           break;
         }
@@ -155,6 +156,22 @@ describe.each(IDS_DOS_MAPAS)('o mapa %s', (id) => {
 
     expect(encontrada).not.toBeNull();
     expect(arena.bloqueado(encontrada!.x, encontrada!.y)).toBe(true);
+  });
+
+  it('arbustos e ossos decorativos não bloqueiam a passagem', () => {
+    let encontrada: { x: number; y: number } | null = null;
+    for (let y = 0; y < arena.altura && !encontrada; y++) {
+      for (let x = 0; x < arena.largura; x++) {
+        const deco = decoracaoEm(arena, x, y);
+        if (deco && (deco.tipo === 'arbusto' || deco.tipo === 'ossos')) {
+          encontrada = { x, y };
+          break;
+        }
+      }
+    }
+
+    expect(encontrada).not.toBeNull();
+    expect(arena.bloqueado(encontrada!.x, encontrada!.y)).toBe(false);
   });
 });
 
