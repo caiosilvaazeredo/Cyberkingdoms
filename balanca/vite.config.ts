@@ -21,5 +21,15 @@ export default defineConfig({
     // A arte é pixel art de 64 px: nada aqui se beneficia de virar data URI, e
     // um sprite embutido no JS deixa de poder ser cacheado por nome.
     assetsInlineLimit: 0,
+    rollupOptions: {
+      // O editor é uma segunda página do mesmo site, não um projeto à parte —
+      // mesma origem, mesmo `dist/`, mesmo processo servindo os dois. Só o
+      // ponto de entrada é outro, porque o editor não tem nada a ver com o
+      // laço de jogo do `index.html`.
+      input: {
+        jogo: 'index.html',
+        editor: 'editor.html',
+      },
+    },
   },
 });

@@ -81,7 +81,18 @@ export type OperacaoDeRelevo =
   | { readonly tipo: 'pontes'; readonly coluna: number; readonly linhas: readonly number[] }
   /** Um lago. `cx`/`cy` aceitam meio tile — é o que centra um lago no eixo de
    * simetria do mapa, que cai exatamente entre dois tiles. */
-  | { readonly tipo: 'elipse'; readonly cx: number; readonly cy: number; readonly rx: number; readonly ry: number };
+  | { readonly tipo: 'elipse'; readonly cx: number; readonly cy: number; readonly rx: number; readonly ry: number }
+  /**
+   * Tiles soltos de água ou ponte, um a um — `[tx, ty][]`.
+   *
+   * Os três gestos acima bastam para desenhar um mapa à mão, com régua e
+   * compasso; ninguém pinta assim. O editor visual (fase 1) pinta tile por
+   * tile e exporta a lista exata do que foi clicado — sem tentar adivinhar
+   * se aquilo formava uma linha reta ou uma elipse. As duas formas convivem:
+   * um mapa pode ter `linha`/`elipse` desenhados à mão e `tiles` por cima,
+   * pintados depois no editor.
+   */
+  | { readonly tipo: 'tiles'; readonly material: 'agua' | 'ponte'; readonly pontos: readonly (readonly [number, number])[] };
 
 /**
  * Um mapa, exatamente como um arquivo `mapas-dados/*.json` o descreve.
@@ -155,6 +166,12 @@ export function aplicarRelevo(p: Pincel, ops: readonly OperacaoDeRelevo[]): void
         break;
       case 'elipse':
         elipse(p, op.cx, op.cy, op.rx, op.ry);
+        break;
+      case 'tiles':
+        for (const [tx, ty] of op.pontos) {
+          if (op.material === 'agua') p.agua(tx, ty);
+          else p.ponte(tx, ty);
+        }
         break;
     }
   }

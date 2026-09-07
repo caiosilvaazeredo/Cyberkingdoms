@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Meu Querido Rei — Editor</title>
+    <link rel="icon" href="/tiny/ui/faixa_meio.png" />
+    <style>
+      :root {
+        color-scheme: dark;
+        --painel: #1b1f27;
+        --painel-2: #242a35;
+        --borda: #384154;
+        --texto: #e7e9ee;
+        --texto-fraco: #9aa3b5;
+        --acento: #e0a940;
+        --acento-2: #4a90d9;
+        --erro: #e05c5c;
+        --grama: #4c7a3d;
+        --agua: #2f6fa8;
+        --ponte: #8a5a2b;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #10131a;
+        color: var(--texto);
+        font: 13px/1.4 'Trebuchet MS', system-ui, sans-serif;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 8px 14px;
+        background: var(--painel);
+        border-bottom: 1px solid var(--borda);
+        flex: none;
+      }
+      header h1 {
+        font-size: 15px;
+        margin: 0;
+        color: var(--acento);
+      }
+      nav.abas {
+        display: flex;
+        gap: 4px;
+      }
+      nav.abas button {
+        background: transparent;
+        border: 1px solid transparent;
+        color: var(--texto-fraco);
+        padding: 6px 12px;
+        border-radius: 6px 6px 0 0;
+        cursor: pointer;
+        font: inherit;
+      }
+      nav.abas button[aria-selected='true'] {
+        background: var(--painel-2);
+        color: var(--texto);
+        border-color: var(--borda);
+        border-bottom-color: var(--painel-2);
+      }
+      a.voltar {
+        margin-left: auto;
+        color: var(--texto-fraco);
+        text-decoration: none;
+        font-size: 12px;
+      }
+      a.voltar:hover {
+        color: var(--texto);
+      }
+      main {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+      }
+      .pagina {
+        flex: 1;
+        min-height: 0;
+        display: none;
+      }
+      .pagina.ativa {
+        display: flex;
+      }
+      aside.painel {
+        width: 280px;
+        flex: none;
+        background: var(--painel);
+        border-right: 1px solid var(--borda);
+        padding: 12px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      aside.painel h2 {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--texto-fraco);
+        margin: 0 0 6px;
+      }
+      .campo {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        margin-bottom: 8px;
+      }
+      .campo label {
+        font-size: 11px;
+        color: var(--texto-fraco);
+      }
+      .campo input,
+      .campo select {
+        background: #0e1116;
+        border: 1px solid var(--borda);
+        color: var(--texto);
+        padding: 5px 7px;
+        border-radius: 4px;
+        font: inherit;
+      }
+      .linha-campos {
+        display: flex;
+        gap: 8px;
+      }
+      .linha-campos .campo {
+        flex: 1;
+      }
+      .ferramentas {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+      }
+      button.ferramenta {
+        background: var(--painel-2);
+        border: 1px solid var(--borda);
+        color: var(--texto);
+        padding: 7px 6px;
+        border-radius: 5px;
+        cursor: pointer;
+        font: inherit;
+        font-size: 12px;
+        text-align: left;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      button.ferramenta[aria-pressed='true'] {
+        border-color: var(--acento);
+        background: #3a3320;
+        color: var(--acento);
+      }
+      button.ferramenta .amostra {
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+        flex: none;
+        display: inline-block;
+      }
+      button.acao {
+        background: var(--acento);
+        border: none;
+        color: #241a05;
+        font-weight: 700;
+        padding: 8px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        font: inherit;
+      }
+      button.acao.secundaria {
+        background: var(--painel-2);
+        color: var(--texto);
+        border: 1px solid var(--borda);
+        font-weight: 500;
+      }
+      button.acao:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .botoes {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .avisos {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .aviso {
+        font-size: 11.5px;
+        padding: 5px 7px;
+        border-radius: 4px;
+        background: rgba(224, 92, 92, 0.15);
+        color: #f0a5a5;
+        border: 1px solid rgba(224, 92, 92, 0.4);
+      }
+      .aviso.ok {
+        background: rgba(76, 122, 61, 0.18);
+        color: #a8d79a;
+        border-color: rgba(76, 122, 61, 0.4);
+      }
+      .palco {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        background: #0b0d12;
+      }
+      .barra-palco {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 10px;
+        background: var(--painel);
+        border-bottom: 1px solid var(--borda);
+        font-size: 12px;
+        color: var(--texto-fraco);
+        flex: none;
+      }
+      .canvas-caixa {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        display: flex;
+        align-items: flex-start;
+        justify-content: flex-start;
+        padding: 16px;
+      }
+      canvas {
+        image-rendering: pixelated;
+        cursor: crosshair;
+        background: #223018;
+        flex: none;
+      }
+      input[type='file'] {
+        color: var(--texto-fraco);
+        font-size: 12px;
+      }
+      .legenda-estrutura {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        font-size: 10.5px;
+        color: var(--texto-fraco);
+      }
+      .legenda-estrutura span {
+        padding: 2px 6px;
+        border-radius: 3px;
+        background: var(--painel-2);
+      }
+      .quadros-selecionados {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        padding: 6px;
+        background: #0e1116;
+        border: 1px solid var(--borda);
+        border-radius: 4px;
+        min-height: 40px;
+      }
+      .quadros-selecionados canvas {
+        border: 1px solid var(--borda);
+        cursor: pointer;
+      }
+      hr {
+        border: none;
+        border-top: 1px solid var(--borda);
+        margin: 4px 0;
+      }
+      .rotulo-secao {
+        font-size: 11px;
+        color: var(--texto-fraco);
+        margin-top: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>⚒ Editor</h1>
+      <nav class="abas">
+        <button data-aba="mapas" aria-selected="true">Mapas</button>
+        <button data-aba="sprites" aria-selected="false">Sprites</button>
+      </nav>
+      <a class="voltar" href="/">← voltar ao jogo</a>
+    </header>
+    <main>
+      <!-- ================================================== editor de mapas -->
+      <section class="pagina ativa" id="pagina-mapas">
+        <aside class="painel">
+          <div>
+            <h2>Mapa</h2>
+            <div class="campo">
+              <label for="mapa-id">id (nome do arquivo)</label>
+              <input id="mapa-id" type="text" placeholder="meu-mapa" />
+            </div>
+            <div class="campo">
+              <label for="mapa-nome">nome</label>
+              <input id="mapa-nome" type="text" placeholder="Meu Mapa" />
+            </div>
+            <div class="campo">
+              <label for="mapa-lema">lema (uma linha)</label>
+              <input id="mapa-lema" type="text" placeholder="o que este campo muda" />
+            </div>
+            <div class="linha-campos">
+              <div class="campo">
+                <label for="mapa-largura">largura</label>
+                <input id="mapa-largura" type="number" min="20" max="200" value="60" />
+              </div>
+              <div class="campo">
+                <label for="mapa-altura">altura</label>
+                <input id="mapa-altura" type="number" min="20" max="200" value="34" />
+              </div>
+            </div>
+            <div class="campo">
+              <label for="mapa-especies">espécie de árvore</label>
+              <select id="mapa-especies">
+                <option value="0,1">pinheiro (0, 1)</option>
+                <option value="2,3">copa redonda (2, 3)</option>
+              </select>
+            </div>
+            <div class="campo">
+              <label><input id="mapa-fora-sorteio" type="checkbox" /> fora do sorteio</label>
+            </div>
+            <button class="acao secundaria" id="mapa-redimensionar">aplicar tamanho</button>
+          </div>
+
+          <div>
+            <h2>Pincel de terreno</h2>
+            <div class="ferramentas">
+              <button class="ferramenta" data-ferramenta="agua" aria-pressed="true">
+                <span class="amostra" style="background: var(--agua)"></span>água
+              </button>
+              <button class="ferramenta" data-ferramenta="ponte">
+                <span class="amostra" style="background: var(--ponte)"></span>ponte
+              </button>
+              <button class="ferramenta" data-ferramenta="grama">
+                <span class="amostra" style="background: var(--grama)"></span>apagar
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <h2>Construções (uma de cada)</h2>
+            <div class="ferramentas" id="ferramentas-estruturas"></div>
+          </div>
+
+          <div>
+            <h2>Jazidas e pasto</h2>
+            <div class="ferramentas" id="ferramentas-pontos"></div>
+            <p class="rotulo-secao">clique no lado azul para adicionar; clique num ponto já
+              colocado para removê-lo. "do meio" nasce na coluna do eixo e não tem dono.</p>
+          </div>
+
+          <div>
+            <h2>Arquivo</h2>
+            <div class="botoes">
+              <button class="acao secundaria" id="mapa-novo">novo mapa em branco</button>
+              <label class="acao secundaria" style="text-align:center; cursor:pointer;">
+                importar .json
+                <input id="mapa-importar" type="file" accept="application/json" style="display:none" />
+              </label>
+              <button class="acao" id="mapa-exportar">exportar .json</button>
+            </div>
+          </div>
+
+          <div class="avisos" id="mapa-avisos"></div>
+        </aside>
+        <div class="palco">
+          <div class="barra-palco">
+            <span id="mapa-status">tile: —</span>
+            <span class="legenda-estrutura" id="mapa-legenda"></span>
+          </div>
+          <div class="canvas-caixa">
+            <canvas id="mapa-canvas" width="960" height="544"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================ editor de sprites -->
+      <section class="pagina" id="pagina-sprites">
+        <aside class="painel">
+          <div>
+            <h2>Imagem</h2>
+            <div class="campo">
+              <label>abrir arquivo</label>
+              <input id="sprite-arquivo" type="file" accept="image/png,image/*" />
+            </div>
+          </div>
+          <div>
+            <h2>Grade de corte</h2>
+            <div class="linha-campos">
+              <div class="campo">
+                <label for="sprite-largura">largura do quadro</label>
+                <input id="sprite-largura" type="number" min="1" value="192" />
+              </div>
+              <div class="campo">
+                <label for="sprite-altura">altura do quadro</label>
+                <input id="sprite-altura" type="number" min="1" value="192" />
+              </div>
+            </div>
+            <p class="rotulo-secao">clique nos quadros da grade, na ordem em que devem sair na
+              tira final. Clique de novo num quadro já escolhido para tirá-lo.</p>
+          </div>
+          <div>
+            <h2>Tira selecionada (<span id="sprite-contagem">0</span> quadro(s))</h2>
+            <div class="quadros-selecionados" id="sprite-selecionados"></div>
+            <div class="botoes" style="margin-top:8px">
+              <button class="acao secundaria" id="sprite-limpar">limpar seleção</button>
+              <button class="acao" id="sprite-exportar-tira">exportar tira (.png)</button>
+            </div>
+          </div>
+          <hr />
+          <div>
+            <h2>Recorte livre (um quadro só)</h2>
+            <p class="rotulo-secao">arraste no desenho para marcar um retângulo, depois exporte —
+              útil para um ícone ou um recurso solto que não é uma folha de quadros.</p>
+            <button class="acao secundaria" id="sprite-exportar-recorte" disabled>
+              exportar recorte (.png)
+            </button>
+          </div>
+        </aside>
+        <div class="palco">
+          <div class="barra-palco" id="sprite-info">nenhuma imagem carregada</div>
+          <div class="canvas-caixa">
+            <canvas id="sprite-canvas" width="1" height="1"></canvas>
+          </div>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="/src/editor/main.ts"></script>
+  </body>
+</html>
