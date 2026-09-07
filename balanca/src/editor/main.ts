@@ -411,7 +411,10 @@ function lerCamposDoModo(): void {
   redesenharModo();
 }
 
-function redesenharModo(): void {
+/** Atualiza avisos e prévia — chamada a cada tecla. Nunca mexe no DOM dos
+ * gatilhos: reconstruir aquilo a cada tecla derrubaria o foco de quem está
+ * digitando a mensagem. */
+function atualizarPreviaDoModo(): void {
   const avisos = pegar<HTMLElement>('#modo-avisos');
   avisos.replaceChildren();
   const erros = modo.validar();
@@ -430,6 +433,74 @@ function redesenharModo(): void {
   }
   pegar<HTMLElement>('#modo-json').textContent = JSON.stringify(modo.paraEsquema(), null, 2);
 }
+
+/** Reconstrói tudo, inclusive as linhas de gatilho — só depois de adicionar,
+ * remover, importar ou zerar, nunca a cada tecla. */
+function redesenharModo(): void {
+  atualizarPreviaDoModo();
+  redesenharGatilhos();
+}
+
+function redesenharGatilhos(): void {
+  const caixa = pegar<HTMLElement>('#modo-gatilhos');
+  caixa.replaceChildren();
+  modo.gatilhos.forEach((g, i) => {
+    const linha = document.createElement('div');
+    linha.className = 'linha-campos';
+    linha.style.alignItems = 'flex-end';
+    linha.style.marginBottom = '6px';
+
+    const campoIntervalo = document.createElement('div');
+    campoIntervalo.className = 'campo';
+    campoIntervalo.style.flex = '0 0 90px';
+    campoIntervalo.innerHTML = '<label>a cada (s)</label>';
+    const inputIntervalo = document.createElement('input');
+    inputIntervalo.type = 'number';
+    inputIntervalo.min = '1';
+    inputIntervalo.value = String(g.quando.intervaloSegundos);
+    inputIntervalo.addEventListener('input', () => {
+      modo.gatilhos[i] = {
+        quando: { tipo: 'temporizador', intervaloSegundos: Number(inputIntervalo.value) || 1 },
+        entao: modo.gatilhos[i]!.entao,
+      };
+      atualizarPreviaDoModo();
+    });
+    campoIntervalo.append(inputIntervalo);
+
+    const campoTexto = document.createElement('div');
+    campoTexto.className = 'campo';
+    campoTexto.innerHTML = '<label>mensagem</label>';
+    const inputTexto = document.createElement('input');
+    inputTexto.type = 'text';
+    inputTexto.placeholder = 'o campo treme…';
+    inputTexto.value = g.entao[0]?.texto ?? '';
+    inputTexto.addEventListener('input', () => {
+      modo.gatilhos[i] = {
+        quando: modo.gatilhos[i]!.quando,
+        entao: [{ tipo: 'mensagem', texto: inputTexto.value }],
+      };
+      atualizarPreviaDoModo();
+    });
+    campoTexto.append(inputTexto);
+
+    const remover = document.createElement('button');
+    remover.className = 'acao secundaria';
+    remover.textContent = '✕';
+    remover.style.flex = '0 0 auto';
+    remover.addEventListener('click', () => {
+      modo.removerGatilho(i);
+      redesenharModo();
+    });
+
+    linha.append(campoIntervalo, campoTexto, remover);
+    caixa.append(linha);
+  });
+}
+
+pegar<HTMLButtonElement>('#modo-gatilho-novo').addEventListener('click', () => {
+  modo.adicionarGatilho();
+  redesenharModo();
+});
 
 for (const campo of Object.values(camposDeModo)) {
   campo.addEventListener('input', lerCamposDoModo);

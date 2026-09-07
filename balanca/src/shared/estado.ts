@@ -353,7 +353,12 @@ export type Evento =
   | { tipo: 'meninoReiGuardado'; time: Time }
   | { tipo: 'noiteCaiu' }
   | { tipo: 'diaChegou' }
-  | { tipo: 'fim'; vencedor: Time | null };
+  | { tipo: 'fim'; vencedor: Time | null }
+  /**
+   * Um gatilho do modo disparou. Ver `Gatilho` em `gatilhos.ts` — é o único
+   * evento cujo texto não é fixo no código: vem do próprio dado do modo.
+   */
+  | { tipo: 'gatilho'; texto: string };
 
 export interface Estado {
   tick: number;

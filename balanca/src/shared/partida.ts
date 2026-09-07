@@ -11,6 +11,7 @@ import {
 } from './classes';
 import { criarArena, linhaLivre, resolverColisao, type Arena, type TipoDeEstrutura } from './arena';
 import { MAPA_PADRAO, mapaDe, type IdDoMapa, type Mapa } from './mapas';
+import { aplicarGatilhos } from './gatilhos';
 import { MODO_PADRAO, modoDe, type IdDoModo } from './modos';
 import {
   CARGA_DO_OFICIO,
@@ -456,6 +457,10 @@ function tick(
       moverCicloDoDia(estado);
       if (estado.noite) moverGuardiao(arena, estado);
     }
+    // A fase 5: comportamento extra do modo que não é alavanca booleana. Ver
+    // a nota em `gatilhos.ts`. No-op para os treze modos que não declaram
+    // nenhum — a mesma garantia que toda linha acima já tem.
+    aplicarGatilhos(modoDe(estado.modo).gatilhos, estado);
     cuidarDosBaus(arena, estado);
     cunhar(estado);
     recomporJazidas(estado);

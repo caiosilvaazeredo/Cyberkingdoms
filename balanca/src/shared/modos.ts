@@ -12,6 +12,8 @@ import VEIASECA_JSON from './modos-dados/veiaseca.json';
 import VIGILIA_JSON from './modos-dados/vigilia.json';
 import XAMA_JSON from './modos-dados/xama.json';
 
+import type { Gatilho } from './gatilhos';
+
 /**
  * Os modos de jogo: o mesmo jogo com uma alavanca puxada — agora como dado,
  * na mesma fase da engine que tirou os mapas do código (ver `mapas.ts`).
@@ -102,6 +104,14 @@ export interface EsquemaDeModo {
   readonly temFuga: boolean;
   /** Dia e noite se alternam, e o Guardião só existe à noite. */
   readonly temNoite: boolean;
+  /**
+   * A fase 5 da engine: comportamento extra que não cabe numa flag booleana
+   * — hoje só "avisar todo mundo a cada N segundos". Ver a nota extensa em
+   * `gatilhos.ts` sobre por que o vocabulário começa (e deve continuar)
+   * pequeno. `undefined`/lista vazia é a esmagadora maioria dos modos: os
+   * treze que já existem não usam nenhum.
+   */
+  readonly gatilhos?: readonly Gatilho[];
 }
 
 /** Um modo depois de carregado — o mesmo `EsquemaDeModo`, com `id` fechado

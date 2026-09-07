@@ -1082,6 +1082,8 @@ export function narrar(
       return {
         texto: evento.vencedor ? `fim — ${NOME_DO_TIME[evento.vencedor]} vence` : 'fim — empate',
       };
+    case 'gatilho':
+      return { texto: evento.texto, cor: '#c9a2e0' };
     default:
       return null;
   }

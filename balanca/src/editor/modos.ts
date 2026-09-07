@@ -1,3 +1,4 @@
+import type { Gatilho } from '../shared/gatilhos';
 import type { EsquemaDeModo } from '../shared/modos';
 
 /**
@@ -27,6 +28,8 @@ export class EditorDeModos {
   temCajado = false;
   temFuga = false;
   temNoite = false;
+  /** A fase 5: gatilhos deste modo. Ver a nota extensa em `gatilhos.ts`. */
+  gatilhos: Gatilho[] = [];
 
   limpar(): void {
     this.id = 'meu-modo';
@@ -46,6 +49,19 @@ export class EditorDeModos {
     this.temCajado = false;
     this.temFuga = false;
     this.temNoite = false;
+    this.gatilhos = [];
+  }
+
+  /** Um gatilho de temporizador a mais, com valores de partida razoáveis. */
+  adicionarGatilho(): void {
+    this.gatilhos.push({
+      quando: { tipo: 'temporizador', intervaloSegundos: 60 },
+      entao: [{ tipo: 'mensagem', texto: '' }],
+    });
+  }
+
+  removerGatilho(indice: number): void {
+    this.gatilhos.splice(indice, 1);
   }
 
   carregar(esquema: EsquemaDeModo): void {
@@ -66,6 +82,7 @@ export class EditorDeModos {
     this.temCajado = esquema.temCajado;
     this.temFuga = esquema.temFuga;
     this.temNoite = esquema.temNoite;
+    this.gatilhos = esquema.gatilhos ? esquema.gatilhos.map((g) => structuredClone(g)) : [];
   }
 
   /**
@@ -86,6 +103,10 @@ export class EditorDeModos {
         'com "abates para vencer" marcado, "resgates para vencer" devia ficar bem alto — senão os dois caminhos competem e o lema de "só briga" (ou o que for) acaba mentindo',
       );
     }
+    this.gatilhos.forEach((g, i) => {
+      if (g.quando.intervaloSegundos < 1) erros.push(`gatilho ${i + 1}: intervalo precisa ser de pelo menos 1 segundo`);
+      if (g.entao.some((a) => !a.texto.trim())) erros.push(`gatilho ${i + 1}: a mensagem está vazia`);
+    });
     return erros;
   }
 
@@ -108,6 +129,7 @@ export class EditorDeModos {
       temCajado: this.temCajado,
       temFuga: this.temFuga,
       temNoite: this.temNoite,
+      gatilhos: this.gatilhos.length > 0 ? this.gatilhos : undefined,
     };
   }
 }
