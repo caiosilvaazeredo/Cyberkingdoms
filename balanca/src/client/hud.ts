@@ -772,7 +772,10 @@ function tabela(
   largura: number,
   altura: number,
 ): void {
-  const l = Math.min(680, largura - 60);
+  // Duzentos pixels a mais que antes de "ouro minerado" e "alimento pego"
+  // entrarem na tabela — sem eles, o nome de um bot ("Fulano ⚙ · Aldeão")
+  // colidia com a primeira coluna de número.
+  const l = Math.min(780, largura - 60);
   const a = Math.min(420, altura - 120);
   const x = (largura - l) / 2;
   const y = (altura - a) / 2;
@@ -791,7 +794,7 @@ function tabela(
     ctx.font = '500 12px "Trebuchet MS", system-ui, sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.5)';
     ctx.fillText('jogador', cx, y + 42);
-    ctx.fillText('aba  mor  fat  res  ent', cx + l / 2 - 168, y + 42);
+    ctx.fillText('aba  mor  fat  res  ent  our  ali', cx + l / 2 - 224, y + 42);
 
     const time_ = estado.unidades
       .filter((u) => u.time === time)
@@ -802,8 +805,8 @@ function tabela(
       ctx.font = '500 13px "Trebuchet MS", system-ui, sans-serif';
       ctx.fillText(`${u.nome}${u.bot ? ' ⚙' : ''} · ${perfil(u.classe).nome}`, cx, ly);
       ctx.fillText(
-        `${pad(u.abates)}  ${pad(u.mortes)}  ${pad(u.depositos)}  ${pad(u.resgates)}  ${pad(u.entregas)}`,
-        cx + l / 2 - 168,
+        `${pad(u.abates)}  ${pad(u.mortes)}  ${pad(u.depositos)}  ${pad(u.resgates)}  ${pad(u.entregas)}  ${pad(u.ouroMinerado)}  ${pad(u.alimentoColetado)}`,
+        cx + l / 2 - 224,
         ly,
       );
     });
@@ -813,7 +816,7 @@ function tabela(
   ctx.font = '500 12px "Trebuchet MS", system-ui, sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.55)';
   ctx.fillText(
-    'aba = abates · mor = mortes · dep = depósitos · res = resgates · ent = carga entregue',
+    'aba = abates · mor = mortes · fat = depósitos · res = resgates · ent = carga entregue · our = ouro minerado · ali = alimento pego',
     largura / 2,
     y + a - 26,
   );

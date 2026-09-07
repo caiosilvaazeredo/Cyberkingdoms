@@ -67,7 +67,7 @@ export function dicaDeUso(arena: Arena, estado: Estado, u: Unidade): Dica | null
         ? { texto: 'a balança está no talo', alvo: cofre }
         : { texto: 'entulhar o baú — pesa nele, alivia o seu', alvo: cofre };
     }
-    if (u.vida < vidaMaximaDe(u.classe, nivelDe(estado, meu), u.fera)) return { texto: 'gastar a bolsa consigo' };
+    if (u.vida < vidaMaximaDe(u.classe, nivelDe(estado, meu), u.fera)) return { texto: 'comer a bolsa como ração e curar' };
     return null;
   }
 

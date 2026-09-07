@@ -191,6 +191,8 @@ export function criarPartida(
         depositos: 0,
         resgates: 0,
         entregas: 0,
+        ouroMinerado: 0,
+        alimentoColetado: 0,
         ultimoComando: 0,
         fera: null,
         feraAte: 0,
@@ -702,6 +704,7 @@ function usar(arena: Arena, estado: Estado, u: Unidade): void {
     if (casaDaMoeda.bolsas > 0) {
       casaDaMoeda.bolsas--;
       u.carga = 'bolsa';
+      u.alimentoColetado++;
     }
     return;
   }
@@ -760,6 +763,7 @@ function pegarItem(estado: Estado, u: Unidade, item: Item): void {
   estado.itens = estado.itens.filter((i) => i.id !== item.id);
   if (item.tipo !== 'chapeu') {
     u.carga = item.tipo;
+    if (item.tipo === 'bolsa') u.alimentoColetado++;
     return;
   }
   const classe = item.classe!;
@@ -915,7 +919,10 @@ function recomporJazidas(estado: Estado): void {
 function entregarNaObra(estado: Estado, u: Unidade, carga: 'madeira' | 'ouro'): void {
   const oficina = oficinaDe(estado, u.time);
   if (carga === 'madeira') oficina.madeira++;
-  else oficina.ouro++;
+  else {
+    oficina.ouro++;
+    u.ouroMinerado++;
+  }
   u.carga = 'nada';
   u.entregas++;
 

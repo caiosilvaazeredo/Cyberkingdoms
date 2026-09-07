@@ -212,6 +212,44 @@ describe('os ofícios', () => {
     expect(vidaMaxima('guerreiro', 2)).toBeGreaterThan(vidaMaxima('guerreiro', 1));
   });
 
+  it('só o ouro entregue conta como ouro minerado — madeira não soma nele', () => {
+    const partida = emJogo();
+    const u = partida.entrar({ nome: 'Obreiro', bot: false, time: 'azul' });
+    const chapelaria = partida.arena.estrutura('chapelaria', 'azul');
+
+    u.carga = 'madeira';
+    em(u, chapelaria);
+    usar(partida, u.id);
+    expect(u.ouroMinerado).toBe(0);
+    expect(u.entregas).toBe(1);
+
+    u.carga = 'ouro';
+    em(u, chapelaria);
+    usar(partida, u.id);
+    expect(u.ouroMinerado).toBe(1);
+    expect(u.entregas).toBe(2);
+  });
+
+  it('pegar uma bolsa na casa da moeda conta como alimento coletado', () => {
+    const partida = emJogo();
+    const u = partida.entrar({ nome: 'Faminto', bot: false, time: 'azul' });
+    const casaDaMoeda = partida.arena.estrutura('casaDaMoeda', 'azul');
+    const forno = partida.estado.casasDaMoeda.find((c) => c.time === 'azul')!;
+    forno.bolsas = 2;
+
+    em(u, casaDaMoeda);
+    usar(partida, u.id);
+    expect(u.carga).toBe('bolsa');
+    expect(u.alimentoColetado).toBe(1);
+
+    // Comer a bolsa não desconta o alimento já contado — o placar é de quanto
+    // se pegou, não de quanto sobrou na mão.
+    u.vida = 1;
+    usar(partida, u.id);
+    expect(u.carga).toBe('nada');
+    expect(u.alimentoColetado).toBe(1);
+  });
+
   it('só se tira minerio matando o bicho', () => {
     const partida = emJogo();
     const saqueador = partida.entrar({ nome: 'Saqueador', bot: false, time: 'azul' });

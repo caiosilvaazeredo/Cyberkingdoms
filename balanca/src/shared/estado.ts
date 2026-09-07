@@ -62,6 +62,12 @@ export interface Unidade {
   resgates: number;
   /** Carga entregue em casa: minério, madeira e pedra somadas. */
   entregas: number;
+  /** Ouro entregue na chapelaria. É o placar do minerador, à parte de
+   * `entregas` — que já soma ouro, madeira e minério e não distingue nada. */
+  ouroMinerado: number;
+  /** Quantas bolsas esta unidade já pegou — da casa da moeda ou do chão —,
+   * comidas ou entulhadas: o placar de quem sustentou o time por dentro. */
+  alimentoColetado: number;
   /** Último comando confirmado, para o cliente reconciliar a previsão. */
   ultimoComando: number;
   /** O Modo Fera: transformação passageira, não uma classe. Ver classes.ts. */

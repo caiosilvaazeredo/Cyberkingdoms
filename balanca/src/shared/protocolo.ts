@@ -443,7 +443,8 @@ export function empacotar(estado: Estado): Retrato {
     ],
     // `[id, time, classe, x, y, olharX*100, olharY*100, vida, vivo, carga,
     //   golpe*100, colheita*100, renasceEm*10, ultimoComando, abates, mortes,
-    //   depósitos, resgates, entregas, fera, xamaAte*10, porco*10]`
+    //   depósitos, resgates, entregas, fera, xamaAte*10, porco*10, ouroMinerado,
+    //   alimentoColetado]`
     //
     // `golpe` vai como centésimos de segundo, e não como um sim/não: é o
     // relógio da animação de ataque, e o cliente precisa dele para saber em que
@@ -479,6 +480,8 @@ export function empacotar(estado: Estado): Retrato {
       u.fera === null ? -1 : FERAS.indexOf(u.fera),
       arred(u.xamaAte * 10),
       arred(u.porco * 10),
+      u.ouroMinerado,
+      u.alimentoColetado,
     ]),
     // `[time, peso, onde, x, y, portador, ajudantes, voltaEm]`
     pr: estado.baus.map((p) => [
@@ -613,6 +616,8 @@ export function desempacotar(r: Retrato, base: Estado): Estado {
       feraAte: 0,
       xamaAte: 0,
       porco: 0,
+      ouroMinerado: 0,
+      alimentoColetado: 0,
     };
     u.time = timePorIdx(linha[1]!);
     u.classe = CLASSES[linha[2]!]!;
@@ -636,6 +641,8 @@ export function desempacotar(r: Retrato, base: Estado): Estado {
     u.fera = idxFera < 0 ? null : FERAS[idxFera]!;
     u.xamaAte = (linha[20] ?? 0) / 10;
     u.porco = (linha[21] ?? 0) / 10;
+    u.ouroMinerado = linha[22] ?? 0;
+    u.alimentoColetado = linha[23] ?? 0;
     return u;
   });
 
