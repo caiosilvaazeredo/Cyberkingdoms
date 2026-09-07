@@ -1,0 +1,17 @@
+{
+  "id": "arqueiro",
+  "nome": "Arqueiro",
+  "resumo": "Puxa o arco e fura a linha de longe. Frágil se deixarem chegar perto.",
+  "vida": 95,
+  "velocidade": 205,
+  "ataque": "flecha",
+  "gesto": "disparo",
+  "dano": 22,
+  "alcance": 520,
+  "cadencia": 0.95,
+  "duracaoDoGolpe": 0.35,
+  "oficio": null,
+  "danoContraAnimal": 1.5,
+  "tintaDoChapeu": "#27ae60",
+  "tintaDaArma": "#8a5a2b"
+}

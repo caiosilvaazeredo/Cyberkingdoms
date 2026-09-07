@@ -1,3 +1,12 @@
+import ALDEAO_JSON from './classes-dados/aldeao.json';
+import ARQUEIRO_JSON from './classes-dados/arqueiro.json';
+import CLERIGO_JSON from './classes-dados/clerigo.json';
+import GUERREIRO_JSON from './classes-dados/guerreiro.json';
+import LANCEIRO_JSON from './classes-dados/lanceiro.json';
+import LENHADOR_JSON from './classes-dados/lenhador.json';
+import MINERADOR_JSON from './classes-dados/minerador.json';
+import SAQUEADOR_JSON from './classes-dados/saqueador.json';
+
 /**
  * As sete classes, o estoque de chapéus e o que cada ofício sabe fazer.
  *
@@ -67,8 +76,8 @@ export type Gesto = 'arco' | 'estocada' | 'disparo' | 'bencao' | 'picareta' | 'm
 /** O que a classe consegue tirar do mundo. */
 export type Oficio = 'ouro' | 'madeira' | 'minerio';
 
-export interface PerfilDeClasse {
-  readonly id: Classe;
+export interface EsquemaDeClasse {
+  readonly id: string;
   readonly nome: string;
   /** Uma linha, do jeito que o jogador leria no chapéu. */
   readonly resumo: string;
@@ -96,143 +105,26 @@ export interface PerfilDeClasse {
   readonly tintaDaArma: string;
 }
 
+
+/**
+ * Um perfil depois de carregado — o mesmo `EsquemaDeClasse`, com `id`
+ * fechado para o tipo que o resto do jogo indexa.
+ */
+export type PerfilDeClasse = Omit<EsquemaDeClasse, 'id'> & { readonly id: Classe };
+
+function comId<I extends Classe>(bruto: unknown, id: I): PerfilDeClasse {
+  return { ...(bruto as EsquemaDeClasse), id };
+}
+
 const PERFIS: Record<Classe, PerfilDeClasse> = {
-  aldeao: {
-    id: 'aldeao',
-    nome: 'Aldeão',
-    resumo: 'Sem chapéu. Junta de tudo, devagar, e apanha se ficar na frente.',
-    vida: 90,
-    velocidade: 215,
-    ataque: 'corpo',
-    gesto: 'faca',
-    dano: 8,
-    alcance: 46,
-    cadencia: 0.55,
-    duracaoDoGolpe: 0.22,
-    oficio: null,
-    danoContraAnimal: 1,
-    tintaDoChapeu: '#d9c8a2',
-    tintaDaArma: '#b9a27a',
-  },
-  guerreiro: {
-    id: 'guerreiro',
-    nome: 'Guerreiro',
-    resumo: 'Espada em arco: acerta tudo à frente. Aguenta pancada e segura ponte.',
-    vida: 175,
-    velocidade: 195,
-    ataque: 'corpo',
-    gesto: 'arco',
-    dano: 26,
-    alcance: 60,
-    cadencia: 0.7,
-    duracaoDoGolpe: 0.3,
-    oficio: null,
-    danoContraAnimal: 1,
-    tintaDoChapeu: '#c0392b',
-    tintaDaArma: '#d6dde4',
-  },
-  lanceiro: {
-    id: 'lanceiro',
-    nome: 'Lanceiro',
-    resumo: 'Estocada que fura a fila: alcança longe e atinge todos na linha.',
-    vida: 130,
-    velocidade: 200,
-    ataque: 'linha',
-    gesto: 'estocada',
-    dano: 23,
-    alcance: 108,
-    cadencia: 0.85,
-    duracaoDoGolpe: 0.26,
-    oficio: null,
-    danoContraAnimal: 1,
-    tintaDoChapeu: '#2f6fd0',
-    tintaDaArma: '#9aa7b4',
-  },
-  arqueiro: {
-    id: 'arqueiro',
-    nome: 'Arqueiro',
-    resumo: 'Puxa o arco e fura a linha de longe. Frágil se deixarem chegar perto.',
-    vida: 95,
-    velocidade: 205,
-    ataque: 'flecha',
-    gesto: 'disparo',
-    dano: 22,
-    alcance: 520,
-    cadencia: 0.95,
-    duracaoDoGolpe: 0.35,
-    oficio: null,
-    danoContraAnimal: 1.5,
-    tintaDoChapeu: '#27ae60',
-    tintaDaArma: '#8a5a2b',
-  },
-  clerigo: {
-    id: 'clerigo',
-    nome: 'Clérigo',
-    resumo: 'Ergue o cajado e cura quem carrega a bau. Ganha sem matar.',
-    vida: 110,
-    velocidade: 200,
-    ataque: 'cura',
-    gesto: 'bencao',
-    dano: 26,
-    alcance: 250,
-    cadencia: 1,
-    duracaoDoGolpe: 0.45,
-    oficio: null,
-    danoContraAnimal: 1,
-    tintaDoChapeu: '#ecf0f1',
-    tintaDaArma: '#f5c542',
-  },
-  minerador: {
-    id: 'minerador',
-    nome: 'Minerador',
-    resumo: 'Picareta na veia de ouro. O ouro levanta a chapelaria — e a picareta dói.',
-    vida: 125,
-    velocidade: 195,
-    ataque: 'corpo',
-    gesto: 'picareta',
-    dano: 17,
-    alcance: 50,
-    cadencia: 0.8,
-    duracaoDoGolpe: 0.32,
-    oficio: 'ouro',
-    danoContraAnimal: 1,
-    tintaDoChapeu: '#7f8c8d',
-    tintaDaArma: '#95a5a6',
-  },
-  lenhador: {
-    id: 'lenhador',
-    nome: 'Lenhador',
-    resumo: 'Machado na árvore, e no inimigo se precisar. A madeira levanta o reino.',
-    vida: 130,
-    velocidade: 200,
-    ataque: 'corpo',
-    gesto: 'machado',
-    dano: 21,
-    alcance: 54,
-    cadencia: 0.9,
-    duracaoDoGolpe: 0.34,
-    oficio: 'madeira',
-    danoContraAnimal: 1.2,
-    tintaDoChapeu: '#8a5a2b',
-    tintaDaArma: '#c0392b',
-  },
-  saqueador: {
-    id: 'saqueador',
-    nome: 'Saqueador',
-    resumo: 'Come quem corre: abate o bicho e leva a minerio para a casaDaMoeda.',
-    vida: 100,
-    velocidade: 212,
-    ataque: 'corpo',
-    gesto: 'faca',
-    dano: 14,
-    alcance: 58,
-    cadencia: 0.55,
-    duracaoDoGolpe: 0.18,
-    oficio: 'minerio',
-    danoContraAnimal: 4,
-    tintaDoChapeu: '#6b8e23',
-    tintaDaArma: '#e8e0c8',
-  },
+  aldeao: comId(ALDEAO_JSON, 'aldeao'),
+  guerreiro: comId(GUERREIRO_JSON, 'guerreiro'),
+  lanceiro: comId(LANCEIRO_JSON, 'lanceiro'),
+  arqueiro: comId(ARQUEIRO_JSON, 'arqueiro'),
+  clerigo: comId(CLERIGO_JSON, 'clerigo'),
+  minerador: comId(MINERADOR_JSON, 'minerador'),
+  lenhador: comId(LENHADOR_JSON, 'lenhador'),
+  saqueador: comId(SAQUEADOR_JSON, 'saqueador'),
 };
 
 export function perfil(classe: Classe): PerfilDeClasse {

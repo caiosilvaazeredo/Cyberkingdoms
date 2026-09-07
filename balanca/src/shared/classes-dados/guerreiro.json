@@ -1,0 +1,17 @@
+{
+  "id": "guerreiro",
+  "nome": "Guerreiro",
+  "resumo": "Espada em arco: acerta tudo à frente. Aguenta pancada e segura ponte.",
+  "vida": 175,
+  "velocidade": 195,
+  "ataque": "corpo",
+  "gesto": "arco",
+  "dano": 26,
+  "alcance": 60,
+  "cadencia": 0.7,
+  "duracaoDoGolpe": 0.3,
+  "oficio": null,
+  "danoContraAnimal": 1,
+  "tintaDoChapeu": "#c0392b",
+  "tintaDaArma": "#d6dde4"
+}

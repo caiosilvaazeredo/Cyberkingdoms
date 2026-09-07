@@ -286,6 +286,7 @@
       <nav class="abas">
         <button data-aba="mapas" aria-selected="true">Mapas</button>
         <button data-aba="modos" aria-selected="false">Modos</button>
+        <button data-aba="classes" aria-selected="false">Classes</button>
         <button data-aba="sprites" aria-selected="false">Sprites</button>
       </nav>
       <a class="voltar" href="/">← voltar ao jogo</a>
@@ -490,6 +491,147 @@
           <div class="barra-palco">pré-visualização do arquivo exportado</div>
           <div class="canvas-caixa">
             <pre id="modo-json" style="color:#9aa3b5; font-size:12px; white-space:pre-wrap; margin:0;"></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================ editor de classes -->
+      <section class="pagina" id="pagina-classes">
+        <aside class="painel">
+          <div>
+            <h2>Classe</h2>
+            <div class="campo">
+              <label for="classe-escolha">editando</label>
+              <select id="classe-escolha"></select>
+            </div>
+            <p class="rotulo-secao">
+              Ajusta o perfil de uma classe já existente. Uma classe nova precisa de
+              sprite (aba Sprites), de entrar em `Classe` no código e no estoque da
+              chapelaria — o formulário aqui não cria classe, só reequilibra as sete.
+            </p>
+          </div>
+
+          <div>
+            <h2>Identidade</h2>
+            <div class="campo">
+              <label for="classe-nome">nome</label>
+              <input id="classe-nome" type="text" />
+            </div>
+            <div class="campo">
+              <label for="classe-resumo">resumo (uma linha, o texto do chapéu)</label>
+              <input id="classe-resumo" type="text" />
+            </div>
+          </div>
+
+          <div>
+            <h2>Corpo</h2>
+            <div class="linha-campos">
+              <div class="campo">
+                <label for="classe-vida">vida</label>
+                <input id="classe-vida" type="number" min="1" />
+              </div>
+              <div class="campo">
+                <label for="classe-velocidade">velocidade (un/s)</label>
+                <input id="classe-velocidade" type="number" min="1" />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h2>Ataque</h2>
+            <div class="linha-campos">
+              <div class="campo">
+                <label for="classe-ataque">tipo</label>
+                <select id="classe-ataque">
+                  <option value="corpo">corpo</option>
+                  <option value="linha">linha</option>
+                  <option value="flecha">flecha</option>
+                  <option value="cura">cura</option>
+                </select>
+              </div>
+              <div class="campo">
+                <label for="classe-gesto">gesto (só o desenho)</label>
+                <select id="classe-gesto">
+                  <option value="arco">arco</option>
+                  <option value="estocada">estocada</option>
+                  <option value="disparo">disparo</option>
+                  <option value="bencao">bênção</option>
+                  <option value="picareta">picareta</option>
+                  <option value="machado">machado</option>
+                  <option value="faca">faca</option>
+                </select>
+              </div>
+            </div>
+            <div class="linha-campos">
+              <div class="campo">
+                <label for="classe-dano">dano (ou cura)</label>
+                <input id="classe-dano" type="number" step="0.5" />
+              </div>
+              <div class="campo">
+                <label for="classe-alcance">alcance</label>
+                <input id="classe-alcance" type="number" />
+              </div>
+            </div>
+            <div class="linha-campos">
+              <div class="campo">
+                <label for="classe-cadencia">cadência (s entre golpes)</label>
+                <input id="classe-cadencia" type="number" step="0.05" />
+              </div>
+              <div class="campo">
+                <label for="classe-duracao-golpe">duração do golpe (s)</label>
+                <input id="classe-duracao-golpe" type="number" step="0.02" />
+              </div>
+            </div>
+            <div class="campo">
+              <label for="classe-dano-animal">multiplicador de dano contra bicho</label>
+              <input id="classe-dano-animal" type="number" step="0.1" />
+            </div>
+          </div>
+
+          <div>
+            <h2>Ofício</h2>
+            <div class="campo">
+              <label for="classe-oficio">colhe rápido</label>
+              <select id="classe-oficio">
+                <option value="">nenhum (classe de combate)</option>
+                <option value="ouro">ouro</option>
+                <option value="madeira">madeira</option>
+                <option value="minerio">minério</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <h2>Cores</h2>
+            <div class="linha-campos">
+              <div class="campo">
+                <label for="classe-cor-chapeu">chapéu</label>
+                <input id="classe-cor-chapeu" type="color" />
+              </div>
+              <div class="campo">
+                <label for="classe-cor-arma">arma</label>
+                <input id="classe-cor-arma" type="color" />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h2>Arquivo</h2>
+            <div class="botoes">
+              <label class="acao secundaria" style="text-align:center; cursor:pointer;">
+                importar .json
+                <input id="classe-importar" type="file" accept="application/json" style="display:none" />
+              </label>
+              <button class="acao" id="classe-exportar">exportar .json</button>
+            </div>
+          </div>
+
+          <div class="avisos" id="classe-avisos"></div>
+        </aside>
+        <div class="palco">
+          <div class="barra-palco">pré-visualização do arquivo exportado</div>
+          <div class="canvas-caixa">
+            <pre id="classe-json" style="color:#9aa3b5; font-size:12px; white-space:pre-wrap; margin:0;"></pre>
           </div>
         </div>
       </section>

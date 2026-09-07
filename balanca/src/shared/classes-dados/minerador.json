@@ -1,0 +1,17 @@
+{
+  "id": "minerador",
+  "nome": "Minerador",
+  "resumo": "Picareta na veia de ouro. O ouro levanta a chapelaria — e a picareta dói.",
+  "vida": 125,
+  "velocidade": 195,
+  "ataque": "corpo",
+  "gesto": "picareta",
+  "dano": 17,
+  "alcance": 50,
+  "cadencia": 0.8,
+  "duracaoDoGolpe": 0.32,
+  "oficio": "ouro",
+  "danoContraAnimal": 1,
+  "tintaDoChapeu": "#7f8c8d",
+  "tintaDaArma": "#95a5a6"
+}

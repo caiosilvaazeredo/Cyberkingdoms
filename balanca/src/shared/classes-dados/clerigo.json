@@ -1,0 +1,17 @@
+{
+  "id": "clerigo",
+  "nome": "Clérigo",
+  "resumo": "Ergue o cajado e cura quem carrega a bau. Ganha sem matar.",
+  "vida": 110,
+  "velocidade": 200,
+  "ataque": "cura",
+  "gesto": "bencao",
+  "dano": 26,
+  "alcance": 250,
+  "cadencia": 1,
+  "duracaoDoGolpe": 0.45,
+  "oficio": null,
+  "danoContraAnimal": 1,
+  "tintaDoChapeu": "#ecf0f1",
+  "tintaDaArma": "#f5c542"
+}

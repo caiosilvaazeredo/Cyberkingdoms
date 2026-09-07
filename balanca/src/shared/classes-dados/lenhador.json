@@ -1,0 +1,17 @@
+{
+  "id": "lenhador",
+  "nome": "Lenhador",
+  "resumo": "Machado na árvore, e no inimigo se precisar. A madeira levanta o reino.",
+  "vida": 130,
+  "velocidade": 200,
+  "ataque": "corpo",
+  "gesto": "machado",
+  "dano": 21,
+  "alcance": 54,
+  "cadencia": 0.9,
+  "duracaoDoGolpe": 0.34,
+  "oficio": "madeira",
+  "danoContraAnimal": 1.2,
+  "tintaDoChapeu": "#8a5a2b",
+  "tintaDaArma": "#c0392b"
+}

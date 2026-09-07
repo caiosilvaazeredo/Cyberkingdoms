@@ -1,6 +1,8 @@
 import type { TipoDeEstrutura, TipoDeJazida } from '../shared/arena';
+import type { EsquemaDeClasse } from '../shared/classes';
 import type { EsquemaDeMapa } from '../shared/mapas';
 import type { EsquemaDeModo } from '../shared/modos';
+import { EditorDeClasses, PERFIS_CONHECIDOS } from './classes';
 import { EditorDeMapas, type Ferramenta } from './mapas';
 import { EditorDeModos } from './modos';
 import { FerramentaDeSprite, baixarComoPng } from './sprites';
@@ -474,6 +476,139 @@ pegar<HTMLButtonElement>('#modo-exportar').addEventListener('click', () => {
 
 sincronizarCamposComModo();
 redesenharModo();
+
+// --- editor de classes ---------------------------------------------------
+
+const classes = new EditorDeClasses();
+
+const campoEscolha = pegar<HTMLSelectElement>('#classe-escolha');
+for (const id of Object.keys(PERFIS_CONHECIDOS)) {
+  const opcao = document.createElement('option');
+  opcao.value = id;
+  opcao.textContent = PERFIS_CONHECIDOS[id]!.nome;
+  campoEscolha.append(opcao);
+}
+
+const camposDeClasse = {
+  nome: pegar<HTMLInputElement>('#classe-nome'),
+  resumo: pegar<HTMLInputElement>('#classe-resumo'),
+  vida: pegar<HTMLInputElement>('#classe-vida'),
+  velocidade: pegar<HTMLInputElement>('#classe-velocidade'),
+  ataque: pegar<HTMLSelectElement>('#classe-ataque'),
+  gesto: pegar<HTMLSelectElement>('#classe-gesto'),
+  dano: pegar<HTMLInputElement>('#classe-dano'),
+  alcance: pegar<HTMLInputElement>('#classe-alcance'),
+  cadencia: pegar<HTMLInputElement>('#classe-cadencia'),
+  duracaoGolpe: pegar<HTMLInputElement>('#classe-duracao-golpe'),
+  danoAnimal: pegar<HTMLInputElement>('#classe-dano-animal'),
+  oficio: pegar<HTMLSelectElement>('#classe-oficio'),
+  corChapeu: pegar<HTMLInputElement>('#classe-cor-chapeu'),
+  corArma: pegar<HTMLInputElement>('#classe-cor-arma'),
+};
+
+function sincronizarCamposComClasse(): void {
+  const p = classes.perfil;
+  camposDeClasse.nome.value = p.nome;
+  camposDeClasse.resumo.value = p.resumo;
+  camposDeClasse.vida.value = String(p.vida);
+  camposDeClasse.velocidade.value = String(p.velocidade);
+  camposDeClasse.ataque.value = p.ataque;
+  camposDeClasse.gesto.value = p.gesto;
+  camposDeClasse.dano.value = String(p.dano);
+  camposDeClasse.alcance.value = String(p.alcance);
+  camposDeClasse.cadencia.value = String(p.cadencia);
+  camposDeClasse.duracaoGolpe.value = String(p.duracaoDoGolpe);
+  camposDeClasse.danoAnimal.value = String(p.danoContraAnimal);
+  camposDeClasse.oficio.value = p.oficio ?? '';
+  camposDeClasse.corChapeu.value = p.tintaDoChapeu;
+  camposDeClasse.corArma.value = p.tintaDaArma;
+}
+
+function redesenharClasse(): void {
+  const avisos = pegar<HTMLElement>('#classe-avisos');
+  avisos.replaceChildren();
+  const erros = classes.validar();
+  if (erros.length === 0) {
+    const ok = document.createElement('div');
+    ok.className = 'aviso ok';
+    ok.textContent = 'sem problemas encontrados — pronto para exportar';
+    avisos.append(ok);
+  } else {
+    for (const erro of erros) {
+      const div = document.createElement('div');
+      div.className = 'aviso';
+      div.textContent = erro;
+      avisos.append(div);
+    }
+  }
+  pegar<HTMLElement>('#classe-json').textContent = JSON.stringify(classes.perfil, null, 2);
+}
+
+function lerCamposDaClasse(): void {
+  classes.perfil = {
+    id: classes.perfil.id,
+    nome: camposDeClasse.nome.value,
+    resumo: camposDeClasse.resumo.value,
+    vida: Math.max(1, Number(camposDeClasse.vida.value) || 1),
+    velocidade: Math.max(1, Number(camposDeClasse.velocidade.value) || 1),
+    ataque: camposDeClasse.ataque.value as EsquemaDeClasse['ataque'],
+    gesto: camposDeClasse.gesto.value as EsquemaDeClasse['gesto'],
+    dano: Number(camposDeClasse.dano.value) || 0,
+    alcance: Math.max(1, Number(camposDeClasse.alcance.value) || 1),
+    cadencia: Math.max(0.01, Number(camposDeClasse.cadencia.value) || 0.01),
+    duracaoDoGolpe: Math.max(0.01, Number(camposDeClasse.duracaoGolpe.value) || 0.01),
+    oficio: (camposDeClasse.oficio.value || null) as EsquemaDeClasse['oficio'],
+    danoContraAnimal: Number(camposDeClasse.danoAnimal.value) || 1,
+    tintaDoChapeu: camposDeClasse.corChapeu.value,
+    tintaDaArma: camposDeClasse.corArma.value,
+  };
+  redesenharClasse();
+}
+
+campoEscolha.addEventListener('change', () => {
+  classes.carregar(PERFIS_CONHECIDOS[campoEscolha.value]!);
+  sincronizarCamposComClasse();
+  redesenharClasse();
+});
+
+for (const campo of Object.values(camposDeClasse)) {
+  campo.addEventListener('input', lerCamposDaClasse);
+  campo.addEventListener('change', lerCamposDaClasse);
+}
+
+pegar<HTMLInputElement>('#classe-importar').addEventListener('change', async (e) => {
+  const arquivo = (e.target as HTMLInputElement).files?.[0];
+  if (!arquivo) return;
+  const texto = await arquivo.text();
+  try {
+    const esquema = JSON.parse(texto) as EsquemaDeClasse;
+    classes.carregar(esquema);
+    sincronizarCamposComClasse();
+    redesenharClasse();
+  } catch (err) {
+    alert(`não consegui ler esta classe: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  (e.target as HTMLInputElement).value = '';
+});
+
+pegar<HTMLButtonElement>('#classe-exportar').addEventListener('click', () => {
+  const erros = classes.validar();
+  if (erros.length > 0 && !confirm(`Esta classe tem ${erros.length} aviso(s). Exportar assim mesmo?`)) {
+    return;
+  }
+  const blob = new Blob([JSON.stringify(classes.perfil, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${classes.perfil.id || 'classe'}.json`;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+});
+
+sincronizarCamposComClasse();
+redesenharClasse();
 
 // --- editor de sprites -----------------------------------------------------
 

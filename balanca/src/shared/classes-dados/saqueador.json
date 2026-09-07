@@ -1,0 +1,17 @@
+{
+  "id": "saqueador",
+  "nome": "Saqueador",
+  "resumo": "Come quem corre: abate o bicho e leva a minerio para a casaDaMoeda.",
+  "vida": 100,
+  "velocidade": 212,
+  "ataque": "corpo",
+  "gesto": "faca",
+  "dano": 14,
+  "alcance": 58,
+  "cadencia": 0.55,
+  "duracaoDoGolpe": 0.18,
+  "oficio": "minerio",
+  "danoContraAnimal": 4,
+  "tintaDoChapeu": "#6b8e23",
+  "tintaDaArma": "#e8e0c8"
+}

@@ -1,0 +1,17 @@
+{
+  "id": "aldeao",
+  "nome": "Aldeão",
+  "resumo": "Sem chapéu. Junta de tudo, devagar, e apanha se ficar na frente.",
+  "vida": 90,
+  "velocidade": 215,
+  "ataque": "corpo",
+  "gesto": "faca",
+  "dano": 8,
+  "alcance": 46,
+  "cadencia": 0.55,
+  "duracaoDoGolpe": 0.22,
+  "oficio": null,
+  "danoContraAnimal": 1,
+  "tintaDoChapeu": "#d9c8a2",
+  "tintaDaArma": "#b9a27a"
+}

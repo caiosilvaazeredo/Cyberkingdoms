@@ -1,0 +1,17 @@
+{
+  "id": "lanceiro",
+  "nome": "Lanceiro",
+  "resumo": "Estocada que fura a fila: alcança longe e atinge todos na linha.",
+  "vida": 130,
+  "velocidade": 200,
+  "ataque": "linha",
+  "gesto": "estocada",
+  "dano": 23,
+  "alcance": 108,
+  "cadencia": 0.85,
+  "duracaoDoGolpe": 0.26,
+  "oficio": null,
+  "danoContraAnimal": 1,
+  "tintaDoChapeu": "#2f6fd0",
+  "tintaDaArma": "#9aa7b4"
+}
