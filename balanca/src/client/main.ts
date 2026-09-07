@@ -22,7 +22,7 @@ import {
   COR_DA_VAGA,
 } from './desenho';
 import { Entrada } from './entrada';
-import { botaoDeRecolher, desenharDica, desenharHud, dispositivoTemToque, narrar } from './hud';
+import { botaoDeRecolher, controlesDeToqueAtivos, desenharDica, desenharHud, narrar } from './hud';
 import { Rede } from './rede';
 import { PainelDaEquipe } from './equipe';
 import { salvarAjustes } from './ajustes';
@@ -637,8 +637,8 @@ function laco(agora: number): void {
           altura: altura / camera.zoom,
         }, largura, rede.marcas);
       }
-      if (dispositivoTemToque()) {
-        botaoDeRecolher(ctx, entrada, 'minimapa', caixa.x + caixa.l - 13, caixa.y + 13, ajustes.minimapa);
+      if (controlesDeToqueAtivos(ajustes)) {
+        botaoDeRecolher(ctx, entrada, ajustes, 'minimapa', caixa.x + caixa.l - 13, caixa.y + 13, ajustes.minimapa);
       }
       // A área clicável vem **depois** do nó de recolher: os dois disputam o
       // mesmo canto, e `Entrada` casa o primeiro retângulo que achar — o nó

@@ -17,7 +17,7 @@ import {
   outroTime,
   type Time,
 } from '../shared/regras';
-import type { Ajustes } from './ajustes';
+import type { Ajustes, Orientacao } from './ajustes';
 import type { Arte } from './arte';
 import { COR_DA_VAGA } from './desenho';
 import type { Entrada } from './entrada';
@@ -159,7 +159,7 @@ export function desenharHud(
   registro(ctx, rede, largura, altura, ajustes, arte, entrada);
   faixaDeFase(ctx, estado, largura, altura, tempo);
   if (entrada.placarAberto) tabela(ctx, estado, largura, altura);
-  botoesDeToque(ctx, entrada, largura, altura);
+  botoesDeToque(ctx, entrada, largura, altura, ajustes);
 }
 
 /**
@@ -424,8 +424,11 @@ function cartaoDaClasse(
   // ou os botões, do lado oposto — alcança; sem toque, a margem de sempre.
   // Onde ele não pode subir: por baixo da balança e do relógio, presos no
   // topo em qualquer tamanho de tela (`balanca()`, mais acima neste arquivo).
-  const pisoDoCartao = dispositivoTemToque()
-    ? altura - CENTRO_DOS_CONTROLES_DA_BASE - RAIO_DO_ANEL_DO_MANCHE - 10
+  const pisoDoCartao = controlesDeToqueAtivos(ajustes)
+    ? altura -
+      CENTRO_DOS_CONTROLES_DA_BASE[ajustes.orientacao] -
+      RAIO_DO_ANEL_DO_MANCHE[ajustes.orientacao] -
+      10
     : altura - 12;
   const TOPO_SEGURO = 150;
   // O nó mora sempre no mesmo canto — o pé do cartão, que é o mesmo esteja
@@ -441,7 +444,7 @@ function cartaoDaClasse(
   // ganhando nada por recolher um cartão que não atrapalha ninguém, a chave
   // já resolve sozinha — ligada ou desligada, sem nó.
   if (!ajustes.cartao) {
-    if (dispositivoTemToque()) botaoDeRecolher(ctx, entrada, 'cartao', xNo, yNo, false);
+    if (controlesDeToqueAtivos(ajustes)) botaoDeRecolher(ctx, entrada, ajustes, 'cartao', xNo, yNo, false);
     return;
   }
 
@@ -464,7 +467,7 @@ function cartaoDaClasse(
   ctx.fillStyle = 'rgba(12, 14, 20, 0.72)';
   arredondado(ctx, x, y, l, alturaCartao, 10);
   ctx.fill();
-  botaoDeRecolher(ctx, entrada, 'cartao', xNo, yNo, true);
+  botaoDeRecolher(ctx, entrada, ajustes, 'cartao', xNo, yNo, true);
 
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
@@ -600,7 +603,7 @@ function registro(
   const y0 = caixa ? caixa.y + caixa.a + 14 : 110;
 
   if (!ajustes.registro) {
-    if (dispositivoTemToque()) botaoDeRecolher(ctx, entrada, 'registro', largura - 27, y0 + 13, false);
+    if (controlesDeToqueAtivos(ajustes)) botaoDeRecolher(ctx, entrada, ajustes, 'registro', largura - 27, y0 + 13, false);
     return;
   }
 
@@ -609,7 +612,7 @@ function registro(
   ctx.textAlign = 'right';
   ctx.textBaseline = 'top';
   ctx.font = '500 13px "Trebuchet MS", system-ui, sans-serif';
-  botaoDeRecolher(ctx, entrada, 'registro', largura - 27, y0 + 13, true);
+  botaoDeRecolher(ctx, entrada, ajustes, 'registro', largura - 27, y0 + 13, true);
   let y = y0 + 34;
   for (const aviso of rede.avisos) {
     const idade = (agora - aviso.quando) / 1000;
@@ -831,13 +834,38 @@ export function dispositivoTemToque(): boolean {
   return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 }
 
+/**
+ * A mesma pergunta que `dispositivoTemToque`, mas deixando o jogador
+ * decidir — a escolha de "celular ou computador" da tela de antes de
+ * entrar na partida. Com `plataforma: 'auto'` (o padrão) o comportamento é
+ * idêntico a hoje: detecção por hardware. Com `'computador'` ou `'celular'`
+ * a escolha explícita vence, mesmo em aparelhos ambíguos.
+ */
+export function controlesDeToqueAtivos(ajustes: Ajustes): boolean {
+  if (ajustes.plataforma === 'computador') return false;
+  if (ajustes.plataforma === 'celular') return true;
+  return dispositivoTemToque();
+}
+
 /** Onde o manche por padrão fica, e o raio do anel dele — a mesma dupla de
  * números usada para desenhá-lo e para reservar a faixa da base que ele
  * ocupa, em `cartaoDaClasse`. Um valor só, puxado dos dois lugares, é o que
  * impede o cartão de voltar a cobrir o manche no dia em que alguém mudar um
  * dos dois sem lembrar do outro. */
-const CENTRO_DOS_CONTROLES_DA_BASE = 130;
-const RAIO_DO_ANEL_DO_MANCHE = 56;
+/**
+ * Vertical (celular em pé) tem altura de sobra e cabe um manche mais alto,
+ * afastado da borda que o polegar cobre ao segurar o aparelho. Horizontal
+ * (celular deitado) tem metade da altura e o mesmo recuo empurraria os
+ * botões para fora da tela — por isso o par encolhe junto.
+ */
+const CENTRO_DOS_CONTROLES_DA_BASE: Readonly<Record<Orientacao, number>> = {
+  vertical: 130,
+  horizontal: 90,
+};
+const RAIO_DO_ANEL_DO_MANCHE: Readonly<Record<Orientacao, number>> = {
+  vertical: 56,
+  horizontal: 44,
+};
 
 /**
  * O botão pequeno que recolhe ou reabre um painel do HUD — só existe no
@@ -854,12 +882,13 @@ const RAIO_DO_ANEL_DO_MANCHE = 56;
 export function botaoDeRecolher(
   ctx: CanvasRenderingContext2D,
   entrada: Entrada,
+  ajustes: Ajustes,
   nome: string,
   x: number,
   y: number,
   aberto: boolean,
 ): void {
-  if (!dispositivoTemToque()) return;
+  if (!controlesDeToqueAtivos(ajustes)) return;
   const r = 13;
   entrada.botoes[`recolher-${nome}`] = { x: x - r, y: y - r, largura: r * 2, altura: r * 2 };
   ctx.save();
@@ -892,15 +921,18 @@ function botoesDeToque(
   entrada: Entrada,
   largura: number,
   altura: number,
+  ajustes: Ajustes,
 ): void {
-  if (!dispositivoTemToque()) return;
-  const r = 46;
+  if (!controlesDeToqueAtivos(ajustes)) return;
+  const base = CENTRO_DOS_CONTROLES_DA_BASE[ajustes.orientacao];
+  const raioDoManche = RAIO_DO_ANEL_DO_MANCHE[ajustes.orientacao];
+  const r = ajustes.orientacao === 'horizontal' ? 38 : 46;
   // Os botões ficam do lado **oposto** ao manche: é a mão que sobra.
   const aDireita = entrada.ladoDoManche === 'esquerda';
   const bx = (recuo: number): number => (aDireita ? largura - recuo : recuo - r * 2);
   const acoes = {
-    atacar: { x: bx(150), y: altura - CENTRO_DOS_CONTROLES_DA_BASE, largura: r * 2, altura: r * 2 },
-    usar: { x: bx(240), y: altura - 80, largura: r * 2, altura: r * 2 },
+    atacar: { x: bx(150), y: altura - base, largura: r * 2, altura: r * 2 },
+    usar: { x: bx(240), y: altura - (base - 50), largura: r * 2, altura: r * 2 },
   };
   entrada.botoes.atacar = acoes.atacar;
   entrada.botoes.usar = acoes.usar;
@@ -924,11 +956,11 @@ function botoesDeToque(
     ctx.strokeStyle = 'rgba(255,255,255,0.3)';
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(manche.x, manche.y, RAIO_DO_ANEL_DO_MANCHE, 0, Math.PI * 2);
+    ctx.arc(manche.x, manche.y, raioDoManche, 0, Math.PI * 2);
     ctx.stroke();
     ctx.fillStyle = 'rgba(255,255,255,0.35)';
     ctx.beginPath();
-    const t = Math.min(1, Math.hypot(manche.dx, manche.dy) / RAIO_DO_ANEL_DO_MANCHE);
+    const t = Math.min(1, Math.hypot(manche.dx, manche.dy) / raioDoManche);
     ctx.arc(manche.x + manche.dx * t, manche.y + manche.dy * t, 22, 0, Math.PI * 2);
     ctx.fill();
   } else {
@@ -938,14 +970,11 @@ function botoesDeToque(
     // fica sem nenhuma pista de onde pôr o polegar. Um anel fraco no canto
     // por padrão, do mesmo raio do de verdade, resolve isso sem prometer
     // uma posição exata — ele nasce onde o dedo tocar, não aqui.
-    const hx =
-      entrada.ladoDoManche === 'esquerda'
-        ? CENTRO_DOS_CONTROLES_DA_BASE
-        : largura - CENTRO_DOS_CONTROLES_DA_BASE;
+    const hx = entrada.ladoDoManche === 'esquerda' ? base : largura - base;
     ctx.strokeStyle = 'rgba(255,255,255,0.18)';
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(hx, altura - CENTRO_DOS_CONTROLES_DA_BASE, RAIO_DO_ANEL_DO_MANCHE, 0, Math.PI * 2);
+    ctx.arc(hx, altura - base, raioDoManche, 0, Math.PI * 2);
     ctx.stroke();
   }
   ctx.restore();

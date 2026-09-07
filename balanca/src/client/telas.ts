@@ -7,6 +7,8 @@ import {
   salvarAjustes,
   type Ajustes,
   type Lado,
+  type Orientacao,
+  type Plataforma,
   type Visao,
 } from './ajustes';
 import { MAXIMO_LOCAL, rotuloDaFonte, type IdDeFonte } from './controles';
@@ -1170,6 +1172,25 @@ export class Telas {
         opcoes: [
           { valor: 'esquerda' as Lado, texto: 'esquerda' },
           { valor: 'direita' as Lado, texto: 'direita' },
+        ],
+      },
+      {
+        chave: 'plataforma',
+        rotulo: 'Controles',
+        explica: 'só muda os controles na tela — o jogo é o mesmo nos três',
+        opcoes: [
+          { valor: 'auto' as Plataforma, texto: 'detectar' },
+          { valor: 'computador' as Plataforma, texto: 'computador' },
+          { valor: 'celular' as Plataforma, texto: 'celular' },
+        ],
+      },
+      {
+        chave: 'orientacao',
+        rotulo: 'Celular deitado ou em pé',
+        explica: 'ajusta onde ficam manche e botões — só com "celular" acima',
+        opcoes: [
+          { valor: 'vertical' as Orientacao, texto: 'em pé' },
+          { valor: 'horizontal' as Orientacao, texto: 'deitado' },
         ],
       },
     ];

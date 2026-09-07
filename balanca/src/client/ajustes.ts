@@ -24,10 +24,26 @@
 
 export type Visao = 'perto' | 'padrao' | 'longe';
 export type Lado = 'esquerda' | 'direita';
+/** Qual controle desenhar: teclado/mouse, toque, ou adivinhar pelo aparelho. */
+export type Plataforma = 'auto' | 'computador' | 'celular';
+export type Orientacao = 'vertical' | 'horizontal';
 
 export interface Ajustes {
   nome: string;
   visao: Visao;
+  /**
+   * A escolha explícita de controles, antes de entrar na partida.
+   *
+   * `'auto'` mantém a detecção por hardware (`dispositivoTemToque`) de
+   * sempre; `'computador'` e `'celular'` forçam o esquema mesmo quando o
+   * aparelho destoa (um celular ligado a teclado, um tablet com mouse). Por
+   * pedido explícito: isto só troca **quais controles aparecem** — mapa,
+   * regras e todo o resto do jogo são os mesmos nas três opções.
+   */
+  plataforma: Plataforma;
+  /** No celular, se a barra de ações some embaixo (vertical) ou nas laterais
+   * (horizontal). Sem efeito quando `plataforma` não é `'celular'`. */
+  orientacao: Orientacao;
   /** Nomes sobre a cabeça de cada um. */
   nomes: boolean;
   /** Árvores, arbustos e pedras. Desligar ajuda em celular fraco. */
@@ -56,6 +72,8 @@ export const PADROES: Ajustes = {
   minimapa: true,
   cartao: true,
   manche: 'esquerda',
+  plataforma: 'auto',
+  orientacao: 'vertical',
 };
 
 /** Multiplicador do zoom por nível de visão. */
@@ -104,5 +122,7 @@ export function sanear(bruto: unknown): Ajustes {
     minimapa: booleano(o.minimapa, PADROES.minimapa),
     cartao: booleano(o.cartao, PADROES.cartao),
     manche: entre(o.manche, ['esquerda', 'direita'] as const, PADROES.manche),
+    plataforma: entre(o.plataforma, ['auto', 'computador', 'celular'] as const, PADROES.plataforma),
+    orientacao: entre(o.orientacao, ['vertical', 'horizontal'] as const, PADROES.orientacao),
   };
 }
