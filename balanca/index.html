@@ -328,9 +328,12 @@
         dourado com uma sombra por baixo, repetido em todo botão sem custar
         mais nada por cor.
       */
-      .coluna button.item {
+      .coluna .item {
         position: relative;
+        display: inline-block;
+        box-sizing: border-box;
         appearance: none;
+        text-decoration: none;
         border: 3px solid rgba(0, 0, 0, 0.6);
         border-bottom-width: 6px;
         border-radius: 10px;
@@ -354,8 +357,8 @@
           0 6px 18px rgba(0, 0, 0, 0.45);
         transition: transform 0.08s ease;
       }
-      .coluna button.item::before,
-      .coluna button.item::after {
+      .coluna .item::before,
+      .coluna .item::after {
         content: '';
         position: absolute;
         top: 6px;
@@ -365,13 +368,13 @@
         background: radial-gradient(circle at 35% 30%, #fff3c9, var(--ouro-forte) 70%);
         box-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
       }
-      .coluna button.item::before {
+      .coluna .item::before {
         left: 8px;
       }
-      .coluna button.item::after {
+      .coluna .item::after {
         right: 8px;
       }
-      .coluna button.item small {
+      .coluna .item small {
         display: block;
         font-weight: 400;
         font-size: clamp(10px, 1vw, 12px);
@@ -388,11 +391,11 @@
         a criar rolagem lateral e a cortar a beira do botão. Subir não custa
         largura nenhuma, e ainda combina com o `:active`, que afunda.
       */
-      .coluna button.item:hover {
+      .coluna .item:hover {
         transform: translateY(-2px);
         filter: brightness(1.1);
       }
-      .coluna button.item:active {
+      .coluna .item:active {
         transform: translateY(3px);
         border-bottom-width: 3px;
       }
@@ -446,7 +449,7 @@
       */
       .miudos {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 6px;
       }
       /*
@@ -457,7 +460,7 @@
         quebra, um rótulo que não couber **sai da caixa**, e aí o roteiro de
         tamanhos acusa em vez de a feiura chegar ao jogador.
       */
-      .miudos button.item {
+      .miudos .item {
         font-size: clamp(10px, 1.1vw, 13px);
         letter-spacing: 0;
         padding: 9px 2px 7px;
@@ -470,7 +473,7 @@
         coluna e são cortados — foi o que acontecia com "Créditos", o último da
         fileira de três, que encostava na borda.
       */
-      .coluna button.item[aria-expanded='true'] {
+      .coluna .item[aria-expanded='true'] {
         filter: brightness(1.25);
         box-shadow:
           inset 0 0 0 2px rgba(255, 255, 255, 0.85),
@@ -601,11 +604,11 @@
         coisa a ceder quando não cabe o que se clica.
       */
       @media (max-height: 520px) {
-        .coluna button.item small,
+        .coluna .item small,
         .assinatura {
           display: none;
         }
-        .coluna button.item {
+        .coluna .item {
           /* Encolhe, mas não abaixo do que um dedo acerta: quarenta pixels é o
              piso, e um botão que não recebe o toque é pior que um botão feio. */
           min-height: 40px;
@@ -614,7 +617,7 @@
         /* Os miúdos ficam com a margem lateral deles: com os dez pixels da
            regra acima sobram trinta e sete de texto, e "Créditos" quebra ao
            meio. Vem depois de propósito — a regra genérica é que é a exceção. */
-        .miudos button.item {
+        .miudos .item {
           padding: 6px 2px 5px;
         }
         .marca {
@@ -1649,10 +1652,10 @@
           <button class="item rubro" data-folha="apelido" aria-expanded="false">Apelido</button>
           <button class="item rubro" data-folha="ajustes" aria-expanded="false">Ajustes</button>
           <button class="item rubro" data-folha="creditos" aria-expanded="false">Créditos</button>
+          <a class="item rubro" href="/editor.html">⚒ Editor</a>
         </div>
 
         <p class="assinatura">um cerco a ouro · dois baús · uma balança só</p>
-        <p class="assinatura"><a href="/editor.html" style="color: inherit">⚒ editor de mapas e sprites</a></p>
 
         <!--
           A tira de classes, do desenho do menu. Ela não é enfeite: é a resposta
