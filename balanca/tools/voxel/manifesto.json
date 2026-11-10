@@ -1,0 +1,29 @@
+{
+  "_": "A lista do que vira voxel. Cada entrada é uma folha de public/tiny; a saída espelha o caminho em public/voxel, trocando .png por .glb. Ver tools/voxelizar.py.",
+  "origem": "public/tiny",
+  "destino": "public/voxel",
+  "padroes": {
+    "meiaProfundidade": 7,
+    "fps": 10
+  },
+  "folhas": [
+    {
+      "arquivo": "units/azul/guerreiro_parado.png",
+      "variantes": { "vermelho": "units/vermelho/guerreiro_parado.png" },
+      "ancora": "centro",
+      "pesDe": "units/azul/guerreiro_parado.png"
+    },
+    {
+      "arquivo": "units/azul/guerreiro_golpe1.png",
+      "variantes": { "vermelho": "units/vermelho/guerreiro_golpe1.png" },
+      "ancora": "centro",
+      "pesDe": "units/azul/guerreiro_parado.png"
+    },
+    {
+      "arquivo": "units/azul/guerreiro_golpe2.png",
+      "variantes": { "vermelho": "units/vermelho/guerreiro_golpe2.png" },
+      "ancora": "centro",
+      "pesDe": "units/azul/guerreiro_parado.png"
+    }
+  ]
+}

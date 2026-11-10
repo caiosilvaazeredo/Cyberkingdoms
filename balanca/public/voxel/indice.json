@@ -1,0 +1,28 @@
+{
+  "folhas": {
+    "units/azul/guerreiro_golpe1": {
+      "glb": "units/azul/guerreiro_golpe1.glb",
+      "paleta": "azul"
+    },
+    "units/azul/guerreiro_golpe2": {
+      "glb": "units/azul/guerreiro_golpe2.glb",
+      "paleta": "azul"
+    },
+    "units/azul/guerreiro_parado": {
+      "glb": "units/azul/guerreiro_parado.glb",
+      "paleta": "azul"
+    },
+    "units/vermelho/guerreiro_golpe1": {
+      "glb": "units/azul/guerreiro_golpe1.glb",
+      "paleta": "vermelho"
+    },
+    "units/vermelho/guerreiro_golpe2": {
+      "glb": "units/azul/guerreiro_golpe2.glb",
+      "paleta": "vermelho"
+    },
+    "units/vermelho/guerreiro_parado": {
+      "glb": "units/azul/guerreiro_parado.glb",
+      "paleta": "vermelho"
+    }
+  }
+}

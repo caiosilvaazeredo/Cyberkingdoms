@@ -1184,6 +1184,15 @@ export class Telas {
         ],
       },
       {
+        chave: 'render',
+        rotulo: 'Visual',
+        explica: 'sprites do pacote ou modelos voxel (em migração)',
+        opcoes: [
+          { valor: '2d', texto: '2D' },
+          { valor: '3d', texto: '3D voxel' },
+        ],
+      },
+      {
         chave: 'nomes',
         rotulo: 'Nomes na tela',
         explica: 'apelido sobre a cabeça de cada um',

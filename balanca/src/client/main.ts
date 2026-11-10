@@ -25,7 +25,8 @@ import { Entrada } from './entrada';
 import { botaoDeRecolher, controlesDeToqueAtivos, desenharDica, desenharHud, narrar } from './hud';
 import { Rede } from './rede';
 import { PainelDaEquipe } from './equipe';
-import { salvarAjustes } from './ajustes';
+import { salvarAjustes, type Ajustes } from './ajustes';
+import type { PintorVoxel } from './voxel/adaptador';
 import { caixaDoMinimapa, Minimapa } from './minimapa';
 import { Particulas } from './particulas';
 import { criarFiel, desenharVitrine, moverFiel } from './vitrine';
@@ -123,6 +124,33 @@ const fiel = criarFiel();
 let olhar = { x: 0, y: 0 };
 
 let arte: Arte | null = null;
+
+/**
+ * O renderer voxel, baixado só quando alguém pede 3D.
+ *
+ * `import()` e não `import`: o three.js é maior que o resto do cliente
+ * inteiro, e quem joga em 2D não tem por que pagar por ele. Enquanto ele
+ * chega — ou se a placa não tiver WebGL —, o jogo segue em 2D, que é também
+ * o que acontece com qualquer folha que ainda não tenha modelo.
+ */
+let voxel: PintorVoxel | null = null;
+let voxelPedido = false;
+const RENDER_DA_URL = new URLSearchParams(location.search).get('render');
+
+function pintorVoxel(ajuste: Ajustes['render']): PintorVoxel | null {
+  const quer = RENDER_DA_URL === '3d' || (RENDER_DA_URL !== '2d' && ajuste === '3d');
+  if (!quer) return null;
+  if (!voxelPedido) {
+    voxelPedido = true;
+    import('./voxel/render3d')
+      .then((m) => m.RenderVoxel.criar())
+      .then((r) => {
+        voxel = r;
+      })
+      .catch((erro) => console.warn('voxel: ficando no 2D —', erro));
+  }
+  return voxel;
+}
 let rede: Rede | null = null;
 let sofa: Sofa | null = null;
 let acumulado = 0;
@@ -524,6 +552,7 @@ function laco(agora: number): void {
     tempo,
     ajustes,
     particulas,
+    pintorVoxel(ajustes.render),
   );
 
   // A noite do Modo Vigília: um véu por cima do mundo já desenhado, e não

@@ -29,6 +29,7 @@ import {
 } from './decoracao';
 import type { Particulas } from './particulas';
 import { TILE, chaoPara, encostaNaAgua, mascaraDe } from './tileset';
+import type { PintorVoxel } from './voxel/adaptador';
 
 /**
  * O mundo desenhado — água, chão, castelos, gente, rebanho e baú.
@@ -288,12 +289,17 @@ export function desenharMundo(
   tempo: number,
   ajustes: Ajustes,
   particulas?: Particulas,
+  voxel?: PintorVoxel | null,
 ): void {
   const estado = olhar.estado;
   const v = vistaDe(camera, largura, altura);
   const escala = v.escala;
   const passo = TILE * escala;
   const agora = performance.now();
+
+  // O 3D abre o quadro com a mesma câmera. O que tiver modelo vai para ele;
+  // o que não tiver continua sprite — ver `voxel/adaptador.ts`.
+  voxel?.comecar(camera, largura, altura, ctx.getTransform().a);
 
   ctx.imageSmoothingEnabled = false;
   ctx.fillStyle = '#3a7ca8';
@@ -1077,6 +1083,10 @@ export function desenharMundo(
     const andando = moveu(olhar, visivel, agora);
     const escolha = folhaDaUnidade(arte, estado, visivel, andando);
     const vaga = olhar.vagaDe(visivel.id);
+    // A mesma escolha de folha, quadro e lado; só o pincel muda. `null` quer
+    // dizer "esta folha ainda não tem modelo", e aí o sprite é desenhado.
+    const recorte =
+      voxel?.folha(escolha.anim, escolha.indice, pos.x, pos.y, 1, escolha.espelhar) ?? null;
     pinturas.push({
       y: pos.y,
       pintar: () => {
@@ -1092,6 +1102,7 @@ export function desenharMundo(
           vaga,
           olhar.quantosLocais,
           ajustes,
+          recorte ? () => voxel!.colar(ctx, recorte) : undefined,
         );
         // O feitiço carregado (Modo Xamã): o mesmo retrato do cajado no
         // chão, agora sobre a cabeça de quem está com ele — é o único jeito
@@ -1114,6 +1125,9 @@ export function desenharMundo(
     });
   }
 
+  // Todos os modelos de uma vez, antes da lista ordenada: cada pintura cola o
+  // seu pedaço na vez dela.
+  voxel?.renderizar();
   for (const p of pinturas.sort((a, b) => a.y - b.y)) p.pintar();
 
   // --- efeito da bênção do clérigo ---------------------------------------
@@ -1407,15 +1421,20 @@ function desenharUnidade(
   vaga: number | null,
   quantosLocais: number,
   ajustes: Ajustes,
+  /** Quando a folha tem modelo voxel: pinta o corpo no lugar do sprite. */
+  corpoVoxel?: () => void,
 ): void {
   const souEu = vaga !== null;
   // As folhas do pacote põem o boneco no centro de uma caixa grande o bastante
   // para a arma. Ancorar no centro e empurrar um pouco para cima planta o pé no
   // chão sem que o lanceiro (caixa de 320) flutue acima do guerreiro (192).
   const centroY = py - escolha.anim.lado * escala * 0.08;
-  espelhado(ctx, px, escolha.espelhar, () =>
-    quadro(ctx, escolha.anim, escolha.indice, px, centroY, escala, 'centro'),
-  );
+  if (corpoVoxel) corpoVoxel();
+  else {
+    espelhado(ctx, px, escolha.espelhar, () =>
+      quadro(ctx, escolha.anim, escolha.indice, px, centroY, escala, 'centro'),
+    );
+  }
 
   const topo = py - 34 * escala;
 

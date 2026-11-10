@@ -66,6 +66,7 @@ const TIPOS: Record<string, string> = {
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
   '.woff2': 'font/woff2',
+  '.glb': 'model/gltf-binary',
 };
 
 const servidor = createServer((req, res) => {

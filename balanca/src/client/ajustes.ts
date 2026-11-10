@@ -27,6 +27,8 @@ export type Lado = 'esquerda' | 'direita';
 /** Qual controle desenhar: teclado/mouse, toque, ou adivinhar pelo aparelho. */
 export type Plataforma = 'auto' | 'computador' | 'celular';
 export type Orientacao = 'vertical' | 'horizontal';
+/** Sprites do pacote ou os modelos voxel de `public/voxel`. */
+export type Render = '2d' | '3d';
 
 export interface Ajustes {
   nome: string;
@@ -61,6 +63,15 @@ export interface Ajustes {
   cartao: boolean;
   /** De que lado da tela fica o manche, no celular. */
   manche: Lado;
+  /**
+   * Como o mundo é desenhado.
+   *
+   * `'3d'` troca os sprites por modelos voxel **onde já existe modelo**; o
+   * resto continua sprite. A simulação é a mesma nas duas opções — isto é só
+   * o pincel, e por isso mora aqui e não nas regras. `?render=3d` na URL
+   * força a opção para uma visita, sem gravar.
+   */
+  render: Render;
 }
 
 export const PADROES: Ajustes = {
@@ -74,6 +85,7 @@ export const PADROES: Ajustes = {
   manche: 'esquerda',
   plataforma: 'auto',
   orientacao: 'vertical',
+  render: '2d',
 };
 
 /** Multiplicador do zoom por nível de visão. */
@@ -124,5 +136,6 @@ export function sanear(bruto: unknown): Ajustes {
     manche: entre(o.manche, ['esquerda', 'direita'] as const, PADROES.manche),
     plataforma: entre(o.plataforma, ['auto', 'computador', 'celular'] as const, PADROES.plataforma),
     orientacao: entre(o.orientacao, ['vertical', 'horizontal'] as const, PADROES.orientacao),
+    render: entre(o.render, ['2d', '3d'] as const, PADROES.render),
   };
 }
