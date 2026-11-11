@@ -27,81 +27,39 @@
     <link rel="apple-touch-icon" href="/pwa/icone-512.png" />
     <style>
       /*
-        Duas peles, e elas não se misturam.
+        Uma família só para tudo: Bricolage Grotesque — sem serifa, geométrica,
+        com contraste entre traço grosso e fino que cresce nos pesos altos. É
+        a alternativa de licença aberta (SIL OFL 1.1, ver
+        `public/fontes/bricolage-OFL.txt`) à Asgard, que só é livre para uso
+        pessoal e não poderia ir para loja nenhuma.
 
-        O jogo é colorido e escuro, porque é pixel art sobre grama. A moldura —
-        menu, painéis, escolha de lado — é a coluna de botões gordos do lado
-        esquerdo, cada um da sua cor, no traço dos jogos de sofá: o item mais
-        importante é o mais alto e o mais quente, e a partida ao vivo continua
-        correndo atrás de tudo.
+        O nome do jogo, os rótulos e o texto de ler usam a mesma fonte, e o que
+        os separa é o peso: 800 no título, 700 nos rótulos, 400 no corpo. O HUD
+        desenhado no canvas usa a mesma, para a partida não falar com outra
+        voz que o menu.
 
-        ## A gótica é do nome, e de mais nada
-
-        A BlackFlag desenha **o título** e para por aí. Ela é uma gótica: bonita
-        num nome de três letras a setenta pixels, e ilegível em tudo o mais.
-        "Assistir" escrito nela num botão de dezoito pixels vira mancha, e um
-        menu que exige esforço para ser lido é um menu que atrasa quem quer
-        jogar.
-
-        ## Duas fontes para o resto, e não uma só
-
-        A Cinzel é a voz dos **rótulos** — título de tela, texto de botão, nome
-        de faixa, o "12:00" do relógio. É a mesma família de letra de pedra que
-        a arte de referência do menu usa para "MY DEAR KING" e "PLAY ONLINE":
-        maiúscula, espaçada, feita para ser vista de relance e não lida devagar.
-
-        Um parágrafo inteiro nela cansa — é desenhada para dez caracteres, não
-        para uma dica de sessenta. Por isso o corpo do texto (dicas, listas de
-        regra, o "conselho" da tela de espera) usa a Spectral, uma serifada de
-        leitura. As duas têm a mesma temperatura — nenhuma é uma sem-serifa de
-        interface de sistema — e é essa temperatura comum que faz o menu parecer
-        um livro e não um formulário.
-
-        A interface **do jogo** — o HUD desenhado no canvas, por cima da
-        partida — continua em Trebuchet MS. Trocá-la exigiria reescrever cada
-        `ctx.font` de `hud.ts` e `desenho.ts`, e o HUD é lido em decisão de
-        meio segundo: é o único lugar da interface onde legibilidade imediata
-        vale mais do que a voz do menu.
+        Hospedada aqui, e não no Google Fonts: o jogo não depende de nenhum
+        serviço de fora. É uma fonte variável — um arquivo cobre todos os
+        pesos —, e o segundo só é baixado se aparecer uma letra fora do latim
+        básico (um apelido, por exemplo).
       */
       @font-face {
-        font-family: 'BlackFlag';
-        src: url('/fontes/blackflag.ttf') format('truetype');
+        font-family: 'Bricolage';
+        src: url('/fontes/bricolage.woff2') format('woff2');
+        font-weight: 200 800;
         font-display: swap;
-      }
-      /*
-        Cinzel e Spectral, hospedadas aqui — não no Google Fonts. O resto do
-        jogo não depende de nenhum serviço de fora (a BlackFlag já vinha assim),
-        e um `<link>` para fora seria a única exceção: alguém jogando sem a
-        internet enxergar aquele domínio veria a gótica sumir e nada mais.
-        Cortadas para o alfabeto latino só — nenhuma letra em português passa
-        de `U+00FF` — os quatro arquivos somam menos de cem quilobytes.
-      */
-      @font-face {
-        font-family: 'Cinzel';
-        src: url('/fontes/cinzel.woff2') format('woff2');
-        font-weight: 400 900;
-        font-display: swap;
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+          U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+          U+FEFF, U+FFFD;
       }
       @font-face {
-        font-family: 'Spectral';
-        src: url('/fontes/spectral-400.woff2') format('woff2');
-        font-weight: 400;
-        font-style: normal;
+        font-family: 'Bricolage';
+        src: url('/fontes/bricolage-ext.woff2') format('woff2');
+        font-weight: 200 800;
         font-display: swap;
-      }
-      @font-face {
-        font-family: 'Spectral';
-        src: url('/fontes/spectral-600.woff2') format('woff2');
-        font-weight: 600;
-        font-style: normal;
-        font-display: swap;
-      }
-      @font-face {
-        font-family: 'Spectral';
-        src: url('/fontes/spectral-400i.woff2') format('woff2');
-        font-weight: 400;
-        font-style: italic;
-        font-display: swap;
+        unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+          U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+          U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
       }
       :root {
         color-scheme: dark;
@@ -118,19 +76,21 @@
         --ouro-fraco: #8a6a2f;
         --madeira: #6b4a2a;
         --madeira-escura: #4a3218;
-        /* Só o nome do jogo. Ver o comentário acima antes de reaproveitar. */
-        --titulo: 'BlackFlag', 'Trebuchet MS', system-ui, sans-serif;
-        /* Rótulos: títulos, botões, faixas. Nunca um parágrafo inteiro. */
-        --rotulo: 'Cinzel', Georgia, serif;
+        /* A mesma família nos três papéis; o peso é que os separa. */
+        --fonte: 'Bricolage', 'Trebuchet MS', system-ui, sans-serif;
+        /* O nome do jogo. */
+        --titulo: var(--fonte);
+        /* Rótulos: títulos, botões, faixas. */
+        --rotulo: var(--fonte);
         /* Corpo: dicas, listas, texto de ler. */
-        --texto: 'Spectral', Georgia, serif;
+        --texto: var(--fonte);
       }
       * {
         box-sizing: border-box;
       }
       /*
-        A regra de tipografia inteira em duas linhas: rótulo é Cinzel, corpo é
-        o que `body` já define (Spectral). Um seletor global aqui — e não um
+        A regra de tipografia inteira em duas linhas: rótulo é o peso gordo da
+        Bricolage, corpo é o que `body` já define (o peso normal dela). Um seletor global aqui — e não um
         por botão, por `h2`, por faixa — é o que garante que a próxima tela
         nasça na voz certa sem ninguém lembrar de repetir a regra.
       */
@@ -279,9 +239,9 @@
         color: rgba(255, 255, 255, 0.6);
       }
       /*
-        O rótulo continua em fonte de texto: a BlackFlag é gótica, e gótica em
-        maiúsculas de dez pixels não se lê — vira textura. Ela fica onde presta,
-        que é o nome grande.
+        O rótulo fica num peso abaixo do nome: o peso mais gordo em maiúsculas
+        de dez pixels entope e vira textura. Ele fica onde presta, que é o
+        nome grande.
       */
       .marca .kicker {
         display: inline-block;
@@ -305,8 +265,9 @@
           largura e não sobra altura nenhuma.
         */
         font-size: clamp(34px, min(6vw, 9vh), 68px);
+        font-weight: 800;
         line-height: 0.95;
-        letter-spacing: 0.01em;
+        letter-spacing: -0.01em;
         color: #fff;
         text-shadow:
           3px 3px 0 var(--tinta),
@@ -341,6 +302,9 @@
         font-family: var(--rotulo);
         font-weight: 700;
         font-size: clamp(14px, 1.5vw, 19px);
+        /* A caixa de linha da Bricolage é alta; solta, a segunda linha do
+           botão saía por baixo da borda quando a coluna aperta. */
+        line-height: 1.1;
         letter-spacing: 0.06em;
         text-align: center;
         /*
@@ -378,6 +342,7 @@
         display: block;
         font-weight: 400;
         font-size: clamp(10px, 1vw, 12px);
+        line-height: 1.15;
         letter-spacing: 0.02em;
         opacity: 0.86;
         text-shadow: none;
@@ -856,9 +821,12 @@
       /* --- ajustes --- */
       .ajuste {
         display: flex;
+        /* Em tela estreita as opções descem para a linha de baixo, em vez de
+           empurrar o rótulo para fora da folha. */
+        flex-wrap: wrap;
         align-items: center;
         justify-content: space-between;
-        gap: 12px;
+        gap: 6px 12px;
         padding: 9px 0;
         border-bottom: 1px solid rgba(0, 0, 0, 0.08);
         font-size: 15px;
@@ -870,8 +838,17 @@
       }
       .opcoes {
         display: flex;
+        flex-wrap: wrap;
         gap: 4px;
-        flex: 0 0 auto;
+        flex: 0 1 auto;
+      }
+      .ajuste > span {
+        flex: 1 1 9em;
+        min-width: 0;
+      }
+      /* Alvo de dedo, como os outros: quarenta de altura é o piso. */
+      #escolha button.pequeno {
+        min-height: 40px;
       }
       /*
         Os botões dos ajustes também são alvo de dedo.
@@ -1846,8 +1823,8 @@
           roubo de chapéu vem do Enemy Pack. A bolsa de moedas, os chapéus no chão e o baú refém
           são desenhados no próprio jogo.
         </p>
-        <p>Tipografia: <b>BlackFlag</b> no nome do jogo; <b>Cinzel</b> nos títulos e botões;
-          <b>Spectral</b> no corpo de texto — as duas últimas de Google Fonts, hospedadas aqui.</p>
+        <p>Tipografia: <b>Bricolage Grotesque</b>, de Mathieu Triay, sob a SIL Open Font
+          License 1.1 — hospedada aqui.</p>
         <p>
           Inspiração declarada: <b>Fat Princess</b> (Titan Studios, 2009) — o esqueleto do resgate
           por times. A balança conservada, os ofícios e o chapéu que se rouba são deste jogo. O

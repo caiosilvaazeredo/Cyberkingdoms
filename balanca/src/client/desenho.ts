@@ -1539,7 +1539,7 @@ function rotulo(
   cor = '#ffffff',
 ): void {
   const tamanho = Math.max(10, Math.round(12 * escala));
-  ctx.font = `600 ${tamanho}px "Trebuchet MS", system-ui, sans-serif`;
+  ctx.font = `600 ${tamanho}px Bricolage, "Trebuchet MS", system-ui, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
   ctx.lineWidth = Math.max(2, 3 * escala);

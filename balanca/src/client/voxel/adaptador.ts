@@ -42,9 +42,10 @@ export interface PontoNaTela {
 export interface PintorVoxel {
   /**
    * Diz quem a câmera segue de perto, por trás — ou `null` para a câmera de
-   * plateia, alta e virada para o norte. `olhar` é para onde ele está virado.
+   * plateia, alta e virada para o norte. A câmera se vira para onde ele
+   * **anda**; `frente` só vale ao entrar em campo, antes do primeiro passo.
    */
-  mirar(alvo: { x: number; y: number; olharX: number; olharY: number } | null, dt: number): void;
+  mirar(alvo: { x: number; y: number; frenteX: number; frenteY: number } | null, dt: number): void;
   /**
    * Para onde a câmera está virada, em radianos a partir do norte. É por
    * quanto se gira o que vem do controle: "para frente" é para onde ela olha.

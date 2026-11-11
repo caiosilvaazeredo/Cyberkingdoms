@@ -76,15 +76,19 @@ import type {
 const ABERTURA = 55;
 
 // A câmera de quem joga: perto, atrás do personagem, olhando por cima do
-// ombro dele para onde ele está virado.
+// ombro dele para onde ele está andando.
 /** Quanto a câmera fica atrás do personagem, e a que altura. */
 const RECUO = 250;
 const ALTURA_DA_CAMERA = 125;
 /** Para onde ela olha: um ponto à frente dele, à altura da cabeça. */
 const ADIANTE = 150;
 const ALTURA_DO_OLHAR = 48;
-/** Com que pressa ela acompanha o giro do personagem (1/s). */
-const PRESSA_DO_GIRO = 2.4;
+/** Com que pressa ela se vira para onde o personagem anda (1/s). */
+const PRESSA_DO_GIRO = 1.8;
+/** Abaixo desta velocidade (unidades/s) ele está parado, e a câmera também. */
+const VELOCIDADE_MINIMA = 25;
+/** A partir deste desvio (radianos) o passo é para trás, e a câmera não vira. */
+const RE = (125 * Math.PI) / 180;
 
 // A câmera de plateia (menu, assistir, vários jogadores no mesmo aparelho):
 // mais alta e aberta, sempre olhando para o norte.
@@ -103,7 +107,9 @@ const COR_DA_NEVOA = 0xcfeaff;
 /** O maior tamanho em que nome, barra e placa são pintados (1 = como no 2D). */
 const ESCALA_MAXIMA_DO_TRACO = 1.5;
 /** A que distância da câmera uma árvore ou pedra deixa de ser desenhada. */
-const FOLGA_DA_LENTE = 70;
+const FOLGA_DA_LENTE = 110;
+/** Abaixo deste tamanho o nome, a barra e a placa deixam de ser pintados. */
+const ESCALA_MINIMA_DO_TRACO = 0.45;
 /** Onde fica o topo da cabeça de um personagem, em fração do lado do quadro. */
 const ALTURA_DA_CABECA = 0.36;
 
@@ -414,20 +420,36 @@ export class RenderVoxel implements PintorVoxel {
     return new RenderVoxel(indice, raiz);
   }
 
-  mirar(alvo: { x: number; y: number; olharX: number; olharY: number } | null, dt: number): void {
+  mirar(alvo: { x: number; y: number; frenteX: number; frenteY: number } | null, dt: number): void {
     if (!alvo) {
       this.alvo = null;
       this.giro = 0;
       return;
     }
-    const chegando = this.alvo === null;
+    const antes = this.alvo;
     this.alvo = { x: alvo.x, y: alvo.y };
-    if (Math.hypot(alvo.olharX, alvo.olharY) < 0.2) return;
-    // Pelo caminho mais curto, e sem pressa: a câmera acompanha, não chicoteia.
-    const quer = Math.atan2(alvo.olharX, -alvo.olharY);
-    let falta = quer - this.giro;
+    if (!antes) {
+      // Ao entrar em campo ainda não há caminho andado: a câmera abre virada
+      // para onde o jogo diz que é a frente (o meio do mapa).
+      if (Math.hypot(alvo.frenteX, alvo.frenteY) > 1e-6) {
+        this.giro = Math.atan2(alvo.frenteX, -alvo.frenteY);
+      }
+      return;
+    }
+    if (dt <= 0) return;
+    // A câmera aponta para onde o personagem **anda**, e não para onde ele
+    // mira: mede-se o passo dado desde o quadro anterior.
+    const vx = (alvo.x - antes.x) / dt;
+    const vy = (alvo.y - antes.y) / dt;
+    if (Math.hypot(vx, vy) < VELOCIDADE_MINIMA) return;
+    let falta = Math.atan2(vx, -vy) - this.giro;
     falta = Math.atan2(Math.sin(falta), Math.cos(falta));
-    this.giro += chegando ? falta : falta * (1 - Math.exp(-dt * PRESSA_DO_GIRO));
+    // Andar de costas não vira a câmera: virar faria o "para trás" do
+    // controle passar a ser "para frente" no meio do passo, e o personagem
+    // ficaria girando no lugar.
+    if (Math.abs(falta) > RE) return;
+    // Pelo caminho mais curto, e sem pressa: a câmera acompanha, não chicoteia.
+    this.giro += falta * (1 - Math.exp(-dt * PRESSA_DO_GIRO));
   }
 
   get rumo(): number {
@@ -1119,7 +1141,8 @@ export class RenderVoxel implements PintorVoxel {
         // conta, o nome de quem está atrás do castelo apareceria na fachada.
         pular =
           !tela ||
-          tela.escala < 0.05 ||
+          // De longe o traço vira um borrão de letras miúdas: some.
+          tela.escala < ESCALA_MINIMA_DO_TRACO ||
           (!grupo.predio && this.tapado(grupo.mundo?.x ?? chao.x, grupo.mundo?.z ?? chao.y));
         if (tela) {
           // Com teto: de perto, um nome não pode crescer até tapar a cena.

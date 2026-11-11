@@ -223,7 +223,7 @@ export function desenharVitrine(
   ctx.save();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = `700 ${Math.round(11 * escala)}px "Trebuchet MS", system-ui, sans-serif`;
+  ctx.font = `700 ${Math.round(11 * escala)}px Bricolage, "Trebuchet MS", system-ui, sans-serif`;
   ctx.fillStyle = 'rgba(255, 224, 130, 0.8)';
   // O espaçamento é feito com espaços dentro do texto, e não com
   // `ctx.letterSpacing`: aquela propriedade não entra na medida que o

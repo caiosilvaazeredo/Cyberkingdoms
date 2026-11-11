@@ -201,7 +201,7 @@ function cartoesDoSofa(
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     ctx.fillStyle = cor;
-    ctx.font = '700 12px "Trebuchet MS", system-ui, sans-serif';
+    ctx.font = '700 12px Bricolage, "Trebuchet MS", system-ui, sans-serif';
     ctx.fillText(
       apertado ? `P${vaga + 1}` : `P${vaga + 1} · ${u.nome}`.slice(0, 22),
       x + margem,
@@ -210,7 +210,7 @@ function cartoesDoSofa(
 
     if (!apertado) {
       ctx.fillStyle = 'rgba(255,255,255,0.72)';
-      ctx.font = '500 11px "Trebuchet MS", system-ui, sans-serif';
+      ctx.font = '500 11px Bricolage, "Trebuchet MS", system-ui, sans-serif';
       ctx.fillText(
         `${perfil(u.classe).nome}${u.carga !== 'nada' ? ` · ${NOME_DA_CARGA[u.carga]}` : ''}`,
         x + margem,
@@ -295,7 +295,7 @@ function balanca(
   // ilegível. Aí a palavra "carregadores" some e fica o número, que é a
   // informação — quem está jogando já sabe o que aquele número conta.
   const curto = largura < 640;
-  ctx.font = `600 ${curto ? 11 : 12}px "Trebuchet MS", system-ui, sans-serif`;
+  ctx.font = `600 ${curto ? 11 : 12}px Bricolage, "Trebuchet MS", system-ui, sans-serif`;
   ctx.textBaseline = 'middle';
   ctx.fillStyle = '#ffffff';
   ctx.textAlign = 'left';
@@ -320,7 +320,7 @@ function balanca(
   // vai deduzi-la olhando uma barra que parece a de sempre.
   ctx.textAlign = 'center';
   ctx.fillStyle = COR_CLARA[meu];
-  ctx.font = '700 12px "Trebuchet MS", system-ui, sans-serif';
+  ctx.font = '700 12px Bricolage, "Trebuchet MS", system-ui, sans-serif';
   ctx.fillText(
     modoDe(estado.modo).vitoriaPorBalanca ? 'A BALANÇA VENCE' : 'A BALANÇA DO REINO',
     x + l / 2,
@@ -335,7 +335,7 @@ function placar(ctx: CanvasRenderingContext2D, estado: Estado, largura: number):
   ctx.save();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
-  ctx.font = '700 26px "Trebuchet MS", system-ui, sans-serif';
+  ctx.font = '700 26px Bricolage, "Trebuchet MS", system-ui, sans-serif';
   // No Abate o placar **é** o de baixas: mostrar resgates num modo em que
   // ninguém carrega o baú seria dois zeros que nunca mudam ao lado de um
   // relógio que corre.
@@ -345,9 +345,9 @@ function placar(ctx: CanvasRenderingContext2D, estado: Estado, largura: number):
   ctx.fillStyle = COR.vermelho;
   ctx.fillText(String(contagem.vermelho), largura / 2 + 64, 8);
   ctx.fillStyle = '#f2e6c9';
-  ctx.font = '600 18px "Trebuchet MS", system-ui, sans-serif';
+  ctx.font = '600 18px Bricolage, "Trebuchet MS", system-ui, sans-serif';
   ctx.fillText(`${minutos}:${String(segundos).padStart(2, '0')}`, largura / 2, 12);
-  ctx.font = '400 10px "Trebuchet MS", system-ui, sans-serif';
+  ctx.font = '400 10px Bricolage, "Trebuchet MS", system-ui, sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.65)';
   ctx.fillText(objetivoDoModo(estado), largura / 2, 34);
   ctx.restore();
@@ -376,7 +376,7 @@ function cabecalho(ctx: CanvasRenderingContext2D, rede: Rede, largura: number): 
   ctx.save();
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
-  ctx.font = '500 12px "Trebuchet MS", system-ui, sans-serif';
+  ctx.font = '500 12px Bricolage, "Trebuchet MS", system-ui, sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.7)';
   // A linha vai até onde o relógio começa. Num celular em pé a versão inteira
   // atravessava o meio da tela e escrevia por cima do placar — duas informações
@@ -398,7 +398,7 @@ function cabecalho(ctx: CanvasRenderingContext2D, rede: Rede, largura: number): 
   // próprio modo — Regência, Cerco e Fuga passam pela mesma campanha, e a
   // linha não pode chamar as três de "Regência".
   if (rede.campanha) {
-    ctx.font = '700 13px "Trebuchet MS", system-ui, sans-serif';
+    ctx.font = '700 13px Bricolage, "Trebuchet MS", system-ui, sans-serif';
     ctx.fillStyle = 'rgba(255, 212, 121, 0.92)';
     const reforcos = rede.campanha.perks.length > 0 ? rede.campanha.perks.join(', ') : 'nenhum ainda';
     ctx.fillText(`${nomeDoModo} · nível ${rede.campanha.nivel} · reforços: ${reforcos}`, 12, 26);
@@ -472,7 +472,7 @@ function cartaoDaClasse(
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   ctx.fillStyle = COR_CLARA[eu.time];
-  ctx.font = '700 15px "Trebuchet MS", system-ui, sans-serif';
+  ctx.font = '700 15px Bricolage, "Trebuchet MS", system-ui, sans-serif';
   ctx.fillText(`${p.nome}${eu.carga !== 'nada' ? ` · ${eu.carga}` : ''}`, x + 12, y + 10);
 
   const barra = l - 102;
@@ -480,7 +480,7 @@ function cartaoDaClasse(
   ctx.fillRect(x + 12, y + 32, barra, 8);
   ctx.fillStyle = eu.vida / max > 0.35 ? '#6ac46a' : '#d9534f';
   ctx.fillRect(x + 12, y + 32, (barra * Math.max(0, eu.vida)) / max, 8);
-  ctx.font = '500 11px "Trebuchet MS", system-ui, sans-serif';
+  ctx.font = '500 11px Bricolage, "Trebuchet MS", system-ui, sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.75)';
   ctx.fillText(`${Math.max(0, Math.round(eu.vida))}/${max}`, x + barra + 20, y + 30);
 
@@ -528,16 +528,16 @@ function avisosDoCentro(
     ctx.fillStyle = 'rgba(0,0,0,0.45)';
     ctx.fillRect(0, 0, largura, altura);
     ctx.fillStyle = '#f2e6c9';
-    ctx.font = '700 34px "Trebuchet MS", system-ui, sans-serif';
+    ctx.font = '700 34px Bricolage, "Trebuchet MS", system-ui, sans-serif';
     ctx.fillText('caiu em combate', largura / 2, altura / 2 - 16);
-    ctx.font = '500 18px "Trebuchet MS", system-ui, sans-serif';
+    ctx.font = '500 18px Bricolage, "Trebuchet MS", system-ui, sans-serif';
     ctx.fillText(`volta em ${Math.ceil(eu.renasceEm)}s`, largura / 2, altura / 2 + 18);
     ctx.restore();
     return;
   }
 
   if (eu.colheita > 0 && eu.colheita < 1) {
-    ctx.font = '600 16px "Trebuchet MS", system-ui, sans-serif';
+    ctx.font = '600 16px Bricolage, "Trebuchet MS", system-ui, sans-serif';
     ctx.fillStyle = 'rgba(255,233,168,0.9)';
     ctx.fillText('trabalhando — andar cancela', largura / 2, altura - 172);
   }
@@ -548,7 +548,7 @@ function avisosDoCentro(
       const precisa = carregadoresPara(p.peso, estado.porTime);
       const tem = p.ajudantes + 1;
       const falta = precisa - tem;
-      ctx.font = '700 22px "Trebuchet MS", system-ui, sans-serif';
+      ctx.font = '700 22px Bricolage, "Trebuchet MS", system-ui, sans-serif';
       if (falta > 0) {
         const pulso = 0.6 + Math.abs(Math.sin(tempo * 4)) * 0.4;
         ctx.fillStyle = `rgba(255, 120, 90, ${pulso})`;
@@ -576,7 +576,7 @@ export function desenharDica(
   ctx.save();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = '600 16px "Trebuchet MS", system-ui, sans-serif';
+  ctx.font = '600 16px Bricolage, "Trebuchet MS", system-ui, sans-serif';
   const rotulo = toque ? texto : `[E] ${texto}`;
   const l = ctx.measureText(rotulo).width + 28;
   ctx.fillStyle = 'rgba(12, 14, 20, 0.78)';
@@ -611,7 +611,7 @@ function registro(
   ctx.save();
   ctx.textAlign = 'right';
   ctx.textBaseline = 'top';
-  ctx.font = '500 13px "Trebuchet MS", system-ui, sans-serif';
+  ctx.font = '500 13px Bricolage, "Trebuchet MS", system-ui, sans-serif';
   botaoDeRecolher(ctx, entrada, ajustes, 'registro', largura - 27, y0 + 13, true);
   let y = y0 + 34;
   for (const aviso of rede.avisos) {
@@ -662,12 +662,12 @@ function faixaDeFase(
   ctx.save();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = '700 40px "Trebuchet MS", system-ui, sans-serif';
+  ctx.font = '700 40px Bricolage, "Trebuchet MS", system-ui, sans-serif';
   ctx.fillStyle = cor;
   ctx.globalAlpha = 0.85 + Math.sin(tempo * 3) * 0.15;
   ctx.fillText(texto, largura / 2, altura / 2 - 60);
   if (estado.fase === 'fim') {
-    ctx.font = '500 16px "Trebuchet MS", system-ui, sans-serif';
+    ctx.font = '500 16px Bricolage, "Trebuchet MS", system-ui, sans-serif';
     ctx.globalAlpha = 0.9;
     ctx.fillText('a próxima partida começa em instantes', largura / 2, altura / 2 - 20);
   }
@@ -711,7 +711,7 @@ function contagemRegressiva(
   ctx.textBaseline = 'middle';
 
   if (faltam > 3) {
-    ctx.font = '700 30px "Trebuchet MS", system-ui, sans-serif';
+    ctx.font = '700 30px Bricolage, "Trebuchet MS", system-ui, sans-serif';
     ctx.fillStyle = '#f2e6c9';
     ctx.globalAlpha = 0.9;
     ctx.fillText(`o portão abre em ${Math.ceil(faltam)}`, cx, cy);
@@ -726,7 +726,7 @@ function contagemRegressiva(
   // teria a cadência da rede, não a de sessenta quadros por segundo.
   const n = Math.max(1, Math.ceil(faltam));
   const pulso = 1 + (0.5 + Math.sin(tempo * 6) * 0.5) * 0.3;
-  ctx.font = `900 ${Math.round(120 * pulso)}px "Trebuchet MS", system-ui, sans-serif`;
+  ctx.font = `900 ${Math.round(120 * pulso)}px Bricolage, "Trebuchet MS", system-ui, sans-serif`;
   ctx.fillStyle = n === 1 ? '#ff9c8f' : '#ffd479';
   ctx.globalAlpha = 0.75 + Math.sin(tempo * 6) * 0.25;
   ctx.shadowColor = 'rgba(0,0,0,0.6)';
@@ -761,7 +761,7 @@ function vaiSeAcabouDeComecar(
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.globalAlpha = 1 - t;
-  ctx.font = `900 ${Math.round(130 + t * 40)}px "Trebuchet MS", system-ui, sans-serif`;
+  ctx.font = `900 ${Math.round(130 + t * 40)}px Bricolage, "Trebuchet MS", system-ui, sans-serif`;
   ctx.fillStyle = '#ffd479';
   ctx.shadowColor = 'rgba(0,0,0,0.6)';
   ctx.shadowBlur = 22;
@@ -791,10 +791,10 @@ function tabela(
   for (const [coluna, time] of (['azul', 'vermelho'] as Time[]).entries()) {
     const cx = x + 20 + coluna * (l / 2);
     ctx.textAlign = 'left';
-    ctx.font = '700 16px "Trebuchet MS", system-ui, sans-serif';
+    ctx.font = '700 16px Bricolage, "Trebuchet MS", system-ui, sans-serif';
     ctx.fillStyle = COR_CLARA[time];
     ctx.fillText(`${NOME_DO_TIME[time]} — ${estado.placar[time]}`, cx, y + 16);
-    ctx.font = '500 12px "Trebuchet MS", system-ui, sans-serif';
+    ctx.font = '500 12px Bricolage, "Trebuchet MS", system-ui, sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.5)';
     ctx.fillText('jogador', cx, y + 42);
     ctx.fillText('aba  mor  fat  res  ent  our  ali', cx + l / 2 - 224, y + 42);
@@ -805,7 +805,7 @@ function tabela(
     time_.forEach((u, i) => {
       const ly = y + 62 + i * 20;
       ctx.fillStyle = u.bot ? 'rgba(255,255,255,0.55)' : '#ffffff';
-      ctx.font = '500 13px "Trebuchet MS", system-ui, sans-serif';
+      ctx.font = '500 13px Bricolage, "Trebuchet MS", system-ui, sans-serif';
       ctx.fillText(`${u.nome}${u.bot ? ' ⚙' : ''} · ${perfil(u.classe).nome}`, cx, ly);
       ctx.fillText(
         `${pad(u.abates)}  ${pad(u.mortes)}  ${pad(u.depositos)}  ${pad(u.resgates)}  ${pad(u.entregas)}  ${pad(u.ouroMinerado)}  ${pad(u.alimentoColetado)}`,
@@ -816,7 +816,7 @@ function tabela(
   }
 
   ctx.textAlign = 'center';
-  ctx.font = '500 12px "Trebuchet MS", system-ui, sans-serif';
+  ctx.font = '500 12px Bricolage, "Trebuchet MS", system-ui, sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.55)';
   ctx.fillText(
     'aba = abates · mor = mortes · fat = depósitos · res = resgates · ent = carga entregue · our = ouro minerado · ali = alimento pego',
@@ -937,7 +937,7 @@ function botoesDeToque(
   entrada.botoes.atacar = acoes.atacar;
   entrada.botoes.usar = acoes.usar;
   ctx.save();
-  ctx.font = '600 14px "Trebuchet MS", system-ui, sans-serif';
+  ctx.font = '600 14px Bricolage, "Trebuchet MS", system-ui, sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   for (const [nome, b] of Object.entries(acoes)) {

@@ -504,10 +504,17 @@ function laco(agora: number): void {
     // gente no sofá, ou sem ninguém em campo, fica a de plateia — não há
     // "atrás" que sirva a quatro pessoas ao mesmo tempo.
     const unico = emCampo.length === 1 && telas.atual === 'jogo' ? emCampo[0]! : null;
-    const previsto = unico ? (sofa?.previsaoDe(unico.unidade) ?? unico.unidade) : null;
+    // Antes do primeiro passo, a frente é o meio do mapa — que é para onde
+    // fica o outro reino, de qualquer um dos lados.
+    const meio = { x: (rede.arena.largura * TILE) / 2, y: (rede.arena.altura * TILE) / 2 };
     tresD.mirar(
-      previsto
-        ? { x: posicoes[0]!.x, y: posicoes[0]!.y, olharX: previsto.olharX, olharY: previsto.olharY }
+      unico
+        ? {
+            x: posicoes[0]!.x,
+            y: posicoes[0]!.y,
+            frenteX: meio.x - posicoes[0]!.x,
+            frenteY: meio.y - posicoes[0]!.y,
+          }
         : null,
       dt,
     );

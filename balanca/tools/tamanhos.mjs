@@ -100,6 +100,10 @@ for (const tamanho of TAMANHOS) {
   await conferir(pagina, tamanho, 'escolha');
 
   await pagina.click('#confirmar');
+  // A sala montada abre um lobby antes da partida: sem o "pronto" de quem a
+  // abriu, ela não começa nunca.
+  await pagina.waitForTimeout(500);
+  if (await pagina.isVisible('#lobby-pronto')) await pagina.click('#lobby-pronto');
   await pagina.waitForFunction(() => window.balanca?.tela() === 'jogo', { timeout: 20000 });
   await pagina.waitForTimeout(2500);
   await pagina.screenshot({ path: `${PASTA}/tamanho-${tamanho.nome}-jogo.png` });

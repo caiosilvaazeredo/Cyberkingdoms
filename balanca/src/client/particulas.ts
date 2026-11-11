@@ -343,7 +343,7 @@ export class Particulas {
     ctx.save();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
-    ctx.font = `700 ${Math.max(11, Math.round(13 * escala))}px "Trebuchet MS", system-ui, sans-serif`;
+    ctx.font = `700 ${Math.max(11, Math.round(13 * escala))}px Bricolage, "Trebuchet MS", system-ui, sans-serif`;
     ctx.lineWidth = 3;
     ctx.strokeStyle = 'rgba(0,0,0,0.75)';
     for (const d of this.dizeres) {

@@ -508,19 +508,19 @@ chapéu sem que ninguém já esteja correndo para o ouro do adversário. Uma
 contagem regressiva no HUD marca o tempo até o apito, e os dois lados são
 soltos ao mesmo tempo.
 
-### A tipografia: Cinzel nos rótulos, Spectral no corpo, gótica só no nome
+### A tipografia: uma família só, e o peso separa os papéis
 
-O título do jogo usa a **BlackFlag**, e ela para aí: é bonita num nome de três
-letras a setenta pixels e ilegível em tudo o mais. O resto da interface — títulos
-de tela, botões, rótulos — usa a **Cinzel**, uma serifada de letras largas e
-maiúsculas marcadas, no traço de brasão que o tema de pergaminho pede; o corpo
-de texto (parágrafos de regra, o conselho da tela de espera) usa a **Spectral**,
-uma serifada de leitura mais leve, para o texto longo não cansar. As duas são
-hospedadas localmente (`public/fontes/`), só no corte "latin" — é tudo que o
-português usa — porque foi assim que as demais fontes do jogo já eram servidas.
-O HUD desenhado em `canvas` continua com a fonte de sistema (Trebuchet MS): é
-texto redesenhado a cada quadro, e trocar a fonte ali é problema de
-desempenho, não de estilo.
+Tudo usa a **Bricolage Grotesque**: sem serifa, geométrica, com contraste entre
+traço grosso e fino que cresce nos pesos altos. O nome do jogo vai em 800, os
+rótulos (títulos de tela, botões) em 700 e o corpo de texto em 400. O HUD
+desenhado em `canvas` usa a mesma fonte, para a partida não falar com outra voz
+que o menu.
+
+Ela é a alternativa de licença aberta à Asgard, que era o pedido original: a
+Asgard só é livre para uso pessoal, e este jogo tem empacotamento para loja. A
+Bricolage é SIL Open Font License 1.1 (o texto está em
+`public/fontes/bricolage-OFL.txt`) e fica hospedada localmente, como fonte
+variável — um arquivo cobre todos os pesos.
 
 ### Caber em qualquer tela
 

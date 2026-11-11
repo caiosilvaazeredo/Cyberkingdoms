@@ -149,8 +149,11 @@ def voxels(
     lados — uma árvore é um tufo redondo, e não um recorte com tampa."""
     alt, larg = opaco.shape
     t = espessuras(opaco, fundo, rgba, finos, degrau)
-    eh_contorno = contorno(rgba, opaco)
-    dentro = miolo(indices, opaco, eh_contorno)
+    # Para o miolo, "contorno" é toda tinta escura, e não só a que encosta no
+    # vazio: de lado o que se vê é o miolo, e o traço do pacote — dois pixels
+    # de largura — pintava as árvores de faixas pretas.
+    luma = rgba[..., 0] * 0.299 + rgba[..., 1] * 0.587 + rgba[..., 2] * 0.114
+    dentro = miolo(indices, opaco, opaco & (luma < LUMA_DO_CONTORNO))
     grade = np.zeros((alt, larg, fundo), dtype=np.int32)
     for y, x in zip(*np.nonzero(opaco)):
         z0 = (fundo - t[y, x]) // 2
@@ -194,6 +197,25 @@ def grade_da_caixa(indices: np.ndarray, opaco: np.ndarray, rgba: np.ndarray, pes
     dentro = np.where(opaco, miolo(indices, opaco, opaco & (luma < LUMA_DO_CONTORNO)) + 1, 0)[corte + 1 :]
     grade[corte + 1 :] = np.where(tampo[None] > 0, dentro[:, :, None], 0)
     grade[corte + 1 :, :, fundo - 1] = parede
+    # As outras três paredes levam o desenho da fachada: a de trás, o mesmo;
+    # as de lado, as colunas da fachada a partir daquela quina. Sem isto, de
+    # lado o prédio é um borrão de faixas — a câmera gira em volta dele.
+    for v in range(corte + 1, alt):
+        for z in range(fundo):
+            colunas = np.nonzero(grade[v, :, z])[0]
+            if len(colunas) == 0:
+                continue
+            k = fundo - 1 - z
+            esquerda, direita = int(colunas[0]), int(colunas[-1])
+            if esquerda + k < larg and cor[v, esquerda + k] > 0:
+                grade[v, esquerda, z] = cor[v, esquerda + k]
+            if direita - k >= 0 and cor[v, direita - k] > 0:
+                grade[v, direita, z] = cor[v, direita - k]
+    for v in range(corte + 1, alt):
+        for c in np.nonzero(parede[v - corte - 1])[0]:
+            fundos = np.nonzero(grade[v, c])[0]
+            if len(fundos):
+                grade[v, c, fundos[0]] = cor[v, c]
     return grade, fundo
 
 
