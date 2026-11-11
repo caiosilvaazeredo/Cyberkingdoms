@@ -26,7 +26,13 @@
       "variantes": {
         "red": "buildings/red"
       },
-      "meiaProfundidade": 8
+      "forma": "caixa",
+      "telhado": 0.45
+    },
+    {
+      "glob": "buildings/oficina_*.png",
+      "forma": "caixa",
+      "telhado": 0.45
     },
     {
       "glob": "buildings/*.png",

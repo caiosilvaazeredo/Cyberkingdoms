@@ -55,6 +55,8 @@ export interface ModeloNoIndice {
   /** A linha do quadro em que ficam os pés — a origem vertical do modelo. */
   pes: number;
   meiaProfundidade: number;
+  /** O topo fica na cor exata do pixel (chão e prédios), sem clarear. */
+  topoExato?: boolean;
   paletas: Record<string, string[]>;
 }
 

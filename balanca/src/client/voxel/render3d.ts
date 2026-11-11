@@ -127,10 +127,13 @@ function texturaDaPaleta(cores: readonly string[]): DataTexture {
 }
 
 // O que cada operação gravada é.
-/** A fatia de profundidade de cada objeto — maior que qualquer modelo. */
-const FATIA = 64;
+/**
+ * A fatia de profundidade de cada objeto — maior que qualquer modelo. O mais
+ * fundo é o telhado de um prédio, que deita para trás uma linha por pixel.
+ */
+const FATIA = 512;
 /** Quantas fatias cabem na faixa de profundidade da câmera. */
-const FATIAS = 8192;
+const FATIAS = 2048;
 
 const ATRIBUIR = 0;
 const CHAMAR = 1;
@@ -148,6 +151,31 @@ const PINTAM = new Set([
   'fill',
   'stroke',
 ]);
+
+/**
+ * O estado que um texto leva consigo quando é adiado para o fim do quadro.
+ */
+const ESTADO_DO_TEXTO = [
+  'font',
+  'textAlign',
+  'textBaseline',
+  'fillStyle',
+  'strokeStyle',
+  'lineWidth',
+  'lineJoin',
+  'globalAlpha',
+  'shadowColor',
+  'shadowBlur',
+  'shadowOffsetX',
+  'shadowOffsetY',
+] as const;
+
+interface Texto {
+  nome: string;
+  args: unknown[];
+  estado: unknown[];
+  matriz: DOMMatrix;
+}
 
 /** Métodos que só perguntam: respondidos na hora pelo contexto de verdade. */
 const PERGUNTAM = new Set([
@@ -179,6 +207,15 @@ export class RenderVoxel implements PintorVoxel {
   private gravador: CanvasRenderingContext2D | null = null;
   private readonly metodos = new Map<string, (...args: unknown[]) => unknown>();
   private ops: unknown[] = [];
+  /**
+   * Nomes e placas, pintados por cima de tudo no fim do quadro.
+   *
+   * Colar o retângulo de um modelo traz junto os pixels de qualquer outro
+   * modelo que esteja nele — inclusive um pintado **antes** de um rótulo, que
+   * assim acabaria por cima do rótulo. Texto por último resolve isso, e é
+   * também o que se quer de um nome: que dê para ler.
+   */
+  private textos: Texto[] = [];
   private vista: CameraDoMundo = { x: 0, y: 0, zoom: 1 };
   private largura = 1;
   private altura = 1;
@@ -221,6 +258,7 @@ export class RenderVoxel implements PintorVoxel {
     this.altura = altura;
     this.dpr = ctx.getTransform().a;
     this.ops.length = 0;
+    this.textos.length = 0;
     this.temChao = false;
     this.ordem = 0;
     this.projetar();
@@ -303,6 +341,17 @@ export class RenderVoxel implements PintorVoxel {
     if (nome === 'drawImage') {
       return (...args) => {
         if (!this.imagem(args)) this.ops.push(CHAMAR, nome, args);
+      };
+    }
+    if (nome === 'fillText' || nome === 'strokeText') {
+      return (...args) => {
+        const real = this.real as unknown as Record<string, unknown>;
+        this.textos.push({
+          nome,
+          args,
+          estado: ESTADO_DO_TEXTO.map((p) => real[p]),
+          matriz: this.real.getTransform(),
+        });
       };
     }
     if (PINTAM.has(nome)) {
@@ -484,8 +533,8 @@ export class RenderVoxel implements PintorVoxel {
         uniforms: {
           paleta: { value: texturaDaPaleta(modelo.dados.paletas[paleta]!) },
           uvDaPaleta: { value: modelo.uvDaPaleta },
-          // O topo do chão é o próprio desenho do tile: fica na cor exata.
-          clarearTopo: { value: modelo.dados.plano === 'chao' ? 0 : 0.14 },
+          // No chão e nos prédios o topo é o próprio desenho: cor exata.
+          clarearTopo: { value: modelo.dados.topoExato ? 0 : 0.14 },
         },
       });
       modelo.materiais.set(paleta, material);
@@ -545,6 +594,16 @@ export class RenderVoxel implements PintorVoxel {
         }
         this.real.restore();
       }
+    }
+
+    for (const texto of this.textos) {
+      this.real.save();
+      this.real.setTransform(texto.matriz);
+      ESTADO_DO_TEXTO.forEach((p, i) => {
+        ctx[p] = texto.estado[i];
+      });
+      (ctx[texto.nome] as (...a: unknown[]) => unknown)(...texto.args);
+      this.real.restore();
     }
   }
 }

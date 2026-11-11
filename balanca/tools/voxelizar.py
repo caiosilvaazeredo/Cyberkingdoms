@@ -331,11 +331,61 @@ def grade_do_chao(indices: np.ndarray, opaco: np.ndarray, altura: int, cores: in
     return grade
 
 
+def malha_da_caixa(indices: np.ndarray, opaco: np.ndarray, pes: int, telhado: float, cores: int):
+    """Um prédio como caixa: parede da frente em pé, telhado deitado para trás.
+
+    O sprite do prédio já é desenhado em 3/4 — a parte de cima é o telhado
+    visto de cima, a de baixo é a fachada. Arredondar isso como se fosse um
+    boneco mostrava o telhado duas vezes. Aqui as linhas abaixo do corte viram
+    a face da frente, e as de cima viram o topo da caixa, uma linha de pixel
+    por voxel de profundidade. Na câmera oblíqua do jogo (tela = y − altura)
+    isso reproduz o sprite pixel a pixel, e é um volume de verdade.
+
+    `telhado` é a fração da altura do desenho, a partir do topo, que é telhado.
+    """
+    linhas = np.nonzero(opaco.any(axis=1))[0]
+    pos, nor, uv, idx = [], [], [], []
+    if len(linhas) == 0:
+        return malha(np.zeros((1, 1, 1), np.int32), (0, 0, 0), cores, False)
+    topo = int(linhas.min())
+    corte = topo + int(round((pes - topo) * telhado))
+    cor = np.where(opaco, indices + 1, 0)
+    meio = opaco.shape[1] / 2
+
+    def face(cantos, normal, c):
+        base = len(pos)
+        pos.extend(cantos)
+        nor.extend([tuple(127 * n for n in normal)] * 4)
+        uv.extend([(round((c - 1 + 0.5) / cores * 65535), 32768)] * 4)
+        idx.extend([base, base + 1, base + 2, base, base + 2, base + 3])
+
+    parede = cor.copy()
+    parede[:corte] = 0
+    for l, c, a, w, k in retangulos(parede):
+        x0, x1 = c - meio, c + w - meio
+        y0, y1 = pes - (l + a), pes - l
+        face([(x0, y0, 0), (x1, y0, 0), (x1, y1, 0), (x0, y1, 0)], (0, 0, 1), k)
+    teto = cor.copy()
+    teto[corte:] = 0
+    y = pes - corte
+    for l, c, a, w, k in retangulos(teto):
+        x0, x1 = c - meio, c + w - meio
+        z0, z1 = l - corte, l + a - corte
+        face([(x0, y, z1), (x1, y, z1), (x1, y, z0), (x0, y, z0)], (0, 1, 0), k)
+    return (
+        np.round(np.array(pos, dtype=np.float64).reshape(-1, 3) * 2).astype(np.int16),
+        np.array(nor, dtype=np.int8).reshape(-1, 3),
+        np.array(uv, dtype=np.uint16).reshape(-1, 2),
+        np.array(idx, dtype=np.uint32),
+    )
+
+
 def converter(folha: dict, manifesto: dict) -> dict:
     origem = RAIZ / manifesto["origem"]
     destino = RAIZ / manifesto["destino"]
     meia = int(folha.get("meiaProfundidade", 7))
     plano = folha.get("plano", "pe")
+    caixa = folha.get("forma") == "caixa"
 
     base = abrir(origem / folha["arquivo"])
     opaco = base[..., 3] == 255
@@ -407,6 +457,10 @@ def converter(folha: dict, manifesto: dict) -> dict:
         if plano == "chao":
             grade = grade_do_chao(indices[linhas, cols], opaco[linhas, cols], int(folha.get("altura", 16)), n)
             pos, nor, uv, idx = malha(grade, (0, 0, 0), total_de_cores, todas)
+        elif caixa:
+            pos, nor, uv, idx = malha_da_caixa(
+                indices[linhas, cols], opaco[linhas, cols], pes, float(folha.get("telhado", 0.45)), total_de_cores
+            )
         else:
             grade = voxels(indices[linhas, cols], opaco[linhas, cols], base[linhas, cols], meia)
             pos, nor, uv, idx = malha(grade, (largura_quadro / 2, pes, meia), total_de_cores, todas)
@@ -443,7 +497,9 @@ def converter(folha: dict, manifesto: dict) -> dict:
         "lado": lado,
         "plano": plano,
         "pes": pes,
-        "meiaProfundidade": 0 if plano == "chao" else meia,
+        "meiaProfundidade": 0 if plano == "chao" or caixa else meia,
+        # Topo e frente na cor exata do pixel: o telhado já vem iluminado.
+        "topoExato": plano == "chao" or caixa,
         "paletas": paletas,
     }
     relativo = str(Path(folha["arquivo"]).with_suffix(".glb"))
