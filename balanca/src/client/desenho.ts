@@ -313,8 +313,8 @@ export function desenharMundo(
     pintarMundo(ctx, arte, arena, olhar, camera, largura, altura, tempo, ajustes, particulas);
     return;
   }
-  voxel.desenhar(ctx, camera, largura, altura, (gravador) =>
-    pintarMundo(gravador, arte, arena, olhar, camera, largura, altura, tempo, ajustes, particulas),
+  voxel.desenhar(ctx, camera, largura, altura, (gravador, deCima, l, a) =>
+    pintarMundo(gravador, arte, arena, olhar, deCima, l, a, tempo, ajustes, particulas),
   );
 }
 

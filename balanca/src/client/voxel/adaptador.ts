@@ -40,20 +40,36 @@ export interface PontoNaTela {
 }
 
 export interface PintorVoxel {
-  /** Aponta a câmera 3D para onde a câmera do jogo está olhando. */
+  /**
+   * Diz quem a câmera segue de perto, por trás — ou `null` para a câmera de
+   * plateia, alta e virada para o norte. `olhar` é para onde ele está virado.
+   */
+  mirar(alvo: { x: number; y: number; olharX: number; olharY: number } | null, dt: number): void;
+  /**
+   * Para onde a câmera está virada, em radianos a partir do norte. É por
+   * quanto se gira o que vem do controle: "para frente" é para onde ela olha.
+   */
+  readonly rumo: number;
+  /** Aponta a câmera 3D. `camera` é a do jogo, usada na vista de plateia. */
   enquadrar(camera: CameraDoMundo, largura: number, altura: number): void;
   /**
    * Desenha um quadro do mundo.
    *
-   * `pintar` é o desenho 2D de sempre; ele recebe o contexto gravador no lugar
-   * do de verdade. `largura` e `altura` são em pixels de CSS.
+   * `pintar` é o desenho 2D de sempre. Ele recebe o contexto gravador no
+   * lugar do de verdade, e a vista de cima em que deve desenhar — maior que a
+   * tela, porque a câmera em perspectiva enxerga mais longe.
    */
   desenhar(
     ctx: CanvasRenderingContext2D,
     camera: CameraDoMundo,
     largura: number,
     altura: number,
-    pintar: (ctx: CanvasRenderingContext2D) => void,
+    pintar: (
+      ctx: CanvasRenderingContext2D,
+      camera: CameraDoMundo,
+      largura: number,
+      altura: number,
+    ) => void,
   ): void;
   /** Onde um ponto do chão do mundo cai na tela; `null` se atrás da câmera. */
   paraTela(x: number, y: number): PontoNaTela | null;

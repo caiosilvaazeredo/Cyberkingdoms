@@ -5,6 +5,7 @@ import {
   Color,
   DataTexture,
   DoubleSide,
+  Fog,
   Float32BufferAttribute,
   InstancedBufferAttribute,
   InstancedMesh,
@@ -20,6 +21,7 @@ import {
   Scene,
   ShaderMaterial,
   Texture,
+  Vector2,
   Vector3,
   Vector4,
   WebGLRenderer,
@@ -71,11 +73,40 @@ import type {
  */
 
 /** Abertura vertical da câmera, em graus. */
-const ABERTURA = 50;
-/** Quanto a câmera olha para baixo, a partir do horizonte. */
-const INCLINACAO = (22 * Math.PI) / 180;
-/** O alvo fica um pouco ao norte de quem joga: vê-se mais do que vem pela frente. */
-const ADIANTE = 64;
+const ABERTURA = 55;
+
+// A câmera de quem joga: perto, atrás do personagem, olhando por cima do
+// ombro dele para onde ele está virado.
+/** Quanto a câmera fica atrás do personagem, e a que altura. */
+const RECUO = 250;
+const ALTURA_DA_CAMERA = 125;
+/** Para onde ela olha: um ponto à frente dele, à altura da cabeça. */
+const ADIANTE = 150;
+const ALTURA_DO_OLHAR = 48;
+/** Com que pressa ela acompanha o giro do personagem (1/s). */
+const PRESSA_DO_GIRO = 2.4;
+
+// A câmera de plateia (menu, assistir, vários jogadores no mesmo aparelho):
+// mais alta e aberta, sempre olhando para o norte.
+const INCLINACAO_DA_PLATEIA = (22 * Math.PI) / 180;
+const ADIANTE_DA_PLATEIA = 64;
+
+// O desenho 2D que alimenta o 3D é feito numa vista de cima larga, bem maior
+// que a tela: a câmera em perspectiva vê muito mais longe que a 2D.
+/** Até onde, a partir do centro, o mundo é desenhado (unidades de mundo). */
+const ALCANCE = 1500;
+/** O zoom dessa vista: alto, para o arredondamento do 2D não virar tremor. */
+const ZOOM_DO_DESENHO = 2;
+/** A névoa esconde a borda do que foi desenhado: começa e fecha aqui. */
+const NEVOA = [900, 1450] as const;
+const COR_DA_NEVOA = 0xcfeaff;
+/** O maior tamanho em que nome, barra e placa são pintados (1 = como no 2D). */
+const ESCALA_MAXIMA_DO_TRACO = 1.5;
+/** A que distância da câmera uma árvore ou pedra deixa de ser desenhada. */
+const FOLGA_DA_LENTE = 70;
+/** Onde fica o topo da cabeça de um personagem, em fração do lado do quadro. */
+const ALTURA_DA_CABECA = 0.36;
+
 /** A altura da água, abaixo do topo dos blocos de chão (que têm 16). */
 const NIVEL_DA_AGUA = -10;
 
@@ -83,13 +114,16 @@ const VERTICE_DO_MODELO = /* glsl */ `
   uniform vec4 uvDaPaleta;
   varying vec2 vUv;
   varying float vLuz;
+  varying float vFundo;
   void main() {
     vUv = uv * uvDaPaleta.xy + uvDaPaleta.zw;
     vec3 n = normalize(mat3(instanceMatrix) * normal);
     // Luz fixa, de cima e de frente: o topo na cor exata, a frente um pouco
     // abaixo, os lados na sombra. É o que separa telhado de parede.
     vLuz = n.y > 0.5 ? 1.0 : (n.z > 0.5 ? 0.84 : 0.66);
-    gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+    vec4 naCamera = modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+    vFundo = -naCamera.z;
+    gl_Position = projectionMatrix * naCamera;
   }
 `;
 
@@ -97,8 +131,12 @@ const FRAGMENTO_DO_MODELO = /* glsl */ `
   uniform sampler2D paleta;
   varying vec2 vUv;
   varying float vLuz;
+  varying float vFundo;
+  uniform vec3 nevoa;
+  uniform vec2 faixaDaNevoa;
   void main() {
-    gl_FragColor = vec4(texture2D(paleta, vUv).rgb * vLuz, 1.0);
+    vec3 cor = texture2D(paleta, vUv).rgb * vLuz;
+    gl_FragColor = vec4(mix(cor, nevoa, smoothstep(faixaDaNevoa.x, faixaDaNevoa.y, vFundo)), 1.0);
   }
 `;
 
@@ -107,10 +145,13 @@ const VERTICE_DO_SPRITE = /* glsl */ `
   attribute vec3 tinta;
   varying vec2 vUv;
   varying vec3 vTinta;
+  varying float vFundo;
   void main() {
     vUv = recorte.xy + position.xy * recorte.zw;
     vTinta = tinta;
-    gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+    vec4 naCamera = modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+    vFundo = -naCamera.z;
+    gl_Position = projectionMatrix * naCamera;
   }
 `;
 
@@ -118,12 +159,16 @@ const FRAGMENTO_DO_SPRITE = /* glsl */ `
   uniform sampler2D mapa;
   varying vec2 vUv;
   varying vec3 vTinta;
+  varying float vFundo;
+  uniform vec3 nevoa;
+  uniform vec2 faixaDaNevoa;
   void main() {
     vec4 cor = texture2D(mapa, vUv);
     // Recorte duro: tira o vazio e também a sombra do chão, que o pacote pinta
     // com alfa parcial.
     if (cor.a < 0.4) discard;
-    gl_FragColor = vec4(cor.rgb * vTinta, 1.0);
+    vec3 tingida = cor.rgb * vTinta;
+    gl_FragColor = vec4(mix(tingida, nevoa, smoothstep(faixaDaNevoa.x, faixaDaNevoa.y, vFundo)), 1.0);
   }
 `;
 
@@ -186,6 +231,8 @@ interface Grupo {
   y: number | null;
   /** Já tem âncora de imagem: as próximas não a trocam. */
   fixo: boolean;
+  /** É o próprio prédio: o nome dele não some atrás dele mesmo. */
+  predio: boolean;
   /** Profundidade de `save` — é o que fecha um grupo implícito. */
   salvos: number;
 }
@@ -282,9 +329,24 @@ export class RenderVoxel implements PintorVoxel {
   private gravador: CanvasRenderingContext2D | null = null;
   private readonly metodos = new Map<string, (...args: unknown[]) => unknown>();
   private ops: unknown[] = [];
-  private vista: CameraDoMundo = { x: 0, y: 0, zoom: 1 };
+  /** A vista de cima em que o desenho 2D é feito — não é a da tela. */
+  private vista: CameraDoMundo = { x: 0, y: 0, zoom: ZOOM_DO_DESENHO };
+  private readonly ladoDoDesenho = 2 * ALCANCE * ZOOM_DO_DESENHO;
+  /** O tamanho da tela de verdade, em pixels de CSS. */
   private largura = 1;
   private altura = 1;
+  /** Quem a câmera segue de perto; `null` é a câmera de plateia. */
+  private alvo: { x: number; y: number } | null = null;
+  /** Para onde a câmera está virada: 0 é o norte, cresce no sentido horário. */
+  private giro = 0;
+  /** A direita da câmera no chão do mundo, e o estica dos sprites em pé. */
+  private direitaX = 1;
+  private direitaZ = 0;
+  private estica = 1;
+  private readonly nevoa = {
+    nevoa: { value: new Color(COR_DA_NEVOA) },
+    faixaDaNevoa: { value: new Vector2(NEVOA[0], NEVOA[1]) },
+  };
   private dpr = 1;
   /** 0: antes da lista ordenada (o chão). 1: dentro dela. 2: depois (efeitos). */
   private fase = 0;
@@ -313,6 +375,7 @@ export class RenderVoxel implements PintorVoxel {
     this.mar.scale.setScalar(120000);
     this.mar.position.y = NIVEL_DA_AGUA - 1;
     this.cena.add(this.mar);
+    this.cena.fog = new Fog(COR_DA_NEVOA, NEVOA[0], NEVOA[1]);
     this.sombras = this.criarSombras(128);
   }
 
@@ -351,25 +414,64 @@ export class RenderVoxel implements PintorVoxel {
     return new RenderVoxel(indice, raiz);
   }
 
+  mirar(alvo: { x: number; y: number; olharX: number; olharY: number } | null, dt: number): void {
+    if (!alvo) {
+      this.alvo = null;
+      this.giro = 0;
+      return;
+    }
+    const chegando = this.alvo === null;
+    this.alvo = { x: alvo.x, y: alvo.y };
+    if (Math.hypot(alvo.olharX, alvo.olharY) < 0.2) return;
+    // Pelo caminho mais curto, e sem pressa: a câmera acompanha, não chicoteia.
+    const quer = Math.atan2(alvo.olharX, -alvo.olharY);
+    let falta = quer - this.giro;
+    falta = Math.atan2(Math.sin(falta), Math.cos(falta));
+    this.giro += chegando ? falta : falta * (1 - Math.exp(-dt * PRESSA_DO_GIRO));
+  }
+
+  get rumo(): number {
+    return this.alvo ? this.giro : 0;
+  }
+
   enquadrar(camera: CameraDoMundo, largura: number, altura: number): void {
-    this.vista = camera;
     this.largura = largura;
     this.altura = altura;
     const c = this.camera;
     c.aspect = largura / altura;
     c.updateProjectionMatrix();
-    // À distância em que o alvo sai na tela na escala do zoom 2D.
-    const distancia = altura / (2 * camera.zoom * Math.tan((ABERTURA * Math.PI) / 360));
-    const alvoZ = camera.y - ADIANTE;
-    c.position.set(
-      camera.x,
-      distancia * Math.sin(INCLINACAO),
-      alvoZ + distancia * Math.cos(INCLINACAO),
-    );
-    c.lookAt(camera.x, 0, alvoZ);
+    let centro: { x: number; y: number };
+    if (this.alvo) {
+      // Atrás do personagem, olhando por cima dele para onde ele vai.
+      centro = this.alvo;
+      const fx = Math.sin(this.giro);
+      const fz = -Math.cos(this.giro);
+      c.position.set(centro.x - fx * RECUO, ALTURA_DA_CAMERA, centro.y - fz * RECUO);
+      c.lookAt(centro.x + fx * ADIANTE, ALTURA_DO_OLHAR, centro.y + fz * ADIANTE);
+    } else {
+      // De plateia: à distância em que o alvo sai na escala do zoom 2D.
+      centro = camera;
+      const distancia = altura / (2 * camera.zoom * Math.tan((ABERTURA * Math.PI) / 360));
+      const alvoZ = camera.y - ADIANTE_DA_PLATEIA;
+      c.position.set(
+        camera.x,
+        distancia * Math.sin(INCLINACAO_DA_PLATEIA),
+        alvoZ + distancia * Math.cos(INCLINACAO_DA_PLATEIA),
+      );
+      c.lookAt(camera.x, 0, alvoZ);
+    }
     c.updateMatrixWorld(true);
-    this.mar.position.x = camera.x;
-    this.mar.position.z = camera.y;
+    const m = c.matrixWorld.elements;
+    const direita = Math.hypot(m[0]!, m[2]!) || 1;
+    this.direitaX = m[0]! / direita;
+    this.direitaZ = m[2]! / direita;
+    // O eixo −Z da câmera é para onde ela olha; a componente vertical dele dá
+    // a inclinação, e os sprites em pé esticam o que ela achataria.
+    const horizontal = Math.hypot(m[8]!, m[10]!);
+    this.estica = Math.min(1.35, 1 / Math.max(0.74, horizontal));
+    this.vista = { x: centro.x, y: centro.y, zoom: ZOOM_DO_DESENHO };
+    this.mar.position.x = centro.x;
+    this.mar.position.z = centro.y;
   }
 
   paraTela(x: number, y: number): PontoNaTela | null {
@@ -404,7 +506,12 @@ export class RenderVoxel implements PintorVoxel {
     camera: CameraDoMundo,
     largura: number,
     altura: number,
-    pintar: (ctx: CanvasRenderingContext2D) => void,
+    pintar: (
+      ctx: CanvasRenderingContext2D,
+      camera: CameraDoMundo,
+      largura: number,
+      altura: number,
+    ) => void,
   ): void {
     this.real = ctx;
     this.dpr = ctx.getTransform().a;
@@ -430,7 +537,12 @@ export class RenderVoxel implements PintorVoxel {
     // `save`/`restore` em volta devolve o contexto como estava antes de tocar.
     ctx.save();
     try {
-      pintar(this.gravador ?? (this.gravador = this.criarGravador()));
+      pintar(
+        this.gravador ?? (this.gravador = this.criarGravador()),
+        this.vista,
+        this.ladoDoDesenho,
+        this.ladoDoDesenho,
+      );
       this.fecharGrupo();
     } finally {
       ctx.restore();
@@ -470,7 +582,12 @@ export class RenderVoxel implements PintorVoxel {
   /** O céu: um degradê que clareia até o horizonte. */
   private ceu(): void {
     const ctx = this.real;
-    const longe = this.projetar(this.vista.x, 0, this.vista.y - 50000);
+    const o = this.camera.position;
+    const longe = this.projetar(
+      o.x + Math.sin(this.rumo) * 50000,
+      0,
+      o.z - Math.cos(this.rumo) * 50000,
+    );
     const horizonte = Math.max(8, Math.min(this.altura, (longe?.y ?? 0) + 2));
     const degrade = ctx.createLinearGradient(0, 0, 0, horizonte);
     degrade.addColorStop(0, '#3f86e0');
@@ -542,7 +659,7 @@ export class RenderVoxel implements PintorVoxel {
   private abrirGrupo(y: number | null): void {
     this.fecharGrupo();
     if (y !== null) this.fase = 1;
-    this.grupo = { ancora: null, mundo: null, y, fixo: false, salvos: 0 };
+    this.grupo = { ancora: null, mundo: null, y, fixo: false, predio: false, salvos: 0 };
     this.ops.push(GRUPO, this.grupo, 0);
   }
 
@@ -552,8 +669,10 @@ export class RenderVoxel implements PintorVoxel {
     this.grupo = null;
     if (!g.ancora) {
       g.ancora = {
-        x: this.largura / 2,
-        y: g.y === null ? this.altura / 2 : (g.y - this.vista.y) * this.vista.zoom + this.altura / 2,
+        x: this.ladoDoDesenho / 2,
+        y:
+          this.ladoDoDesenho / 2 +
+          (g.y === null ? 0 : (g.y - this.vista.y) * this.vista.zoom),
       };
     }
     this.ops.push(FIM_DO_GRUPO, 0, 0);
@@ -568,8 +687,8 @@ export class RenderVoxel implements PintorVoxel {
   /** O ponto do chão do mundo que o desenho 2D põe naquele pixel. */
   private noChao(p: Ponto): Ponto {
     return {
-      x: (p.x - this.largura / 2) / this.vista.zoom + this.vista.x,
-      y: (p.y - this.altura / 2) / this.vista.zoom + this.vista.y,
+      x: (p.x - this.ladoDoDesenho / 2) / this.vista.zoom + this.vista.x,
+      y: (p.y - this.ladoDoDesenho / 2) / this.vista.zoom + this.vista.y,
     };
   }
 
@@ -649,6 +768,15 @@ export class RenderVoxel implements PintorVoxel {
         const escala = ((dw / sw) * Math.hypot(t.a, t.b)) / this.dpr / this.vista.zoom;
         const chao = this.noChao(pe);
         this.sombra(chao.x, chao.y, dados.larguraQuadro * 0.15 * escala);
+        if (g && !g.fixo) {
+          // O nome e a barra de vida ficam logo acima da cabeça, e é por ela
+          // que o grupo se ancora: de perto o traço tem tamanho máximo, e
+          // ancorado no pé o nome cairia no meio do rosto.
+          const cabeca = dados.lado * ALTURA_DA_CABECA * escala;
+          g.ancora = { x: pe.x, y: pe.y - cabeca * this.vista.zoom };
+          g.mundo = { x: chao.x, altura: cabeca * this.estica, z: chao.y };
+          g.fixo = true;
+        }
       }
       if (g && !g.fixo) {
         g.ancora = pe;
@@ -705,11 +833,22 @@ export class RenderVoxel implements PintorVoxel {
       const topo = modelo.quadros[quadro]!.topo;
       g.ancora = this.noDesenho(dx + dw / 2, dy);
       g.mundo = { x: chao.x, altura: topo.altura * escala, z: chao.y + topo.fundo * escala };
+      g.predio = true;
       g.fixo = true;
     }
 
+    // Árvore ou pedra encostada na lente tapa meia tela e não diz nada: a
+    // câmera anda atrás de quem joga e passa por dentro delas. Some o que
+    // estiver a menos de um corpo da câmera.
+    if (this.alvo && d.plano !== 'chao' && !d.oclui) {
+      const c = modelo.quadros[quadro]!.caixa;
+      const raio = Math.max(c.max.x - c.min.x, c.max.z - c.min.z) * 0.5 * escala;
+      const o = this.camera.position;
+      if (Math.hypot(chao.x - o.x, chao.y - o.z) < raio + FOLGA_DA_LENTE) return true;
+    }
     if (d.oclui) {
       const c = modelo.quadros[quadro]!.caixa;
+      const i = this.paredes.length;
       this.paredes.push(
         chao.x + c.min.x * escala,
         chao.x + c.max.x * escala,
@@ -717,6 +856,13 @@ export class RenderVoxel implements PintorVoxel {
         chao.y + c.min.z * escala,
         chao.y + c.max.z * escala,
       );
+      // Prédio não barra ninguém, e a câmera vai atrás de quem anda: um
+      // prédio entre os dois taparia a tela inteira com o telhado. Esse some
+      // — fica o nome dele, pintado por cima —, e não tapa mais nada.
+      if (this.alvo && this.raioCruza(i, this.alvo.x, 40, this.alvo.y)) {
+        this.paredes.length = i;
+        return true;
+      }
     }
 
     const chave = `${quadro}:${entrada.paleta}`;
@@ -730,6 +876,7 @@ export class RenderVoxel implements PintorVoxel {
           // O espelho inverte a ordem dos vértices; sem isto ele sumiria.
           side: DoubleSide,
           uniforms: {
+            ...this.nevoa,
             paleta: { value: texturaDaPaleta(d.paletas[entrada.paleta]!) },
             uvDaPaleta: { value: modelo.uvDaPaleta },
           },
@@ -802,14 +949,18 @@ export class RenderVoxel implements PintorVoxel {
    *
    * Em pé, o retângulo fica num plano vertical que passa pelo ponto do chão
    * da âncora; o que no desenho 2D estava "acima" dela vira altura. A altura
-   * é esticada por 1/cos da inclinação da câmera, para o sprite sair na tela
+   * é esticada pelo tanto que a inclinação da câmera a achataria, para o sprite
+   * sair na tela
    * com a proporção do desenho em vez de achatado. Deitado (água, espuma), o
    * retângulo é o próprio pedaço de chão.
    */
   private sprite(img: ImagemPendente, ancora: Ponto | null, deitado: boolean, tinta?: Color): void {
     const lote = this.loteDeSprites(img.fonte);
     const zoom = this.vista.zoom;
-    const estica = 1 / Math.cos(INCLINACAO);
+    // De pé, o sprite fica de frente para a câmera. Quando ela está virada
+    // para o sul, o leste do mundo é a esquerda da tela — e quem olha para o
+    // leste tem de sair olhando para a esquerda.
+    const lado = (this.direitaX < 0 ? -1 : 1) / zoom;
     const chao = ancora ? this.noChao(ancora) : null;
     // Cada um um fio acima do anterior: o que foi pintado depois fica por cima.
     const ordem = Math.min(this.deitados++, 8000) * 0.0005;
@@ -819,10 +970,11 @@ export class RenderVoxel implements PintorVoxel {
         const m = this.noChao(c);
         return saida.set(m.x, altura, m.y);
       }
+      const dx = (c.x - ancora.x) * lado;
       return saida.set(
-        chao.x + (c.x - ancora.x) / zoom,
-        ((ancora.y - c.y) / zoom) * estica,
-        chao.y,
+        chao.x + dx * this.direitaX,
+        ((ancora.y - c.y) / zoom) * this.estica,
+        chao.y + dx * this.direitaZ,
       );
     };
     const o = ponto(img.cantos[0], this.p);
@@ -860,7 +1012,7 @@ export class RenderVoxel implements PintorVoxel {
         vertexShader: VERTICE_DO_SPRITE,
         fragmentShader: FRAGMENTO_DO_SPRITE,
         side: DoubleSide,
-        uniforms: { mapa: { value: mapa } },
+        uniforms: { ...this.nevoa, mapa: { value: mapa } },
       });
     }
     const capacidade = lote ? lote.malha.instanceMatrix.count * 2 : 32;
@@ -896,7 +1048,7 @@ export class RenderVoxel implements PintorVoxel {
       this.noDesenho(x + l, y),
       this.noDesenho(x, y + a),
     ];
-    if (cantos[1].x - cantos[0].x > this.largura * 0.9) return;
+    if (cantos[1].x - cantos[0].x > this.ladoDoDesenho * 0.9) return;
     const estilo = this.real.fillStyle;
     if (typeof estilo !== 'string') return;
     this.cor.setStyle(estilo);
@@ -907,30 +1059,37 @@ export class RenderVoxel implements PintorVoxel {
 
   /** Se há um prédio entre a câmera e um ponto à altura do peito, no chão dado. */
   private tapado(x: number, z: number): boolean {
-    const o = this.camera.position;
-    const d = [x - o.x, 28 - o.y, z - o.z] as const;
-    const origem = [o.x, o.y, o.z] as const;
-    const p = this.paredes;
-    for (let i = 0; i < p.length; i += 5) {
-      const min = [p[i]!, 0, p[i + 3]!] as const;
-      const max = [p[i + 1]!, p[i + 2]!, p[i + 4]!] as const;
-      let entra = 0;
-      // Até o próprio ponto: quem está **dentro** da caixa — prédio não barra
-      // ninguém — também está tapado.
-      let sai = 1;
-      for (let k = 0; k < 3 && entra <= sai; k++) {
-        if (Math.abs(d[k]!) < 1e-9) {
-          if (origem[k]! < min[k]! || origem[k]! > max[k]!) entra = 2;
-          continue;
-        }
-        const a = (min[k]! - origem[k]!) / d[k]!;
-        const b = (max[k]! - origem[k]!) / d[k]!;
-        entra = Math.max(entra, Math.min(a, b));
-        sai = Math.min(sai, Math.max(a, b));
-      }
-      if (entra <= sai) return true;
+    for (let i = 0; i < this.paredes.length; i += 5) {
+      if (this.raioCruza(i, x, 28, z)) return true;
     }
     return false;
+  }
+
+  /**
+   * Se o segmento da câmera até um ponto atravessa a caixa `i` de `paredes`.
+   * Vai até o próprio ponto: quem está **dentro** da caixa também conta.
+   */
+  private raioCruza(i: number, x: number, h: number, z: number): boolean {
+    const o = this.camera.position;
+    const p = this.paredes;
+    const d = [x - o.x, h - o.y, z - o.z] as const;
+    const origem = [o.x, o.y, o.z] as const;
+    const min = [p[i]!, 0, p[i + 3]!] as const;
+    const max = [p[i + 1]!, p[i + 2]!, p[i + 4]!] as const;
+    let entra = 0;
+    let sai = 1;
+    for (let k = 0; k < 3; k++) {
+      if (Math.abs(d[k]!) < 1e-9) {
+        if (origem[k]! < min[k]! || origem[k]! > max[k]!) return false;
+        continue;
+      }
+      const a = (min[k]! - origem[k]!) / d[k]!;
+      const b = (max[k]! - origem[k]!) / d[k]!;
+      entra = Math.max(entra, Math.min(a, b));
+      sai = Math.min(sai, Math.max(a, b));
+      if (entra > sai) return false;
+    }
+    return true;
   }
 
   /**
@@ -958,9 +1117,13 @@ export class RenderVoxel implements PintorVoxel {
         this.real.save();
         // O 2D vai por cima do quadro 3D e não tem profundidade: sem esta
         // conta, o nome de quem está atrás do castelo apareceria na fachada.
-        pular = !tela || tela.escala < 0.05 || (!grupo.mundo && this.tapado(chao.x, chao.y));
+        pular =
+          !tela ||
+          tela.escala < 0.05 ||
+          (!grupo.predio && this.tapado(grupo.mundo?.x ?? chao.x, grupo.mundo?.z ?? chao.y));
         if (tela) {
-          const s = tela.escala / this.vista.zoom;
+          // Com teto: de perto, um nome não pode crescer até tapar a cena.
+          const s = Math.min(tela.escala, ESCALA_MAXIMA_DO_TRACO) / this.vista.zoom;
           this.real.setTransform(
             dpr * s,
             0,

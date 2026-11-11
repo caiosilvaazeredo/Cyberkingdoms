@@ -500,6 +500,17 @@ function laco(agora: number): void {
   // (a mira do mouse, as setas da borda) pergunta ao renderer.
   const tresD = pintorVoxel(ajustes.render);
   if (tresD) {
+    // Um jogador só neste aparelho: a câmera vai para trás dele. Com mais
+    // gente no sofá, ou sem ninguém em campo, fica a de plateia — não há
+    // "atrás" que sirva a quatro pessoas ao mesmo tempo.
+    const unico = emCampo.length === 1 && telas.atual === 'jogo' ? emCampo[0]! : null;
+    const previsto = unico ? (sofa?.previsaoDe(unico.unidade) ?? unico.unidade) : null;
+    tresD.mirar(
+      previsto
+        ? { x: posicoes[0]!.x, y: posicoes[0]!.y, olharX: previsto.olharX, olharY: previsto.olharY }
+        : null,
+      dt,
+    );
     tresD.enquadrar(camera, largura, altura);
     vista.ponto = (x, y) => tresD.paraTela(x, y);
   }
@@ -525,7 +536,7 @@ function laco(agora: number): void {
   }
   while (acumulado >= DT && passos < 5) {
     if (sofa && telas.atual === 'jogo') {
-      sofa.passar(entrada, centros);
+      sofa.passar(entrada, centros, tresD?.rumo ?? 0);
       espia.comandos++;
     }
     acumulado -= DT;

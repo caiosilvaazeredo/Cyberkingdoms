@@ -245,10 +245,9 @@ def retangulos(mascara: np.ndarray):
 # baixo (-y) e de trás (-z) ficam de costas. São metade dos
 # triângulos, e nunca viram pixel. `"faces": "todas"` no manifesto as devolve.
 FACES_VISIVEIS = {(1, 1), (2, 1)}
-# O que a câmera em perspectiva alcança: ela olha sempre do sul para o norte,
-# de cima, então vê o topo, a frente e os dois lados — nunca a base nem as
-# costas. `"faces": "todas"` no manifesto devolve o sólido fechado.
-FACES_DO_VOLUME = {(0, 1), (0, -1), (1, 1), (2, 1)}
+# O que a câmera em perspectiva alcança: ela gira em volta das coisas, sempre
+# de cima, então vê tudo menos a base.
+FACES_DO_VOLUME = {(0, 1), (0, -1), (1, 1), (2, 1), (2, -1)}
 
 
 def malha(grade: np.ndarray, origem: tuple[float, float, float], cores: int, faces: set | None):

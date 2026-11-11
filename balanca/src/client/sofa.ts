@@ -227,11 +227,21 @@ export class Sofa implements OlharLocal {
    *
    * @param centro onde está na tela a unidade de cada vaga, para o esquema com
    * mouse mirar. As outras fontes ignoram.
+   * @param giro para onde a câmera está virada (radianos a partir do norte).
+   * Com a câmera 3D atrás do personagem, "para cima" no controle é para onde
+   * ela olha, e não o norte do mapa: o que vem do controle é girado por isto
+   * antes de virar comando. No 2D é sempre zero.
    */
-  passar(entrada: Entrada, centros: Map<number, { x: number; y: number }>): void {
+  passar(entrada: Entrada, centros: Map<number, { x: number; y: number }>, giro = 0): void {
     const pads = controlesLigados();
     for (const j of this.locais) {
-      const leitura = this.lerJogador(j, entrada, pads, centros.get(j.vaga) ?? { x: 0, y: 0 });
+      const leitura = this.lerJogador(
+        j,
+        entrada,
+        pads,
+        centros.get(j.vaga) ?? { x: 0, y: 0 },
+        giro,
+      );
       j.rumo = atualizarRumo(j.rumo, leitura.mx, leitura.my);
       if (j.rede.eu) j.rede.passar(leitura);
       else j.rede.manterVivo();
@@ -243,20 +253,38 @@ export class Sofa implements OlharLocal {
     entrada: Entrada,
     pads: ReturnType<typeof controlesLigados>,
     centro: { x: number; y: number },
+    giro: number,
   ): LeituraDeEntrada {
+    const cos = Math.cos(giro);
+    const sen = Math.sin(giro);
+    // Da tela para o mundo, e de volta. O rumo guardado é do mundo; quem lê o
+    // controle pensa em tela, então recebe o rumo desgirado e devolve tudo
+    // para ser girado junto.
+    const paraOMundo = (x: number, y: number): [number, number] => [
+      x * cos - y * sen,
+      x * sen + y * cos,
+    ];
+    const rumoNaTela = { x: j.rumo.x * cos + j.rumo.y * sen, y: -j.rumo.x * sen + j.rumo.y * cos };
+    const girada = (l: LeituraDeEntrada, comMira: boolean): LeituraDeEntrada => {
+      if (giro === 0) return l;
+      const [mx, my] = paraOMundo(l.mx, l.my);
+      const [ax, ay] = comMira ? paraOMundo(l.ax, l.ay) : [l.ax, l.ay];
+      return { ...l, mx, my, ax, ay };
+    };
     if (j.fonte.startsWith('controle:')) {
       const indice = Number(j.fonte.split(':')[1]);
       const pad = pads.find((p) => p.indice === indice);
       // Controle que sumiu no meio da partida devolve comando vazio: o boneco
       // para onde está em vez de sair correndo com o último eixo lido.
-      return pad ? lerControle(pad, j.rumo) : parado();
+      return pad ? girada(lerControle(pad, rumoNaTela), true) : parado();
     }
     const esquema = ESQUEMAS.find((e) => e.id === j.fonte);
     if (!esquema) return parado();
     // O esquema do WASD passa pela `Entrada` porque é o único que também tem
-    // mouse e dedo — os três viram um comando só lá.
-    if (esquema.comMouse) return entrada.ler(centro);
-    return lerTeclado(esquema, entrada.teclasApertadas, j.rumo, null);
+    // mouse e dedo — os três viram um comando só lá. A mira dele já vem do
+    // mundo (é o ponto do chão debaixo do cursor), então só o andar gira.
+    if (esquema.comMouse) return girada(entrada.ler(centro), false);
+    return girada(lerTeclado(esquema, entrada.teclasApertadas, rumoNaTela, null), true);
   }
 
   // --- o que o desenho pergunta -------------------------------------------
