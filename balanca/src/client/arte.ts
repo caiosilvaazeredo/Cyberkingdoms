@@ -38,12 +38,6 @@ export interface Animacao {
   readonly lado: number;
   readonly quadros: number;
   readonly fps: number;
-  /**
-   * De que arquivo de `/tiny` a folha veio, sem a extensão
-   * (`units/azul/guerreiro_parado`). É a chave com que o renderer voxel acha o
-   * modelo da mesma folha — ver `voxel/adaptador.ts`. O 2D não usa.
-   */
-  readonly caminho?: string;
 }
 
 const RAIZ = '/tiny';
@@ -291,10 +285,8 @@ export function animacao(
   larguraQuadro = imagem.height,
 ): Animacao {
   const lado = imagem.height;
-  const caminho = (imagem.src ?? '').replace(/^.*\/tiny\//, '').replace(/\.png$/, '');
   return {
     imagem,
-    caminho,
     larguraQuadro,
     lado,
     quadros: Math.max(1, Math.floor(imagem.width / larguraQuadro)),

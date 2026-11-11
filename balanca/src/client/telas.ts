@@ -1186,7 +1186,7 @@ export class Telas {
       {
         chave: 'render',
         rotulo: 'Visual',
-        explica: 'sprites do pacote ou modelos voxel (em migração)',
+        explica: 'sprites do pacote ou modelos voxel',
         opcoes: [
           { valor: '2d', texto: '2D' },
           { valor: '3d', texto: '3D voxel' },

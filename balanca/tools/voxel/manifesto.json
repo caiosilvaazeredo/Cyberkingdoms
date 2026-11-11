@@ -1,29 +1,79 @@
 {
-  "_": "A lista do que vira voxel. Cada entrada é uma folha de public/tiny; a saída espelha o caminho em public/voxel, trocando .png por .glb. Ver tools/voxelizar.py.",
+  "_": "A lista do que vira voxel: só o que o jogo desenha. Cada grupo é um glob em public/tiny e as opções dele; a saída espelha o caminho em public/voxel, trocando .png por .glb. Efeitos (fx/), interface, retratos, espuma e água ficam de fora de propósito e continuam 2D. Ver tools/voxelizar.py.",
   "origem": "public/tiny",
   "destino": "public/voxel",
-  "padroes": {
-    "meiaProfundidade": 7,
-    "fps": 10
-  },
-  "folhas": [
+  "compactar": true,
+  "grupos": [
     {
-      "arquivo": "units/azul/guerreiro_parado.png",
-      "variantes": { "vermelho": "units/vermelho/guerreiro_parado.png" },
-      "ancora": "centro",
-      "pesDe": "units/azul/guerreiro_parado.png"
+      "glob": "units/azul/*.png",
+      "exceto": [
+        "flecha",
+        "clerigo_bencao"
+      ],
+      "variantes": {
+        "vermelho": "units/vermelho"
+      },
+      "pesDe": "parado",
+      "meiaProfundidade": 7
     },
     {
-      "arquivo": "units/azul/guerreiro_golpe1.png",
-      "variantes": { "vermelho": "units/vermelho/guerreiro_golpe1.png" },
-      "ancora": "centro",
-      "pesDe": "units/azul/guerreiro_parado.png"
+      "glob": "feras/*.png",
+      "pesDe": "parado",
+      "meiaProfundidade": 10
     },
     {
-      "arquivo": "units/azul/guerreiro_golpe2.png",
-      "variantes": { "vermelho": "units/vermelho/guerreiro_golpe2.png" },
-      "ancora": "centro",
-      "pesDe": "units/azul/guerreiro_parado.png"
+      "glob": "buildings/blue/*.png",
+      "variantes": {
+        "red": "buildings/red"
+      },
+      "meiaProfundidade": 8
+    },
+    {
+      "glob": "buildings/*.png",
+      "meiaProfundidade": 10
+    },
+    {
+      "glob": "deco/Tree[12].png",
+      "larguraQuadro": 192,
+      "meiaProfundidade": 12
+    },
+    {
+      "glob": "deco/Tree[34].png",
+      "meiaProfundidade": 12
+    },
+    {
+      "glob": "deco/Stump*.png",
+      "meiaProfundidade": 8
+    },
+    {
+      "glob": "deco/Bushe*.png",
+      "meiaProfundidade": 8
+    },
+    {
+      "glob": "deco/*.png",
+      "meiaProfundidade": 5
+    },
+    {
+      "glob": "recursos/*.png",
+      "exceto": [
+        "xama_avatar",
+        "menino_rei_avatar"
+      ],
+      "meiaProfundidade": 8
+    },
+    {
+      "glob": "canhao/corpo.png",
+      "meiaProfundidade": 8
+    },
+    {
+      "glob": "terrain/ground.png",
+      "plano": "chao",
+      "grade": {
+        "colunas": 4,
+        "linhas": 4,
+        "celula": 64
+      },
+      "altura": 16
     }
   ]
 }

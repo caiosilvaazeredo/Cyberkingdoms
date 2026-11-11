@@ -39,9 +39,12 @@ from __future__ import annotations
 import argparse
 import io
 import json
+import os
 import struct
+import subprocess
 import sys
 from collections import deque
+from multiprocessing import Pool
 from pathlib import Path
 
 import numpy as np
@@ -302,49 +305,89 @@ class Glb:
             f.write(self.bin)
 
 
-def converter(folha: dict, manifesto: dict) -> dict:
-    origem = RAIZ / manifesto["origem"]
-    destino = RAIZ / manifesto["destino"]
-    padroes = manifesto.get("padroes", {})
-    meia = int(folha.get("meiaProfundidade", padroes.get("meiaProfundidade", 7)))
-
-    base = abrir(origem / folha["arquivo"])
-    lado = base.shape[0]
-    largura_quadro = int(folha.get("larguraQuadro", lado))
-    quadros = max(1, base.shape[1] // largura_quadro)
-    opaco = base[..., 3] == 255
-
-    # A paleta é indexada pela tupla (cor na base, cor em cada variante): se
-    # dois pixels do mesmo azul viram vermelhos diferentes, são duas entradas.
-    nomes = ["base"] + list(folha.get("variantes", {}))
-    camadas = [base] + [abrir(origem / c) for c in folha.get("variantes", {}).values()]
-    for nome, camada in zip(nomes, camadas):
-        if camada.shape != base.shape or not ((camada[..., 3] == 255) == opaco).all():
-            raise SystemExit(f"{folha['arquivo']}: a variante {nome} não tem a mesma silhueta da base")
+def paleta_de(camadas: list[np.ndarray], opaco: np.ndarray):
+    """Índice de paleta por pixel. A chave é a tupla (cor na base, cor em cada
+    variante): se dois pixels do mesmo azul viram vermelhos diferentes, são
+    duas entradas."""
     chaves = np.concatenate([c[..., :3] for c in camadas], axis=-1)[opaco]
     unicas, inverso = np.unique(chaves, axis=0, return_inverse=True)
     indices = np.zeros(opaco.shape, dtype=np.int32)
     indices[opaco] = inverso.reshape(-1)
-    paletas = {
-        nome: ["#%02x%02x%02x" % tuple(int(v) for v in linha[i * 3 : i * 3 + 3]) for linha in unicas]
-        for i, nome in enumerate(nomes)
-    }
-    nome_da_base = Path(folha["arquivo"]).parent.name if folha.get("variantes") else "base"
-    paletas[nome_da_base] = paletas.pop("base")
+    return unicas, indices
 
-    pes = base_dos_pes(origem / folha["pesDe"], lado) if folha.get("pesDe") else lado
-    ancora = folha.get("ancora", "pe")
-    # Onde o 2D ancora o quadro, em pixels a partir do canto de cima: no
-    # centro com 8% de folga para as unidades, na base para cenário.
-    pivo = [largura_quadro / 2, lado * 0.58 if ancora == "centro" else float(lado)]
+
+def grade_do_chao(indices: np.ndarray, opaco: np.ndarray, altura: int, cores: int) -> np.ndarray:
+    """Um tile deitado: cada pixel opaco vira uma coluna de `altura` voxels
+    com o topo na cor do pixel e o corpo na cor escurecida (índice + cores)."""
+    lado_z, lado_x = opaco.shape
+    grade = np.zeros((altura, lado_x, lado_z), dtype=np.int32)
+    topo = np.where(opaco, indices + 1, 0).T
+    grade[0] = topo
+    # O corpo é de uma cor só — a mais comum do tile, escurecida. Escurecer
+    # pixel a pixel levava o contorno da borda para a parede, em listras.
+    if opaco.any():
+        comum = int(np.bincount(indices[opaco]).argmax())
+        grade[1:] = np.where(topo > 0, comum + 1 + cores, 0)
+    return grade
+
+
+def converter(folha: dict, manifesto: dict) -> dict:
+    origem = RAIZ / manifesto["origem"]
+    destino = RAIZ / manifesto["destino"]
+    meia = int(folha.get("meiaProfundidade", 7))
+    plano = folha.get("plano", "pe")
+
+    base = abrir(origem / folha["arquivo"])
+    opaco = base[..., 3] == 255
+
+    # Uma variante só troca a paleta se tiver exatamente a mesma silhueta. A
+    # que não tiver é devolvida para ser convertida como modelo próprio.
+    variantes, sobras = {}, []
+    for nome, caminho in folha.get("variantes", {}).items():
+        camada = abrir(origem / caminho)
+        if camada.shape == base.shape and ((camada[..., 3] == 255) == opaco).all():
+            variantes[nome] = (caminho, camada)
+        else:
+            sobras.append(caminho)
+    unicas, indices = paleta_de([base] + [c for _, c in variantes.values()], opaco)
+    n = len(unicas)
+    nome_da_base = Path(folha["arquivo"]).parent.name
+    paletas = {}
+    for i, nome in enumerate([nome_da_base] + list(variantes)):
+        cores = [tuple(int(v) for v in linha[i * 3 : i * 3 + 3]) for linha in unicas]
+        if plano == "chao":
+            # O corpo do bloco: a mesma cor, mais escura, na segunda metade.
+            cores += [tuple(int(v * 0.62) for v in cor) for cor in cores]
+        paletas[nome] = ["#%02x%02x%02x" % cor for cor in cores]
+    total_de_cores = len(paletas[nome_da_base])
+
+    alt_img, larg_img = opaco.shape
+    if plano == "chao":
+        g = folha["grade"]
+        celula, colunas = int(g["celula"]), int(g["colunas"])
+        recortes = [
+            (slice(l * celula, (l + 1) * celula), slice(c * celula, (c + 1) * celula))
+            for l in range(int(g["linhas"]))
+            for c in range(colunas)
+        ]
+        largura_quadro = lado = celula
+        pes = 0
+    else:
+        lado = alt_img
+        largura_quadro = int(folha.get("larguraQuadro") or (lado if larg_img % lado == 0 else larg_img))
+        colunas = max(1, larg_img // largura_quadro)
+        recortes = [(slice(None), slice(q * largura_quadro, (q + 1) * largura_quadro)) for q in range(colunas)]
+        pes = base_dos_pes(origem / folha["pesDe"], lado) if folha.get("pesDe") else base_dos_pes(origem / folha["arquivo"], lado)
 
     glb = Glb()
     glb.json["extensionsUsed"] = ["KHR_mesh_quantization"]
     glb.json["extensionsRequired"] = ["KHR_mesh_quantization"]
-    todas = folha.get("faces", padroes.get("faces", "visiveis")) == "todas"
-    n = len(unicas)
+    todas = folha.get("faces", "visiveis") == "todas"
     png = io.BytesIO()
-    Image.fromarray(unicas[:, :3].astype(np.uint8).reshape(1, n, 3), "RGB").save(png, "PNG")
+    cores_da_base = np.array(
+        [[int(c[k : k + 2], 16) for k in (1, 3, 5)] for c in paletas[nome_da_base]], dtype=np.uint8
+    )
+    Image.fromarray(cores_da_base.reshape(1, total_de_cores, 3), "RGB").save(png, "PNG")
     glb.json["images"] = [{"bufferView": glb.vista(png.getvalue()), "mimeType": "image/png"}]
     glb.json["samplers"] = [{"magFilter": 9728, "minFilter": 9728, "wrapS": 33071, "wrapT": 33071}]
     glb.json["textures"] = [{"source": 0, "sampler": 0}]
@@ -360,13 +403,13 @@ def converter(folha: dict, manifesto: dict) -> dict:
     ]
 
     triangulos = 0
-    total_de_voxels = 0
-    for q in range(quadros):
-        x0 = q * largura_quadro
-        recorte = slice(x0, x0 + largura_quadro)
-        grade = voxels(indices[:, recorte], opaco[:, recorte], base[:, recorte], meia)
-        total_de_voxels += int((grade != 0).sum())
-        pos, nor, uv, idx = malha(grade, (largura_quadro / 2, pes, meia), n, todas)
+    for q, (linhas, cols) in enumerate(recortes):
+        if plano == "chao":
+            grade = grade_do_chao(indices[linhas, cols], opaco[linhas, cols], int(folha.get("altura", 16)), n)
+            pos, nor, uv, idx = malha(grade, (0, 0, 0), total_de_cores, todas)
+        else:
+            grade = voxels(indices[linhas, cols], opaco[linhas, cols], base[linhas, cols], meia)
+            pos, nor, uv, idx = malha(grade, (largura_quadro / 2, pes, meia), total_de_cores, todas)
         if len(idx) == 0:
             pos = np.zeros((3, 3), np.int16)
             nor = np.zeros((3, 3), np.int8)
@@ -393,59 +436,144 @@ def converter(folha: dict, manifesto: dict) -> dict:
         glb.json["nodes"].append({"name": f"q{q}", "mesh": q, "scale": [0.5, 0.5, 0.5]})
         glb.json["scenes"][0]["nodes"].append(q)
 
-    glb.json["scenes"][0]["extras"] = {
-        "quadros": quadros,
-        "fps": folha.get("fps", padroes.get("fps", 10)),
+    extras = {
+        "quadros": len(recortes),
+        "colunas": colunas,
         "larguraQuadro": largura_quadro,
         "lado": lado,
-        "ancora": ancora,
-        "pivo": pivo,
+        "plano": plano,
         "pes": pes,
-        "base": nome_da_base,
+        "meiaProfundidade": 0 if plano == "chao" else meia,
         "paletas": paletas,
     }
-    saida = (destino / folha["arquivo"]).with_suffix(".glb")
-    glb.salvar(saida)
     relativo = str(Path(folha["arquivo"]).with_suffix(".glb"))
+    saida = destino / relativo
+    glb.salvar(saida)
+    bruto = saida.stat().st_size
+    if manifesto.get("compactar", True):
+        compactar(saida)
+
+    # Os dados do modelo vão no índice, e não só dentro do .glb: o jogo precisa
+    # deles antes de baixar o arquivo, e o compactador não promete guardá-los.
+    entrada = {"glb": relativo, **extras}
     fontes = {str(Path(folha["arquivo"]).with_suffix("")): {"glb": relativo, "paleta": nome_da_base}}
-    for nome, caminho in folha.get("variantes", {}).items():
+    for nome, (caminho, _) in variantes.items():
         fontes[str(Path(caminho).with_suffix(""))] = {"glb": relativo, "paleta": nome}
     return {
         "fontes": fontes,
-        "arquivo": str(saida.relative_to(RAIZ)),
-        "quadros": quadros,
-        "voxels": total_de_voxels,
+        "modelo": entrada,
+        "sobras": sobras,
+        "arquivo": relativo,
+        "quadros": len(recortes),
         "triangulos": triangulos,
-        "cores": n,
+        "cores": total_de_cores,
+        "bruto": bruto,
         "bytes": saida.stat().st_size,
     }
+
+
+def compactar(caminho: Path) -> None:
+    """Passa o .glb pelo gltfpack (EXT_meshopt_compression): a geometria de
+    voxel é muito regular e cai para um quinto. Sem o gltfpack instalado
+    (`npm install`), o arquivo fica como saiu — maior, mas igualmente válido."""
+    binario = RAIZ / "node_modules/.bin/gltfpack"
+    if not binario.exists():
+        return
+    temporario = caminho.with_suffix(".bruto.glb")
+    caminho.rename(temporario)
+    feito = subprocess.run(
+        [str(binario), "-i", str(temporario), "-o", str(caminho), "-cc", "-kn", "-ke", "-km"],
+        capture_output=True,
+        text=True,
+    )
+    if feito.returncode != 0 or not caminho.exists():
+        temporario.rename(caminho)
+        print(f"  gltfpack falhou em {caminho.name}: {feito.stderr.strip()[:200]}", file=sys.stderr)
+    else:
+        temporario.unlink()
+
+
+def pes_de(origem: Path, arquivo: str, regra: str | None) -> str | None:
+    """`"pesDe": "parado"`: a folha irmã `<prefixo>_parado.png`, tirando
+    pedaços do nome pela direita até achar (`lanceiro_golpe_cima_lado` →
+    `lanceiro_parado`). Os pés não podem pular de um quadro de golpe para o
+    parado, e é a folha parada que diz onde eles ficam."""
+    if not regra:
+        return None
+    caminho = Path(arquivo)
+    partes = caminho.stem.split("_")
+    for corte in range(len(partes) - 1, 0, -1):
+        candidato = caminho.with_name("_".join(partes[:corte] + [regra]) + ".png")
+        if (origem / candidato).exists():
+            return str(candidato)
+    return None
+
+
+def expandir(manifesto: dict) -> list[dict]:
+    """Os grupos do manifesto (um glob e as opções dele) viram uma folha por
+    arquivo. A primeira regra que pega um arquivo fica com ele."""
+    origem = RAIZ / manifesto["origem"]
+    folhas, vistos = [], set()
+    for grupo in manifesto["grupos"]:
+        opcoes = {k: v for k, v in grupo.items() if k not in ("glob", "exceto", "variantes", "pesDe")}
+        for caminho in sorted(origem.glob(grupo["glob"])):
+            arquivo = str(caminho.relative_to(origem))
+            if arquivo in vistos or caminho.stem in grupo.get("exceto", []):
+                continue
+            vistos.add(arquivo)
+            variantes = {
+                nome: f"{pasta}/{caminho.name}"
+                for nome, pasta in grupo.get("variantes", {}).items()
+                if (origem / pasta / caminho.name).exists()
+            }
+            folhas.append(
+                {**opcoes, "arquivo": arquivo, "variantes": variantes, "pesDe": pes_de(origem, arquivo, grupo.get("pesDe"))}
+            )
+    return folhas
+
+
+def _converter(args):
+    return converter(*args)
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--manifesto", default=str(RAIZ / "tools/voxel/manifesto.json"))
     ap.add_argument("--so", help="converte só as folhas cujo caminho contém este texto")
+    ap.add_argument("--processos", type=int, default=os.cpu_count() or 2)
     args = ap.parse_args()
     manifesto = json.loads(Path(args.manifesto).read_text(encoding="utf-8"))
-    folhas = [f for f in manifesto["folhas"] if not args.so or args.so in f["arquivo"]]
+    folhas = [f for f in expandir(manifesto) if not args.so or args.so in f["arquivo"]]
     if not folhas:
         sys.exit("nenhuma folha do manifesto casa com o filtro")
+
     # O índice é o que o jogo lê para saber que folha já tem modelo. Ele é
     # refeito a partir do que existe, para um `--so` não apagar o resto.
     caminho_do_indice = RAIZ / manifesto["destino"] / "indice.json"
-    indice = {"folhas": {}}
+    indice = {"folhas": {}, "modelos": {}}
     if caminho_do_indice.exists():
-        indice = json.loads(caminho_do_indice.read_text(encoding="utf-8"))
-    for folha in folhas:
-        r = converter(folha, manifesto)
-        indice["folhas"].update(r["fontes"])
-        caminho_do_indice.write_text(
-            json.dumps(indice, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8"
-        )
-        print(
-            f"{r['arquivo']}: {r['quadros']} quadros, {r['voxels']} voxels, "
-            f"{r['triangulos']} triângulos, {r['cores']} cores, {r['bytes'] / 1024:.0f} kB"
-        )
+        indice = {**indice, **json.loads(caminho_do_indice.read_text(encoding="utf-8"))}
+
+    total = bruto = 0
+    with Pool(args.processos) as fila:
+        while folhas:
+            resultados = fila.map(_converter, [(f, manifesto) for f in folhas])
+            folhas = []
+            for r in resultados:
+                indice["folhas"].update(r["fontes"])
+                indice["modelos"][r["arquivo"]] = r["modelo"]
+                total += r["bytes"]
+                bruto += r["bruto"]
+                print(
+                    f"{r['arquivo']}: {r['quadros']} quadros, {r['triangulos']} triângulos, "
+                    f"{r['cores']} cores, {r['bytes'] / 1024:.0f} kB"
+                )
+                # Variante de silhueta diferente vira modelo próprio.
+                folhas += [{"arquivo": sobra, "variantes": {}, "pesDe": None} for sobra in r["sobras"]]
+    caminho_do_indice.write_text(
+        json.dumps(indice, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8"
+    )
+    print(f"{len(indice['modelos'])} modelos no índice · {total / 1e6:.1f} MB ({bruto / 1e6:.1f} MB sem compactar)")
 
 
 if __name__ == "__main__":
