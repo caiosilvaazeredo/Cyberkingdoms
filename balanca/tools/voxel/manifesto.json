@@ -1,26 +1,9 @@
 {
-  "_": "A lista do que vira voxel: só o que o jogo desenha. Cada grupo é um glob em public/tiny e as opções dele; a saída espelha o caminho em public/voxel, trocando .png por .glb. Efeitos (fx/), interface, retratos, espuma e água ficam de fora de propósito e continuam 2D. Ver tools/voxelizar.py. `finos` são os ajustes à mão por cor (cor da folha base → espessura máxima): lâmina, rastro de golpe e afins não têm a grossura do corpo.",
+  "_": "A lista do que o renderer 3D precisa conhecer: só o que o jogo desenha. Cada grupo é um glob em public/tiny e as opções dele; a primeira regra que pega um arquivo fica com ele. Cenário vira modelo (.glb em public/voxel, espelhando o caminho); personagens, bichos e ícones são `\"forma\": \"sprite\"` — sprites planos em pé, sem modelo, só com a linha dos pés anotada no índice. Efeitos, interface, água e espuma não entram: o renderer os trata sozinho. `finos` são ajustes à mão por cor (cor → espessura máxima). Ver tools/voxelizar.py.",
   "origem": "public/tiny",
   "destino": "public/voxel",
   "compactar": true,
   "grupos": [
-    {
-      "glob": "units/azul/guerreiro_*.png",
-      "exceto": [
-        "flecha",
-        "clerigo_bencao"
-      ],
-      "variantes": {
-        "vermelho": "units/vermelho"
-      },
-      "pesDe": "parado",
-      "profundidade": 6,
-      "finos": {
-        "#ffffff": 1,
-        "#9cbeaa": 2,
-        "#d4edc2": 2
-      }
-    },
     {
       "glob": "units/azul/*.png",
       "exceto": [
@@ -31,15 +14,12 @@
         "vermelho": "units/vermelho"
       },
       "pesDe": "parado",
-      "profundidade": 6,
-      "finos": {
-        "#ffffff": 1
-      }
+      "forma": "sprite"
     },
     {
       "glob": "feras/*.png",
       "pesDe": "parado",
-      "profundidade": 8
+      "forma": "sprite"
     },
     {
       "glob": "buildings/blue/*.png",
@@ -50,34 +30,58 @@
       "telhado": 0.45
     },
     {
-      "glob": "buildings/oficina_*.png",
+      "glob": "buildings/oficina_nivel3.png",
       "forma": "caixa",
       "telhado": 0.45
     },
     {
+      "glob": "buildings/oficina_nivel2.png",
+      "profundidade": 40,
+      "degrau": 8
+    },
+    {
       "glob": "buildings/*.png",
-      "profundidade": 8
+      "forma": "sprite"
     },
     {
       "glob": "deco/Tree[12].png",
       "larguraQuadro": 192,
-      "profundidade": 8
+      "profundidade": 72,
+      "degrau": 8
     },
     {
       "glob": "deco/Tree[34].png",
-      "profundidade": 8
+      "profundidade": 72,
+      "degrau": 8
     },
     {
       "glob": "deco/Stump*.png",
-      "profundidade": 6
+      "profundidade": 28
     },
     {
       "glob": "deco/Bushe*.png",
-      "profundidade": 6
+      "profundidade": 44,
+      "degrau": 8
+    },
+    {
+      "glob": "deco/Rock*.png",
+      "profundidade": 36
     },
     {
       "glob": "deco/*.png",
-      "profundidade": 4
+      "profundidade": 12
+    },
+    {
+      "glob": "recursos/jazida_*.png",
+      "profundidade": 56
+    },
+    {
+      "glob": "recursos/gnomo_choupana.png",
+      "profundidade": 48
+    },
+    {
+      "glob": "recursos/gnomo_torre.png",
+      "profundidade": 48
     },
     {
       "glob": "recursos/*.png",
@@ -85,11 +89,11 @@
         "xama_avatar",
         "menino_rei_avatar"
       ],
-      "profundidade": 6
+      "forma": "sprite"
     },
     {
       "glob": "canhao/corpo.png",
-      "profundidade": 6
+      "profundidade": 40
     },
     {
       "glob": "terrain/ground.png",

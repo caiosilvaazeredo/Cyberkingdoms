@@ -29,7 +29,7 @@ import {
 } from './decoracao';
 import type { Particulas } from './particulas';
 import { TILE, chaoPara, encostaNaAgua, mascaraDe } from './tileset';
-import type { PintorVoxel } from './voxel/adaptador';
+import { abrirGrupo, fecharGrupos, type PintorVoxel } from './voxel/adaptador';
 
 /**
  * O mundo desenhado — água, chão, castelos, gente, rebanho e baú.
@@ -263,6 +263,17 @@ export interface Vista {
   paraTelaX(x: number): number;
   paraTelaY(y: number): number;
   escala: number;
+  /**
+   * Onde um ponto do mundo cai na tela, quando isso não se separa em x e y —
+   * a câmera em perspectiva do renderer 3D. Sem ele, valem as duas de cima.
+   */
+  ponto?: (x: number, y: number) => { x: number; y: number } | null;
+}
+
+/** O ponto do mundo na tela, pela projeção que a vista tiver. */
+function naTela(vista: Vista, alvo: { x: number; y: number }): { x: number; y: number } | null {
+  if (vista.ponto) return vista.ponto(alvo.x, alvo.y);
+  return { x: vista.paraTelaX(alvo.x), y: vista.paraTelaY(alvo.y) };
 }
 
 export function vistaDe(camera: Camera, largura: number, altura: number): Vista {
@@ -623,7 +634,11 @@ function pintarMundo(
   }
 
   if (!estado) {
-    for (const p of pinturas.sort((a, b) => a.y - b.y)) p.pintar();
+    for (const p of pinturas.sort((a, b) => a.y - b.y)) {
+      abrirGrupo(ctx, p.y);
+      p.pintar();
+    }
+    fecharGrupos(ctx);
     return;
   }
 
@@ -1144,7 +1159,13 @@ function pintarMundo(
     });
   }
 
-  for (const p of pinturas.sort((a, b) => a.y - b.y)) p.pintar();
+  // `abrirGrupo` não faz nada no canvas de verdade; no renderer 3D, é o que
+  // diz de que coisa do mundo são o nome e a barra pintados a seguir.
+  for (const p of pinturas.sort((a, b) => a.y - b.y)) {
+    abrirGrupo(ctx, p.y);
+    p.pintar();
+  }
+  fecharGrupos(ctx);
 
   // --- efeito da bênção do clérigo ---------------------------------------
   for (const brilho of olhar.brilhos) {
@@ -1755,8 +1776,9 @@ export function realce(
   alvo: { x: number; y: number },
   tempo: number,
 ): void {
-  const x = vista.paraTelaX(alvo.x);
-  const y = vista.paraTelaY(alvo.y);
+  const onde = naTela(vista, alvo);
+  if (!onde) return;
+  const { x, y } = onde;
   const r = (26 + Math.sin(tempo * 4) * 3) * vista.escala;
   ctx.save();
   ctx.strokeStyle = 'rgba(255, 233, 168, 0.9)';
@@ -1777,8 +1799,9 @@ export function bussola(
   alvo: { x: number; y: number },
   cor: string,
 ): void {
-  const x = vista.paraTelaX(alvo.x);
-  const y = vista.paraTelaY(alvo.y);
+  // Atrás da câmera não há ponto na tela: a seta aponta para baixo, que é
+  // para onde fica o que está às costas de quem olha.
+  const { x, y } = naTela(vista, alvo) ?? { x: largura / 2, y: altura * 2 };
   const margem = 44;
   if (x > margem && x < largura - margem && y > margem && y < altura - margem) return;
   const cx = largura / 2;

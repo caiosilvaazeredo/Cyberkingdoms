@@ -1,17 +1,23 @@
 import {
   BufferGeometry,
-  Camera,
+  Color,
   DataTexture,
   DoubleSide,
+  Float32BufferAttribute,
+  InstancedBufferAttribute,
   InstancedMesh,
   Matrix4,
   Mesh,
+  MeshBasicMaterial,
   MeshStandardMaterial,
   NearestFilter,
+  PerspectiveCamera,
+  PlaneGeometry,
   Quaternion,
   RGBAFormat,
   Scene,
   ShaderMaterial,
+  Texture,
   Vector3,
   Vector4,
   WebGLRenderer,
@@ -19,79 +25,103 @@ import {
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 
-import type { CameraDoMundo, IndiceDeVoxels, ModeloNoIndice, PintorVoxel } from './adaptador';
+import type {
+  CameraDoMundo,
+  IndiceDeVoxels,
+  ModeloNoIndice,
+  PintorVoxel,
+  PontoNaTela,
+} from './adaptador';
 
 /**
- * O renderer voxel: modelos `.glb` de `public/voxel`, câmera oblíqua.
+ * O renderer 3D: cenário em volumes, personagens em sprites, câmera em
+ * perspectiva.
  *
  * ## A câmera
  *
- * Ortográfica oblíqua: `telaX = x`, `telaY = y − altura`. O chão cai na tela
- * exatamente onde o 2D o põe (tile de 64 px × zoom) e um voxel de altura vale
- * um pixel do sprite, então o enquadramento não muda — `seguir`, `prender` e o
- * zoom são os mesmos, só a projeção é uma matriz em vez de duas contas.
+ * Em perspectiva, baixa, olhando do sul para o norte por cima do ombro de
+ * quem joga — o horizonte e o céu aparecem. Ela mira o mesmo ponto que a
+ * câmera 2D do jogo (`seguir`, `prender` e o zoom continuam valendo) e fica
+ * à distância em que esse ponto sai na tela na mesma escala do 2D.
  *
  * No espaço do three: X é o x do mundo, **Z é o y do mundo** (sul = perto de
  * quem olha) e Y é a altura.
  *
- * ## Quem fica na frente de quem
- *
- * Entre objetos, vale a **ordem de pintura do 2D**, e não a geometria: o jogo
- * ordena por uma chave que nem sempre é o pé do sprite (o prédio ordena pela
- * porta, e quem está na soleira aparece na frente dele). Cada objeto é
- * empurrado ao longo do raio de visão — o que não muda onde ele cai na tela —
- * até uma fatia de profundidade só dele, na ordem em que foi pedido. O
- * z-buffer resolve o que sobra: as faces de um mesmo modelo.
- *
  * ## Como o mundo chega aqui
  *
- * `desenhar` entrega ao desenho 2D um contexto **gravador**. Cada chamada é
- * anotada numa lista em vez de ir para o canvas, e cada `drawImage` é
- * conferido: se a imagem tem modelo, o modelo entra em cena no retângulo que o
- * sprite ocuparia e a lista ganha um "cole aqui o pedaço do 3D". Depois o 3D é
- * renderizado de uma vez e a lista é tocada em ordem.
+ * `desenhar` entrega ao desenho 2D um contexto **gravador**. O jogo desenha o
+ * mundo plano de sempre; cada pedido é anotado e remontado em 3D:
  *
- * Tocar em ordem é o que mantém a ordenação por y entre o que já é modelo e o
- * que ainda é desenho 2D (baú, bolsa, ponte, efeitos): cada modelo cola o seu
- * retângulo na vez dele, e entre modelos quem resolve é o z-buffer.
+ * - `drawImage` de imagem com modelo → o modelo, no ponto do chão em que o pé
+ *   do sprite estaria;
+ * - `drawImage` de qualquer outra imagem → um sprite plano em pé (ou deitado,
+ *   se for água e espuma, que são pintadas antes de tudo);
+ * - traço e texto → guardados por **grupo** (uma coisa do mundo) e tocados em
+ *   2D por cima do quadro 3D, no ponto da tela em que a coisa foi parar e na
+ *   escala daquela distância.
  *
- * ## Espelho
+ * ## O que é de quem
  *
- * Onde o 2D faz `scale(-1, 1)`, aqui o modelo é espelhado em x. Girar 180°
- * não serve: a frente do modelo é plana (é o desenho do sprite) e o volume
- * cresce para trás, então o giro mostraria as costas.
- *
- * ## Instancing
- *
- * Um `InstancedMesh` por (modelo, quadro, paleta): cem árvores no mesmo quadro
- * de animação são uma chamada de desenho. O chão vai numa cena à parte,
- * renderizada e colada inteira antes de tudo.
+ * O desenho 2D diz "o nome fica 34 px acima do boneco", e em perspectiva isso
+ * só tem sentido relativo ao boneco. Cada grupo tem uma âncora — o pé da
+ * primeira imagem dele, ou a linha do mundo em que foi aberto — e tudo o mais
+ * do grupo é posto em relação a ela.
  */
 
-const VERTICE = /* glsl */ `
+/** Abertura vertical da câmera, em graus. */
+const ABERTURA = 50;
+/** Quanto a câmera olha para baixo, a partir do horizonte. */
+const INCLINACAO = (22 * Math.PI) / 180;
+/** O alvo fica um pouco ao norte de quem joga: vê-se mais do que vem pela frente. */
+const ADIANTE = 64;
+/** A altura da água, abaixo do topo dos blocos de chão (que têm 16). */
+const NIVEL_DA_AGUA = -10;
+
+const VERTICE_DO_MODELO = /* glsl */ `
   uniform vec4 uvDaPaleta;
   varying vec2 vUv;
   varying float vLuz;
   void main() {
     vUv = uv * uvDaPaleta.xy + uvDaPaleta.zw;
-    vec3 n = normalize(mat3(instanceMatrix) * mat3(modelMatrix) * normal);
-    vLuz = n.y > 0.5 ? 1.0 : (abs(n.z) > 0.5 ? 0.0 : -1.0);
+    vec3 n = normalize(mat3(instanceMatrix) * normal);
+    // Luz fixa, de cima e de frente: o topo na cor exata, a frente um pouco
+    // abaixo, os lados na sombra. É o que separa telhado de parede.
+    vLuz = n.y > 0.5 ? 1.0 : (n.z > 0.5 ? 0.84 : 0.66);
     gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
   }
 `;
 
-const FRAGMENTO = /* glsl */ `
+const FRAGMENTO_DO_MODELO = /* glsl */ `
   uniform sampler2D paleta;
-  uniform float clarearTopo;
   varying vec2 vUv;
   varying float vLuz;
   void main() {
-    vec3 cor = texture2D(paleta, vUv).rgb;
-    // A frente leva a cor exata do pixel; o topo clareia um nada para o volume
-    // se ler, e o resto (que a câmera quase não vê) escurece.
-    if (vLuz > 0.5) cor = mix(cor, vec3(1.0), clarearTopo);
-    else if (vLuz < -0.5) cor *= 0.8;
-    gl_FragColor = vec4(cor, 1.0);
+    gl_FragColor = vec4(texture2D(paleta, vUv).rgb * vLuz, 1.0);
+  }
+`;
+
+const VERTICE_DO_SPRITE = /* glsl */ `
+  attribute vec4 recorte;
+  attribute vec3 tinta;
+  varying vec2 vUv;
+  varying vec3 vTinta;
+  void main() {
+    vUv = recorte.xy + position.xy * recorte.zw;
+    vTinta = tinta;
+    gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+  }
+`;
+
+const FRAGMENTO_DO_SPRITE = /* glsl */ `
+  uniform sampler2D mapa;
+  varying vec2 vUv;
+  varying vec3 vTinta;
+  void main() {
+    vec4 cor = texture2D(mapa, vUv);
+    // Recorte duro: tira o vazio e também a sombra do chão, que o pacote pinta
+    // com alfa parcial.
+    if (cor.a < 0.4) discard;
+    gl_FragColor = vec4(cor.rgb * vTinta, 1.0);
   }
 `;
 
@@ -99,6 +129,8 @@ interface Quadro {
   geometria: BufferGeometry;
   /** A matriz do nó no `.glb` — desfaz a quantização do conversor. */
   matriz: Matrix4;
+  /** O ponto mais alto e mais ao fundo do modelo, em unidades dele. */
+  topo: { altura: number; fundo: number };
 }
 
 interface Modelo {
@@ -106,12 +138,52 @@ interface Modelo {
   quadros: Quadro[];
   uvDaPaleta: Vector4;
   materiais: Map<string, ShaderMaterial>;
-  lotes: Map<string, Lote>;
+  lotes: Map<string, { malha: InstancedMesh; usados: number }>;
 }
 
-interface Lote {
+/** Os sprites de uma mesma imagem: um `InstancedMesh` só. */
+interface LoteDeSprites {
   malha: InstancedMesh;
+  material: ShaderMaterial;
+  recorte: InstancedBufferAttribute;
+  tinta: InstancedBufferAttribute;
   usados: number;
+}
+
+interface Ponto {
+  x: number;
+  y: number;
+}
+
+type Fonte = { width: number; height: number; src?: string };
+
+/** Uma imagem a pôr no mundo como sprite. */
+interface ImagemPendente {
+  fonte: Fonte;
+  /** Recorte de origem, em pixels da imagem. */
+  sx: number;
+  sy: number;
+  sw: number;
+  sh: number;
+  /** Cantos de destino no desenho 2D: cima-esquerda, cima-direita, baixo-esquerda. */
+  cantos: [Ponto, Ponto, Ponto];
+}
+
+interface Grupo {
+  /** A âncora no desenho 2D, em pixels de CSS. */
+  ancora: Ponto | null;
+  /**
+   * O ponto do mundo a que a âncora corresponde. Sem ele, é o chão debaixo
+   * dela. Um prédio ancora pelo **topo**: o nome dele é pintado "acima do
+   * sprite", e o sprite é bem mais alto que a caixa que o prédio virou.
+   */
+  mundo: { x: number; altura: number; z: number } | null;
+  /** A linha do mundo em que o grupo foi aberto, se foi o jogo que abriu. */
+  y: number | null;
+  /** Já tem âncora de imagem: as próximas não a trocam. */
+  fixo: boolean;
+  /** Profundidade de `save` — é o que fecha um grupo implícito. */
+  salvos: number;
 }
 
 function texturaDaPaleta(cores: readonly string[]): DataTexture {
@@ -127,23 +199,22 @@ function texturaDaPaleta(cores: readonly string[]): DataTexture {
   return t;
 }
 
-// O que cada operação gravada é.
-/**
- * A fatia de profundidade de cada objeto — maior que qualquer modelo. O mais
- * fundo é o telhado de um prédio, que deita para trás uma linha por pixel.
- */
-const FATIA = 512;
-/** Quantas fatias cabem na faixa de profundidade da câmera. */
-const FATIAS = 2048;
+/** O quadrado de (0,0) a (1,1) em que todo sprite é desenhado. */
+function quadrado(): BufferGeometry {
+  const g = new BufferGeometry();
+  g.setAttribute('position', new Float32BufferAttribute([0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0], 3));
+  g.setIndex([0, 1, 2, 0, 2, 3]);
+  return g;
+}
 
+// O que cada operação gravada é.
 const ATRIBUIR = 0;
 const CHAMAR = 1;
-const COLAR_CHAO = 2;
-const COLAR = 3;
+const GRUPO = 2;
+const FIM_DO_GRUPO = 3;
 
-/** Métodos que pintam: ficam só na lista, e vão ao canvas na hora de tocar. */
+/** Métodos que pintam. */
 const PINTAM = new Set([
-  'drawImage',
   'fillRect',
   'strokeRect',
   'clearRect',
@@ -152,31 +223,6 @@ const PINTAM = new Set([
   'fill',
   'stroke',
 ]);
-
-/**
- * O estado que um texto leva consigo quando é adiado para o fim do quadro.
- */
-const ESTADO_DO_TEXTO = [
-  'font',
-  'textAlign',
-  'textBaseline',
-  'fillStyle',
-  'strokeStyle',
-  'lineWidth',
-  'lineJoin',
-  'globalAlpha',
-  'shadowColor',
-  'shadowBlur',
-  'shadowOffsetX',
-  'shadowOffsetY',
-] as const;
-
-interface Texto {
-  nome: string;
-  args: unknown[];
-  estado: unknown[];
-  matriz: DOMMatrix;
-}
 
 /** Métodos que só perguntam: respondidos na hora pelo contexto de verdade. */
 const PERGUNTAM = new Set([
@@ -192,42 +238,56 @@ const PERGUNTAM = new Set([
   'isPointInStroke',
 ]);
 
+/** Onde, nos argumentos de cada método, está o primeiro ponto (x, y). */
+const PONTO_EM: Readonly<Record<string, number>> = {
+  translate: 0,
+  moveTo: 0,
+  lineTo: 0,
+  arc: 0,
+  ellipse: 0,
+  rect: 0,
+  roundRect: 0,
+  fillRect: 0,
+  strokeRect: 0,
+  fillText: 1,
+  strokeText: 1,
+};
+
+const BRANCO: Fonte = { width: 1, height: 1 };
+
 export class RenderVoxel implements PintorVoxel {
   private readonly tela = document.createElement('canvas');
   private readonly gl: WebGLRenderer;
-  private readonly cenaDoChao = new Scene();
   private readonly cena = new Scene();
-  private readonly camera = new Camera();
+  private readonly camera = new PerspectiveCamera(ABERTURA, 1, 20, 60000);
   private readonly carregador = new GLTFLoader();
   /** Por `.glb`: o modelo, ou `null` enquanto baixa (ou se falhou). */
   private readonly modelos = new Map<string, Modelo | null>();
-  /** Por imagem: o modelo e a paleta dela, ou `null` se não tem. */
-  private readonly porImagem = new WeakMap<object, { glb: string; paleta: string } | null>();
+  private readonly sprites = new Map<object, LoteDeSprites>();
+  /** Por imagem: o caminho dela em `/tiny`, sem extensão. */
+  private readonly caminhos = new WeakMap<object, string | null>();
+  private readonly quadrado = quadrado();
+  private readonly mar: Mesh;
 
   private real!: CanvasRenderingContext2D;
   private gravador: CanvasRenderingContext2D | null = null;
   private readonly metodos = new Map<string, (...args: unknown[]) => unknown>();
   private ops: unknown[] = [];
-  /**
-   * Nomes e placas, pintados por cima de tudo no fim do quadro.
-   *
-   * Colar o retângulo de um modelo traz junto os pixels de qualquer outro
-   * modelo que esteja nele — inclusive um pintado **antes** de um rótulo, que
-   * assim acabaria por cima do rótulo. Texto por último resolve isso, e é
-   * também o que se quer de um nome: que dê para ler.
-   */
-  private textos: Texto[] = [];
   private vista: CameraDoMundo = { x: 0, y: 0, zoom: 1 };
   private largura = 1;
   private altura = 1;
   private dpr = 1;
-  private temChao = false;
-  private ordem = 0;
+  /** 0: antes da lista ordenada (o chão). 1: dentro dela. 2: depois (efeitos). */
+  private fase = 0;
+  private grupo: Grupo | null = null;
+  private deitados = 0;
 
   private readonly m = new Matrix4();
   private readonly p = new Vector3();
   private readonly e = new Vector3();
+  private readonly v = new Vector3();
   private readonly semGiro = new Quaternion();
+  private readonly cor = new Color();
 
   private constructor(
     private readonly indice: IndiceDeVoxels,
@@ -235,14 +295,69 @@ export class RenderVoxel implements PintorVoxel {
   ) {
     this.gl = new WebGLRenderer({ canvas: this.tela, alpha: true, antialias: false });
     this.gl.setClearColor(0x000000, 0);
-    this.camera.matrixAutoUpdate = false;
     this.carregador.setMeshoptDecoder(MeshoptDecoder);
+    // O mar até o horizonte: o mapa acaba, a água não.
+    this.mar = new Mesh(
+      new PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
+      new MeshBasicMaterial({ color: 0x47abaa }),
+    );
+    this.mar.scale.setScalar(120000);
+    this.mar.position.y = NIVEL_DA_AGUA - 1;
+    this.cena.add(this.mar);
   }
 
   /** Lê o índice. Os modelos são baixados um a um, quando aparecem em cena. */
   static async criar(raiz = '/voxel'): Promise<RenderVoxel> {
     const indice = (await (await fetch(`${raiz}/indice.json`)).json()) as IndiceDeVoxels;
     return new RenderVoxel(indice, raiz);
+  }
+
+  enquadrar(camera: CameraDoMundo, largura: number, altura: number): void {
+    this.vista = camera;
+    this.largura = largura;
+    this.altura = altura;
+    const c = this.camera;
+    c.aspect = largura / altura;
+    c.updateProjectionMatrix();
+    // À distância em que o alvo sai na tela na escala do zoom 2D.
+    const distancia = altura / (2 * camera.zoom * Math.tan((ABERTURA * Math.PI) / 360));
+    const alvoZ = camera.y - ADIANTE;
+    c.position.set(
+      camera.x,
+      distancia * Math.sin(INCLINACAO),
+      alvoZ + distancia * Math.cos(INCLINACAO),
+    );
+    c.lookAt(camera.x, 0, alvoZ);
+    c.updateMatrixWorld(true);
+    this.mar.position.x = camera.x;
+    this.mar.position.z = camera.y;
+  }
+
+  paraTela(x: number, y: number): PontoNaTela | null {
+    return this.projetar(x, 0, y);
+  }
+
+  private projetar(x: number, h: number, z: number): PontoNaTela | null {
+    const v = this.v.set(x, h, z).applyMatrix4(this.camera.matrixWorldInverse);
+    const fundo = -v.z;
+    if (fundo < this.camera.near) return null;
+    const escala = this.altura / 2 / (Math.tan((ABERTURA * Math.PI) / 360) * fundo);
+    return {
+      x: this.largura / 2 + v.x * escala,
+      y: this.altura / 2 - v.y * escala,
+      escala,
+    };
+  }
+
+  paraMundo(telaX: number, telaY: number): Ponto | null {
+    const origem = this.camera.position;
+    const raio = this.v
+      .set((telaX / this.largura) * 2 - 1, 1 - (telaY / this.altura) * 2, 0.5)
+      .unproject(this.camera)
+      .sub(origem);
+    if (raio.y >= -1e-6) return null;
+    const t = -origem.y / raio.y;
+    return { x: origem.x + raio.x * t, y: origem.z + raio.z * t };
   }
 
   desenhar(
@@ -253,18 +368,20 @@ export class RenderVoxel implements PintorVoxel {
     pintar: (ctx: CanvasRenderingContext2D) => void,
   ): void {
     this.real = ctx;
-    this.vista = camera;
-    this.largura = largura;
-    this.altura = altura;
     this.dpr = ctx.getTransform().a;
+    this.enquadrar(camera, largura, altura);
+    const l = Math.floor(largura * this.dpr);
+    const a = Math.floor(altura * this.dpr);
+    if (this.tela.width !== l || this.tela.height !== a) this.gl.setSize(l, a, false);
+
     this.ops.length = 0;
-    this.textos.length = 0;
-    this.temChao = false;
-    this.ordem = 0;
-    this.projetar();
+    this.fase = 0;
+    this.grupo = null;
+    this.deitados = 0;
     for (const modelo of this.modelos.values()) {
       if (modelo) for (const lote of modelo.lotes.values()) lote.usados = 0;
     }
+    for (const lote of this.sprites.values()) lote.usados = 0;
 
     // O desenho de sempre, no gravador. O estado (transformações, fonte,
     // traçado) também é aplicado ao contexto de verdade na hora, para que as
@@ -273,6 +390,7 @@ export class RenderVoxel implements PintorVoxel {
     ctx.save();
     try {
       pintar(this.gravador ?? (this.gravador = this.criarGravador()));
+      this.fecharGrupo();
     } finally {
       ctx.restore();
     }
@@ -285,38 +403,50 @@ export class RenderVoxel implements PintorVoxel {
         if (lote.usados > 0) lote.malha.instanceMatrix.needsUpdate = true;
       }
     }
+    for (const lote of this.sprites.values()) {
+      lote.malha.count = lote.usados;
+      lote.malha.visible = lote.usados > 0;
+      if (lote.usados > 0) {
+        lote.malha.instanceMatrix.needsUpdate = true;
+        lote.recorte.needsUpdate = true;
+        lote.tinta.needsUpdate = true;
+      }
+    }
+
+    this.ceu();
+    this.gl.render(this.cena, this.camera);
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(this.tela, 0, 0);
+    ctx.restore();
     this.tocar();
   }
 
-  /**
-   * A projeção oblíqua, escrita direto em coordenadas de recorte:
-   *
-   *     ndcX =  2z/L · (X − cx)
-   *     ndcY =  2z/A · (Y − Z + cy)      ← altura sobe, sul desce
-   *     ndcZ = −2/F · (Z − cy)           ← mais ao sul = mais perto
-   */
-  private projetar(): void {
-    const l = Math.floor(this.largura * this.dpr);
-    const a = Math.floor(this.altura * this.dpr);
-    if (this.tela.width !== l || this.tela.height !== a) this.gl.setSize(l, a, false);
-    const { x, y, zoom } = this.vista;
-    const sx = (2 * zoom) / this.largura;
-    const sy = (2 * zoom) / this.altura;
-    const sz = 2 / (FATIA * FATIAS);
-    // prettier-ignore
-    this.camera.projectionMatrix.set(
-      sx, 0,   0,  -sx * x,
-      0,  sy, -sy,  sy * y,
-      0,  0,  -sz,  sz * y,
-      0,  0,   0,   1,
-    );
-    this.camera.projectionMatrixInverse.copy(this.camera.projectionMatrix).invert();
+  /** O céu: um degradê que clareia até o horizonte. */
+  private ceu(): void {
+    const ctx = this.real;
+    const longe = this.projetar(this.vista.x, 0, this.vista.y - 50000);
+    const horizonte = Math.max(8, Math.min(this.altura, (longe?.y ?? 0) + 2));
+    const degrade = ctx.createLinearGradient(0, 0, 0, horizonte);
+    degrade.addColorStop(0, '#3f86e0');
+    degrade.addColorStop(1, '#cfeaff');
+    ctx.fillStyle = degrade;
+    ctx.fillRect(0, 0, this.largura, this.altura);
   }
+
+  // --- gravação -------------------------------------------------------------
 
   private criarGravador(): CanvasRenderingContext2D {
     const eu = this;
     return new Proxy({} as CanvasRenderingContext2D, {
       get(_alvo, nome: string) {
+        if (nome === 'grupoVoxel') return (y: number) => eu.abrirGrupo(y);
+        if (nome === 'fimDosGruposVoxel') {
+          return () => {
+            eu.fecharGrupo();
+            eu.fase = 2;
+          };
+        }
         const valor = (eu.real as unknown as Record<string, unknown>)[nome];
         if (typeof valor !== 'function') return valor;
         let metodo = eu.metodos.get(nome);
@@ -338,139 +468,232 @@ export class RenderVoxel implements PintorVoxel {
     const chamar = (args: unknown[]): unknown =>
       (this.real as unknown as Record<string, (...a: unknown[]) => unknown>)[nome]!(...args);
     if (PERGUNTAM.has(nome)) return (...args) => chamar(args);
-    if (nome === 'drawImage') {
-      return (...args) => {
-        if (!this.imagem(args)) this.ops.push(CHAMAR, nome, args);
-      };
-    }
-    if (nome === 'fillText' || nome === 'strokeText') {
-      return (...args) => {
-        const real = this.real as unknown as Record<string, unknown>;
-        this.textos.push({
-          nome,
-          args,
-          estado: ESTADO_DO_TEXTO.map((p) => real[p]),
-          matriz: this.real.getTransform(),
-        });
-      };
-    }
-    if (PINTAM.has(nome)) {
-      return (...args) => {
-        this.ops.push(CHAMAR, nome, args);
-      };
-    }
+    if (nome === 'drawImage') return (...args) => this.imagem(args);
+    const pinta = PINTAM.has(nome);
+    const pontoEm = PONTO_EM[nome];
     return (...args) => {
+      if (this.fase === 0 && pinta) {
+        if (nome === 'fillRect') this.retanguloNoChao(args as number[]);
+        return undefined;
+      }
+      // Fora da lista ordenada, o que é traço vira um grupo próprio, ancorado
+      // no primeiro ponto que aparecer — um dizer que sobe, um clarão.
+      if (this.fase === 2 && !this.grupo) this.abrirGrupo(null);
+      const g = this.grupo;
+      if (g && pontoEm !== undefined && !g.ancora && g.y === null) {
+        g.ancora = this.noDesenho(args[pontoEm] as number, args[pontoEm + 1] as number);
+      }
       this.ops.push(CHAMAR, nome, args);
-      return chamar(args);
+      const volta = pinta ? undefined : chamar(args);
+      if (g && g.y === null) {
+        if (nome === 'save') g.salvos++;
+        else if (nome === 'restore') g.salvos--;
+        if (g.salvos <= 0 && (pinta || nome === 'restore')) this.fecharGrupo();
+      }
+      return volta;
     };
   }
 
-  /**
-   * Um `drawImage`. Devolve `true` se virou modelo.
-   *
-   * O retângulo de destino é o do sprite, já com o arredondamento que o 2D
-   * fez; o modelo é encaixado nele. O recorte de origem diz qual é o quadro.
-   */
-  private imagem(args: unknown[]): boolean {
-    const img = args[0] as { width: number; height: number; src?: string };
+  private abrirGrupo(y: number | null): void {
+    this.fecharGrupo();
+    if (y !== null) this.fase = 1;
+    this.grupo = { ancora: null, mundo: null, y, fixo: false, salvos: 0 };
+    this.ops.push(GRUPO, this.grupo, 0);
+  }
+
+  private fecharGrupo(): void {
+    const g = this.grupo;
+    if (!g) return;
+    this.grupo = null;
+    if (!g.ancora) {
+      g.ancora = {
+        x: this.largura / 2,
+        y: g.y === null ? this.altura / 2 : (g.y - this.vista.y) * this.vista.zoom + this.altura / 2,
+      };
+    }
+    this.ops.push(FIM_DO_GRUPO, 0, 0);
+  }
+
+  /** Um ponto dos argumentos, levado pela transformação atual a pixels de CSS. */
+  private noDesenho(x: number, y: number): Ponto {
+    const t = this.real.getTransform();
+    return { x: (t.a * x + t.c * y + t.e) / this.dpr, y: (t.b * x + t.d * y + t.f) / this.dpr };
+  }
+
+  /** O ponto do chão do mundo que o desenho 2D põe naquele pixel. */
+  private noChao(p: Ponto): Ponto {
+    return {
+      x: (p.x - this.largura / 2) / this.vista.zoom + this.vista.x,
+      y: (p.y - this.altura / 2) / this.vista.zoom + this.vista.y,
+    };
+  }
+
+  private caminhoDe(img: Fonte): string | null {
+    let caminho = this.caminhos.get(img);
+    if (caminho === undefined) {
+      caminho =
+        typeof img.src === 'string'
+          ? img.src.replace(/^.*\/tiny\//, '').replace(/\.png$/, '')
+          : null;
+      this.caminhos.set(img, caminho);
+    }
+    return caminho;
+  }
+
+  /** Um `drawImage`: vira modelo, sprite em pé ou sprite deitado. */
+  private imagem(args: unknown[]): void {
+    const img = args[0] as Fonte;
     let sx = 0;
     let sy = 0;
     let sw = img.width;
     let sh = img.height;
     let dx: number, dy: number, dw: number, dh: number;
     if (args.length === 9) {
-      [sx, sy, sw, sh, dx, dy, dw, dh] = args.slice(1) as number[] as [
+      [sx, sy, sw, sh, dx, dy, dw, dh] = args.slice(1) as [
         number, number, number, number, number, number, number, number,
       ];
     } else if (args.length === 5) {
       [dx, dy, dw, dh] = args.slice(1) as [number, number, number, number];
     } else {
-      return false;
+      return;
     }
-    if (this.real.globalAlpha < 1) return false;
-    const achado = this.modeloDe(img);
-    if (!achado) return false;
-    const { modelo, paleta } = achado;
+    if (this.real.globalAlpha < 0.2) return;
+    if (this.fase === 2 && !this.grupo) this.abrirGrupo(null);
+    const g = this.grupo;
+    const caminho = this.caminhoDe(img);
+    const fechaSeSolto = (): void => {
+      if (g && g === this.grupo && g.y === null && g.salvos <= 0) this.fecharGrupo();
+    };
+
+    const entrada = caminho ? this.indice.folhas[caminho] : undefined;
+    if (entrada && this.modelo(entrada, sx, sy, sw, sh, dx, dy, dw, dh)) {
+      fechaSeSolto();
+      return;
+    }
+
+    const pendente: ImagemPendente = {
+      fonte: img,
+      sx,
+      sy,
+      sw,
+      sh,
+      cantos: [
+        this.noDesenho(dx, dy),
+        this.noDesenho(dx + dw, dy),
+        this.noDesenho(dx, dy + dh),
+      ],
+    };
+    if (this.fase === 0) {
+      this.sprite(pendente, null, true);
+      return;
+    }
+    // Uma folha de personagem sabe onde ficam os pés dela, e vira um sprite
+    // em pé no mundo. Qualquer outra imagem de um grupo (o ícone da placa, o
+    // retrato sobre a cabeça) é pintada em 2D junto com o traço dele — e, sem
+    // grupo que tenha âncora, fica em pé na própria base.
+    const dados = caminho ? this.indice.sprites[caminho] : undefined;
+    const semAncora = !g || (!g.ancora && g.y === null);
+    const pe = dados
+      ? this.noDesenho(dx + dw / 2, dy + (dados.pes / dados.lado) * dh)
+      : semAncora
+        ? this.noDesenho(dx + dw / 2, dy + dh)
+        : null;
+    if (pe) {
+      if (g && !g.fixo) {
+        g.ancora = pe;
+        g.fixo = true;
+      }
+      this.sprite(pendente, g?.ancora ?? pe, false);
+    } else {
+      this.ops.push(CHAMAR, 'drawImage', args);
+    }
+    fechaSeSolto();
+  }
+
+  /** Põe o modelo de uma folha em cena. Devolve `false` se ainda não há modelo. */
+  private modelo(
+    entrada: { glb: string; paleta: string },
+    sx: number,
+    sy: number,
+    sw: number,
+    sh: number,
+    dx: number,
+    dy: number,
+    dw: number,
+    dh: number,
+  ): boolean {
+    let modelo = this.modelos.get(entrada.glb);
+    if (modelo === undefined) {
+      // Primeira vez que esta folha aparece: baixa, e até chegar é sprite.
+      this.modelos.set(entrada.glb, null);
+      void this.baixar(entrada.glb);
+      modelo = null;
+    }
+    if (!modelo) return false;
     const d = modelo.dados;
     if (Math.abs(sw - d.larguraQuadro) > 0.5 || Math.abs(sh - d.lado) > 0.5) return false;
     const quadro = Math.round(sy / d.lado) * d.colunas + Math.round(sx / d.larguraQuadro);
     if (quadro < 0 || quadro >= d.quadros) return false;
 
     const t = this.real.getTransform();
-    const dpr = this.dpr;
-    const zoom = this.vista.zoom;
-    // Escala do sprite na tela, em pixels de CSS por pixel de sprite.
-    const giro = Math.hypot(t.a, t.b) / dpr;
-    const escala = (dh / d.lado) * giro;
-    const paraMundo = (px: number, py: number): { x: number; y: number } => ({
-      x: ((t.a * px + t.c * py + t.e) / dpr - this.largura / 2) / zoom + this.vista.x,
-      y: ((t.b * px + t.d * py + t.f) / dpr - this.altura / 2) / zoom + this.vista.y,
-    });
-
-    if (d.plano === 'chao') {
-      const canto = paraMundo(dx, dy);
-      this.instancia(modelo, quadro, paleta, canto.x, canto.y, escala / zoom, false, this.cenaDoChao);
-      if (!this.temChao) {
-        this.temChao = true;
-        this.ops.push(COLAR_CHAO, 0, 0);
-      }
-      return true;
-    }
-
+    const escala = ((dh / d.lado) * Math.hypot(t.a, t.b)) / this.dpr / this.vista.zoom;
     const espelhar = t.a * t.d - t.b * t.c < 0;
-    const pe = paraMundo(dx + dw / 2, dy + (d.pes / d.lado) * dh);
-    // Subir e ir para o sul na mesma medida anda sobre o raio de visão: o
-    // objeto fica no mesmo pixel e muda só de profundidade.
-    const fatia = this.vista.y + (Math.min(this.ordem++, FATIAS - 2) - FATIAS / 2 + 1) * FATIA;
-    this.instancia(modelo, quadro, paleta, pe.x, pe.y, escala / zoom, espelhar, this.cena, fatia - pe.y);
-
-    // O retângulo a colar: o do sprite na tela, mais a espessura do modelo —
-    // que a câmera oblíqua mostra como alguns pixels a mais em cima e embaixo.
-    let x0 = Infinity;
-    let y0 = Infinity;
-    let x1 = -Infinity;
-    let y1 = -Infinity;
-    for (const [cx, cy] of [
-      [dx, dy],
-      [dx + dw, dy],
-      [dx, dy + dh],
-      [dx + dw, dy + dh],
-    ] as const) {
-      const px = t.a * cx + t.c * cy + t.e;
-      const py = t.b * cx + t.d * cy + t.f;
-      x0 = Math.min(x0, px);
-      x1 = Math.max(x1, px);
-      y0 = Math.min(y0, py);
-      y1 = Math.max(y1, py);
+    const noDesenho =
+      d.plano === 'chao'
+        ? this.noDesenho(dx, dy)
+        : this.noDesenho(dx + dw / 2, dy + (d.pes / d.lado) * dh);
+    const chao = this.noChao(noDesenho);
+    const g = this.grupo;
+    if (g && !g.fixo && d.plano !== 'chao') {
+      const topo = modelo.quadros[quadro]!.topo;
+      g.ancora = this.noDesenho(dx + dw / 2, dy);
+      g.mundo = { x: chao.x, altura: topo.altura * escala, z: chao.y + topo.fundo * escala };
+      g.fixo = true;
     }
-    const folga = Math.ceil((d.meiaProfundidade + 2) * escala * dpr);
-    x0 = Math.max(0, Math.floor(x0) - 1);
-    y0 = Math.max(0, Math.floor(y0) - folga);
-    x1 = Math.min(this.tela.width, Math.ceil(x1) + 1);
-    y1 = Math.min(this.tela.height, Math.ceil(y1) + folga);
-    if (x1 > x0 && y1 > y0) this.ops.push(COLAR, x0 | (y0 << 16), (x1 - x0) | ((y1 - y0) << 16));
+
+    const chave = `${quadro}:${entrada.paleta}`;
+    let lote = modelo.lotes.get(chave);
+    if (!lote || lote.usados >= lote.malha.instanceMatrix.count) {
+      let material = modelo.materiais.get(entrada.paleta);
+      if (!material) {
+        material = new ShaderMaterial({
+          vertexShader: VERTICE_DO_MODELO,
+          fragmentShader: FRAGMENTO_DO_MODELO,
+          // O espelho inverte a ordem dos vértices; sem isto ele sumiria.
+          side: DoubleSide,
+          uniforms: {
+            paleta: { value: texturaDaPaleta(d.paletas[entrada.paleta]!) },
+            uvDaPaleta: { value: modelo.uvDaPaleta },
+          },
+        });
+        modelo.materiais.set(entrada.paleta, material);
+      }
+      // Lote cheio: dobra, levando o que já foi posto neste quadro.
+      const malha = new InstancedMesh(
+        modelo.quadros[quadro]!.geometria,
+        material,
+        lote ? lote.malha.instanceMatrix.count * 2 : 16,
+      );
+      malha.frustumCulled = false;
+      if (lote) {
+        (malha.instanceMatrix.array as Float32Array).set(lote.malha.instanceMatrix.array);
+        this.cena.remove(lote.malha);
+        lote.malha.dispose();
+        lote.malha = malha;
+      } else {
+        lote = { malha, usados: 0 };
+        modelo.lotes.set(chave, lote);
+      }
+      this.cena.add(malha);
+    }
+    this.m.compose(
+      this.p.set(chao.x, 0, chao.y),
+      this.semGiro,
+      this.e.set(espelhar ? -escala : escala, escala, escala),
+    );
+    this.m.multiply(modelo.quadros[quadro]!.matriz);
+    lote.malha.setMatrixAt(lote.usados++, this.m);
     return true;
-  }
-
-  private modeloDe(img: { src?: string }): { modelo: Modelo; paleta: string } | null {
-    let entrada = this.porImagem.get(img);
-    if (entrada === undefined) {
-      const caminho =
-        typeof img.src === 'string'
-          ? img.src.replace(/^.*\/tiny\//, '').replace(/\.png$/, '')
-          : null;
-      entrada = (caminho && this.indice.folhas[caminho]) || null;
-      this.porImagem.set(img, entrada);
-    }
-    if (!entrada) return null;
-    const modelo = this.modelos.get(entrada.glb);
-    if (modelo === undefined) {
-      // Primeira vez que esta folha aparece: baixa, e até chegar é sprite.
-      this.modelos.set(entrada.glb, null);
-      void this.baixar(entrada.glb);
-      return null;
-    }
-    return modelo ? { modelo, paleta: entrada.paleta } : null;
   }
 
   private async baixar(glb: string): Promise<void> {
@@ -491,121 +714,169 @@ export class RenderVoxel implements PintorVoxel {
         // O compactador quantiza a UV e deixa a conta de volta na textura.
         const mapa = (achada.material as MeshStandardMaterial).map;
         if (mapa) uvDaPaleta.set(mapa.repeat.x, mapa.repeat.y, mapa.offset.x, mapa.offset.y);
-        quadros.push({ geometria: achada.geometry, matriz: achada.matrixWorld.clone() });
+        achada.geometry.computeBoundingBox();
+        const caixa = achada.geometry.boundingBox!.clone().applyMatrix4(achada.matrixWorld);
+        quadros.push({
+          geometria: achada.geometry,
+          matriz: achada.matrixWorld.clone(),
+          topo: { altura: caixa.max.y, fundo: caixa.min.z },
+        });
       }
       this.modelos.set(glb, { dados, quadros, uvDaPaleta, materiais: new Map(), lotes: new Map() });
     } catch (erro) {
-      console.warn(`voxel: ${glb} fica em 2D —`, erro);
+      console.warn(`voxel: ${glb} fica como sprite —`, erro);
     }
   }
 
-  private instancia(
-    modelo: Modelo,
-    quadro: number,
-    paleta: string,
-    x: number,
-    y: number,
-    escala: number,
-    espelhar: boolean,
-    cena: Scene,
-    noRaio = 0,
-  ): void {
-    const lote = this.lote(modelo, quadro, paleta, cena);
-    this.m.compose(
-      this.p.set(x, noRaio, y + noRaio),
-      this.semGiro,
-      this.e.set(espelhar ? -escala : escala, escala, escala),
+  /**
+   * Um sprite: o retângulo que o 2D pintaria, posto no mundo.
+   *
+   * Em pé, o retângulo fica num plano vertical que passa pelo ponto do chão
+   * da âncora; o que no desenho 2D estava "acima" dela vira altura. A altura
+   * é esticada por 1/cos da inclinação da câmera, para o sprite sair na tela
+   * com a proporção do desenho em vez de achatado. Deitado (água, espuma), o
+   * retângulo é o próprio pedaço de chão.
+   */
+  private sprite(img: ImagemPendente, ancora: Ponto | null, deitado: boolean, tinta?: Color): void {
+    const lote = this.loteDeSprites(img.fonte);
+    const zoom = this.vista.zoom;
+    const estica = 1 / Math.cos(INCLINACAO);
+    const chao = ancora ? this.noChao(ancora) : null;
+    const altura = tinta ? 0.4 : NIVEL_DA_AGUA + Math.min(this.deitados++, 4000) * 0.0005;
+    const ponto = (c: Ponto, saida: Vector3): Vector3 => {
+      if (deitado || !ancora || !chao) {
+        const m = this.noChao(c);
+        return saida.set(m.x, altura, m.y);
+      }
+      return saida.set(
+        chao.x + (c.x - ancora.x) / zoom,
+        ((ancora.y - c.y) / zoom) * estica,
+        chao.y,
+      );
+    };
+    const o = ponto(img.cantos[0], this.p);
+    const ex = ponto(img.cantos[1], this.e).sub(o);
+    const ey = ponto(img.cantos[2], this.v).sub(o);
+    // prettier-ignore
+    this.m.set(
+      ex.x, ey.x, 0, o.x,
+      ex.y, ey.y, 0, o.y,
+      ex.z, ey.z, 1, o.z,
+      0,    0,    0, 1,
     );
-    this.m.multiply(modelo.quadros[quadro]!.matriz);
-    lote.malha.setMatrixAt(lote.usados++, this.m);
+    const i = lote.usados++;
+    lote.malha.setMatrixAt(i, this.m);
+    const f = img.fonte;
+    lote.recorte.setXYZW(i, img.sx / f.width, img.sy / f.height, img.sw / f.width, img.sh / f.height);
+    lote.tinta.setXYZ(i, tinta?.r ?? 1, tinta?.g ?? 1, tinta?.b ?? 1);
   }
 
-  private lote(modelo: Modelo, quadro: number, paleta: string, cena: Scene): Lote {
-    const chave = `${quadro}:${paleta}`;
-    let lote = modelo.lotes.get(chave);
+  private loteDeSprites(fonte: Fonte): LoteDeSprites {
+    let lote = this.sprites.get(fonte);
     if (lote && lote.usados < lote.malha.instanceMatrix.count) return lote;
-
-    let material = modelo.materiais.get(paleta);
+    let material = lote?.material;
     if (!material) {
+      const mapa =
+        fonte === BRANCO
+          ? new DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1, RGBAFormat)
+          : new Texture(fonte as unknown as HTMLImageElement);
+      mapa.magFilter = NearestFilter;
+      mapa.minFilter = NearestFilter;
+      mapa.generateMipmaps = false;
+      mapa.flipY = false;
+      mapa.needsUpdate = true;
       material = new ShaderMaterial({
-        vertexShader: VERTICE,
-        fragmentShader: FRAGMENTO,
-        // O espelho inverte a ordem dos vértices; sem isto ele sumiria.
+        vertexShader: VERTICE_DO_SPRITE,
+        fragmentShader: FRAGMENTO_DO_SPRITE,
         side: DoubleSide,
-        uniforms: {
-          paleta: { value: texturaDaPaleta(modelo.dados.paletas[paleta]!) },
-          uvDaPaleta: { value: modelo.uvDaPaleta },
-          // No chão e nos prédios o topo é o próprio desenho: cor exata.
-          clarearTopo: { value: modelo.dados.topoExato ? 0 : 0.14 },
-        },
+        uniforms: { mapa: { value: mapa } },
       });
-      modelo.materiais.set(paleta, material);
     }
-    // Lote cheio: dobra, levando o que já foi posto neste quadro.
-    const capacidade = lote ? lote.malha.instanceMatrix.count * 2 : 16;
-    const malha = new InstancedMesh(modelo.quadros[quadro]!.geometria, material, capacidade);
+    const capacidade = lote ? lote.malha.instanceMatrix.count * 2 : 32;
+    const geometria = this.quadrado.clone();
+    const recorte = new InstancedBufferAttribute(new Float32Array(capacidade * 4), 4);
+    const tinta = new InstancedBufferAttribute(new Float32Array(capacidade * 3), 3);
+    geometria.setAttribute('recorte', recorte);
+    geometria.setAttribute('tinta', tinta);
+    const malha = new InstancedMesh(geometria, material, capacidade);
     malha.frustumCulled = false;
-    malha.count = 0;
     if (lote) {
       (malha.instanceMatrix.array as Float32Array).set(lote.malha.instanceMatrix.array);
-      cena.remove(lote.malha);
+      (recorte.array as Float32Array).set(lote.recorte.array);
+      (tinta.array as Float32Array).set(lote.tinta.array);
+      this.cena.remove(lote.malha);
+      lote.malha.geometry.dispose();
       lote.malha.dispose();
-      lote.malha = malha;
-    } else {
-      lote = { malha, usados: 0 };
-      modelo.lotes.set(chave, lote);
     }
-    cena.add(malha);
+    this.cena.add(malha);
+    lote = { malha, material, recorte, tinta, usados: lote?.usados ?? 0 };
+    this.sprites.set(fonte, lote);
     return lote;
   }
 
-  /** Toca a lista gravada no canvas de verdade, colando o 3D onde foi pedido. */
+  /**
+   * Um `fillRect` pintado antes da lista ordenada: é chão — a ponte. O que
+   * cobre a tela inteira é o fundo, e o fundo aqui é o mar e o céu.
+   */
+  private retanguloNoChao(args: number[]): void {
+    const [x, y, l, a] = args as [number, number, number, number];
+    const cantos: [Ponto, Ponto, Ponto] = [
+      this.noDesenho(x, y),
+      this.noDesenho(x + l, y),
+      this.noDesenho(x, y + a),
+    ];
+    if (cantos[1].x - cantos[0].x > this.largura * 0.9) return;
+    const estilo = this.real.fillStyle;
+    if (typeof estilo !== 'string') return;
+    this.cor.setStyle(estilo);
+    this.sprite({ fonte: BRANCO, sx: 0, sy: 0, sw: 1, sh: 1, cantos }, null, true, this.cor);
+  }
+
+  // --- o 2D por cima ----------------------------------------------------------
+
+  /**
+   * Toca o traço e o texto gravados, grupo a grupo, por cima do quadro 3D.
+   *
+   * Cada grupo é desenhado com uma transformação que leva a âncora dele, no
+   * desenho 2D, ao ponto da tela em que ela caiu em perspectiva — e na escala
+   * daquela distância. O que está fora de grupo é só estado (cor, fonte), e é
+   * reaplicado sem pintar nada.
+   */
   private tocar(): void {
     const ctx = this.real as unknown as Record<string, unknown>;
     const ops = this.ops;
-    let objetosProntos = false;
-    const prepararObjetos = (): void => {
-      if (objetosProntos) return;
-      objetosProntos = true;
-      this.gl.render(this.cena, this.camera);
-    };
-    // Sem chão em cena, os objetos já podem ser renderizados.
-    if (!this.temChao) prepararObjetos();
-
+    const dpr = this.dpr;
+    let pular = false;
     for (let i = 0; i < ops.length; i += 3) {
       const tipo = ops[i];
-      if (tipo === CHAMAR) {
-        (ctx[ops[i + 1] as string] as (...a: unknown[]) => unknown)(...(ops[i + 2] as unknown[]));
+      if (tipo === GRUPO) {
+        const grupo = ops[i + 1] as Grupo;
+        const ancora = grupo.ancora!;
+        const chao = this.noChao(ancora);
+        const tela = grupo.mundo
+          ? this.projetar(grupo.mundo.x, grupo.mundo.altura, grupo.mundo.z)
+          : this.projetar(chao.x, 0, chao.y);
+        this.real.save();
+        pular = !tela || tela.escala < 0.05;
+        if (tela) {
+          const s = tela.escala / this.vista.zoom;
+          this.real.setTransform(
+            dpr * s,
+            0,
+            0,
+            dpr * s,
+            dpr * (tela.x - s * ancora.x),
+            dpr * (tela.y - s * ancora.y),
+          );
+        }
+      } else if (tipo === FIM_DO_GRUPO) {
+        this.real.restore();
+        pular = false;
       } else if (tipo === ATRIBUIR) {
         ctx[ops[i + 1] as string] = ops[i + 2];
-      } else {
-        this.real.save();
-        this.real.setTransform(1, 0, 0, 1, 0, 0);
-        if (tipo === COLAR_CHAO) {
-          this.gl.render(this.cenaDoChao, this.camera);
-          this.real.drawImage(this.tela, 0, 0);
-          prepararObjetos();
-        } else {
-          const a = ops[i + 1] as number;
-          const b = ops[i + 2] as number;
-          const x = a & 0xffff;
-          const y = a >>> 16;
-          const l = b & 0xffff;
-          const h = b >>> 16;
-          this.real.drawImage(this.tela, x, y, l, h, x, y, l, h);
-        }
-        this.real.restore();
+      } else if (!pular) {
+        (ctx[ops[i + 1] as string] as (...a: unknown[]) => unknown)(...(ops[i + 2] as unknown[]));
       }
-    }
-
-    for (const texto of this.textos) {
-      this.real.save();
-      this.real.setTransform(texto.matriz);
-      ESTADO_DO_TEXTO.forEach((p, i) => {
-        ctx[p] = texto.estado[i];
-      });
-      (ctx[texto.nome] as (...a: unknown[]) => unknown)(...texto.args);
-      this.real.restore();
     }
   }
 }

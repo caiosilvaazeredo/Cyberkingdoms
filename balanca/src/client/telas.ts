@@ -1186,10 +1186,10 @@ export class Telas {
       {
         chave: 'render',
         rotulo: 'Visual',
-        explica: 'sprites do pacote ou modelos voxel',
+        explica: 'visto de cima, ou em 3D com câmera baixa',
         opcoes: [
           { valor: '2d', texto: '2D' },
-          { valor: '3d', texto: '3D voxel' },
+          { valor: '3d', texto: '3D' },
         ],
       },
       {

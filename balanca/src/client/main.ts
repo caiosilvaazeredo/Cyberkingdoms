@@ -496,6 +496,13 @@ function laco(agora: number): void {
     camera.zoom *= 0.9;
   }
   const vista = vistaDe(camera, largura, altura);
+  // Em 3D a câmera é em perspectiva: quem precisa saber onde algo cai na tela
+  // (a mira do mouse, as setas da borda) pergunta ao renderer.
+  const tresD = pintorVoxel(ajustes.render);
+  if (tresD) {
+    tresD.enquadrar(camera, largura, altura);
+    vista.ponto = (x, y) => tresD.paraTela(x, y);
+  }
 
   // Passo fixo: um comando por `DT`, nem mais nem menos, independentemente da
   // taxa de quadros. Plateia não manda comando de movimento — manda só o aceno
@@ -505,7 +512,16 @@ function laco(agora: number): void {
   const centros = new Map<number, { x: number; y: number }>();
   for (const [i, p] of emCampo.entries()) {
     const pos = posicoes[i]!;
-    centros.set(p.vaga, { x: vista.paraTelaX(pos.x), y: vista.paraTelaY(pos.y) });
+    // A mira é a direção do cursor a partir do boneco. Em perspectiva essa
+    // direção tem de ser medida no chão, e não na tela: o centro devolvido é
+    // o cursor recuado do tanto que o separa do boneco no mundo.
+    const noChao = tresD?.paraMundo(entrada.cursor.x, entrada.cursor.y);
+    centros.set(
+      p.vaga,
+      noChao
+        ? { x: entrada.cursor.x - (noChao.x - pos.x), y: entrada.cursor.y - (noChao.y - pos.y) }
+        : (vista.ponto?.(pos.x, pos.y) ?? { x: vista.paraTelaX(pos.x), y: vista.paraTelaY(pos.y) }),
+    );
   }
   while (acumulado >= DT && passos < 5) {
     if (sofa && telas.atual === 'jogo') {
@@ -552,7 +568,7 @@ function laco(agora: number): void {
     tempo,
     ajustes,
     particulas,
-    pintorVoxel(ajustes.render),
+    tresD,
   );
 
   // A noite do Modo Vigília: um véu por cima do mundo já desenhado, e não

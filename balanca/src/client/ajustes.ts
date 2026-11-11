@@ -27,7 +27,7 @@ export type Lado = 'esquerda' | 'direita';
 /** Qual controle desenhar: teclado/mouse, toque, ou adivinhar pelo aparelho. */
 export type Plataforma = 'auto' | 'computador' | 'celular';
 export type Orientacao = 'vertical' | 'horizontal';
-/** Sprites do pacote ou os modelos voxel de `public/voxel`. */
+/** Visto de cima, ou em 3D com a câmera em perspectiva. */
 export type Render = '2d' | '3d';
 
 export interface Ajustes {
@@ -66,9 +66,9 @@ export interface Ajustes {
   /**
    * Como o mundo é desenhado.
    *
-   * `'3d'` troca os sprites por modelos voxel **onde já existe modelo**; o
-   * resto continua sprite. A simulação é a mesma nas duas opções — isto é só
-   * o pincel, e por isso mora aqui e não nas regras. `?render=3d` na URL
+   * `'3d'` põe a câmera em perspectiva, baixa, com o cenário em volumes e os
+   * personagens em sprites em pé. A simulação é a mesma nas duas opções —
+   * isto é só o pincel, e por isso mora aqui e não nas regras. `?render=3d` na URL
    * força a opção para uma visita, sem gravar.
    */
   render: Render;
