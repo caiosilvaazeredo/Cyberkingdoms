@@ -549,6 +549,8 @@ def converter(folha: dict, manifesto: dict) -> dict:
         "larguraQuadro": largura_quadro,
         "lado": lado,
         "plano": plano,
+        # Prédio tapa a visão: o renderer esconde o nome de quem está atrás.
+        "oclui": caixa,
         "pes": pes,
         "paletas": paletas,
     }

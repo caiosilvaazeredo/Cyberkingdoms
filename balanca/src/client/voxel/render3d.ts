@@ -1,5 +1,7 @@
 import {
+  Box3,
   BufferGeometry,
+  CircleGeometry,
   Color,
   DataTexture,
   DoubleSide,
@@ -131,6 +133,8 @@ interface Quadro {
   matriz: Matrix4;
   /** O ponto mais alto e mais ao fundo do modelo, em unidades dele. */
   topo: { altura: number; fundo: number };
+  /** A caixa que envolve o modelo, em unidades dele. */
+  caixa: Box3;
 }
 
 interface Modelo {
@@ -268,6 +272,11 @@ export class RenderVoxel implements PintorVoxel {
   private readonly caminhos = new WeakMap<object, string | null>();
   private readonly quadrado = quadrado();
   private readonly mar: Mesh;
+  /** A sombra redonda debaixo de cada sprite em pé. */
+  private sombras: InstancedMesh;
+  private sombrasUsadas = 0;
+  /** As caixas dos prédios postos em cena neste quadro: x0, x1, altura, z0, z1. */
+  private readonly paredes: number[] = [];
 
   private real!: CanvasRenderingContext2D;
   private gravador: CanvasRenderingContext2D | null = null;
@@ -304,6 +313,36 @@ export class RenderVoxel implements PintorVoxel {
     this.mar.scale.setScalar(120000);
     this.mar.position.y = NIVEL_DA_AGUA - 1;
     this.cena.add(this.mar);
+    this.sombras = this.criarSombras(128);
+  }
+
+  /**
+   * O pacote pinta a sombra dentro do sprite, com alfa parcial, e ela é
+   * recortada junto com o vazio — de pé, ela ficaria no ar. Esta é a
+   * substituta: um disco escuro deitado no chão, no pé de cada um.
+   */
+  private criarSombras(capacidade: number): InstancedMesh {
+    const malha = new InstancedMesh(
+      new CircleGeometry(1, 20).rotateX(-Math.PI / 2),
+      new MeshBasicMaterial({ color: 0x10202a, transparent: true, opacity: 0.28, depthWrite: false }),
+      capacidade,
+    );
+    malha.frustumCulled = false;
+    malha.count = 0;
+    this.cena.add(malha);
+    return malha;
+  }
+
+  private sombra(x: number, z: number, raio: number): void {
+    if (this.sombrasUsadas >= this.sombras.instanceMatrix.count) {
+      const maior = this.criarSombras(this.sombras.instanceMatrix.count * 2);
+      (maior.instanceMatrix.array as Float32Array).set(this.sombras.instanceMatrix.array);
+      this.cena.remove(this.sombras);
+      this.sombras.dispose();
+      this.sombras = maior;
+    }
+    this.m.compose(this.p.set(x, 0.3, z), this.semGiro, this.e.set(raio, 1, raio * 0.55));
+    this.sombras.setMatrixAt(this.sombrasUsadas++, this.m);
   }
 
   /** Lê o índice. Os modelos são baixados um a um, quando aparecem em cena. */
@@ -378,6 +417,8 @@ export class RenderVoxel implements PintorVoxel {
     this.fase = 0;
     this.grupo = null;
     this.deitados = 0;
+    this.sombrasUsadas = 0;
+    this.paredes.length = 0;
     for (const modelo of this.modelos.values()) {
       if (modelo) for (const lote of modelo.lotes.values()) lote.usados = 0;
     }
@@ -412,6 +453,10 @@ export class RenderVoxel implements PintorVoxel {
         lote.tinta.needsUpdate = true;
       }
     }
+
+    this.sombras.count = this.sombrasUsadas;
+    this.sombras.visible = this.sombrasUsadas > 0;
+    this.sombras.instanceMatrix.needsUpdate = true;
 
     this.ceu();
     this.gl.render(this.cena, this.camera);
@@ -599,11 +644,18 @@ export class RenderVoxel implements PintorVoxel {
         ? this.noDesenho(dx + dw / 2, dy + dh)
         : null;
     if (pe) {
+      if (dados) {
+        const t = this.real.getTransform();
+        const escala = ((dw / sw) * Math.hypot(t.a, t.b)) / this.dpr / this.vista.zoom;
+        const chao = this.noChao(pe);
+        this.sombra(chao.x, chao.y, dados.larguraQuadro * 0.15 * escala);
+      }
       if (g && !g.fixo) {
         g.ancora = pe;
         g.fixo = true;
       }
-      this.sprite(pendente, g?.ancora ?? pe, false);
+      // Sempre pelo próprio pé: a âncora do grupo pode ser o topo de um prédio.
+      this.sprite(pendente, pe, false);
     } else {
       this.ops.push(CHAMAR, 'drawImage', args);
     }
@@ -644,11 +696,27 @@ export class RenderVoxel implements PintorVoxel {
         : this.noDesenho(dx + dw / 2, dy + (d.pes / d.lado) * dh);
     const chao = this.noChao(noDesenho);
     const g = this.grupo;
+    // Prédio não barra ninguém na simulação: anda-se por cima do pé do sprite
+    // dele, e o 2D resolve isso pintando na frente quem está ao sul da linha
+    // em que o prédio é ordenado. A caixa fica com a fachada nessa linha — e
+    // não na base do desenho —, senão quem para na porta some dentro dela.
+    if (d.oclui && g && g.y !== null) chao.y = g.y;
     if (g && !g.fixo && d.plano !== 'chao') {
       const topo = modelo.quadros[quadro]!.topo;
       g.ancora = this.noDesenho(dx + dw / 2, dy);
       g.mundo = { x: chao.x, altura: topo.altura * escala, z: chao.y + topo.fundo * escala };
       g.fixo = true;
+    }
+
+    if (d.oclui) {
+      const c = modelo.quadros[quadro]!.caixa;
+      this.paredes.push(
+        chao.x + c.min.x * escala,
+        chao.x + c.max.x * escala,
+        c.max.y * escala,
+        chao.y + c.min.z * escala,
+        chao.y + c.max.z * escala,
+      );
     }
 
     const chave = `${quadro}:${entrada.paleta}`;
@@ -720,6 +788,7 @@ export class RenderVoxel implements PintorVoxel {
           geometria: achada.geometry,
           matriz: achada.matrixWorld.clone(),
           topo: { altura: caixa.max.y, fundo: caixa.min.z },
+          caixa,
         });
       }
       this.modelos.set(glb, { dados, quadros, uvDaPaleta, materiais: new Map(), lotes: new Map() });
@@ -742,7 +811,9 @@ export class RenderVoxel implements PintorVoxel {
     const zoom = this.vista.zoom;
     const estica = 1 / Math.cos(INCLINACAO);
     const chao = ancora ? this.noChao(ancora) : null;
-    const altura = tinta ? 0.4 : NIVEL_DA_AGUA + Math.min(this.deitados++, 4000) * 0.0005;
+    // Cada um um fio acima do anterior: o que foi pintado depois fica por cima.
+    const ordem = Math.min(this.deitados++, 8000) * 0.0005;
+    const altura = tinta ? 0.4 + ordem : NIVEL_DA_AGUA + ordem;
     const ponto = (c: Ponto, saida: Vector3): Vector3 => {
       if (deitado || !ancora || !chao) {
         const m = this.noChao(c);
@@ -834,6 +905,34 @@ export class RenderVoxel implements PintorVoxel {
 
   // --- o 2D por cima ----------------------------------------------------------
 
+  /** Se há um prédio entre a câmera e um ponto à altura do peito, no chão dado. */
+  private tapado(x: number, z: number): boolean {
+    const o = this.camera.position;
+    const d = [x - o.x, 28 - o.y, z - o.z] as const;
+    const origem = [o.x, o.y, o.z] as const;
+    const p = this.paredes;
+    for (let i = 0; i < p.length; i += 5) {
+      const min = [p[i]!, 0, p[i + 3]!] as const;
+      const max = [p[i + 1]!, p[i + 2]!, p[i + 4]!] as const;
+      let entra = 0;
+      // Até o próprio ponto: quem está **dentro** da caixa — prédio não barra
+      // ninguém — também está tapado.
+      let sai = 1;
+      for (let k = 0; k < 3 && entra <= sai; k++) {
+        if (Math.abs(d[k]!) < 1e-9) {
+          if (origem[k]! < min[k]! || origem[k]! > max[k]!) entra = 2;
+          continue;
+        }
+        const a = (min[k]! - origem[k]!) / d[k]!;
+        const b = (max[k]! - origem[k]!) / d[k]!;
+        entra = Math.max(entra, Math.min(a, b));
+        sai = Math.min(sai, Math.max(a, b));
+      }
+      if (entra <= sai) return true;
+    }
+    return false;
+  }
+
   /**
    * Toca o traço e o texto gravados, grupo a grupo, por cima do quadro 3D.
    *
@@ -857,7 +956,9 @@ export class RenderVoxel implements PintorVoxel {
           ? this.projetar(grupo.mundo.x, grupo.mundo.altura, grupo.mundo.z)
           : this.projetar(chao.x, 0, chao.y);
         this.real.save();
-        pular = !tela || tela.escala < 0.05;
+        // O 2D vai por cima do quadro 3D e não tem profundidade: sem esta
+        // conta, o nome de quem está atrás do castelo apareceria na fachada.
+        pular = !tela || tela.escala < 0.05 || (!grupo.mundo && this.tapado(chao.x, chao.y));
         if (tela) {
           const s = tela.escala / this.vista.zoom;
           this.real.setTransform(

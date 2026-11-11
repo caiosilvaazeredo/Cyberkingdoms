@@ -94,6 +94,8 @@ export interface ModeloNoIndice {
   plano: 'pe' | 'chao';
   /** A linha do quadro em que ficam os pés — a origem vertical do modelo. */
   pes: number;
+  /** É um prédio: esconde o nome e a barra de quem está atrás dele. */
+  oclui?: boolean;
   paletas: Record<string, string[]>;
 }
 
