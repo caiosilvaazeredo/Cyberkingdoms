@@ -1,9 +1,26 @@
 {
-  "_": "A lista do que vira voxel: só o que o jogo desenha. Cada grupo é um glob em public/tiny e as opções dele; a saída espelha o caminho em public/voxel, trocando .png por .glb. Efeitos (fx/), interface, retratos, espuma e água ficam de fora de propósito e continuam 2D. Ver tools/voxelizar.py.",
+  "_": "A lista do que vira voxel: só o que o jogo desenha. Cada grupo é um glob em public/tiny e as opções dele; a saída espelha o caminho em public/voxel, trocando .png por .glb. Efeitos (fx/), interface, retratos, espuma e água ficam de fora de propósito e continuam 2D. Ver tools/voxelizar.py. `finos` são os ajustes à mão por cor (cor da folha base → espessura máxima): lâmina, rastro de golpe e afins não têm a grossura do corpo.",
   "origem": "public/tiny",
   "destino": "public/voxel",
   "compactar": true,
   "grupos": [
+    {
+      "glob": "units/azul/guerreiro_*.png",
+      "exceto": [
+        "flecha",
+        "clerigo_bencao"
+      ],
+      "variantes": {
+        "vermelho": "units/vermelho"
+      },
+      "pesDe": "parado",
+      "profundidade": 6,
+      "finos": {
+        "#ffffff": 1,
+        "#9cbeaa": 2,
+        "#d4edc2": 2
+      }
+    },
     {
       "glob": "units/azul/*.png",
       "exceto": [
@@ -14,12 +31,15 @@
         "vermelho": "units/vermelho"
       },
       "pesDe": "parado",
-      "meiaProfundidade": 7
+      "profundidade": 6,
+      "finos": {
+        "#ffffff": 1
+      }
     },
     {
       "glob": "feras/*.png",
       "pesDe": "parado",
-      "meiaProfundidade": 10
+      "profundidade": 8
     },
     {
       "glob": "buildings/blue/*.png",
@@ -36,28 +56,28 @@
     },
     {
       "glob": "buildings/*.png",
-      "meiaProfundidade": 10
+      "profundidade": 8
     },
     {
       "glob": "deco/Tree[12].png",
       "larguraQuadro": 192,
-      "meiaProfundidade": 12
+      "profundidade": 8
     },
     {
       "glob": "deco/Tree[34].png",
-      "meiaProfundidade": 12
+      "profundidade": 8
     },
     {
       "glob": "deco/Stump*.png",
-      "meiaProfundidade": 8
+      "profundidade": 6
     },
     {
       "glob": "deco/Bushe*.png",
-      "meiaProfundidade": 8
+      "profundidade": 6
     },
     {
       "glob": "deco/*.png",
-      "meiaProfundidade": 5
+      "profundidade": 4
     },
     {
       "glob": "recursos/*.png",
@@ -65,11 +85,11 @@
         "xama_avatar",
         "menino_rei_avatar"
       ],
-      "meiaProfundidade": 8
+      "profundidade": 6
     },
     {
       "glob": "canhao/corpo.png",
-      "meiaProfundidade": 8
+      "profundidade": 6
     },
     {
       "glob": "terrain/ground.png",

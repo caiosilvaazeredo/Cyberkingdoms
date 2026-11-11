@@ -2,6 +2,7 @@ import {
   BufferGeometry,
   Camera,
   DataTexture,
+  DoubleSide,
   InstancedMesh,
   Matrix4,
   Mesh,
@@ -54,11 +55,11 @@ import type { CameraDoMundo, IndiceDeVoxels, ModeloNoIndice, PintorVoxel } from 
  * que ainda é desenho 2D (baú, bolsa, ponte, efeitos): cada modelo cola o seu
  * retângulo na vez dele, e entre modelos quem resolve é o z-buffer.
  *
- * ## Espelho vira rotação
+ * ## Espelho
  *
- * Onde o 2D faz `scale(-1, 1)`, aqui o modelo gira 180° em torno do eixo
- * vertical. O modelo é simétrico em profundidade (sai de um sprite só), então
- * a silhueta é o espelho exato.
+ * Onde o 2D faz `scale(-1, 1)`, aqui o modelo é espelhado em x. Girar 180°
+ * não serve: a frente do modelo é plana (é o desenho do sprite) e o volume
+ * cresce para trás, então o giro mostraria as costas.
  *
  * ## Instancing
  *
@@ -226,8 +227,7 @@ export class RenderVoxel implements PintorVoxel {
   private readonly m = new Matrix4();
   private readonly p = new Vector3();
   private readonly e = new Vector3();
-  private readonly frente = new Quaternion();
-  private readonly costas = new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), Math.PI);
+  private readonly semGiro = new Quaternion();
 
   private constructor(
     private readonly indice: IndiceDeVoxels,
@@ -513,8 +513,8 @@ export class RenderVoxel implements PintorVoxel {
     const lote = this.lote(modelo, quadro, paleta, cena);
     this.m.compose(
       this.p.set(x, noRaio, y + noRaio),
-      espelhar ? this.costas : this.frente,
-      this.e.set(escala, escala, escala),
+      this.semGiro,
+      this.e.set(espelhar ? -escala : escala, escala, escala),
     );
     this.m.multiply(modelo.quadros[quadro]!.matriz);
     lote.malha.setMatrixAt(lote.usados++, this.m);
@@ -530,6 +530,8 @@ export class RenderVoxel implements PintorVoxel {
       material = new ShaderMaterial({
         vertexShader: VERTICE,
         fragmentShader: FRAGMENTO,
+        // O espelho inverte a ordem dos vértices; sem isto ele sumiria.
+        side: DoubleSide,
         uniforms: {
           paleta: { value: texturaDaPaleta(modelo.dados.paletas[paleta]!) },
           uvDaPaleta: { value: modelo.uvDaPaleta },

@@ -20,13 +20,15 @@ desenha, nunca o pacote inteiro. A saída espelha `public/tiny` em
 - **Volume arredondado, não extrusão.** A espessura de cada pixel sai do
   perfil circular do trecho opaco em que ele está — na linha **e** na coluna,
   valendo o menor dos dois. Só a linha faria de uma espada deitada uma laje.
+  A frente é plana e a espessura cresce para trás, para o desenho da frente
+  sair idêntico ao sprite.
 - **Contorno escuro só na casca.** O pixel de contorno pinta a camada da
   frente e a do fundo; o miolo dele pega a cor do vizinho de dentro. Sem isso
   o topo da cabeça — que é uma linha inteira de contorno — viraria um disco
   preto visto de cima.
 - **Pivô nos pés.** A origem do modelo é (centro do quadro, base dos pés,
-  meio da espessura). `extras.pivo` guarda onde o jogo 2D ancora o mesmo
-  quadro, para o renderer pôr o modelo exatamente no mesmo pixel.
+  face da frente). O índice guarda a linha dos pés (`pes`), e o renderer
+  encaixa o modelo no retângulo que o sprite ocuparia.
 - **Uma malha, várias paletas.** A cor do vértice é um índice (a UV aponta
   para um texel da paleta). O azul vai embutido como textura; as outras cores
   vão em `extras.paletas` e o jogo troca a textura do material.
@@ -83,12 +85,19 @@ def trechos(mascara: np.ndarray) -> np.ndarray:
     return saida
 
 
-def espessuras(opaco: np.ndarray, meia: int) -> np.ndarray:
-    """Espessura em voxels (par, de 2 a 2*meia) de cada pixel opaco."""
+def espessuras(opaco: np.ndarray, fundo: int, rgba: np.ndarray, finos: dict) -> np.ndarray:
+    """Espessura em voxels (de 1 a `fundo`) de cada pixel opaco.
+
+    `finos` são os ajustes à mão: cor → espessura máxima. Uma lâmina, uma
+    haste ou um escudo têm a largura do corpo no desenho, mas não a grossura
+    dele — sem o ajuste, a espada ganha a mesma "tampa" que a cabeça."""
     por_linha = trechos(opaco)
     por_coluna = trechos(opaco.T).T
     t = np.minimum(por_linha, por_coluna)
-    t = np.clip(2 * np.round(t / 2), 2, 2 * meia).astype(np.int32)
+    t = np.clip(np.round(t), 1, fundo).astype(np.int32)
+    for cor, teto in finos.items():
+        alvo = tuple(int(cor[k : k + 2], 16) for k in (1, 3, 5))
+        t = np.where((rgba[..., :3] == alvo).all(axis=-1), np.minimum(t, int(teto)), t)
     return np.where(opaco, t, 0)
 
 
@@ -123,21 +132,49 @@ def miolo(indices: np.ndarray, opaco: np.ndarray, eh_contorno: np.ndarray) -> np
     return saida
 
 
-def voxels(indices: np.ndarray, opaco: np.ndarray, rgba: np.ndarray, meia: int) -> np.ndarray:
+def voxels(indices: np.ndarray, opaco: np.ndarray, rgba: np.ndarray, fundo: int, finos: dict) -> np.ndarray:
     """Grade [linha, coluna, z] com o índice de paleta + 1 (0 = vazio).
-    z cresce para a frente (para quem olha o sprite)."""
+
+    A frente do modelo é **plana** e fica na última fatia de z; a espessura
+    cresce só para trás. É o que mantém o desenho da frente idêntico ao
+    sprite: com a espessura dividida entre frente e fundo, a barriga (grossa)
+    descia na tela mais que o ombro (fino) e o boneco entortava. Para trás, o
+    volume aparece como uma tampa arredondada em cima da cabeça, do ombro e
+    da arma — e em mais lugar nenhum."""
     alt, larg = opaco.shape
-    t = espessuras(opaco, meia)
+    t = espessuras(opaco, fundo, rgba, finos)
     eh_contorno = contorno(rgba, opaco)
     dentro = miolo(indices, opaco, eh_contorno)
-    grade = np.zeros((alt, larg, 2 * meia), dtype=np.int32)
+    grade = np.zeros((alt, larg, fundo), dtype=np.int32)
     for y, x in zip(*np.nonzero(opaco)):
-        z0 = meia - t[y, x] // 2
-        z1 = meia + t[y, x] // 2
-        grade[y, x, z0:z1] = dentro[y, x] + 1
+        z0 = fundo - t[y, x]
+        grade[y, x, z0:fundo] = dentro[y, x] + 1
+        # A casca — frente e fundo — leva a cor do pixel, contorno incluído: é
+        # o fundo que desenha a linha escura em volta da tampa.
         grade[y, x, z0] = indices[y, x] + 1
-        grade[y, x, z1 - 1] = indices[y, x] + 1
+        grade[y, x, fundo - 1] = indices[y, x] + 1
     return grade
+
+
+def previa(grade: np.ndarray, cores: np.ndarray, escala: int = 3) -> Image.Image:
+    """Projeta a grade na câmera oblíqua do jogo (tela = linha − profundidade)
+    para conferir um modelo sem abrir o jogo."""
+    alt, larg, fundo = grade.shape
+    tela = np.zeros((alt + fundo, larg, 4), dtype=np.uint8)
+    perto = np.full((alt + fundo, larg), 1e9)
+    for y, x, z in zip(*np.nonzero(grade)):
+        k = fundo - 1 - z
+        cor = cores[grade[y, x, z] - 1]
+        if k == 0 and perto[y + fundo, x] > 0:
+            perto[y + fundo, x] = 0
+            tela[y + fundo, x] = (*cor, 255)
+        if y == 0 or grade[y - 1, x, z] == 0:
+            linha = y + fundo - 1 - k
+            if perto[linha, x] > k + 0.5:
+                perto[linha, x] = k + 0.5
+                tela[linha, x] = (*(int(c + (255 - c) * 0.14) for c in cor), 255)
+    img = Image.fromarray(tela, "RGBA")
+    return img.resize((larg * escala, (alt + fundo) * escala), Image.NEAREST)
 
 
 def retangulos(mascara: np.ndarray):
@@ -163,10 +200,10 @@ def retangulos(mascara: np.ndarray):
 
 
 # As faces que a câmera do jogo consegue ver. Ela é oblíqua e só olha do sul
-# e de cima, e o modelo só gira 0° ou 180°: face de lado (±x) fica de perfil,
-# com área zero na tela, e a de baixo (-y) fica de costas. São metade dos
+# e de cima: face de lado (±x) fica de perfil, com área zero na tela, e as de
+# baixo (-y) e de trás (-z) ficam de costas. São metade dos
 # triângulos, e nunca viram pixel. `"faces": "todas"` no manifesto as devolve.
-FACES_VISIVEIS = {(1, 1), (2, 1), (2, -1)}
+FACES_VISIVEIS = {(1, 1), (2, 1)}
 
 
 def malha(grade: np.ndarray, origem: tuple[float, float, float], cores: int, todas: bool):
@@ -331,7 +368,16 @@ def grade_do_chao(indices: np.ndarray, opaco: np.ndarray, altura: int, cores: in
     return grade
 
 
-def malha_da_caixa(indices: np.ndarray, opaco: np.ndarray, pes: int, telhado: float, cores: int):
+# Fachada na sombra (×0,78) e a faixa logo abaixo do beiral (×0,6): é o que
+# faz a caixa se ler como volume, já que na câmera oblíqua ela projeta
+# exatamente o desenho original.
+SOMBRA_DA_FACHADA = (0.78, 0.6)
+ALTURA_DO_BEIRAL = 5
+
+PASTA_DA_PREVIA: str | None = None
+
+
+def malha_da_caixa(indices: np.ndarray, opaco: np.ndarray, pes: int, telhado: float, cores: int, base: int):
     """Um prédio como caixa: parede da frente em pé, telhado deitado para trás.
 
     O sprite do prédio já é desenhado em 3/4 — a parte de cima é o telhado
@@ -359,7 +405,9 @@ def malha_da_caixa(indices: np.ndarray, opaco: np.ndarray, pes: int, telhado: fl
         uv.extend([(round((c - 1 + 0.5) / cores * 65535), 32768)] * 4)
         idx.extend([base, base + 1, base + 2, base, base + 2, base + 3])
 
-    parede = cor.copy()
+    parede = np.where(cor > 0, cor + base, 0)
+    beiral = slice(corte, corte + ALTURA_DO_BEIRAL)
+    parede[beiral] = np.where(cor[beiral] > 0, cor[beiral] + 2 * base, 0)
     parede[:corte] = 0
     for l, c, a, w, k in retangulos(parede):
         x0, x1 = c - meio, c + w - meio
@@ -383,7 +431,8 @@ def malha_da_caixa(indices: np.ndarray, opaco: np.ndarray, pes: int, telhado: fl
 def converter(folha: dict, manifesto: dict) -> dict:
     origem = RAIZ / manifesto["origem"]
     destino = RAIZ / manifesto["destino"]
-    meia = int(folha.get("meiaProfundidade", 7))
+    fundo = int(folha.get("profundidade", 6))
+    finos = folha.get("finos", {})
     plano = folha.get("plano", "pe")
     caixa = folha.get("forma") == "caixa"
 
@@ -408,6 +457,9 @@ def converter(folha: dict, manifesto: dict) -> dict:
         if plano == "chao":
             # O corpo do bloco: a mesma cor, mais escura, na segunda metade.
             cores += [tuple(int(v * 0.62) for v in cor) for cor in cores]
+        elif caixa:
+            # A fachada na sombra, e mais escura ainda logo abaixo do beiral.
+            cores = cores + [tuple(int(v * f) for v in cor) for f in SOMBRA_DA_FACHADA for cor in cores]
         paletas[nome] = ["#%02x%02x%02x" % cor for cor in cores]
     total_de_cores = len(paletas[nome_da_base])
 
@@ -459,11 +511,15 @@ def converter(folha: dict, manifesto: dict) -> dict:
             pos, nor, uv, idx = malha(grade, (0, 0, 0), total_de_cores, todas)
         elif caixa:
             pos, nor, uv, idx = malha_da_caixa(
-                indices[linhas, cols], opaco[linhas, cols], pes, float(folha.get("telhado", 0.45)), total_de_cores
+                indices[linhas, cols], opaco[linhas, cols], pes, float(folha.get("telhado", 0.45)), total_de_cores, n
             )
         else:
-            grade = voxels(indices[linhas, cols], opaco[linhas, cols], base[linhas, cols], meia)
-            pos, nor, uv, idx = malha(grade, (largura_quadro / 2, pes, meia), total_de_cores, todas)
+            grade = voxels(indices[linhas, cols], opaco[linhas, cols], base[linhas, cols], fundo, finos)
+            pos, nor, uv, idx = malha(grade, (largura_quadro / 2, pes, fundo), total_de_cores, todas)
+            if q == 0 and PASTA_DA_PREVIA:
+                destino_da_previa = Path(PASTA_DA_PREVIA) / Path(folha["arquivo"]).with_suffix(".png")
+                destino_da_previa.parent.mkdir(parents=True, exist_ok=True)
+                previa(grade, unicas[:, :3]).save(destino_da_previa)
         if len(idx) == 0:
             pos = np.zeros((3, 3), np.int16)
             nor = np.zeros((3, 3), np.int8)
@@ -497,7 +553,7 @@ def converter(folha: dict, manifesto: dict) -> dict:
         "lado": lado,
         "plano": plano,
         "pes": pes,
-        "meiaProfundidade": 0 if plano == "chao" or caixa else meia,
+        "meiaProfundidade": 0 if plano == "chao" or caixa else fundo,
         # Topo e frente na cor exata do pixel: o telhado já vem iluminado.
         "topoExato": plano == "chao" or caixa,
         "paletas": paletas,
@@ -588,6 +644,11 @@ def expandir(manifesto: dict) -> list[dict]:
     return folhas
 
 
+def _previa_em(pasta):
+    global PASTA_DA_PREVIA
+    PASTA_DA_PREVIA = pasta
+
+
 def _converter(args):
     return converter(*args)
 
@@ -597,7 +658,10 @@ def main() -> None:
     ap.add_argument("--manifesto", default=str(RAIZ / "tools/voxel/manifesto.json"))
     ap.add_argument("--so", help="converte só as folhas cujo caminho contém este texto")
     ap.add_argument("--processos", type=int, default=os.cpu_count() or 2)
+    ap.add_argument("--previa", help="pasta onde gravar um PNG do primeiro quadro de cada modelo, já projetado")
     args = ap.parse_args()
+    global PASTA_DA_PREVIA
+    PASTA_DA_PREVIA = args.previa
     manifesto = json.loads(Path(args.manifesto).read_text(encoding="utf-8"))
     folhas = [f for f in expandir(manifesto) if not args.so or args.so in f["arquivo"]]
     if not folhas:
@@ -611,7 +675,7 @@ def main() -> None:
         indice = {**indice, **json.loads(caminho_do_indice.read_text(encoding="utf-8"))}
 
     total = bruto = 0
-    with Pool(args.processos) as fila:
+    with Pool(args.processos, initializer=_previa_em, initargs=(args.previa,)) as fila:
         while folhas:
             resultados = fila.map(_converter, [(f, manifesto) for f in folhas])
             folhas = []
