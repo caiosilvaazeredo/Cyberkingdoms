@@ -1,5 +1,5 @@
 {
-  "_": "A lista do que o renderer 3D precisa conhecer: só o que o jogo desenha. Cada grupo é um glob em public/tiny e as opções dele; a primeira regra que pega um arquivo fica com ele. Cenário vira modelo (.glb em public/voxel, espelhando o caminho); personagens, bichos e ícones são `\"forma\": \"sprite\"` — sprites planos em pé, sem modelo, só com a linha dos pés anotada no índice. Efeitos, interface, água e espuma não entram: o renderer os trata sozinho. `finos` são ajustes à mão por cor (cor → espessura máxima). Ver tools/voxelizar.py.",
+  "_": "A lista do que o renderer 3D precisa conhecer: só o que o jogo desenha. Cada grupo é um glob em public/tiny e as opções dele; a primeira regra que pega um arquivo fica com ele. Cenário vira modelo (.glb em public/voxel, espelhando o caminho); personagens, bichos e ícones são `\"forma\": \"sprite\"` — sprites planos em pé, sem modelo, só com a linha dos pés anotada no índice. Efeitos, interface, água e espuma não entram: o renderer os trata sozinho. Árvores, arbustos e pedras são `\"forma\": \"redondo\"` (sólido de revolução; `voxel` é o tamanho do bloco, em pixels). `finos` são ajustes à mão por cor (cor → espessura máxima). Ver tools/voxelizar.py.",
   "origem": "public/tiny",
   "destino": "public/voxel",
   "compactar": true,
@@ -46,26 +46,26 @@
     {
       "glob": "deco/Tree[12].png",
       "larguraQuadro": 192,
-      "profundidade": 72,
-      "degrau": 8
+      "forma": "redondo",
+      "voxel": 2
     },
     {
       "glob": "deco/Tree[34].png",
-      "profundidade": 72,
-      "degrau": 8
+      "forma": "redondo",
+      "voxel": 2
     },
     {
       "glob": "deco/Stump*.png",
-      "profundidade": 28
+      "forma": "redondo"
     },
     {
       "glob": "deco/Bushe*.png",
-      "profundidade": 44,
-      "degrau": 8
+      "forma": "redondo",
+      "voxel": 2
     },
     {
       "glob": "deco/Rock*.png",
-      "profundidade": 36
+      "forma": "redondo"
     },
     {
       "glob": "deco/*.png",
@@ -73,15 +73,15 @@
     },
     {
       "glob": "recursos/jazida_*.png",
-      "profundidade": 56
+      "forma": "redondo"
     },
     {
       "glob": "recursos/gnomo_choupana.png",
-      "profundidade": 48
+      "forma": "redondo"
     },
     {
       "glob": "recursos/gnomo_torre.png",
-      "profundidade": 48
+      "forma": "redondo"
     },
     {
       "glob": "recursos/*.png",

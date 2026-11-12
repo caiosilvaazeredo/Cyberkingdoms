@@ -113,6 +113,8 @@ export interface ModeloNoIndice {
   pes: number;
   /** É um prédio: esconde o nome e a barra de quem está atrás dele. */
   oclui?: boolean;
+  /** É um sólido de revolução (árvore, pedra): igual visto de qualquer lado. */
+  redondo?: boolean;
   paletas: Record<string, string[]>;
 }
 

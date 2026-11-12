@@ -25,6 +25,9 @@ desenha, nunca o pacote inteiro. A saída espelha `public/tiny` em
   perfil circular do trecho opaco em que ele está — na linha **e** na coluna,
   valendo o menor dos dois — e é centrada na profundidade.
 - **Prédio é caixa** (`"forma": "caixa"`): fachada em pé, telhado deitado.
+- **Árvore, arbusto e pedra são redondos** (`"forma": "redondo"`): um sólido
+  de revolução com a textura do sprite repetida em volta — ver
+  `grade_redonda`.
 - **Contorno escuro só na casca.** O pixel de contorno pinta a camada da
   frente e a do fundo; o miolo dele pega a cor do vizinho de dentro. Sem isso
   o topo da cabeça — que é uma linha inteira de contorno — viraria um disco
@@ -165,6 +168,72 @@ def voxels(
     return grade
 
 
+def grade_redonda(indices: np.ndarray, opaco: np.ndarray, rgba: np.ndarray):
+    """Um objeto redondo — árvore, arbusto, pedra — como sólido de revolução.
+    Devolve a grade e a profundidade dela.
+
+    ## A forma
+
+    De um objeto visto de um lado só não se sabe o fundo. A saída clássica é
+    a interseção de silhuetas: supor que ele tem a mesma silhueta visto de
+    qualquer ângulo, e ficar com o que cabe em todas. Para uma vista só,
+    girada em volta do eixo vertical, isso é um sólido de revolução — cada
+    linha do sprite vira um disco com a largura que ela tem. O disco gira em
+    volta do meio **daquela linha**, e não de um eixo único: assim a vista de
+    frente continua sendo a silhueta do sprite, mesmo torta.
+
+    ## A cor
+
+    Estender o pixel para o fundo deixa faixas de lado; girar a cor com a
+    forma pinta tudo com a cor da borda. A que funciona é projetar o sprite
+    de quatro lados — frente, direita, trás, esquerda —, cada um valendo no
+    quarto de volta dele, **espelhando um sim, um não**. O espelho é o que
+    casa as emendas: na diagonal, os dois lados pedem a mesma coluna do
+    sprite. De frente, o miolo é o sprite pixel a pixel; em volta, a textura
+    continua sem costura.
+
+    O contorno escuro sai: é tinta da silhueta de uma vista, e num sólido ela
+    viraria riscos no meio da copa.
+    """
+    alt, larg = opaco.shape
+    luma = rgba[..., 0] * 0.299 + rgba[..., 1] * 0.587 + rgba[..., 2] * 0.114
+    cor = miolo(indices, opaco, opaco & (luma < LUMA_DO_CONTORNO)) + 1
+    vaos = [np.flatnonzero(opaco[y]) for y in range(alt)]
+    raio_maximo = max((int(v[-1] - v[0]) + 1 for v in vaos if len(v)), default=1)
+    fundo = raio_maximo + 2
+    meio_z = fundo / 2
+    grade = np.zeros((alt, larg, fundo), dtype=np.int32)
+    zs = np.arange(fundo) + 0.5 - meio_z
+    for y, vao in enumerate(vaos):
+        if len(vao) == 0:
+            continue
+        esquerda, direita = int(vao[0]), int(vao[-1])
+        centro = (esquerda + direita + 1) / 2
+        raio = (direita - esquerda + 1) / 2
+        # A linha sem buracos: o vão transparente no meio pega o vizinho.
+        linha = cor[y, esquerda : direita + 1].copy()
+        cheios = np.flatnonzero(opaco[y, esquerda : direita + 1])
+        vazios = np.flatnonzero(~opaco[y, esquerda : direita + 1])
+        if len(vazios):
+            perto = cheios[np.abs(cheios[None, :] - vazios[:, None]).argmin(axis=1)]
+            linha[vazios] = linha[perto]
+        xs = np.arange(esquerda, direita + 1) + 0.5 - centro
+        dx, dz = np.meshgrid(xs, zs, indexing="ij")
+        dentro = dx * dx + dz * dz <= raio * raio
+        # Frente e trás leem o sprite pela largura; os lados, pela profundidade.
+        s = np.where(np.abs(dz) >= np.abs(dx), np.where(dz >= 0, dx, -dx), np.sign(dx) * dz)
+        coluna = np.clip(np.floor(s + raio).astype(int), 0, len(linha) - 1)
+        grade[y, esquerda : direita + 1, :] = np.where(dentro, linha[coluna], 0)
+    return grade, fundo
+
+
+def reduzido(a: np.ndarray, passo: int, pes: int):
+    """Uma amostra a cada `passo` pixels, alinhada para a linha dos pés ficar
+    inteira. Devolve a amostra e a linha dos pés nela."""
+    primeira = (pes - 1) % passo
+    return a[primeira::passo, passo // 2 :: passo], (pes - 1 - primeira) // passo + 1
+
+
 def grade_da_caixa(indices: np.ndarray, opaco: np.ndarray, rgba: np.ndarray, pes: int, telhado: float):
     """Um prédio como caixa sólida. Devolve a grade e a profundidade dela.
 
@@ -241,15 +310,17 @@ def previa(grade: np.ndarray, cores: np.ndarray, escala: int = 3) -> Image.Image
 
 
 def retangulos(mascara: np.ndarray):
-    """Greedy meshing de uma fatia: devolve (u, v, largura, altura, cor)."""
+    """Greedy meshing de uma fatia: devolve (u, v, largura, altura, cor).
+
+    Só visita as células preenchidas: numa fatia de um sólido, as faces
+    expostas são um anel fino, e varrer o vazio célula a célula era quase todo
+    o tempo da conversão."""
     m = mascara.copy()
     nu, nv = m.shape
-    for u in range(nu):
-        v = 0
-        while v < nv:
+    for u in np.flatnonzero(m.any(axis=1)):
+        for v in np.flatnonzero(m[u]):
             cor = m[u, v]
             if cor == 0:
-                v += 1
                 continue
             h = 1
             while v + h < nv and m[u, v + h] == cor:
@@ -258,8 +329,7 @@ def retangulos(mascara: np.ndarray):
             while u + w < nu and (m[u + w, v : v + h] == cor).all():
                 w += 1
             m[u : u + w, v : v + h] = 0
-            yield u, v, w, h, int(cor)
-            v += h
+            yield int(u), int(v), w, h, int(cor)
 
 
 # As faces que a câmera do jogo consegue ver. Ela é oblíqua e só olha do sul
@@ -444,6 +514,7 @@ def converter(folha: dict, manifesto: dict) -> dict:
     finos = folha.get("finos", {})
     plano = folha.get("plano", "pe")
     caixa = folha.get("forma") == "caixa"
+    redondo = folha.get("forma") == "redondo"
 
     base = abrir(origem / folha["arquivo"])
     opaco = base[..., 3] == 255
@@ -529,6 +600,16 @@ def converter(folha: dict, manifesto: dict) -> dict:
                 indices[linhas, cols], opaco[linhas, cols], base[linhas, cols], pes, float(folha.get("telhado", 0.45))
             )
             pos, nor, uv, idx = malha(grade, (largura_quadro / 2, pes, fundo_da_caixa), total_de_cores, faces)
+        elif redondo:
+            # Com `voxel` maior que 1 o objeto é feito de blocos maiores: o
+            # sprite é amostrado mais ralo e a malha, ampliada de volta.
+            passo = int(folha.get("voxel", 1))
+            ind_r, pes_r = reduzido(indices[linhas, cols], passo, pes)
+            opa_r, _ = reduzido(opaco[linhas, cols], passo, pes)
+            rgb_r, _ = reduzido(base[linhas, cols], passo, pes)
+            grade, fundo_r = grade_redonda(ind_r, opa_r, rgb_r)
+            pos, nor, uv, idx = malha(grade, (ind_r.shape[1] / 2, pes_r, fundo_r / 2), total_de_cores, faces)
+            pos = (pos.astype(np.int32) * passo).astype(np.int16)
         else:
             grade = voxels(
                 indices[linhas, cols], opaco[linhas, cols], base[linhas, cols], fundo, finos, int(folha.get("degrau", 1))
@@ -572,6 +653,8 @@ def converter(folha: dict, manifesto: dict) -> dict:
         "plano": plano,
         # Prédio tapa a visão: o renderer esconde o nome de quem está atrás.
         "oclui": caixa,
+        # Redondo é igual de todo lado: o renderer ilumina os lados por igual.
+        "redondo": redondo,
         "pes": pes,
         "paletas": paletas,
     }

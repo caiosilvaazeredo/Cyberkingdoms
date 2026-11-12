@@ -118,6 +118,7 @@ const NIVEL_DA_AGUA = -10;
 
 const VERTICE_DO_MODELO = /* glsl */ `
   uniform vec4 uvDaPaleta;
+  uniform float ladoIgual;
   varying vec2 vUv;
   varying float vLuz;
   varying float vFundo;
@@ -126,7 +127,9 @@ const VERTICE_DO_MODELO = /* glsl */ `
     vec3 n = normalize(mat3(instanceMatrix) * normal);
     // Luz fixa, de cima e de frente: o topo na cor exata, a frente um pouco
     // abaixo, os lados na sombra. É o que separa telhado de parede.
-    vLuz = n.y > 0.5 ? 1.0 : (n.z > 0.5 ? 0.84 : 0.66);
+    // Num objeto redondo todos os lados levam a mesma luz: com a câmera
+    // girando em volta, um lado "da frente" mais claro denunciaria a emenda.
+    vLuz = n.y > 0.5 ? 1.0 : mix(n.z > 0.5 ? 0.84 : 0.66, 0.84, ladoIgual);
     vec4 naCamera = modelViewMatrix * instanceMatrix * vec4(position, 1.0);
     vFundo = -naCamera.z;
     gl_Position = projectionMatrix * naCamera;
@@ -901,6 +904,7 @@ export class RenderVoxel implements PintorVoxel {
             ...this.nevoa,
             paleta: { value: texturaDaPaleta(d.paletas[entrada.paleta]!) },
             uvDaPaleta: { value: modelo.uvDaPaleta },
+            ladoIgual: { value: d.redondo ? 1 : 0 },
           },
         });
         modelo.materiais.set(entrada.paleta, material);
@@ -977,8 +981,15 @@ export class RenderVoxel implements PintorVoxel {
    * retângulo é o próprio pedaço de chão.
    */
   private sprite(img: ImagemPendente, ancora: Ponto | null, deitado: boolean, tinta?: Color): void {
-    const lote = this.loteDeSprites(img.fonte);
     const zoom = this.vista.zoom;
+    // Como as árvores: um sprite encostado na lente tapa a tela e não é o
+    // personagem de quem joga, que fica bem mais longe dela.
+    if (!deitado && ancora && this.alvo) {
+      const perto = this.noChao(ancora);
+      const o = this.camera.position;
+      if (Math.hypot(perto.x - o.x, perto.y - o.z) < FOLGA_DA_LENTE * 0.75) return;
+    }
+    const lote = this.loteDeSprites(img.fonte);
     // De pé, o sprite fica de frente para a câmera. Quando ela está virada
     // para o sul, o leste do mundo é a esquerda da tela — e quem olha para o
     // leste tem de sair olhando para a esquerda.
