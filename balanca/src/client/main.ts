@@ -693,12 +693,25 @@ function laco(agora: number): void {
     if (rede.estado && rede.arena) {
       const caixa = caixaDoMinimapa(largura, rede.arena);
       if (ajustes.minimapa) {
-        minimapa.desenhar(ctx, rede.arena, rede.estado, emCampo[0]!.unidade.time, {
-          x: camera.x,
-          y: camera.y,
-          largura: largura / camera.zoom,
-          altura: altura / camera.zoom,
-        }, largura, rede.marcas);
+        // Com a câmera 3D atrás de quem joga, o que se vê é um leque à frente
+        // dele, e não o retângulo da câmera de cima.
+        const seguido = tresD && emCampo.length === 1 && telas.atual === 'jogo' ? posicoes[0] : null;
+        minimapa.desenhar(
+          ctx,
+          rede.arena,
+          rede.estado,
+          emCampo[0]!.unidade.time,
+          {
+            x: camera.x,
+            y: camera.y,
+            largura: largura / camera.zoom,
+            altura: altura / camera.zoom,
+            ...(seguido ? { cone: { x: seguido.x, y: seguido.y, rumo: tresD!.rumo, alcance: 1300 } } : {}),
+          },
+          largura,
+          rede.marcas,
+          emCampo.length === 1 ? emCampo[0]!.unidade.id : null,
+        );
       }
       if (controlesDeToqueAtivos(ajustes)) {
         botaoDeRecolher(ctx, entrada, ajustes, 'minimapa', caixa.x + caixa.l - 13, caixa.y + 13, ajustes.minimapa);
