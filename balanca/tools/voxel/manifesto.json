@@ -43,7 +43,13 @@
         "cumeeira": 165,
         "beiral": 238
       },
-      "planta": "retangulo"
+      "planta": "retangulo",
+      "torre": {
+        "x0": 60,
+        "x1": 131,
+        "topo": 44,
+        "base": 140
+      }
     },
     {
       "variantes": {

@@ -412,6 +412,12 @@ export class RenderVoxel implements PintorVoxel {
   private sombrasUsadas = 0;
   /** As caixas dos prédios postos em cena neste quadro: x0, x1, altura, z0, z1. */
   private readonly paredes: number[] = [];
+  /**
+   * A copa das árvores e o corpo das pedras deste quadro, no mesmo formato
+   * de `paredes` mais a altura de baixo: x0, x1, alto, z0, z1, baixo. Só
+   * servem para esconder o 2D que fica atrás delas (nome, baú, bolsa).
+   */
+  private readonly copas: number[] = [];
 
   private real!: CanvasRenderingContext2D;
   private gravador: CanvasRenderingContext2D | null = null;
@@ -636,6 +642,7 @@ export class RenderVoxel implements PintorVoxel {
     this.deitados = 0;
     this.sombrasUsadas = 0;
     this.paredes.length = 0;
+    this.copas.length = 0;
     for (const modelo of this.modelos.values()) {
       if (modelo) for (const lote of modelo.lotes.values()) lote.usados = 0;
     }
@@ -959,6 +966,20 @@ export class RenderVoxel implements PintorVoxel {
       const o = this.camera.position;
       if (Math.hypot(chao.x - o.x, chao.y - o.z) < raio + FOLGA_DA_LENTE) return true;
     }
+    if (d.redondo) {
+      // Só o miolo da copa: a borda é rendada, e o tronco é fino.
+      const c = modelo.quadros[quadro]!.caixa;
+      const rx = (c.max.x - c.min.x) * 0.5 * escala * 0.55;
+      const rz = (c.max.z - c.min.z) * 0.5 * escala * 0.55;
+      this.copas.push(
+        chao.x - rx,
+        chao.x + rx,
+        c.max.y * escala * 0.9,
+        chao.y - rz,
+        chao.y + rz,
+        c.max.y * escala * (d.vento ? 0.3 : 0),
+      );
+    }
     if (d.oclui) {
       const c = modelo.quadros[quadro]!.caixa;
       const i = this.paredes.length;
@@ -972,7 +993,7 @@ export class RenderVoxel implements PintorVoxel {
       // Prédio não barra ninguém, e a câmera vai atrás de quem anda: um
       // prédio entre os dois taparia a tela inteira com o telhado. Esse some
       // — fica o nome dele, pintado por cima —, e não tapa mais nada.
-      if (this.alvo && this.raioCruza(i, this.alvo.x, 40, this.alvo.y)) {
+      if (this.alvo && this.raioCruza(this.paredes, i, 0, this.alvo.x, 40, this.alvo.y, 1)) {
         this.paredes.length = i;
         return true;
       }
@@ -1211,7 +1232,12 @@ export class RenderVoxel implements PintorVoxel {
   /** Se há um prédio entre a câmera e um ponto à altura do peito, no chão dado. */
   private tapado(x: number, z: number): boolean {
     for (let i = 0; i < this.paredes.length; i += 5) {
-      if (this.raioCruza(i, x, 28, z)) return true;
+      if (this.raioCruza(this.paredes, i, 0, x, 28, z, 1)) return true;
+    }
+    // Atrás de árvore e pedra também — mas só **atrás**: quem está debaixo
+    // da copa, colhendo, continua visível.
+    for (let i = 0; i < this.copas.length; i += 6) {
+      if (this.raioCruza(this.copas, i, this.copas[i + 5]!, x, 28, z, 0.9)) return true;
     }
     return false;
   }
@@ -1220,15 +1246,22 @@ export class RenderVoxel implements PintorVoxel {
    * Se o segmento da câmera até um ponto atravessa a caixa `i` de `paredes`.
    * Vai até o próprio ponto: quem está **dentro** da caixa também conta.
    */
-  private raioCruza(i: number, x: number, h: number, z: number): boolean {
+  private raioCruza(
+    p: readonly number[],
+    i: number,
+    baixo: number,
+    x: number,
+    h: number,
+    z: number,
+    ate: number,
+  ): boolean {
     const o = this.camera.position;
-    const p = this.paredes;
     const d = [x - o.x, h - o.y, z - o.z] as const;
     const origem = [o.x, o.y, o.z] as const;
-    const min = [p[i]!, 0, p[i + 3]!] as const;
+    const min = [p[i]!, baixo, p[i + 3]!] as const;
     const max = [p[i + 1]!, p[i + 2]!, p[i + 4]!] as const;
     let entra = 0;
-    let sai = 1;
+    let sai = ate;
     for (let k = 0; k < 3; k++) {
       if (Math.abs(d[k]!) < 1e-9) {
         if (origem[k]! < min[k]! || origem[k]! > max[k]!) return false;

@@ -294,6 +294,45 @@ def planta_do_predio(forma, folha: dict, larg: int, fundo: int, x0: int, x1: int
     return m
 
 
+def erguer_torre(grade, opaco, cor, cheia, torre: dict, fundo: int, estica: float) -> None:
+    """A torre do sino, ou qualquer volume que fure o telhado: uma pilha de
+    quadrados, um por linha do desenho, com a largura que a linha tem — o
+    campanário sai um bloco, a agulha sai uma pirâmide.
+
+    Ela fica no meio da profundidade, em cima da cumeeira. No desenho em 3/4
+    o que está no fundo aparece mais alto do que é; a torre desce o tanto
+    que a perspectiva do desenho a subia, para nascer da cumeeira e não
+    flutuar acima dela.
+    """
+    x0, x1 = int(torre["x0"]), int(torre["x1"])
+    topo, base = int(torre["topo"]), int(torre["base"])
+    zc = fundo / 2
+    desce = int(round(zc / estica))
+    alt = grade.shape[0]
+    for v in range(topo, base + 1):
+        cols = np.flatnonzero(opaco[v, x0 : x1 + 1]) + x0
+        if len(cols) == 0:
+            continue
+        esq, dir_ = int(cols[0]), int(cols[-1])
+        meia = (dir_ - esq + 1) / 2
+        z0, z1 = int(round(zc - meia)), int(round(zc + meia))
+        linha = v + desce
+        if linha >= alt or z1 <= z0:
+            continue
+        w = dir_ - esq + 1
+        for c in range(esq, dir_ + 1):
+            grade[linha, c, z0:z1] = cheia[v, c]
+            grade[linha, c, z1 - 1] = cor[v, c] if opaco[v, c] else cheia[v, c]
+            grade[linha, c, z0] = cor[v, c] if opaco[v, c] else cheia[v, c]
+        # Os lados levam as colunas da frente, envolvidas: de lado a torre
+        # tem o mesmo sino e as mesmas telhas.
+        for z in range(z0, z1):
+            k = (z1 - 1 - z) % (2 * w)
+            k = k if k < w else 2 * w - 1 - k
+            grade[linha, esq, z] = cor[v, esq + k] if opaco[v, esq + k] else cheia[v, esq + k]
+            grade[linha, dir_, z] = cor[v, dir_ - k] if opaco[v, dir_ - k] else cheia[v, dir_ - k]
+
+
 def grade_do_predio(indices: np.ndarray, opaco: np.ndarray, rgba: np.ndarray, pes: int, folha: dict):
     """Um prédio a partir de um sprite em 3/4. Devolve a grade e a profundidade.
 
@@ -356,6 +395,14 @@ def grade_do_predio(indices: np.ndarray, opaco: np.ndarray, rgba: np.ndarray, pe
         acima = np.flatnonzero(opaco[: corte[c], c])
         if len(acima):
             topo[c] = acima[0]
+    # A torre (`"torre"` no manifesto) sai do telhado: as linhas dela não
+    # entram na textura das águas, que começa logo abaixo.
+    torre = folha.get("torre")
+    if torre:
+        for c in range(int(torre["x0"]), int(torre["x1"]) + 1):
+            abaixo = np.flatnonzero(opaco[int(torre["base"]) : corte[c], c]) + int(torre["base"])
+            if len(abaixo):
+                topo[c] = max(topo[c], int(abaixo[0]))
     tira = np.maximum(0, corte - topo)
     if not tira.any():
         return np.zeros((alt, larg, 1), dtype=np.int32), 1
@@ -427,6 +474,9 @@ def grade_do_predio(indices: np.ndarray, opaco: np.ndarray, rgba: np.ndarray, pe
                     grade[v, c, frente[-1]] = cor[v, c] if opaco[v, c] else cheia[v, c]
             elif opaco[v, c]:
                 grade[v, c, max(0, z - 1) : z + 1] = cor[v, c]
+
+    if torre:
+        erguer_torre(grade, opaco, cor, cheia, torre, fundo, estica)
 
     # As outras paredes levam a fachada **envolvida** em volta do prédio:
     # andando pela parede de lado a partir da quina da frente, lê-se a fachada

@@ -276,7 +276,12 @@ function tingir(
  * segunda devolve o ocre que faz a pedra parecer que tem metal dentro.
  */
 function pedra(img: HTMLImageElement): HTMLCanvasElement {
-  return tingir(tingir(img, '#7c8088', 0.82), '#c79a3c', 0.22);
+  const tela = tingir(tingir(img, '#7c8088', 0.82), '#c79a3c', 0.22);
+  // A folha repintada continua sendo a mesma folha do pacote: quem precisa
+  // saber de onde ela veio (o renderer 3D acha por aí onde ficam os pés) lê
+  // o mesmo `src` da original.
+  (tela as HTMLCanvasElement & { src?: string }).src = img.src;
+  return tela;
 }
 
 export function animacao(
