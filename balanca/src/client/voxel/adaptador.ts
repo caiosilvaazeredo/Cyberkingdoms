@@ -115,6 +115,8 @@ export interface ModeloNoIndice {
   oclui?: boolean;
   /** É um sólido de revolução (árvore, pedra): igual visto de qualquer lado. */
   redondo?: boolean;
+  /** Balança com o vento (árvore, arbusto). */
+  vento?: boolean;
   paletas: Record<string, string[]>;
 }
 

@@ -3,6 +3,7 @@ import {
   BufferGeometry,
   CircleGeometry,
   Color,
+  ColorManagement,
   DataTexture,
   DoubleSide,
   Fog,
@@ -72,6 +73,11 @@ import type {
  * do grupo é posto em relação a ela.
  */
 
+// As cores daqui são as do sprite, byte a byte, e os shaders as escrevem como
+// vieram. Com a gestão de cor ligada, `new Color('#8a5a2b')` seria convertida
+// para linear — e a ponte, o mar e a névoa sairiam mais escuros que o resto.
+ColorManagement.enabled = false;
+
 /** Abertura vertical da câmera, em graus. */
 const ABERTURA = 55;
 
@@ -119,6 +125,8 @@ const NIVEL_DA_AGUA = -10;
 const VERTICE_DO_MODELO = /* glsl */ `
   uniform vec4 uvDaPaleta;
   uniform float ladoIgual;
+  uniform float vento;
+  uniform float tempo;
   varying vec2 vUv;
   varying float vLuz;
   varying float vFundo;
@@ -129,8 +137,18 @@ const VERTICE_DO_MODELO = /* glsl */ `
     // abaixo, os lados na sombra. É o que separa telhado de parede.
     // Num objeto redondo todos os lados levam a mesma luz: com a câmera
     // girando em volta, um lado "da frente" mais claro denunciaria a emenda.
-    vLuz = n.y > 0.5 ? 1.0 : mix(n.z > 0.5 ? 0.84 : 0.66, 0.84, ladoIgual);
-    vec4 naCamera = modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+    vLuz = n.y > 0.5 ? 1.0 : mix(n.z > 0.5 ? 0.88 : 0.76, 0.86, ladoIgual);
+    vec4 noMundo = instanceMatrix * vec4(position, 1.0);
+    // O vento: a copa balança e o pé não sai do lugar. O deslocamento cresce
+    // com o quadrado da altura, e a fase vem de onde a árvore está plantada —
+    // cada uma no seu tempo, como uma rajada que atravessa o campo.
+    vec3 raiz = instanceMatrix[3].xyz;
+    float alto = max(noMundo.y, 0.0);
+    float fase = tempo * 1.3 + raiz.x * 0.011 + raiz.z * 0.015 + alto * 0.012;
+    float forca = vento * alto * alto * 0.00022;
+    noMundo.x += (sin(fase) + 0.4 * sin(fase * 2.3 + 1.0)) * forca;
+    noMundo.z += cos(fase * 0.8) * forca * 0.6;
+    vec4 naCamera = viewMatrix * noMundo;
     vFundo = -naCamera.z;
     gl_Position = projectionMatrix * naCamera;
   }
@@ -149,16 +167,38 @@ const FRAGMENTO_DO_MODELO = /* glsl */ `
   }
 `;
 
+/**
+ * A água em movimento: ondas largas que clareiam e escurecem a cor, e
+ * cintilações que correm por cima. Tudo em blocos de quatro unidades, para a
+ * água ter o mesmo grão do resto do mundo.
+ */
+const ONDAS = /* glsl */ `
+  uniform float tempo;
+  vec3 ondular(vec3 cor, vec2 chao) {
+    vec2 q = floor(chao / 4.0) * 4.0;
+    float onda =
+      sin(q.x * 0.045 + tempo * 1.1) +
+      sin(q.y * 0.06 - tempo * 0.8) +
+      sin((q.x + q.y) * 0.03 + tempo * 0.5);
+    cor *= 1.0 + 0.045 * onda;
+    float brilho = step(2.5, onda + 0.4 * sin(q.x * 0.21 + q.y * 0.17 + tempo * 2.0));
+    return mix(cor, vec3(0.86, 0.97, 1.0), brilho * 0.5);
+  }
+`;
+
 const VERTICE_DO_SPRITE = /* glsl */ `
   attribute vec4 recorte;
   attribute vec3 tinta;
   varying vec2 vUv;
   varying vec3 vTinta;
   varying float vFundo;
+  varying vec2 vChao;
   void main() {
     vUv = recorte.xy + position.xy * recorte.zw;
     vTinta = tinta;
-    vec4 naCamera = modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+    vec4 noMundo = instanceMatrix * vec4(position, 1.0);
+    vChao = noMundo.xz;
+    vec4 naCamera = viewMatrix * noMundo;
     vFundo = -naCamera.z;
     gl_Position = projectionMatrix * naCamera;
   }
@@ -166,18 +206,47 @@ const VERTICE_DO_SPRITE = /* glsl */ `
 
 const FRAGMENTO_DO_SPRITE = /* glsl */ `
   uniform sampler2D mapa;
+  uniform float agua;
   varying vec2 vUv;
   varying vec3 vTinta;
   varying float vFundo;
+  varying vec2 vChao;
   uniform vec3 nevoa;
   uniform vec2 faixaDaNevoa;
+  ${ONDAS}
   void main() {
     vec4 cor = texture2D(mapa, vUv);
     // Recorte duro: tira o vazio e também a sombra do chão, que o pacote pinta
     // com alfa parcial.
     if (cor.a < 0.4) discard;
     vec3 tingida = cor.rgb * vTinta;
+    if (agua > 0.5) tingida = ondular(tingida, vChao);
     gl_FragColor = vec4(mix(tingida, nevoa, smoothstep(faixaDaNevoa.x, faixaDaNevoa.y, vFundo)), 1.0);
+  }
+`;
+
+const VERTICE_DO_MAR = /* glsl */ `
+  varying float vFundo;
+  varying vec2 vChao;
+  void main() {
+    vec4 noMundo = modelMatrix * vec4(position, 1.0);
+    vChao = noMundo.xz;
+    vec4 naCamera = viewMatrix * noMundo;
+    vFundo = -naCamera.z;
+    gl_Position = projectionMatrix * naCamera;
+  }
+`;
+
+const FRAGMENTO_DO_MAR = /* glsl */ `
+  uniform vec3 cor;
+  varying float vFundo;
+  varying vec2 vChao;
+  uniform vec3 nevoa;
+  uniform vec2 faixaDaNevoa;
+  ${ONDAS}
+  void main() {
+    vec3 c = ondular(cor, vChao);
+    gl_FragColor = vec4(mix(c, nevoa, smoothstep(faixaDaNevoa.x, faixaDaNevoa.y, vFundo)), 1.0);
   }
 `;
 
@@ -352,9 +421,11 @@ export class RenderVoxel implements PintorVoxel {
   private direitaX = 1;
   private direitaZ = 0;
   private estica = 1;
+  /** Os uniformes que todo material compartilha: a névoa e o relógio. */
   private readonly nevoa = {
     nevoa: { value: new Color(COR_DA_NEVOA) },
     faixaDaNevoa: { value: new Vector2(NEVOA[0], NEVOA[1]) },
+    tempo: { value: 0 },
   };
   private dpr = 1;
   /** 0: antes da lista ordenada (o chão). 1: dentro dela. 2: depois (efeitos). */
@@ -379,7 +450,11 @@ export class RenderVoxel implements PintorVoxel {
     // O mar até o horizonte: o mapa acaba, a água não.
     this.mar = new Mesh(
       new PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
-      new MeshBasicMaterial({ color: 0x47abaa }),
+      new ShaderMaterial({
+        vertexShader: VERTICE_DO_MAR,
+        fragmentShader: FRAGMENTO_DO_MAR,
+        uniforms: { ...this.nevoa, cor: { value: new Color(0x47abaa) } },
+      }),
     );
     this.mar.scale.setScalar(120000);
     this.mar.position.y = NIVEL_DA_AGUA - 1;
@@ -595,6 +670,7 @@ export class RenderVoxel implements PintorVoxel {
     this.sombras.visible = this.sombrasUsadas > 0;
     this.sombras.instanceMatrix.needsUpdate = true;
 
+    this.nevoa.tempo.value = performance.now() / 1000;
     this.ceu();
     this.gl.render(this.cena, this.camera);
     ctx.save();
@@ -905,6 +981,7 @@ export class RenderVoxel implements PintorVoxel {
             paleta: { value: texturaDaPaleta(d.paletas[entrada.paleta]!) },
             uvDaPaleta: { value: modelo.uvDaPaleta },
             ladoIgual: { value: d.redondo ? 1 : 0 },
+            vento: { value: d.vento ? 1 : 0 },
           },
         });
         modelo.materiais.set(entrada.paleta, material);
@@ -1045,7 +1122,11 @@ export class RenderVoxel implements PintorVoxel {
         vertexShader: VERTICE_DO_SPRITE,
         fragmentShader: FRAGMENTO_DO_SPRITE,
         side: DoubleSide,
-        uniforms: { ...this.nevoa, mapa: { value: mapa } },
+        uniforms: {
+          ...this.nevoa,
+          mapa: { value: mapa },
+          agua: { value: this.caminhoDe(fonte) === 'terrain/water' ? 1 : 0 },
+        },
       });
     }
     const capacidade = lote ? lote.malha.instanceMatrix.count * 2 : 32;

@@ -22,17 +22,55 @@
       "forma": "sprite"
     },
     {
-      "glob": "buildings/blue/*.png",
       "variantes": {
         "red": "buildings/red"
       },
       "forma": "caixa",
-      "telhado": 0.45
+      "glob": "buildings/blue/House1.png",
+      "duasAguas": {
+        "cumeeira": 88,
+        "beiral": 128
+      }
+    },
+    {
+      "variantes": {
+        "red": "buildings/red"
+      },
+      "forma": "caixa",
+      "glob": "buildings/blue/Monastery.png",
+      "duasAguas": {
+        "cumeeira": 165,
+        "beiral": 238
+      }
+    },
+    {
+      "variantes": {
+        "red": "buildings/red"
+      },
+      "forma": "caixa",
+      "glob": "buildings/blue/Tower.png",
+      "corte": 0.33
+    },
+    {
+      "variantes": {
+        "red": "buildings/red"
+      },
+      "forma": "caixa",
+      "glob": "buildings/blue/Barracks.png",
+      "corte": 0.4
+    },
+    {
+      "variantes": {
+        "red": "buildings/red"
+      },
+      "forma": "caixa",
+      "glob": "buildings/blue/*.png",
+      "corte": 0.45
     },
     {
       "glob": "buildings/oficina_nivel3.png",
       "forma": "caixa",
-      "telhado": 0.45
+      "corte": 0.45
     },
     {
       "glob": "buildings/oficina_nivel2.png",
@@ -47,12 +85,14 @@
       "glob": "deco/Tree[12].png",
       "larguraQuadro": 192,
       "forma": "redondo",
-      "voxel": 2
+      "voxel": 2,
+      "vento": true
     },
     {
       "glob": "deco/Tree[34].png",
       "forma": "redondo",
-      "voxel": 2
+      "voxel": 2,
+      "vento": true
     },
     {
       "glob": "deco/Stump*.png",
@@ -61,7 +101,8 @@
     {
       "glob": "deco/Bushe*.png",
       "forma": "redondo",
-      "voxel": 2
+      "voxel": 2,
+      "vento": true
     },
     {
       "glob": "deco/Rock*.png",

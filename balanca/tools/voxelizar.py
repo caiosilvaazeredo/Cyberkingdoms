@@ -24,7 +24,8 @@ desenha, nunca o pacote inteiro. A saída espelha `public/tiny` em
 - **Volume arredondado, não extrusão.** A espessura de cada pixel sai do
   perfil circular do trecho opaco em que ele está — na linha **e** na coluna,
   valendo o menor dos dois — e é centrada na profundidade.
-- **Prédio é caixa** (`"forma": "caixa"`): fachada em pé, telhado deitado.
+- **Prédio** (`"forma": "caixa"`): planta, fachada e telhado lidos do sprite,
+  com terraço de ameias ou telhado de duas águas — ver `grade_do_predio`.
 - **Árvore, arbusto e pedra são redondos** (`"forma": "redondo"`): um sólido
   de revolução com a textura do sprite repetida em volta — ver
   `grade_redonda`.
@@ -227,6 +228,30 @@ def grade_redonda(indices: np.ndarray, opaco: np.ndarray, rgba: np.ndarray):
     return grade, fundo
 
 
+def fechada(mascara: np.ndarray, raio: int) -> np.ndarray:
+    """Fechamento morfológico (dilata e depois erode) com um quadrado."""
+
+    def passa(m: np.ndarray, junta) -> np.ndarray:
+        cheio = np.pad(m, raio, constant_values=False)
+        saida = m.copy()
+        for dy in range(-raio, raio + 1):
+            for dx in range(-raio, raio + 1):
+                saida = junta(
+                    saida, cheio[raio + dy : raio + dy + m.shape[0], raio + dx : raio + dx + m.shape[1]]
+                )
+        return saida
+
+    dilatada = passa(mascara, np.logical_or)
+    # Na erosão a borda da imagem conta como cheia, para a mancha não encolher
+    # só por encostar nela.
+    cheio = np.pad(dilatada, raio, constant_values=True)
+    saida = dilatada.copy()
+    for dy in range(-raio, raio + 1):
+        for dx in range(-raio, raio + 1):
+            saida &= cheio[raio + dy : raio + dy + mascara.shape[0], raio + dx : raio + dx + mascara.shape[1]]
+    return saida
+
+
 def reduzido(a: np.ndarray, passo: int, pes: int):
     """Uma amostra a cada `passo` pixels, alinhada para a linha dos pés ficar
     inteira. Devolve a amostra e a linha dos pés nela."""
@@ -234,56 +259,136 @@ def reduzido(a: np.ndarray, passo: int, pes: int):
     return a[primeira::passo, passo // 2 :: passo], (pes - 1 - primeira) // passo + 1
 
 
-def grade_da_caixa(indices: np.ndarray, opaco: np.ndarray, rgba: np.ndarray, pes: int, telhado: float):
-    """Um prédio como caixa sólida. Devolve a grade e a profundidade dela.
+def grade_do_predio(indices: np.ndarray, opaco: np.ndarray, rgba: np.ndarray, pes: int, folha: dict):
+    """Um prédio a partir de um sprite em 3/4. Devolve a grade e a profundidade.
 
-    O sprite do prédio é desenhado em 3/4: a parte de cima é o telhado visto
-    de cima, a de baixo é a fachada. As linhas abaixo do corte viram a parede
-    da frente; as de cima viram o tampo da caixa, uma linha de pixel por voxel
-    de profundidade — e é o desenho do telhado que diz onde a caixa existe. O
-    miolo e as outras paredes repetem a cor da fachada naquela altura — sem o
-    contorno escuro, que é tinta da silhueta e pintaria as laterais de preto.
+    ## A técnica
 
-    `telhado` é a fração da altura do desenho, a partir do topo, que é telhado.
+    Reconstruir um prédio de uma imagem só é um problema sem solução única, e
+    a literatura (modelagem procedural de fachadas, gramáticas de forma) o
+    resolve do mesmo jeito: separa o prédio em **planta, fachada e telhado**, e
+    aplica ao telhado um operador que depende do tipo dele. É o que se faz
+    aqui, lendo cada parte do próprio sprite:
+
+    - **Fachada**: as linhas abaixo do corte, em pé, na frente.
+    - **Planta**: o contorno do desenho do telhado, que no 3/4 é o prédio
+      visto de cima. Ele é achatado pela perspectiva do desenho, então cada
+      linha vale `estica` voxels de profundidade — é o que faz a boca da torre,
+      desenhada como elipse, voltar a ser um círculo.
+    - **Telhado**, por tipo:
+      - *terraço* (castelo, quartel, torre): o piso de madeira é **rebaixado**
+        e a pedra em volta fica na altura da fachada — ameias de verdade, dos
+        quatro lados. Piso e pedra se separam pela cor.
+      - *duas águas* (`"duasAguas"`, casa e mosteiro): o corte acompanha a
+        empena — sobe do beiral até a cumeeira —, a parede da frente fica com
+        o triângulo, e o telhado segue essa altura até o fundo.
+
+    As outras paredes levam o desenho da fachada, sem o contorno escuro.
     """
     alt, larg = opaco.shape
     linhas = np.nonzero(opaco.any(axis=1))[0]
     if len(linhas) == 0:
         return np.zeros((alt, larg, 1), dtype=np.int32), 1
-    topo = int(linhas.min())
-    corte = topo + max(1, int(round((pes - topo) * telhado)))
-    fundo = corte - topo
+    estica = float(folha.get("estica", 1.6))
+    aguas = folha.get("duasAguas")
+    rebaixo = 0 if aguas else int(folha.get("parapeito", 14))
     cor = np.where(opaco, indices + 1, 0)
-    # tampo[coluna, z]: z = fundo − 1 é a beira da frente (a linha logo acima
-    # do corte) e z = 0 é o fundo (a linha do topo do desenho).
-    tampo = cor[topo:corte].T
-    grade = np.zeros((alt, larg, fundo), dtype=np.int32)
-    grade[corte] = tampo
-    parede = cor[corte + 1 :]
-    # Aqui "contorno" é toda tinta escura, e não só a que encosta no vazio: o
-    # traço do pacote tem dois pixels de largura, e o de dentro contaminaria.
     luma = rgba[..., 0] * 0.299 + rgba[..., 1] * 0.587 + rgba[..., 2] * 0.114
-    dentro = np.where(opaco, miolo(indices, opaco, opaco & (luma < LUMA_DO_CONTORNO)) + 1, 0)[corte + 1 :]
-    grade[corte + 1 :] = np.where(tampo[None] > 0, dentro[:, :, None], 0)
-    grade[corte + 1 :, :, fundo - 1] = parede
-    # As outras três paredes levam o desenho da fachada: a de trás, o mesmo;
-    # as de lado, as colunas da fachada a partir daquela quina. Sem isto, de
-    # lado o prédio é um borrão de faixas — a câmera gira em volta dele.
-    for v in range(corte + 1, alt):
+    # "Contorno" aqui é toda tinta escura: o traço do pacote tem dois pixels.
+    dentro = miolo(indices, opaco, opaco & (luma < LUMA_DO_CONTORNO)) + 1
+    r, g, b = (rgba[..., k].astype(int) for k in range(3))
+    madeira = opaco & (r > b + 25) & (r >= g) & (luma > 70)
+    # O piso tem veios e frestas escuras que, pela cor, não são madeira — e
+    # ficariam de pé no meio do terraço, como estacas. Fecha-se a mancha:
+    # cresce e encolhe de novo, e o que estava cercado de madeira vira piso.
+    madeira = fechada(madeira, 4) & opaco
+
+    colunas = np.flatnonzero(opaco.any(axis=0))
+    x0, x1 = int(colunas[0]), int(colunas[-1])
+    topo_geral = int(linhas.min())
+    if aguas:
+        meio = (x0 + x1 + 1) / 2
+        meia = (x1 - x0 + 1) / 2
+        t = np.clip(1 - np.abs(np.arange(larg) + 0.5 - meio) / meia, 0, 1)
+        corte = np.round(aguas["beiral"] - (aguas["beiral"] - aguas["cumeeira"]) * t).astype(int)
+    else:
+        fracao = float(folha.get("corte", 0.45))
+        corte = np.full(larg, topo_geral + max(1, int(round((pes - topo_geral) * fracao))))
+
+    # A tira de telhado de cada coluna: do primeiro pixel opaco até o corte.
+    topo = np.full(larg, alt)
+    for c in colunas:
+        acima = np.flatnonzero(opaco[: corte[c], c])
+        if len(acima):
+            topo[c] = acima[0]
+    tira = np.maximum(0, corte - topo)
+    if not tira.any():
+        return np.zeros((alt, larg, 1), dtype=np.int32), 1
+    fundo = int(np.ceil((np.median(tira[tira > 0]) if aguas else tira.max()) * estica))
+    grade = np.zeros((alt, larg, fundo), dtype=np.int32)
+
+    # A fachada sem buracos, para o miolo das paredes: vão pega o vizinho.
+    cheia = dentro.copy()
+    for v in range(alt):
+        cheios = np.flatnonzero(opaco[v])
+        if len(cheios) and len(cheios) < larg:
+            vazios = np.flatnonzero(~opaco[v])
+            cheia[v, vazios] = dentro[v, cheios[np.abs(cheios[None, :] - vazios[:, None]).argmin(axis=1)]]
+
+    base = np.full(larg, pes - 1)
+    for c in colunas:
+        abaixo = np.flatnonzero(opaco[corte[c] :, c])
+        if len(abaixo):
+            base[c] = corte[c] + abaixo[-1]
+
+    for c in colunas:
+        if tira[c] == 0:
+            continue
+        for k in range(fundo):
+            # De que linha do telhado vem este voxel de profundidade.
+            passo = k * tira[c] / fundo if aguas else k / estica
+            linha = corte[c] - 1 - int(passo)
+            if linha < topo[c] or not opaco[linha, c]:
+                continue
+            z = fundo - 1 - k
+            piso = rebaixo if madeira[linha, c] else 0
+            alto = corte[c] + piso
+            if alto > base[c]:
+                continue
+            grade[alto : base[c] + 1, c, z] = cheia[alto : base[c] + 1, c]
+            # O tampo, e — onde há ameia — o corpo dela, na cor do telhado.
+            grade[alto : min(corte[c] + rebaixo, base[c]) + 1, c, z] = cor[linha, c]
+
+    # A fachada na frente de cada coluna; coluna sem planta ganha uma lasca.
+    for c in colunas:
+        ocupados = np.flatnonzero(grade[:, c, :].any(axis=0))
+        z = int(ocupados[-1]) if len(ocupados) else fundo - 1
+        for v in np.flatnonzero(opaco[corte[c] :, c]) + corte[c]:
+            if len(ocupados):
+                frente = np.flatnonzero(grade[v, c])
+                if len(frente):
+                    grade[v, c, frente[-1]] = cor[v, c]
+            else:
+                grade[v, c, max(0, z - 1) : z + 1] = cor[v, c]
+
+    # As paredes de lado levam as colunas da fachada a partir daquela quina, e
+    # a de trás leva a fachada: de qualquer lado o prédio tem janela e pedra.
+    for v in range(int(corte.min()) + 1, alt):
         for z in range(fundo):
-            colunas = np.nonzero(grade[v, :, z])[0]
-            if len(colunas) == 0:
+            cheias = np.flatnonzero(grade[v, :, z])
+            if len(cheias) == 0:
                 continue
             k = fundo - 1 - z
-            esquerda, direita = int(colunas[0]), int(colunas[-1])
-            if esquerda + k < larg and cor[v, esquerda + k] > 0:
+            esquerda, direita = int(cheias[0]), int(cheias[-1])
+            if v > corte[esquerda] + rebaixo and esquerda + k < larg and cor[v, esquerda + k] > 0:
                 grade[v, esquerda, z] = cor[v, esquerda + k]
-            if direita - k >= 0 and cor[v, direita - k] > 0:
+            if v > corte[direita] + rebaixo and direita - k >= 0 and cor[v, direita - k] > 0:
                 grade[v, direita, z] = cor[v, direita - k]
-    for v in range(corte + 1, alt):
-        for c in np.nonzero(parede[v - corte - 1])[0]:
-            fundos = np.nonzero(grade[v, c])[0]
-            if len(fundos):
+        for c in np.flatnonzero(opaco[v]):
+            if v <= corte[c] + rebaixo:
+                continue
+            fundos = np.flatnonzero(grade[v, c])
+            if len(fundos) > 1:
                 grade[v, c, fundos[0]] = cor[v, c]
     return grade, fundo
 
@@ -596,8 +701,8 @@ def converter(folha: dict, manifesto: dict) -> dict:
             grade = grade_do_chao(indices[linhas, cols], opaco[linhas, cols], int(folha.get("altura", 16)), n)
             pos, nor, uv, idx = malha(grade, (0, 0, 0), total_de_cores, faces)
         elif caixa:
-            grade, fundo_da_caixa = grade_da_caixa(
-                indices[linhas, cols], opaco[linhas, cols], base[linhas, cols], pes, float(folha.get("telhado", 0.45))
+            grade, fundo_da_caixa = grade_do_predio(
+                indices[linhas, cols], opaco[linhas, cols], base[linhas, cols], pes, folha
             )
             pos, nor, uv, idx = malha(grade, (largura_quadro / 2, pes, fundo_da_caixa), total_de_cores, faces)
         elif redondo:
@@ -655,6 +760,8 @@ def converter(folha: dict, manifesto: dict) -> dict:
         "oclui": caixa,
         # Redondo é igual de todo lado: o renderer ilumina os lados por igual.
         "redondo": redondo,
+        # Árvore e arbusto balançam com o vento; pedra e prédio, não.
+        "vento": bool(folha.get("vento", False)),
         "pes": pes,
         "paletas": paletas,
     }
