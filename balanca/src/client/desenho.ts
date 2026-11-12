@@ -1464,9 +1464,17 @@ function desenharUnidade(
   // para a arma. Ancorar no centro e empurrar um pouco para cima planta o pé no
   // chão sem que o lanceiro (caixa de 320) flutue acima do guerreiro (192).
   const centroY = py - escolha.anim.lado * escala * 0.08;
+  const r = reacaoAoGolpe(estado, u, performance.now());
+  ctx.save();
+  // Tudo em volta do pé: achatar, esticar e empurrar sem tirá-lo do chão.
+  ctx.translate(px + r.dx * escala, py + r.dy * escala);
+  ctx.scale(r.sx, r.sy);
+  ctx.translate(-px, -py);
+  if (r.brilho > 1) ctx.filter = `brightness(${r.brilho})`;
   espelhado(ctx, px, escolha.espelhar, () =>
     quadro(ctx, escolha.anim, escolha.indice, px, centroY, escala, 'centro'),
   );
+  ctx.restore();
 
   const topo = py - 34 * escala;
 
@@ -1512,6 +1520,85 @@ function desenharUnidade(
       rotulo(ctx, u.bot ? `${nome} ⚙` : nome, px, topo - 12 * escala, escala, cor);
     }
   }
+}
+
+/**
+ * Como o boneco reage ao próprio golpe e ao golpe que leva.
+ *
+ * A simulação não manda um evento por dano — o que chega é a vida, a cada
+ * retrato. Uma queda nela é o golpe recebido, e daí sai a reação, com os
+ * princípios clássicos de animação aplicados a um sprite só:
+ *
+ * - **Impacto**: um clarão branco nos primeiros quadros (é o que diz "acertou"
+ *   antes de qualquer número), o corpo achatado e alargado, e um recuo para
+ *   longe de quem bateu, que volta com folga.
+ * - **Ataque**: antecipação e avanço — o corpo encolhe um nada antes do golpe
+ *   e estica para a frente no meio dele, na direção em que está olhando.
+ *
+ * Nada disto mexe na posição de verdade: é pincel, e a colisão continua sendo
+ * a da simulação.
+ */
+const golpesRecebidos = new Map<number, { vida: number; em: number; dx: number; dy: number }>();
+const DURACAO_DO_IMPACTO = 260;
+
+export interface Reacao {
+  dx: number;
+  dy: number;
+  sx: number;
+  sy: number;
+  brilho: number;
+}
+
+export function reacaoAoGolpe(estado: Estado, u: Unidade, agora: number): Reacao {
+  let reg = golpesRecebidos.get(u.id);
+  if (!reg || u.vida > reg.vida + 0.01) {
+    reg = { vida: u.vida, em: -Infinity, dx: 0, dy: 0 };
+    golpesRecebidos.set(u.id, reg);
+  }
+  if (u.vida < reg.vida - 0.01) {
+    // Quem bateu: o inimigo vivo mais perto. É uma aproximação — o retrato
+    // não diz de quem foi o golpe —, mas o recuo só precisa de um sentido.
+    let perto: Unidade | null = null;
+    let menor = 260;
+    for (const o of estado.unidades) {
+      if (!o.vivo || o.time === u.time) continue;
+      const d = Math.hypot(o.x - u.x, o.y - u.y);
+      if (d < menor) {
+        menor = d;
+        perto = o;
+      }
+    }
+    const ang = perto ? Math.atan2(u.y - perto.y, u.x - perto.x) : (u.id * 2.399) % (Math.PI * 2);
+    reg.em = agora;
+    reg.dx = Math.cos(ang);
+    reg.dy = Math.sin(ang);
+  }
+  reg.vida = u.vida;
+
+  const r: Reacao = { dx: 0, dy: 0, sx: 1, sy: 1, brilho: 1 };
+  const t = (agora - reg.em) / DURACAO_DO_IMPACTO;
+  if (t >= 0 && t < 1) {
+    const volta = (1 - t) * (1 - t);
+    r.dx += reg.dx * 9 * volta;
+    r.dy += reg.dy * 9 * volta;
+    // Um tremor curto, de lado, por cima do recuo.
+    r.dx += Math.sin(agora * 0.09) * 2 * volta;
+    r.sx *= 1 + 0.16 * volta;
+    r.sy *= 1 - 0.14 * volta;
+    if (t < 0.3) r.brilho = 3.2;
+  }
+
+  if (u.golpe > 0) {
+    const dur = u.fera ? PERFIS_DE_FERA[u.fera].duracaoDoGolpe : perfil(u.classe).duracaoDoGolpe;
+    const p = 1 - Math.max(0, Math.min(1, u.golpe / dur));
+    // Antecipação no primeiro quinto, avanço até o meio, volta no fim.
+    const avanco = p < 0.2 ? -p / 0.2 * 0.3 : Math.sin(((p - 0.2) / 0.8) * Math.PI);
+    r.dx += u.olharX * 7 * avanco;
+    r.dy += u.olharY * 7 * avanco;
+    r.sx *= 1 + 0.07 * avanco;
+    r.sy *= 1 - 0.05 * avanco;
+  }
+  return r;
 }
 
 /** A setinha de "este é o seu", apontando para baixo. */

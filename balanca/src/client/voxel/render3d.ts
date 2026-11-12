@@ -117,6 +117,9 @@ const ESCALA_MAXIMA_DO_TRACO = 1.5;
 const FOLGA_DA_LENTE = 110;
 /** Abaixo deste tamanho o nome, a barra e a placa deixam de ser pintados. */
 const ESCALA_MINIMA_DO_TRACO = 0.45;
+/** Quantas camadas dão espessura a um personagem, e a distância entre elas. */
+const CAMADAS_DO_SPRITE = 3;
+const PASSO_DA_CAMADA = 1.6;
 /** Onde fica o topo da cabeça de um personagem, em fração do lado do quadro. */
 const ALTURA_DA_CABECA = 0.36;
 
@@ -891,7 +894,10 @@ export class RenderVoxel implements PintorVoxel {
         g.fixo = true;
       }
       // Sempre pelo próprio pé: a âncora do grupo pode ser o topo de um prédio.
-      this.sprite(pendente, pe, false);
+      // O clarão do golpe recebido chega como `filter: brightness(…)` — ver
+      // `reacaoAoGolpe` em desenho.ts.
+      const brilho = /brightness\(([\d.]+)\)/.exec(this.real.filter ?? '');
+      this.sprite(pendente, pe, false, undefined, Boolean(dados), brilho ? Number(brilho[1]) : 1);
     } else {
       this.ops.push(CHAMAR, 'drawImage', args);
     }
@@ -1064,7 +1070,14 @@ export class RenderVoxel implements PintorVoxel {
    * com a proporção do desenho em vez de achatado. Deitado (água, espuma), o
    * retângulo é o próprio pedaço de chão.
    */
-  private sprite(img: ImagemPendente, ancora: Ponto | null, deitado: boolean, tinta?: Color): void {
+  private sprite(
+    img: ImagemPendente,
+    ancora: Ponto | null,
+    deitado: boolean,
+    tinta?: Color,
+    espesso = false,
+    brilho = 1,
+  ): void {
     const zoom = this.vista.zoom;
     // Como as árvores: um sprite encostado na lente tapa a tela e não é o
     // personagem de quem joga, que fica bem mais longe dela.
@@ -1104,11 +1117,28 @@ export class RenderVoxel implements PintorVoxel {
       ex.z, ey.z, 1, o.z,
       0,    0,    0, 1,
     );
-    const i = lote.usados++;
-    lote.malha.setMatrixAt(i, this.m);
     const f = img.fonte;
-    lote.recorte.setXYZW(i, img.sx / f.width, img.sy / f.height, img.sw / f.width, img.sh / f.height);
-    lote.tinta.setXYZ(i, tinta?.r ?? 1, tinta?.g ?? 1, tinta?.b ?? 1);
+    const por = (alvo: LoteDeSprites, tom: number): void => {
+      const i = alvo.usados++;
+      alvo.malha.setMatrixAt(i, this.m);
+      alvo.recorte.setXYZW(i, img.sx / f.width, img.sy / f.height, img.sw / f.width, img.sh / f.height);
+      alvo.tinta.setXYZ(i, (tinta?.r ?? 1) * tom, (tinta?.g ?? 1) * tom, (tinta?.b ?? 1) * tom);
+    };
+    por(lote, brilho);
+    if (!espesso) return;
+    // Espessura de papel recortado: a mesma folha repetida atrás, um pouco
+    // mais para dentro da cena a cada camada e mais escura. De frente não se
+    // vê nada; quando a câmera gira em volta, a perspectiva desloca as
+    // camadas de trás e aparece uma borda escura do lado oposto à luz — o
+    // personagem deixa de ser uma folha sem espessura nenhuma.
+    const fx = this.direitaZ;
+    const fz = -this.direitaX;
+    for (let k = 1; k <= CAMADAS_DO_SPRITE; k++) {
+      const recuo = k * PASSO_DA_CAMADA;
+      this.m.elements[12] = o.x + fx * recuo;
+      this.m.elements[14] = o.z + fz * recuo;
+      por(this.loteDeSprites(f), 0.52 * Math.min(1, brilho));
+    }
   }
 
   private loteDeSprites(fonte: Fonte): LoteDeSprites {
