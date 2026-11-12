@@ -132,11 +132,12 @@ export interface Tronco {
 export const CORPO_DA_ESTRUTURA: Readonly<
   Record<TipoDeEstrutura, { largura: number; fundo: number }>
 > = {
-  tesouraria: { largura: 304, fundo: 150 },
-  cofre: { largura: 112, fundo: 112 },
-  casaDaMoeda: { largura: 152, fundo: 116 },
-  chapelaria: { largura: 176, fundo: 112 },
-  nascedouro: { largura: 104, fundo: 108 },
+  tesouraria: { largura: 304, fundo: 118 },
+  // A torre é redonda; o retângulo é o inscrito com folga nas quinas.
+  cofre: { largura: 104, fundo: 104 },
+  casaDaMoeda: { largura: 152, fundo: 112 },
+  chapelaria: { largura: 176, fundo: 108 },
+  nascedouro: { largura: 104, fundo: 104 },
 };
 
 /** O tronco de uma jazida: fino, para a colheita continuar ao alcance. */

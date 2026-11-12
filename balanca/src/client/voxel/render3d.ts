@@ -128,6 +128,7 @@ const VERTICE_DO_MODELO = /* glsl */ `
   uniform float ladoIgual;
   uniform float vento;
   uniform float tempo;
+  uniform float contato;
   varying vec2 vUv;
   varying float vLuz;
   varying float vFundo;
@@ -140,6 +141,11 @@ const VERTICE_DO_MODELO = /* glsl */ `
     // girando em volta, um lado "da frente" mais claro denunciaria a emenda.
     vLuz = n.y > 0.5 ? 1.0 : mix(n.z > 0.5 ? 0.88 : 0.76, 0.86, ladoIgual);
     vec4 noMundo = instanceMatrix * vec4(position, 1.0);
+    // Sombra de contato: o pé de toda parede e de todo tronco escurece onde
+    // encosta no chão. É o que tira o objeto de "colado em cima da grama" e o
+    // planta nela — a oclusão de ambiente mais barata que existe, uma rampa
+    // na altura.
+    vLuz *= mix(1.0, mix(0.58, 1.0, smoothstep(0.0, 26.0, noMundo.y)), contato);
     // O vento: a copa balança e o pé não sai do lugar. O deslocamento cresce
     // com o quadrado da altura, e a fase vem de onde a árvore está plantada —
     // cada uma no seu tempo, como uma rajada que atravessa o campo.
@@ -982,6 +988,7 @@ export class RenderVoxel implements PintorVoxel {
             uvDaPaleta: { value: modelo.uvDaPaleta },
             ladoIgual: { value: d.redondo ? 1 : 0 },
             vento: { value: d.vento ? 1 : 0 },
+            contato: { value: d.plano === 'chao' ? 0 : 1 },
           },
         });
         modelo.materiais.set(entrada.paleta, material);

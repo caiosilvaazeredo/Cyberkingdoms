@@ -30,7 +30,8 @@
       "duasAguas": {
         "cumeeira": 88,
         "beiral": 128
-      }
+      },
+      "planta": "retangulo"
     },
     {
       "variantes": {
@@ -41,7 +42,8 @@
       "duasAguas": {
         "cumeeira": 165,
         "beiral": 238
-      }
+      },
+      "planta": "retangulo"
     },
     {
       "variantes": {
@@ -49,7 +51,8 @@
       },
       "forma": "caixa",
       "glob": "buildings/blue/Tower.png",
-      "corte": 0.33
+      "corte": 0.33,
+      "planta": "circulo"
     },
     {
       "variantes": {
@@ -57,7 +60,8 @@
       },
       "forma": "caixa",
       "glob": "buildings/blue/Barracks.png",
-      "corte": 0.4
+      "corte": 0.4,
+      "planta": "retangulo"
     },
     {
       "variantes": {
@@ -65,12 +69,15 @@
       },
       "forma": "caixa",
       "glob": "buildings/blue/*.png",
-      "corte": 0.45
+      "corte": 0.45,
+      "planta": "castelo",
+      "raioDaTorre": 48
     },
     {
       "glob": "buildings/oficina_nivel3.png",
       "forma": "caixa",
-      "corte": 0.45
+      "corte": 0.45,
+      "planta": "retangulo"
     },
     {
       "glob": "buildings/oficina_nivel2.png",

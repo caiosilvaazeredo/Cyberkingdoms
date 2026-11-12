@@ -259,6 +259,41 @@ def reduzido(a: np.ndarray, passo: int, pes: int):
     return a[primeira::passo, passo // 2 :: passo], (pes - 1 - primeira) // passo + 1
 
 
+def planta_do_predio(forma, folha: dict, larg: int, fundo: int, x0: int, x1: int):
+    """A planta limpa de um prédio: `planta[coluna, z]` é chão construído.
+
+    Ler a planta direto do contorno do telhado desenhado dá paredes que
+    acompanham cada degrau do traço à mão — a silhueta 3D sai serrilhada, e
+    cada degrau é mais um punhado de faces. Uma planta geométrica dá parede
+    reta, quina viva e cilindro redondo, que é o que se lê de longe; o
+    desenho do sprite continua sendo a pele.
+
+    - `"retangulo"`: o quartel, a casa, o mosteiro.
+    - `"circulo"`: a torre.
+    - `"castelo"`: o corpo retangular entre duas torres redondas
+      (`"raioDaTorre"`), que é o desenho do pacote.
+    - nada: a planta sai do desenho, como antes.
+    """
+    if not forma:
+        return None
+    m = np.zeros((larg, fundo), dtype=bool)
+    xs = np.arange(larg)[:, None] + 0.5
+    zs = np.arange(fundo)[None, :] + 0.5
+    if forma == "retangulo":
+        m[x0 : x1 + 1, :] = True
+    elif forma == "circulo":
+        cx, r = (x0 + x1 + 1) / 2, (x1 - x0 + 1) / 2
+        m = (xs - cx) ** 2 + (zs - fundo / 2) ** 2 <= r * r
+    elif forma == "castelo":
+        r = float(folha.get("raioDaTorre", 48))
+        cz = fundo - r
+        for cx in (x0 + r, x1 + 1 - r):
+            m |= (xs - cx) ** 2 + (zs - cz) ** 2 <= r * r
+        miolo_z = int(round(fundo * float(folha.get("fundoDoMiolo", 0.8))))
+        m[int(x0 + r) : int(x1 + 1 - r), fundo - miolo_z :] = True
+    return m
+
+
 def grade_do_predio(indices: np.ndarray, opaco: np.ndarray, rgba: np.ndarray, pes: int, folha: dict):
     """Um prédio a partir de um sprite em 3/4. Devolve a grade e a profundidade.
 
@@ -325,6 +360,13 @@ def grade_do_predio(indices: np.ndarray, opaco: np.ndarray, rgba: np.ndarray, pe
     if not tira.any():
         return np.zeros((alt, larg, 1), dtype=np.int32), 1
     fundo = int(np.ceil((np.median(tira[tira > 0]) if aguas else tira.max()) * estica))
+    forma = folha.get("planta")
+    margem = int(folha.get("margem", 2))
+    if forma == "circulo":
+        # Uma torre é um cilindro: o fundo é o diâmetro, e não o que a
+        # perspectiva do desenho sugere.
+        fundo = (x1 - x0 + 1) - 2 * margem
+    planta = planta_do_predio(forma, folha, larg, fundo, x0 + margem, x1 - margem)
     grade = np.zeros((alt, larg, fundo), dtype=np.int32)
 
     # A fachada sem buracos, para o miolo das paredes: vão pega o vizinho.
@@ -341,38 +383,66 @@ def grade_do_predio(indices: np.ndarray, opaco: np.ndarray, rgba: np.ndarray, pe
         if len(abaixo):
             base[c] = corte[c] + abaixo[-1]
 
-    for c in colunas:
-        if tira[c] == 0:
+    # Coluna da planta sem telhado desenhado em cima (a quina arredondada do
+    # sprite, a margem do contorno) lê o telhado da coluna vizinha que tem.
+    com_telhado = np.flatnonzero(tira > 0)
+    fonte = np.array([com_telhado[np.abs(com_telhado - c).argmin()] for c in range(larg)])
+
+    for c in range(larg):
+        zs = np.flatnonzero(planta[c]) if planta is not None else range(fundo)
+        cc = int(fonte[c]) if planta is not None else c
+        if tira[cc] == 0:
             continue
-        for k in range(fundo):
+        for z in zs:
+            k = fundo - 1 - z
             # De que linha do telhado vem este voxel de profundidade.
-            passo = k * tira[c] / fundo if aguas else k / estica
-            linha = corte[c] - 1 - int(passo)
-            if linha < topo[c] or not opaco[linha, c]:
+            passo = k * tira[cc] / fundo if aguas else k / estica
+            linha = corte[cc] - 1 - min(int(passo), tira[cc] - 1)
+            if planta is None and (linha < topo[cc] or not opaco[linha, cc]):
                 continue
-            z = fundo - 1 - k
-            piso = rebaixo if madeira[linha, c] else 0
-            alto = corte[c] + piso
-            if alto > base[c]:
+            if not opaco[linha, cc]:
+                acima = np.flatnonzero(opaco[topo[cc] : corte[cc], cc]) + topo[cc]
+                if len(acima) == 0:
+                    continue
+                linha = int(acima[np.abs(acima - linha).argmin()])
+            piso = rebaixo if madeira[linha, cc] else 0
+            alto = corte[cc] + piso
+            fim = base[cc] if base[c] == pes - 1 else base[c]
+            if alto > fim:
                 continue
-            grade[alto : base[c] + 1, c, z] = cheia[alto : base[c] + 1, c]
+            grade[alto : fim + 1, c, z] = cheia[alto : fim + 1, c]
             # O tampo, e — onde há ameia — o corpo dela, na cor do telhado.
-            grade[alto : min(corte[c] + rebaixo, base[c]) + 1, c, z] = cor[linha, c]
+            grade[alto : min(corte[cc] + rebaixo, fim) + 1, c, z] = cor[linha, cc]
 
     # A fachada na frente de cada coluna; coluna sem planta ganha uma lasca.
-    for c in colunas:
+    for c in range(larg):
         ocupados = np.flatnonzero(grade[:, c, :].any(axis=0))
+        if planta is not None and len(ocupados) == 0:
+            continue
         z = int(ocupados[-1]) if len(ocupados) else fundo - 1
-        for v in np.flatnonzero(opaco[corte[c] :, c]) + corte[c]:
+        for v in range(int(corte[c]), alt):
             if len(ocupados):
                 frente = np.flatnonzero(grade[v, c])
-                if len(frente):
-                    grade[v, c, frente[-1]] = cor[v, c]
-            else:
+                if len(frente) and (opaco[v, c] or planta is not None):
+                    grade[v, c, frente[-1]] = cor[v, c] if opaco[v, c] else cheia[v, c]
+            elif opaco[v, c]:
                 grade[v, c, max(0, z - 1) : z + 1] = cor[v, c]
 
-    # As paredes de lado levam as colunas da fachada a partir daquela quina, e
-    # a de trás leva a fachada: de qualquer lado o prédio tem janela e pedra.
+    # As outras paredes levam a fachada **envolvida** em volta do prédio:
+    # andando pela parede de lado a partir da quina da frente, lê-se a fachada
+    # a partir da borda dela, e ao chegar no fim volta espelhada — a mesma
+    # costura do objeto redondo, sem emenda nas quinas. Sem o contorno escuro,
+    # que é tinta da silhueta da frente e viraria listra preta de lado.
+    def envolvida(v: int, passo: int, desde: str) -> int:
+        cheios = np.flatnonzero(opaco[v])
+        if len(cheios) == 0:
+            return 0
+        a, b = int(cheios[0]) + 2, int(cheios[-1]) - 2
+        w = max(1, b - a + 1)
+        t = passo % (2 * w)
+        t = t if t < w else 2 * w - 1 - t
+        return int(cheia[v, a + t] if desde == "esquerda" else cheia[v, b - t])
+
     for v in range(int(corte.min()) + 1, alt):
         for z in range(fundo):
             cheias = np.flatnonzero(grade[v, :, z])
@@ -380,16 +450,17 @@ def grade_do_predio(indices: np.ndarray, opaco: np.ndarray, rgba: np.ndarray, pe
                 continue
             k = fundo - 1 - z
             esquerda, direita = int(cheias[0]), int(cheias[-1])
-            if v > corte[esquerda] + rebaixo and esquerda + k < larg and cor[v, esquerda + k] > 0:
-                grade[v, esquerda, z] = cor[v, esquerda + k]
-            if v > corte[direita] + rebaixo and direita - k >= 0 and cor[v, direita - k] > 0:
-                grade[v, direita, z] = cor[v, direita - k]
-        for c in np.flatnonzero(opaco[v]):
-            if v <= corte[c] + rebaixo:
+            # Inclusive no anel das ameias: por fora, é a mesma pedra.
+            if v > corte[esquerda]:
+                grade[v, esquerda, z] = envolvida(v, k, "esquerda")
+            if v > corte[direita]:
+                grade[v, direita, z] = envolvida(v, k, "direita")
+        for c in range(larg):
+            if v <= corte[c]:
                 continue
             fundos = np.flatnonzero(grade[v, c])
             if len(fundos) > 1:
-                grade[v, c, fundos[0]] = cor[v, c]
+                grade[v, c, fundos[0]] = cheia[v, c]
     return grade, fundo
 
 
