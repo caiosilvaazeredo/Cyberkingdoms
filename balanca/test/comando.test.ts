@@ -194,8 +194,15 @@ describe('a ordem do líder', () => {
 
     const npc = sala.estado.unidades.find((u) => u.bot && u.time === 'azul')!;
     expect(sala.mandar('Ana', npc.id, 'clerigo', false)).toBe(true);
-    rodar(sala, 60, ['Ana']);
-    expect(sala.estado.unidades.find((u) => u.id === npc.id)?.classe).toBe('clerigo');
+    // Confere-se se ele **chegou a vestir**, e não a classe no fim: vestido,
+    // ele vai à briga, e quem cai renasce aldeão. Olhar só o último tick fazia
+    // o teste depender de o npc sobreviver, que não é o que ele promete.
+    let vestiu = false;
+    for (let s = 0; s < 60 && !vestiu; s++) {
+      rodar(sala, 1, ['Ana']);
+      vestiu = sala.estado.unidades.find((u) => u.id === npc.id)?.classe === 'clerigo';
+    }
+    expect(vestiu).toBe(true);
   });
 
   it('a ordem sobrevive à revisão de ofício do próprio bot', () => {

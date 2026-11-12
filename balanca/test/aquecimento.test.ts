@@ -81,6 +81,9 @@ describe('a parede do aquecimento', () => {
     // parede do aquecimento que segurou ou a água — que é a mesma confusão
     // que a parede existe para não causar do lado de dentro.
     u.y = 10.5 * TILE;
+    // E já depois da chapelaria, que fica no caminho da ponte: o corpo dela
+    // barra passagem, e quem corre reto contra ele também não atravessa.
+    u.x = 13.5 * TILE;
 
     // Ainda no aquecimento: empurra contra a parede e vê que ela segura.
     correrPor(partida, u.id, 1, AQUECIMENTO - 1);

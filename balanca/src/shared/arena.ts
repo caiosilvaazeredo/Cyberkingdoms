@@ -88,6 +88,10 @@ export interface Arena {
   readonly estruturas: readonly Estrutura[];
   readonly jazidas: readonly Jazida[];
   readonly pastos: readonly Pasto[];
+  /** O corpo de cada construção: um retângulo que barra passagem. */
+  readonly paredes: readonly Parede[];
+  /** O tronco de cada jazida: um círculo que barra passagem. */
+  readonly troncos: readonly Tronco[];
   tile(tx: number, ty: number): number;
   ehChao(tx: number, ty: number): boolean;
   bloqueado(tx: number, ty: number): boolean;
@@ -95,6 +99,48 @@ export interface Arena {
   decoracao(tx: number, ty: number): DecoracaoNoChao | null;
   estrutura(tipo: TipoDeEstrutura, time: Time): Estrutura;
 }
+
+/** Um retângulo sólido, em unidades de mundo. */
+export interface Parede {
+  readonly x0: number;
+  readonly y0: number;
+  readonly x1: number;
+  readonly y1: number;
+}
+
+/** Um círculo sólido, em unidades de mundo. */
+export interface Tronco {
+  readonly x: number;
+  readonly y: number;
+  readonly raio: number;
+}
+
+/**
+ * O corpo de cada construção: largura e fundo, em unidades de mundo.
+ *
+ * ## Onde ele fica
+ *
+ * A construção é um **ponto de uso** — o tile dela — e é ali, na porta, que se
+ * entrega o baú, se pega o chapéu, se renasce. O corpo fica **atrás** desse
+ * tile, ao norte, com a fachada na borda de cima dele: a porta continua livre
+ * e ao alcance, e o prédio deixa de ser um desenho por dentro do qual se anda.
+ *
+ * As medidas são as dos modelos 3D de `public/voxel` (ver
+ * `tools/voxelizar.py`), que por sua vez saem do sprite: é o que faz a parede
+ * em que o personagem para ser a parede que se vê.
+ */
+export const CORPO_DA_ESTRUTURA: Readonly<
+  Record<TipoDeEstrutura, { largura: number; fundo: number }>
+> = {
+  tesouraria: { largura: 304, fundo: 150 },
+  cofre: { largura: 112, fundo: 112 },
+  casaDaMoeda: { largura: 152, fundo: 116 },
+  chapelaria: { largura: 176, fundo: 112 },
+  nascedouro: { largura: 104, fundo: 108 },
+};
+
+/** O tronco de uma jazida: fino, para a colheita continuar ao alcance. */
+export const RAIO_DO_TRONCO = 16;
 
 /** Espelha uma coluna para o lado vermelho. */
 /**
@@ -254,6 +300,18 @@ export function criarArena(seed: number, idDoMapa: IdDoMapa = MAPA_PADRAO): Aren
   const decoracoes: (DecoracaoNoChao | null)[] = new Array(largura * altura).fill(null);
   const bloqueados = new Uint8Array(largura * altura);
 
+  const paredes: Parede[] = estruturas.map((e) => {
+    const corpo = CORPO_DA_ESTRUTURA[e.tipo];
+    const frente = e.y - TILE / 2;
+    return {
+      x0: e.x - corpo.largura / 2,
+      x1: e.x + corpo.largura / 2,
+      y0: frente - corpo.fundo,
+      y1: frente,
+    };
+  });
+  const troncos: Tronco[] = jazidas.map((j) => ({ x: j.x, y: j.y, raio: RAIO_DO_TRONCO }));
+
   const arena: Arena = {
     seed,
     mapa: mapa.id,
@@ -263,6 +321,8 @@ export function criarArena(seed: number, idDoMapa: IdDoMapa = MAPA_PADRAO): Aren
     estruturas,
     jazidas,
     pastos,
+    paredes,
+    troncos,
     tile,
     ehChao: (tx, ty) => tile(tx, ty) !== AGUA,
     decoracao: (tx, ty) =>
@@ -288,11 +348,34 @@ export function criarArena(seed: number, idDoMapa: IdDoMapa = MAPA_PADRAO): Aren
       bloqueados[ty * largura + tx] = tile(tx, ty) === AGUA || bloqueiaMato ? 1 : 0;
     }
   }
+
+  // O corpo das construções também entra na grade de bloqueio — é ela que o
+  // navegador dos bots e as flechas consultam. Entra o tile cujo **centro**
+  // está dentro do corpo: a grade é uma aproximação para planejar caminho, e
+  // quem barra de verdade, no pixel, é o retângulo em `resolverColisao`. Um
+  // tile que seja ponto de uso de alguma coisa (outra construção, jazida,
+  // pasto) fica livre: nada pode ser emparedado por um vizinho.
+  const emUso = new Set<number>();
+  for (const p of [...estruturas, ...jazidas, ...pastos]) {
+    emUso.add(Math.floor(p.y / TILE) * largura + Math.floor(p.x / TILE));
+  }
+  for (const p of paredes) {
+    for (let ty = Math.floor(p.y0 / TILE); ty <= Math.floor(p.y1 / TILE); ty++) {
+      for (let tx = Math.floor(p.x0 / TILE); tx <= Math.floor(p.x1 / TILE); tx++) {
+        if (tx < 0 || ty < 0 || tx >= largura || ty >= altura) continue;
+        const cx = tx * TILE + TILE / 2;
+        const cy = ty * TILE + TILE / 2;
+        if (cx < p.x0 || cx > p.x1 || cy < p.y0 || cy > p.y1) continue;
+        if (!emUso.has(ty * largura + tx)) bloqueados[ty * largura + tx] = 1;
+      }
+    }
+  }
   return arena;
 }
 
 /**
- * Empurra um círculo para fora dos tiles bloqueados.
+ * Empurra um círculo para fora do que é sólido: tiles bloqueados, o corpo
+ * das construções e o tronco das jazidas.
  *
  * Resolve um eixo de cada vez, e nessa ordem por um motivo prático: com os dois
  * juntos, quem corre encostado numa parede gruda na quina de cada tile. Um eixo
@@ -343,6 +426,51 @@ export function resolverColisao(
           else if (menor === paraTopo) py = topo - raio;
           else py = base + raio;
         }
+      }
+    }
+    // O corpo das construções: a mesma conta do tile, com o retângulo dele.
+    for (const p of arena.paredes) {
+      if (px + raio <= p.x0 || px - raio >= p.x1 || py + raio <= p.y0 || py - raio >= p.y1) continue;
+      const maisPertoX = Math.max(p.x0, Math.min(px, p.x1));
+      const maisPertoY = Math.max(p.y0, Math.min(py, p.y1));
+      const dx = px - maisPertoX;
+      const dy = py - maisPertoY;
+      const d2 = dx * dx + dy * dy;
+      if (d2 >= raio * raio) continue;
+      if (d2 > 0.0001) {
+        const d = Math.sqrt(d2);
+        px += (dx / d) * (raio - d);
+        py += (dy / d) * (raio - d);
+      } else {
+        const paraEsq = px - p.x0;
+        const paraDir = p.x1 - px;
+        const paraTopo = py - p.y0;
+        const paraBase = p.y1 - py;
+        const menor = Math.min(paraEsq, paraDir, paraTopo, paraBase);
+        if (menor === paraBase) py = p.y1 + raio;
+        else if (menor === paraEsq) px = p.x0 - raio;
+        else if (menor === paraDir) px = p.x1 + raio;
+        else py = p.y0 - raio;
+      }
+    }
+    // O tronco das jazidas: redondo, então quem esbarra escorrega em volta.
+    for (const t of arena.troncos) {
+      const dx = px - t.x;
+      const dy = py - t.y;
+      const junto = raio + t.raio;
+      const d2 = dx * dx + dy * dy;
+      if (d2 >= junto * junto) continue;
+      if (d2 > 0.0001) {
+        const d = Math.sqrt(d2);
+        const fora = junto - d;
+        // Para fora, e um tanto de lado. Só para fora, quem vem de frente —
+        // um bot seguindo o centro dos tiles, por exemplo — ficaria batendo
+        // no tronco para sempre; o passo de lado, sempre para o mesmo lado, o
+        // faz contornar. Parado ao lado dele não há sobreposição, e nada anda.
+        px += (dx / d) * fora - (dy / d) * fora * 0.6;
+        py += (dy / d) * fora + (dx / d) * fora * 0.6;
+      } else {
+        py += junto;
       }
     }
   }

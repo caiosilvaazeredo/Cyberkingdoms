@@ -30,6 +30,7 @@ import {
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 
+import { TILE } from '../../shared/regras';
 import type {
   CameraDoMundo,
   IndiceDeVoxels,
@@ -925,11 +926,10 @@ export class RenderVoxel implements PintorVoxel {
         : this.noDesenho(dx + dw / 2, dy + (d.pes / d.lado) * dh);
     const chao = this.noChao(noDesenho);
     const g = this.grupo;
-    // Prédio não barra ninguém na simulação: anda-se por cima do pé do sprite
-    // dele, e o 2D resolve isso pintando na frente quem está ao sul da linha
-    // em que o prédio é ordenado. A caixa fica com a fachada nessa linha — e
-    // não na base do desenho —, senão quem para na porta some dentro dela.
-    if (d.oclui && g && g.y !== null) chao.y = g.y;
+    // O prédio fica onde a simulação diz que está o corpo dele: fachada na
+    // borda de cima do tile da porta (ver `CORPO_DA_ESTRUTURA` em
+    // shared/arena.ts), que é a parede em que o personagem para.
+    if (d.oclui && g && g.y !== null) chao.y = g.y - TILE / 2;
     if (g && !g.fixo && d.plano !== 'chao') {
       const topo = modelo.quadros[quadro]!.topo;
       g.ancora = this.noDesenho(dx + dw / 2, dy);

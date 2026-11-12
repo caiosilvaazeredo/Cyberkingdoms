@@ -435,6 +435,7 @@ function tick(
     }
   }
 
+  afastarUnidades(arena, estado);
   moverProjeteis(arena, estado);
   if (jogando) {
     moverAnimais(arena, estado);
@@ -579,6 +580,55 @@ export function moverUnidade(
       const ajustado = resolverColisao(arena, preso, u.y, RAIO_UNIDADE);
       u.x = ajustado.x;
       u.y = ajustado.y;
+    }
+  }
+}
+
+/**
+ * Quem está em cima de quem é empurrado para o lado, devagar.
+ *
+ * Sem isto, um time inteiro cabe num ponto só: na câmera 3D, de perto, seis
+ * guerreiros viram um sprite com seis nomes. O empurrão é **macio** — corrige
+ * só uma parte da sobreposição por tick —, para que ninguém seja barrado de
+ * verdade por um companheiro: o cortejo do baú e a fila na porta continuam
+ * andando, só que lado a lado. Quem está carregando o baú não é empurrado: o
+ * cortejo se arruma em volta dele, e não o contrário.
+ */
+const FORCA_DO_AFASTAMENTO = 0.35;
+
+function afastarUnidades(arena: Arena, estado: Estado): void {
+  const vivos = estado.unidades.filter((u) => u.vivo);
+  const junto = RAIO_UNIDADE * 1.6;
+  for (let i = 0; i < vivos.length; i++) {
+    const a = vivos[i]!;
+    for (let j = i + 1; j < vivos.length; j++) {
+      const b = vivos[j]!;
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      if (Math.abs(dx) >= junto || Math.abs(dy) >= junto) continue;
+      const d2 = dx * dx + dy * dy;
+      if (d2 >= junto * junto) continue;
+      const d = Math.sqrt(d2);
+      // Dois exatamente no mesmo ponto: a direção sai do id, que é a única
+      // coisa que os distingue e não muda de um tick para o outro.
+      const nx = d > 0.001 ? dx / d : Math.cos(a.id * 2.399);
+      const ny = d > 0.001 ? dy / d : Math.sin(a.id * 2.399);
+      const fora = (junto - d) * FORCA_DO_AFASTAMENTO;
+      const fixoA = a.carga === 'bau';
+      const fixoB = b.carga === 'bau';
+      if (fixoA && fixoB) continue;
+      const parteA = fixoA ? 0 : fixoB ? 1 : 0.5;
+      const parteB = 1 - parteA;
+      if (parteA > 0) {
+        const p = resolverColisao(arena, a.x - nx * fora * parteA, a.y - ny * fora * parteA, RAIO_UNIDADE);
+        a.x = p.x;
+        a.y = p.y;
+      }
+      if (parteB > 0) {
+        const p = resolverColisao(arena, b.x + nx * fora * parteB, b.y + ny * fora * parteB, RAIO_UNIDADE);
+        b.x = p.x;
+        b.y = p.y;
+      }
     }
   }
 }
