@@ -132,7 +132,7 @@ export interface Tronco {
 export const CORPO_DA_ESTRUTURA: Readonly<
   Record<TipoDeEstrutura, { largura: number; fundo: number }>
 > = {
-  tesouraria: { largura: 304, fundo: 118 },
+  tesouraria: { largura: 304, fundo: 108 },
   // A torre é redonda; o retângulo é o inscrito com folga nas quinas.
   cofre: { largura: 104, fundo: 104 },
   casaDaMoeda: { largura: 152, fundo: 112 },

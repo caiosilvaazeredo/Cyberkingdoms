@@ -733,7 +733,116 @@ def grade_do_chao(indices: np.ndarray, opaco: np.ndarray, altura: int, cores: in
 PASTA_DA_PREVIA: str | None = None
 
 
+def converter_parametrico(folha: dict, manifesto: dict) -> dict:
+    """Uma construção montada por primitivas (ver `tools/voxel/predios.py`).
+
+    O sprite entra só com a paleta (e o par azul × vermelho que dá a outra) e
+    com o tamanho do quadro, que é como o jogo reconhece a folha na hora de
+    trocar pelo modelo."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent / "voxel"))
+    import predios
+
+    origem = RAIZ / manifesto["origem"]
+    destino = RAIZ / manifesto["destino"]
+    base = abrir(origem / folha["arquivo"])
+    lado, largura_quadro = base.shape[0], base.shape[1]
+    pes = base_dos_pes(origem / folha["arquivo"], lado)
+    obra = predios.CONSTRUCOES[folha["construcao"]]()
+    grade = obra.grade()
+
+    nome_da_base = Path(folha["arquivo"]).parent.name
+    paletas = {nome_da_base: predios.paleta(base, None)}
+    variantes = {}
+    for nome, caminho in folha.get("variantes", {}).items():
+        camada = abrir(origem / caminho)
+        variantes[nome] = caminho
+        paletas[nome] = predios.paleta(base, camada)
+    paletas = {k: ["#%02x%02x%02x" % c for c in v] for k, v in paletas.items()}
+    total_de_cores = len(predios.NOMES)
+
+    glb = Glb()
+    glb.json["extensionsUsed"] = ["KHR_mesh_quantization"]
+    glb.json["extensionsRequired"] = ["KHR_mesh_quantization"]
+    png = io.BytesIO()
+    cores_da_base = np.array(
+        [[int(c[k : k + 2], 16) for k in (1, 3, 5)] for c in paletas[nome_da_base]], dtype=np.uint8
+    )
+    Image.fromarray(cores_da_base.reshape(1, total_de_cores, 3), "RGB").save(png, "PNG")
+    glb.json["images"] = [{"bufferView": glb.vista(png.getvalue()), "mimeType": "image/png"}]
+    glb.json["samplers"] = [{"magFilter": 9728, "minFilter": 9728, "wrapS": 33071, "wrapT": 33071}]
+    glb.json["textures"] = [{"source": 0, "sampler": 0}]
+    glb.json["materials"] = [
+        {"name": "paleta", "pbrMetallicRoughness": {"baseColorTexture": {"index": 0}, "metallicFactor": 0, "roughnessFactor": 1}}
+    ]
+    # A origem é o meio da largura, o chão e a fachada da frente.
+    pos, nor, uv, idx = malha(grade, (obra.nx / 2, obra.nh, obra.nz), total_de_cores, FACES_DO_VOLUME)
+    pos = (pos.astype(np.int32) * predios.BLOCO).astype(np.int16)
+    if len(pos) < 65536:
+        idx = idx.astype(np.uint16)
+    glb.json["meshes"].append(
+        {
+            "primitives": [
+                {
+                    "attributes": {
+                        "POSITION": glb.acessor(pos, "VEC3", 34962, limites=True),
+                        "NORMAL": glb.acessor(nor, "VEC3", 34962, normalizado=True),
+                        "TEXCOORD_0": glb.acessor(uv, "VEC2", 34962, normalizado=True),
+                    },
+                    "indices": glb.acessor(idx, "SCALAR", 34963),
+                    "material": 0,
+                }
+            ],
+        }
+    )
+    glb.json["nodes"].append({"name": "q0", "mesh": 0, "scale": [0.5, 0.5, 0.5]})
+    glb.json["scenes"][0]["nodes"].append(0)
+
+    if PASTA_DA_PREVIA:
+        destino_da_previa = Path(PASTA_DA_PREVIA) / Path(folha["arquivo"]).with_suffix(".png")
+        destino_da_previa.parent.mkdir(parents=True, exist_ok=True)
+        previa(grade, cores_da_base).save(destino_da_previa)
+
+    relativo = str(Path(folha["arquivo"]).with_suffix(".glb"))
+    saida = destino / relativo
+    glb.salvar(saida)
+    bruto = saida.stat().st_size
+    if manifesto.get("compactar", True):
+        compactar(saida)
+    entrada = {
+        "glb": relativo,
+        "quadros": 1,
+        "colunas": 1,
+        "larguraQuadro": largura_quadro,
+        "lado": lado,
+        "plano": "pe",
+        "oclui": True,
+        "redondo": False,
+        "vento": False,
+        # Luz difusa de Lambert com o sol fixo: as faces do prédio se separam
+        # pela direção, como num volume de verdade.
+        "lambert": True,
+        "pes": pes,
+        "paletas": paletas,
+    }
+    fontes = {str(Path(folha["arquivo"]).with_suffix("")): {"glb": relativo, "paleta": nome_da_base}}
+    for nome, caminho in variantes.items():
+        fontes[str(Path(caminho).with_suffix(""))] = {"glb": relativo, "paleta": nome}
+    return {
+        "fontes": fontes,
+        "modelo": entrada,
+        "sobras": [],
+        "arquivo": relativo,
+        "quadros": 1,
+        "triangulos": len(idx) // 3,
+        "cores": total_de_cores,
+        "bruto": bruto,
+        "bytes": saida.stat().st_size,
+    }
+
+
 def converter(folha: dict, manifesto: dict) -> dict:
+    if folha.get("forma") == "parametrico":
+        return converter_parametrico(folha, manifesto)
     origem = RAIZ / manifesto["origem"]
     destino = RAIZ / manifesto["destino"]
     fundo = int(folha.get("profundidade", 6))

@@ -132,6 +132,7 @@ const VERTICE_DO_MODELO = /* glsl */ `
   uniform float vento;
   uniform float tempo;
   uniform float contato;
+  uniform float lambert;
   varying vec2 vUv;
   varying float vLuz;
   varying float vFundo;
@@ -143,6 +144,12 @@ const VERTICE_DO_MODELO = /* glsl */ `
     // Num objeto redondo todos os lados levam a mesma luz: com a câmera
     // girando em volta, um lado "da frente" mais claro denunciaria a emenda.
     vLuz = n.y > 0.5 ? 1.0 : mix(n.z > 0.5 ? 0.88 : 0.76, 0.86, ladoIgual);
+    // Nas construções, a luz difusa de Lambert com o sol fixo, alto e um
+    // pouco à esquerda da frente: I = ambiente + difusa·max(N·L, 0). Cada
+    // face sai com o tom da sua direção — telhado, frente, lado e fundo se
+    // separam como num volume de verdade, de qualquer lado que se olhe.
+    vec3 sol = normalize(vec3(-0.35, 0.85, 0.4));
+    vLuz = mix(vLuz, 0.62 + 0.42 * max(dot(n, sol), 0.0), lambert);
     vec4 noMundo = instanceMatrix * vec4(position, 1.0);
     // Sombra de contato: o pé de toda parede e de todo tronco escurece onde
     // encosta no chão. É o que tira o objeto de "colado em cima da grama" e o
@@ -1016,6 +1023,7 @@ export class RenderVoxel implements PintorVoxel {
             ladoIgual: { value: d.redondo ? 1 : 0 },
             vento: { value: d.vento ? 1 : 0 },
             contato: { value: d.plano === 'chao' ? 0 : 1 },
+            lambert: { value: d.lambert ? 1 : 0 },
           },
         });
         modelo.materiais.set(entrada.paleta, material);
