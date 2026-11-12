@@ -5,6 +5,7 @@ import {
   Color,
   ColorManagement,
   DataTexture,
+  DepthTexture,
   DoubleSide,
   Fog,
   Float32BufferAttribute,
@@ -13,8 +14,10 @@ import {
   Matrix4,
   Mesh,
   MeshBasicMaterial,
+  MeshDepthMaterial,
   MeshStandardMaterial,
   NearestFilter,
+  OrthographicCamera,
   PerspectiveCamera,
   PlaneGeometry,
   Quaternion,
@@ -26,6 +29,7 @@ import {
   Vector3,
   Vector4,
   WebGLRenderer,
+  WebGLRenderTarget,
 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
@@ -80,27 +84,18 @@ import type {
 ColorManagement.enabled = false;
 
 /** Abertura vertical da câmera, em graus. */
-const ABERTURA = 55;
+const ABERTURA = 38;
 
-// A câmera de quem joga: perto, atrás do personagem, olhando por cima do
-// ombro dele para onde ele está andando.
-/** Quanto a câmera fica atrás do personagem, e a que altura. */
-const RECUO = 250;
-const ALTURA_DA_CAMERA = 125;
-/** Para onde ela olha: um ponto à frente dele, à altura da cabeça. */
-const ADIANTE = 150;
-const ALTURA_DO_OLHAR = 48;
-/** Com que pressa ela se vira para onde o personagem anda (1/s). */
-const PRESSA_DO_GIRO = 1.8;
-/** Abaixo desta velocidade (unidades/s) ele está parado, e a câmera também. */
-const VELOCIDADE_MINIMA = 25;
-/** A partir deste desvio (radianos) o passo é para trás, e a câmera não vira. */
-const RE = (125 * Math.PI) / 180;
-
-// A câmera de plateia (menu, assistir, vários jogadores no mesmo aparelho):
-// mais alta e aberta, sempre olhando para o norte.
-const INCLINACAO_DA_PLATEIA = (22 * Math.PI) / 180;
-const ADIANTE_DA_PLATEIA = 64;
+// A câmera é a de um jogo de construir e defender: alta, inclinada, sempre
+// virada para o norte, seguindo quem joga de longe o bastante para ver a base
+// e de onde vêm as ondas. Ela não gira — "para cima" no controle é sempre o
+// norte do mapa, como no 2D.
+/** Quanto ela olha para baixo, a partir do horizonte. */
+const INCLINACAO = (52 * Math.PI) / 180;
+/** A distância até quem ela segue, jogando sozinho. */
+const DISTANCIA = 1050;
+/** O alvo fica um pouco ao norte de quem joga: vê-se mais do que vem pela frente. */
+const ADIANTE = 60;
 
 // O desenho 2D que alimenta o 3D é feito numa vista de cima larga, bem maior
 // que a tela: a câmera em perspectiva vê muito mais longe que a 2D.
@@ -113,8 +108,6 @@ const NEVOA = [900, 1450] as const;
 const COR_DA_NEVOA = 0xcfeaff;
 /** O maior tamanho em que nome, barra e placa são pintados (1 = como no 2D). */
 const ESCALA_MAXIMA_DO_TRACO = 1.5;
-/** A que distância da câmera uma árvore ou pedra deixa de ser desenhada. */
-const FOLGA_DA_LENTE = 110;
 /** Abaixo deste tamanho o nome, a barra e a placa deixam de ser pintados. */
 const ESCALA_MINIMA_DO_TRACO = 0.45;
 /** Quantas camadas dão espessura a um personagem, e a distância entre elas. */
@@ -126,36 +119,69 @@ const ALTURA_DA_CABECA = 0.36;
 /** A altura da água, abaixo do topo dos blocos de chão (que têm 16). */
 const NIVEL_DA_AGUA = -10;
 
+/**
+ * A luz do mundo, à maneira dos jogos de construir e defender em low poly:
+ * um sol baixo e fixo, que projeta sombras longas e duras, e sombra
+ * **colorida** — azul-arroxeada, e não preta —, que é o que dá ao cenário o
+ * contraste quente/frio das referências.
+ *
+ * Duas técnicas de renderização não fotorrealista (Santos, Ivo & Rabelo,
+ * *RETRÔ*, SBGames 2024): **toon shading** — a difusa de Lambert cortada em
+ * duas faixas, luz ou sombra, sem degradê — e **contorno** por filtro de Sobel
+ * no buffer de profundidade (ver `CONTORNO`).
+ *
+ * A sombra projetada é um shadow map feito à mão: a cena é renderizada do
+ * ponto de vista do sol (`apontarOSol`) e cada fragmento confere se está atrás
+ * do que o sol vê primeiro.
+ */
+const LUZ = /* glsl */ `
+  uniform sampler2D mapaDoSol;
+  uniform mat4 matrizDoSol;
+  uniform vec3 direcaoDoSol;
+  uniform vec3 corDaSombra;
+  uniform vec3 corDaLuz;
+  uniform float texelDoSol;
+
+  // 1 no sol, 0 na sombra projetada; quatro amostras para a borda não serrilhar.
+  float noSol(vec3 mundo) {
+    vec4 s = matrizDoSol * vec4(mundo, 1.0);
+    vec3 p = s.xyz * 0.5 + 0.5;
+    if (p.x <= 0.0 || p.x >= 1.0 || p.y <= 0.0 || p.y >= 1.0) return 1.0;
+    float vies = 0.0015;
+    float soma = 0.0;
+    for (int i = 0; i < 4; i++) {
+      vec2 d = vec2(float(i / 2) - 0.5, float(i - (i / 2) * 2) - 0.5) * texelDoSol;
+      soma += step(p.z - vies, texture2D(mapaDoSol, p.xy + d).r);
+    }
+    return soma * 0.25;
+  }
+
+  // Toon: a face virada para o sol leva a cor quente da luz; a que dá as
+  // costas para ele, ou está na sombra de outra coisa, leva a sombra fria.
+  vec3 iluminar(vec3 cor, vec3 n, vec3 mundo) {
+    float difusa = dot(n, direcaoDoSol);
+    float luz = step(0.12, difusa) * noSol(mundo);
+    return cor * mix(corDaSombra, corDaLuz, luz);
+  }
+`;
+
 const VERTICE_DO_MODELO = /* glsl */ `
   uniform vec4 uvDaPaleta;
-  uniform float ladoIgual;
   uniform float vento;
   uniform float tempo;
   uniform float contato;
-  uniform float lambert;
   varying vec2 vUv;
-  varying float vLuz;
+  varying vec3 vNormal;
+  varying vec3 vMundo;
+  varying float vContato;
   varying float vFundo;
   void main() {
     vUv = uv * uvDaPaleta.xy + uvDaPaleta.zw;
-    vec3 n = normalize(mat3(instanceMatrix) * normal);
-    // Luz fixa, de cima e de frente: o topo na cor exata, a frente um pouco
-    // abaixo, os lados na sombra. É o que separa telhado de parede.
-    // Num objeto redondo todos os lados levam a mesma luz: com a câmera
-    // girando em volta, um lado "da frente" mais claro denunciaria a emenda.
-    vLuz = n.y > 0.5 ? 1.0 : mix(n.z > 0.5 ? 0.88 : 0.76, 0.86, ladoIgual);
-    // Nas construções, a luz difusa de Lambert com o sol fixo, alto e um
-    // pouco à esquerda da frente: I = ambiente + difusa·max(N·L, 0). Cada
-    // face sai com o tom da sua direção — telhado, frente, lado e fundo se
-    // separam como num volume de verdade, de qualquer lado que se olhe.
-    vec3 sol = normalize(vec3(-0.35, 0.85, 0.4));
-    vLuz = mix(vLuz, 0.62 + 0.42 * max(dot(n, sol), 0.0), lambert);
+    vNormal = normalize(mat3(instanceMatrix) * normal);
     vec4 noMundo = instanceMatrix * vec4(position, 1.0);
     // Sombra de contato: o pé de toda parede e de todo tronco escurece onde
-    // encosta no chão. É o que tira o objeto de "colado em cima da grama" e o
-    // planta nela — a oclusão de ambiente mais barata que existe, uma rampa
-    // na altura.
-    vLuz *= mix(1.0, mix(0.58, 1.0, smoothstep(0.0, 26.0, noMundo.y)), contato);
+    // encosta no chão — a oclusão de ambiente mais barata que existe.
+    vContato = mix(1.0, mix(0.7, 1.0, smoothstep(0.0, 22.0, noMundo.y)), contato);
     // O vento: a copa balança e o pé não sai do lugar. O deslocamento cresce
     // com o quadrado da altura, e a fase vem de onde a árvore está plantada —
     // cada uma no seu tempo, como uma rajada que atravessa o campo.
@@ -165,6 +191,7 @@ const VERTICE_DO_MODELO = /* glsl */ `
     float forca = vento * alto * alto * 0.00022;
     noMundo.x += (sin(fase) + 0.4 * sin(fase * 2.3 + 1.0)) * forca;
     noMundo.z += cos(fase * 0.8) * forca * 0.6;
+    vMundo = noMundo.xyz;
     vec4 naCamera = viewMatrix * noMundo;
     vFundo = -naCamera.z;
     gl_Position = projectionMatrix * naCamera;
@@ -174,12 +201,17 @@ const VERTICE_DO_MODELO = /* glsl */ `
 const FRAGMENTO_DO_MODELO = /* glsl */ `
   uniform sampler2D paleta;
   varying vec2 vUv;
-  varying float vLuz;
+  varying vec3 vNormal;
+  varying vec3 vMundo;
+  varying float vContato;
   varying float vFundo;
   uniform vec3 nevoa;
   uniform vec2 faixaDaNevoa;
+  ${LUZ}
   void main() {
-    vec3 cor = texture2D(paleta, vUv).rgb * vLuz;
+    // O lado interno de uma instância espelhada: a normal vira junto.
+    vec3 n = gl_FrontFacing ? vNormal : -vNormal;
+    vec3 cor = iluminar(texture2D(paleta, vUv).rgb, n, vMundo) * vContato;
     gl_FragColor = vec4(mix(cor, nevoa, smoothstep(faixaDaNevoa.x, faixaDaNevoa.y, vFundo)), 1.0);
   }
 `;
@@ -210,11 +242,13 @@ const VERTICE_DO_SPRITE = /* glsl */ `
   varying vec3 vTinta;
   varying float vFundo;
   varying vec2 vChao;
+  varying vec3 vMundo;
   void main() {
     vUv = recorte.xy + position.xy * recorte.zw;
     vTinta = tinta;
     vec4 noMundo = instanceMatrix * vec4(position, 1.0);
     vChao = noMundo.xz;
+    vMundo = noMundo.xyz;
     vec4 naCamera = viewMatrix * noMundo;
     vFundo = -naCamera.z;
     gl_Position = projectionMatrix * naCamera;
@@ -228,9 +262,11 @@ const FRAGMENTO_DO_SPRITE = /* glsl */ `
   varying vec3 vTinta;
   varying float vFundo;
   varying vec2 vChao;
+  varying vec3 vMundo;
   uniform vec3 nevoa;
   uniform vec2 faixaDaNevoa;
   ${ONDAS}
+  ${LUZ}
   void main() {
     vec4 cor = texture2D(mapa, vUv);
     // Recorte duro: tira o vazio e também a sombra do chão, que o pacote pinta
@@ -238,6 +274,9 @@ const FRAGMENTO_DO_SPRITE = /* glsl */ `
     if (cor.a < 0.4) discard;
     vec3 tingida = cor.rgb * vTinta;
     if (agua > 0.5) tingida = ondular(tingida, vChao);
+    // O personagem tem o sombreado do próprio desenho: do sol ele só recebe
+    // a sombra que os prédios e as árvores projetam nele.
+    else tingida *= mix(corDaSombra, vec3(1.0), noSol(vMundo + vec3(0.0, 2.0, 0.0)));
     gl_FragColor = vec4(mix(tingida, nevoa, smoothstep(faixaDaNevoa.x, faixaDaNevoa.y, vFundo)), 1.0);
   }
 `;
@@ -261,9 +300,67 @@ const FRAGMENTO_DO_MAR = /* glsl */ `
   uniform vec3 nevoa;
   uniform vec2 faixaDaNevoa;
   ${ONDAS}
+  ${LUZ}
   void main() {
-    vec3 c = ondular(cor, vChao);
+    vec3 c = ondular(cor, vChao) * mix(corDaSombra, vec3(1.0), noSol(vec3(vChao.x, -11.0, vChao.y)));
     gl_FragColor = vec4(mix(c, nevoa, smoothstep(faixaDaNevoa.x, faixaDaNevoa.y, vFundo)), 1.0);
+  }
+`;
+
+/**
+ * O passe final, em tela cheia: contorno e gradação de cor.
+ *
+ * O contorno é o de *RETRÔ* (Santos, Ivo & Rabelo, 2024), por filtro de borda
+ * no buffer de profundidade. Usa-se o laplaciano, e não o Sobel puro, da
+ * profundidade linear: num plano inclinado — o chão visto de cima — a
+ * primeira derivada é constante e não nula, e o Sobel riscaria o chão
+ * inteiro; a segunda derivada só acende onde a superfície quebra (silhueta,
+ * quina). Dividir pela profundidade deixa o limiar igual perto e longe.
+ */
+const VERTICE_DO_PASSE = /* glsl */ `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = vec4(position.xy, 0.0, 1.0);
+  }
+`;
+
+const FRAGMENTO_DO_PASSE = /* glsl */ `
+  uniform sampler2D tCor;
+  uniform sampler2D tProf;
+  uniform vec2 passo;
+  uniform float perto;
+  uniform float longe;
+  uniform vec3 corDoContorno;
+  varying vec2 vUv;
+  float linear(vec2 uv) {
+    float z = texture2D(tProf, uv).r * 2.0 - 1.0;
+    return 2.0 * perto * longe / (longe + perto - z * (longe - perto));
+  }
+  void main() {
+    vec4 cor = texture2D(tCor, vUv);
+    float c = linear(vUv);
+    float l = linear(vUv - vec2(passo.x, 0.0));
+    float r = linear(vUv + vec2(passo.x, 0.0));
+    float u = linear(vUv - vec2(0.0, passo.y));
+    float d = linear(vUv + vec2(0.0, passo.y));
+    float maisPerto = min(min(l, r), min(u, d));
+    // Só o lado de dentro da borda é riscado (o mais perto da câmera): o
+    // contorno fica colado no objeto, e não flutuando no fundo atrás dele.
+    float lap = (4.0 * c - l - r - u - d) / maisPerto;
+    float borda = smoothstep(0.035, 0.09, lap);
+    vec3 rgb = cor.rgb;
+    // Gradação: um pouco mais de saturação e de densidade nos meios-tons —
+    // as cores das referências são cheias, não lavadas.
+    float cinza = dot(rgb, vec3(0.299, 0.587, 0.114));
+    rgb = mix(vec3(cinza), rgb, 1.18);
+    rgb = pow(max(rgb, 0.0), vec3(1.08));
+    // O verde puxa para o azul e escurece: a grama das referências é um
+    // verde-petróleo fundo, que deixa as construções quentes saltarem.
+    float verde = clamp((rgb.g - max(rgb.r, rgb.b)) * 5.0, 0.0, 1.0);
+    rgb = mix(rgb, rgb * vec3(0.42, 0.66, 0.66) + vec3(0.0, 0.03, 0.09), verde * 0.85);
+    rgb = mix(rgb, corDoContorno, borda * 0.85);
+    gl_FragColor = vec4(rgb, max(cor.a, borda * step(c, longe * 0.99)));
   }
 `;
 
@@ -439,7 +536,50 @@ export class RenderVoxel implements PintorVoxel {
   /** Quem a câmera segue de perto; `null` é a câmera de plateia. */
   private alvo: { x: number; y: number } | null = null;
   /** Para onde a câmera está virada: 0 é o norte, cresce no sentido horário. */
-  private giro = 0;
+  // --- o sol ----------------------------------------------------------------
+  /** Para onde fica o sol: baixo, a nordeste — as sombras caem para sudoeste. */
+  private readonly direcaoDoSol = new Vector3(0.62, 0.58, -0.53).normalize();
+  private readonly ladoDoMapaDoSol = 2048;
+  private readonly alvoDoSol = (() => {
+    const alvo = new WebGLRenderTarget(this.ladoDoMapaDoSol, this.ladoDoMapaDoSol);
+    alvo.depthTexture = new DepthTexture(this.ladoDoMapaDoSol, this.ladoDoMapaDoSol);
+    return alvo;
+  })();
+  private readonly camaraDoSol = new OrthographicCamera(-1600, 1600, 1600, -1600, 1, 8000);
+  private readonly materialDoSol = new MeshDepthMaterial({ side: DoubleSide });
+  /** Os uniformes da luz, compartilhados por todo material da cena. */
+  private readonly luz = {
+    mapaDoSol: { value: this.alvoDoSol.depthTexture },
+    matrizDoSol: { value: new Matrix4() },
+    direcaoDoSol: { value: this.direcaoDoSol },
+    // A sombra é fria e a luz é quente: o contraste das referências.
+    corDaSombra: { value: new Color(0.44, 0.46, 0.74) },
+    corDaLuz: { value: new Color(1.02, 0.99, 0.93) },
+    texelDoSol: { value: 1 / this.ladoDoMapaDoSol },
+  };
+
+  // --- o passe final -----------------------------------------------------------
+  private alvoDaCena: WebGLRenderTarget | null = null;
+  private readonly cenaDoPasse = new Scene();
+  private readonly camaraDoPasse = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  private readonly passe = new ShaderMaterial({
+    vertexShader: VERTICE_DO_PASSE,
+    fragmentShader: FRAGMENTO_DO_PASSE,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    uniforms: {
+      tCor: { value: null },
+      tProf: { value: null },
+      passo: { value: new Vector2() },
+      perto: { value: 20 },
+      longe: { value: 60000 },
+      corDoContorno: { value: new Color(0.11, 0.1, 0.22) },
+    },
+  });
+
+  /** Quão longe a câmera está de quem segue — a névoa e o sol dependem disso. */
+  private distancia = DISTANCIA;
   /** A direita da câmera no chão do mundo, e o estica dos sprites em pé. */
   private direitaX = 1;
   private direitaZ = 0;
@@ -476,13 +616,14 @@ export class RenderVoxel implements PintorVoxel {
       new ShaderMaterial({
         vertexShader: VERTICE_DO_MAR,
         fragmentShader: FRAGMENTO_DO_MAR,
-        uniforms: { ...this.nevoa, cor: { value: new Color(0x47abaa) } },
+        uniforms: { ...this.nevoa, ...this.luz, cor: { value: new Color(0x47abaa) } },
       }),
     );
     this.mar.scale.setScalar(120000);
     this.mar.position.y = NIVEL_DA_AGUA - 1;
     this.cena.add(this.mar);
     this.cena.fog = new Fog(COR_DA_NEVOA, NEVOA[0], NEVOA[1]);
+    this.cenaDoPasse.add(new Mesh(new PlaneGeometry(2, 2), this.passe));
     this.sombras = this.criarSombras(128);
   }
 
@@ -521,40 +662,13 @@ export class RenderVoxel implements PintorVoxel {
     return new RenderVoxel(indice, raiz);
   }
 
-  mirar(alvo: { x: number; y: number; frenteX: number; frenteY: number } | null, dt: number): void {
-    if (!alvo) {
-      this.alvo = null;
-      this.giro = 0;
-      return;
-    }
-    const antes = this.alvo;
-    this.alvo = { x: alvo.x, y: alvo.y };
-    if (!antes) {
-      // Ao entrar em campo ainda não há caminho andado: a câmera abre virada
-      // para onde o jogo diz que é a frente (o meio do mapa).
-      if (Math.hypot(alvo.frenteX, alvo.frenteY) > 1e-6) {
-        this.giro = Math.atan2(alvo.frenteX, -alvo.frenteY);
-      }
-      return;
-    }
-    if (dt <= 0) return;
-    // A câmera aponta para onde o personagem **anda**, e não para onde ele
-    // mira: mede-se o passo dado desde o quadro anterior.
-    const vx = (alvo.x - antes.x) / dt;
-    const vy = (alvo.y - antes.y) / dt;
-    if (Math.hypot(vx, vy) < VELOCIDADE_MINIMA) return;
-    let falta = Math.atan2(vx, -vy) - this.giro;
-    falta = Math.atan2(Math.sin(falta), Math.cos(falta));
-    // Andar de costas não vira a câmera: virar faria o "para trás" do
-    // controle passar a ser "para frente" no meio do passo, e o personagem
-    // ficaria girando no lugar.
-    if (Math.abs(falta) > RE) return;
-    // Pelo caminho mais curto, e sem pressa: a câmera acompanha, não chicoteia.
-    this.giro += falta * (1 - Math.exp(-dt * PRESSA_DO_GIRO));
+  mirar(alvo: { x: number; y: number; frenteX: number; frenteY: number } | null, _dt: number): void {
+    this.alvo = alvo ? { x: alvo.x, y: alvo.y } : null;
   }
 
+  /** A câmera não gira: o controle nunca precisa ser desgirado. */
   get rumo(): number {
-    return this.alvo ? this.giro : 0;
+    return 0;
   }
 
   enquadrar(camera: CameraDoMundo, largura: number, altura: number): void {
@@ -563,27 +677,21 @@ export class RenderVoxel implements PintorVoxel {
     const c = this.camera;
     c.aspect = largura / altura;
     c.updateProjectionMatrix();
-    let centro: { x: number; y: number };
-    if (this.alvo) {
-      // Atrás do personagem, olhando por cima dele para onde ele vai.
-      centro = this.alvo;
-      const fx = Math.sin(this.giro);
-      const fz = -Math.cos(this.giro);
-      c.position.set(centro.x - fx * RECUO, ALTURA_DA_CAMERA, centro.y - fz * RECUO);
-      c.lookAt(centro.x + fx * ADIANTE, ALTURA_DO_OLHAR, centro.y + fz * ADIANTE);
-    } else {
-      // De plateia: à distância em que o alvo sai na escala do zoom 2D.
-      centro = camera;
-      const distancia = altura / (2 * camera.zoom * Math.tan((ABERTURA * Math.PI) / 360));
-      const alvoZ = camera.y - ADIANTE_DA_PLATEIA;
-      c.position.set(
-        camera.x,
-        distancia * Math.sin(INCLINACAO_DA_PLATEIA),
-        alvoZ + distancia * Math.cos(INCLINACAO_DA_PLATEIA),
-      );
-      c.lookAt(camera.x, 0, alvoZ);
-    }
+    // Seguindo alguém, a distância é fixa; de plateia, a que põe o alvo na
+    // escala do zoom 2D (o menu e o Assistir abrem mais).
+    const centro = this.alvo ?? camera;
+    const distancia = this.alvo
+      ? DISTANCIA
+      : Math.max(DISTANCIA, altura / (2 * camera.zoom * Math.tan((ABERTURA * Math.PI) / 360)));
+    const alvoZ = centro.y - ADIANTE;
+    c.position.set(
+      centro.x,
+      distancia * Math.sin(INCLINACAO),
+      alvoZ + distancia * Math.cos(INCLINACAO),
+    );
+    c.lookAt(centro.x, 0, alvoZ);
     c.updateMatrixWorld(true);
+    this.distancia = distancia;
     const m = c.matrixWorld.elements;
     const direita = Math.hypot(m[0]!, m[2]!) || 1;
     this.direitaX = m[0]! / direita;
@@ -592,9 +700,29 @@ export class RenderVoxel implements PintorVoxel {
     // a inclinação, e os sprites em pé esticam o que ela achataria.
     const horizontal = Math.hypot(m[8]!, m[10]!);
     this.estica = Math.min(1.35, 1 / Math.max(0.74, horizontal));
+    // O mapa do sol cobre o que a câmera alcança daqui.
+    const meia = Math.min(2400, this.distancia * 1.4);
+    Object.assign(this.camaraDoSol, { left: -meia, right: meia, top: meia, bottom: -meia });
     this.vista = { x: centro.x, y: centro.y, zoom: ZOOM_DO_DESENHO };
     this.mar.position.x = centro.x;
     this.mar.position.z = centro.y;
+    // A névoa fecha antes da borda do que foi desenhado.
+    const perto = distancia + 350;
+    const longe = distancia + 1000;
+    this.nevoa.faixaDaNevoa.value.set(perto, longe);
+    (this.cena.fog as Fog).near = perto;
+    (this.cena.fog as Fog).far = longe;
+    this.apontarOSol(centro.x, centro.y);
+  }
+
+  /** O sol olha para o centro da vista, de longe, na direção dele. */
+  private apontarOSol(x: number, z: number): void {
+    const c = this.camaraDoSol;
+    c.position.set(x, 0, z).addScaledVector(this.direcaoDoSol, 4000);
+    c.lookAt(x, 0, z);
+    c.updateMatrixWorld(true);
+    c.updateProjectionMatrix();
+    this.luz.matrizDoSol.value.multiplyMatrices(c.projectionMatrix, c.matrixWorldInverse);
   }
 
   paraTela(x: number, y: number): PontoNaTela | null {
@@ -696,7 +824,36 @@ export class RenderVoxel implements PintorVoxel {
 
     this.nevoa.tempo.value = performance.now() / 1000;
     this.ceu();
+
+    // 1. O mapa do sol: só o que projeta sombra (os modelos, na camada 1).
+    this.cena.overrideMaterial = this.materialDoSol;
+    this.camaraDoSol.layers.set(1);
+    this.gl.setRenderTarget(this.alvoDoSol);
+    this.gl.clear();
+    this.gl.render(this.cena, this.camaraDoSol);
+    this.cena.overrideMaterial = null;
+
+    // 2. A cena, numa textura com profundidade.
+    if (!this.alvoDaCena || this.alvoDaCena.width !== l || this.alvoDaCena.height !== a) {
+      this.alvoDaCena?.dispose();
+      this.alvoDaCena = new WebGLRenderTarget(l, a);
+      this.alvoDaCena.depthTexture = new DepthTexture(l, a);
+    }
+    this.gl.setRenderTarget(this.alvoDaCena);
+    this.gl.clear();
     this.gl.render(this.cena, this.camera);
+
+    // 3. Contorno e gradação, na tela.
+    const u = this.passe.uniforms;
+    u.tCor!.value = this.alvoDaCena.texture;
+    u.tProf!.value = this.alvoDaCena.depthTexture;
+    const px = Math.max(1, this.dpr * 0.75);
+    (u.passo!.value as Vector2).set(px / l, px / a);
+    u.perto!.value = this.camera.near;
+    u.longe!.value = this.camera.far;
+    this.gl.setRenderTarget(null);
+    this.gl.clear();
+    this.gl.render(this.cenaDoPasse, this.camaraDoPasse);
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.drawImage(this.tela, 0, 0);
@@ -708,11 +865,7 @@ export class RenderVoxel implements PintorVoxel {
   private ceu(): void {
     const ctx = this.real;
     const o = this.camera.position;
-    const longe = this.projetar(
-      o.x + Math.sin(this.rumo) * 50000,
-      0,
-      o.z - Math.cos(this.rumo) * 50000,
-    );
+    const longe = this.projetar(o.x, 0, o.z - 50000);
     const horizonte = Math.max(8, Math.min(this.altura, (longe?.y ?? 0) + 2));
     const degrade = ctx.createLinearGradient(0, 0, 0, horizonte);
     degrade.addColorStop(0, '#3f86e0');
@@ -964,15 +1117,6 @@ export class RenderVoxel implements PintorVoxel {
       g.fixo = true;
     }
 
-    // Árvore ou pedra encostada na lente tapa meia tela e não diz nada: a
-    // câmera anda atrás de quem joga e passa por dentro delas. Some o que
-    // estiver a menos de um corpo da câmera.
-    if (this.alvo && d.plano !== 'chao' && !d.oclui) {
-      const c = modelo.quadros[quadro]!.caixa;
-      const raio = Math.max(c.max.x - c.min.x, c.max.z - c.min.z) * 0.5 * escala;
-      const o = this.camera.position;
-      if (Math.hypot(chao.x - o.x, chao.y - o.z) < raio + FOLGA_DA_LENTE) return true;
-    }
     if (d.redondo) {
       // Só o miolo da copa: a borda é rendada, e o tronco é fino.
       const c = modelo.quadros[quadro]!.caixa;
@@ -1018,12 +1162,11 @@ export class RenderVoxel implements PintorVoxel {
           side: DoubleSide,
           uniforms: {
             ...this.nevoa,
+            ...this.luz,
             paleta: { value: texturaDaPaleta(d.paletas[entrada.paleta]!) },
             uvDaPaleta: { value: modelo.uvDaPaleta },
-            ladoIgual: { value: d.redondo ? 1 : 0 },
             vento: { value: d.vento ? 1 : 0 },
             contato: { value: d.plano === 'chao' ? 0 : 1 },
-            lambert: { value: d.lambert ? 1 : 0 },
           },
         });
         modelo.materiais.set(entrada.paleta, material);
@@ -1035,6 +1178,9 @@ export class RenderVoxel implements PintorVoxel {
         lote ? lote.malha.instanceMatrix.count * 2 : 16,
       );
       malha.frustumCulled = false;
+      // Camada 1: projeta sombra. O chão não precisa (só recebe), e de fora
+      // fica o passe do sol mais barato.
+      if (d.plano !== 'chao') malha.layers.enable(1);
       if (lote) {
         (malha.instanceMatrix.array as Float32Array).set(lote.malha.instanceMatrix.array);
         this.cena.remove(lote.malha);
@@ -1108,13 +1254,6 @@ export class RenderVoxel implements PintorVoxel {
     brilho = 1,
   ): void {
     const zoom = this.vista.zoom;
-    // Como as árvores: um sprite encostado na lente tapa a tela e não é o
-    // personagem de quem joga, que fica bem mais longe dela.
-    if (!deitado && ancora && this.alvo) {
-      const perto = this.noChao(ancora);
-      const o = this.camera.position;
-      if (Math.hypot(perto.x - o.x, perto.y - o.z) < FOLGA_DA_LENTE * 0.75) return;
-    }
     const lote = this.loteDeSprites(img.fonte);
     // De pé, o sprite fica de frente para a câmera. Quando ela está virada
     // para o sul, o leste do mundo é a esquerda da tela — e quem olha para o
@@ -1190,6 +1329,7 @@ export class RenderVoxel implements PintorVoxel {
         side: DoubleSide,
         uniforms: {
           ...this.nevoa,
+          ...this.luz,
           mapa: { value: mapa },
           agua: { value: this.caminhoDe(fonte) === 'terrain/water' ? 1 : 0 },
         },
