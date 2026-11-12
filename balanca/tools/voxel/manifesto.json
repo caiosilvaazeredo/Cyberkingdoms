@@ -79,15 +79,14 @@
     {
       "glob": "deco/Tree[12].png",
       "larguraQuadro": 192,
-      "forma": "redondo",
-      "voxel": 2,
-      "vento": true
+      "forma": "parametrico",
+      "construcao": "arvore"
     },
     {
       "glob": "deco/Tree[34].png",
-      "forma": "redondo",
-      "voxel": 2,
-      "vento": true
+      "larguraQuadro": 192,
+      "forma": "parametrico",
+      "construcao": "arvore"
     },
     {
       "glob": "deco/Stump*.png",
@@ -95,9 +94,9 @@
     },
     {
       "glob": "deco/Bushe*.png",
-      "forma": "redondo",
-      "voxel": 2,
-      "vento": true
+      "larguraQuadro": 128,
+      "forma": "parametrico",
+      "construcao": "arbusto"
     },
     {
       "glob": "deco/Rock*.png",

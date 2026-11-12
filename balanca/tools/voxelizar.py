@@ -740,25 +740,33 @@ def converter_parametrico(folha: dict, manifesto: dict) -> dict:
     com o tamanho do quadro, que é como o jogo reconhece a folha na hora de
     trocar pelo modelo."""
     sys.path.insert(0, str(Path(__file__).resolve().parent / "voxel"))
+    import natureza
     import predios
 
     origem = RAIZ / manifesto["origem"]
     destino = RAIZ / manifesto["destino"]
     base = abrir(origem / folha["arquivo"])
-    lado, largura_quadro = base.shape[0], base.shape[1]
+    lado = base.shape[0]
+    largura_quadro = int(folha.get("larguraQuadro") or base.shape[1])
     pes = base_dos_pes(origem / folha["arquivo"], lado)
-    obra = predios.CONSTRUCOES[folha["construcao"]]()
-    grade = obra.grade()
-
     nome_da_base = Path(folha["arquivo"]).parent.name
-    paletas = {nome_da_base: predios.paleta(base, None)}
     variantes = {}
-    for nome, caminho in folha.get("variantes", {}).items():
-        camada = abrir(origem / caminho)
-        variantes[nome] = caminho
-        paletas[nome] = predios.paleta(base, camada)
+    natural = folha["construcao"] in natureza.MODELOS
+    if natural:
+        # Um quadro só da folha basta: a forma é paramétrica, e o vento do
+        # renderer faz o papel da animação do sprite.
+        obra, cores = natureza.MODELOS[folha["construcao"]](base[:, :largura_quadro])
+        paletas = {nome_da_base: cores}
+    else:
+        obra = predios.CONSTRUCOES[folha["construcao"]]()
+        paletas = {nome_da_base: predios.paleta(base, None)}
+        for nome, caminho in folha.get("variantes", {}).items():
+            camada = abrir(origem / caminho)
+            variantes[nome] = caminho
+            paletas[nome] = predios.paleta(base, camada)
+    grade = obra.grade()
     paletas = {k: ["#%02x%02x%02x" % c for c in v] for k, v in paletas.items()}
-    total_de_cores = len(predios.NOMES)
+    total_de_cores = len(paletas[nome_da_base])
 
     glb = Glb()
     glb.json["extensionsUsed"] = ["KHR_mesh_quantization"]
@@ -775,7 +783,9 @@ def converter_parametrico(folha: dict, manifesto: dict) -> dict:
         {"name": "paleta", "pbrMetallicRoughness": {"baseColorTexture": {"index": 0}, "metallicFactor": 0, "roughnessFactor": 1}}
     ]
     # A origem é o meio da largura, o chão e a fachada da frente.
-    pos, nor, uv, idx = malha(grade, (obra.nx / 2, obra.nh, obra.nz), total_de_cores, FACES_DO_VOLUME)
+    pos, nor, uv, idx = malha(
+        grade, (obra.nx / 2, obra.nh, obra.nz / 2 if obra.origem_no_meio else obra.nz), total_de_cores, FACES_DO_VOLUME
+    )
     pos = (pos.astype(np.int32) * predios.BLOCO).astype(np.int16)
     if len(pos) < 65536:
         idx = idx.astype(np.uint16)
@@ -815,9 +825,9 @@ def converter_parametrico(folha: dict, manifesto: dict) -> dict:
         "larguraQuadro": largura_quadro,
         "lado": lado,
         "plano": "pe",
-        "oclui": True,
-        "redondo": False,
-        "vento": False,
+        "oclui": not natural,
+        "redondo": natural,
+        "vento": natural,
         # Luz difusa de Lambert com o sol fixo: as faces do prédio se separam
         # pela direção, como num volume de verdade.
         "lambert": True,

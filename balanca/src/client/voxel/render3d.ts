@@ -1093,7 +1093,10 @@ export class RenderVoxel implements PintorVoxel {
     if (!modelo) return false;
     const d = modelo.dados;
     if (Math.abs(sw - d.larguraQuadro) > 0.5 || Math.abs(sh - d.lado) > 0.5) return false;
-    const quadro = Math.round(sy / d.lado) * d.colunas + Math.round(sx / d.larguraQuadro);
+    // Modelo de um quadro só (árvore, arbusto, construção): serve para qualquer
+    // quadro da folha — a animação do sprite vira o vento do shader.
+    const quadro =
+      d.quadros === 1 ? 0 : Math.round(sy / d.lado) * d.colunas + Math.round(sx / d.larguraQuadro);
     if (quadro < 0 || quadro >= d.quadros) return false;
 
     const t = this.real.getTransform();

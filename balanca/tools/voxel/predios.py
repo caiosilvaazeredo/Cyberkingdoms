@@ -102,6 +102,9 @@ class Obra:
         )
         self.H, self.X, self.Z = h, x, z
         self.g = np.zeros((self.nh, self.nx, self.nz), dtype=np.int32)
+        # A origem do modelo: no meio da fachada da frente (prédio) ou no meio
+        # da planta (árvore, personagem).
+        self.origem_no_meio = False
 
     def por(self, mascara: np.ndarray, cores: np.ndarray | int) -> None:
         self.g = np.where(mascara, cores, self.g)
